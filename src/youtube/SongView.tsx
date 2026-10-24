@@ -67,7 +67,11 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
     const w = window.open('/yt-player.html', 'dc-yt-player', 'width=560,height=360');
     if (!w) { setLink(l => ({ ...l, error: 'Allow pop-ups for localhost, then try again.' })); return; }
     popup.current = w;
-    if (w.document.readyState !== 'complete') await new Promise(r => w.addEventListener('load', r, { once: true }));
+    // A new popup starts on about:blank, which already reads as loaded: wait for the real page, or the player
+    // gets built in the blank document that's about to be replaced and never becomes ready.
+    const ready = () => w.closed || (w.location.pathname === '/yt-player.html' && w.document.readyState === 'complete');
+    if (!ready()) await new Promise<void>(r => { const t = setInterval(() => { if (ready()) { clearInterval(t); r(); } }, 50); });
+    if (w.closed) { popup.current = null; return; }
     yt?.destroy();
     host.current!.replaceChildren(Object.assign(document.createElement('p'), { className: 'small', textContent: 'The song plays in the "song player" window. Keep it open.' }));
     const p = new YtPlayer(w.document.getElementById('player')!, videoId, w);
