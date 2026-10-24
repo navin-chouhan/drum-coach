@@ -4,6 +4,7 @@ import type { Chart } from '../engine/chart';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { requestPlay } from '../ui/nav';
 import { askCoach, Thinking, useCoachEntry } from './api';
+import { say, voiceEngine } from '../voice/voice';
 import type { ChatReply, NextExercise, Plan } from './schemas';
 
 type Msg = { role: 'user' | 'assistant'; content: string; chart?: Chart };
@@ -13,6 +14,8 @@ const CHAT_KEY = 'drumcoach.chat';
 export function CoachView() {
   const [status, setStatus] = useState<{ ready: boolean; message: string }>();
   const settings = useSyncExternalStore(subscribeSettings, getSettings);
+  const [engine, setEngine] = useState<string>();
+  useEffect(() => { void voiceEngine().then(setEngine); }, []);
   useEffect(() => {
     fetch('/api/coach/status').then(r => r.json()).then(setStatus)
       .catch(() => setStatus({ ready: false, message: 'Cannot reach the local server. Is `npm run dev` running?' }));
@@ -33,6 +36,8 @@ export function CoachView() {
             </select></label>
         </div>
         <label className="check"><input type="checkbox" checked={settings.voice} onChange={e => setSettings({ voice: e.target.checked })} /> Speak verdicts and the coach's feedback</label>
+        <p className="small">Voice: {engine === 'piper' ? 'Piper (offline, natural)' : engine === 'browser' ? "the browser's voice (install Piper for a better one, see README)" : '…'}
+          {' '}<button className="link" onClick={() => void say('Ready when you are. One, two, three, four.', true)}>test the voice</button></p>
         <label className="check"><input type="checkbox" checked={settings.countIn} onChange={e => setSettings({ countIn: e.target.checked })} /> Count me in out loud ("one, two, three, four")</label>
         <label className="check"><input type="checkbox" checked={settings.autoCoach} onChange={e => setSettings({ autoCoach: e.target.checked })} />
           Ask for feedback automatically after every run (uses more of your Claude usage)</label>

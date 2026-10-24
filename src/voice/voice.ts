@@ -1,0 +1,59 @@
+import { audio, playVoice } from '../play/audio';
+
+// The coach's voice: Piper on the local server (offline, natural) when it's set up, else the browser's voice.
+// Fixed phrases (count-in, tips) are decoded ahead of time so they can play exactly on a beat.
+let engine: Promise<'piper' | 'browser'> | null = null;
+const clips = new Map<string, Promise<AudioBuffer | null>>();
+const ready = new Map<string, AudioBuffer>();
+let busyUntil = 0;
+// dev only: what the voice said, for headless tests (drumCoachVoiceLog in the console)
+const log = (what: string) => { if (import.meta.env.DEV) ((window as unknown as { drumCoachVoiceLog?: string[] }).drumCoachVoiceLog ??= []).push(what); };
+
+export const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+
+export function voiceEngine() {
+  engine ??= fetch('/api/tts/status').then(r => r.json()).then(s => (s.engine === 'piper' ? 'piper' : 'browser') as 'piper' | 'browser').catch(() => 'browser' as const);
+  return engine;
+}
+
+function clip(text: string): Promise<AudioBuffer | null> {
+  if (!clips.has(text)) {
+    clips.set(text, fetch(`/api/tts?text=${encodeURIComponent(text)}`)
+      .then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+      .then(b => audio().decodeAudioData(b))
+      .then(buf => { ready.set(text, buf); return buf; })
+      .catch(() => { clips.delete(text); return null; }));
+  }
+  return clips.get(text)!;
+}
+
+/** Renders and decodes phrases ahead of time (Piper only). */
+export async function prepare(texts: string[]) {
+  if (await voiceEngine() === 'piper') await Promise.all(texts.map(clip));
+}
+
+/** Plays a prepared phrase at an exact audio time (count-in). Returns false if it isn't ready yet. */
+export function sayAt(text: string, when: number) {
+  const buf = ready.get(text);
+  if (!buf) return false;
+  log(`at:${text}`);
+  playVoice(buf, when);
+  return true;
+}
+
+/** Says something now. `urgent` cuts in; otherwise it's skipped while the coach is still talking. */
+export async function say(text: string, urgent = false) {
+  const now = performance.now();
+  if (!urgent && now < busyUntil) return;
+  if (await voiceEngine() === 'piper') {
+    const buf = await clip(text);
+    if (buf) { busyUntil = performance.now() + buf.duration * 1000; log(`say:${text}`); playVoice(buf); return; }
+  }
+  log(`browser:${text}`);
+  if (!('speechSynthesis' in window)) return;
+  if (urgent) speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.05;
+  busyUntil = now + 300 + text.length * 70; // rough length, the browser doesn't tell us
+  speechSynthesis.speak(u);
+}

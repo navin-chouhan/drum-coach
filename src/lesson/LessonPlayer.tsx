@@ -8,6 +8,7 @@ import { Highway } from '../play/Highway';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
+import { say } from '../voice/voice';
 import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -68,6 +69,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
       o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone' };
     }
     outcomes.set(f, o);
+    if (getSettings().voice) void say(o.text);
     if (o.itemDone) onItemDone?.();
     saveRun(f, { passed: check.ok });
     setSecs(s => s + f.durationS);

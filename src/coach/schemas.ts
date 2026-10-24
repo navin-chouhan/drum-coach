@@ -4,6 +4,7 @@ import { CHART_DRUMS, ChartSchema } from '../engine/chart.ts';
 // Shapes the coach must answer with. Validated on the server before anything reaches the app.
 export const FeedbackSchema = z.object({
   feedback: z.string().min(1).max(2000),
+  spoken: z.string().max(240).optional(), // one short sentence the coach says out loud
   drill: z.object({
     title: z.string().max(120),
     instructions: z.string().max(1000),

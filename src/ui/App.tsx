@@ -8,7 +8,9 @@ import { useMidi } from '../input/useMidi';
 import { TodayView } from '../lesson/TodayView';
 import { playDrum } from '../play/audio';
 import { PlayView } from '../play/PlayView';
-import { stop } from '../play/player';
+import { onCue, stop } from '../play/player';
+import { NUMBERS, prepare, say } from '../voice/voice';
+import { SPOKEN_CUES } from '../engine/liveCoach';
 import { Calibrate } from './Calibrate';
 import { KitView } from './KitView';
 import { LastHit } from './LastHit';
@@ -27,6 +29,9 @@ export function App() {
   useEffect(startKeyboard, []);
   useEffect(() => onHit(h => { if (h.pad && getSettings().browserSounds) playDrum(h.pad, h.velocity); }), []);
   useEffect(() => onPlayRequest(r => { stop(); setPending(r); setTabState('play'); }), []);
+  // The coach's voice: prepare the count-in and tips, speak tips when asked to.
+  useEffect(() => { void prepare([...NUMBERS.slice(0, 8), ...SPOKEN_CUES]); }, []);
+  useEffect(() => onCue(c => { if (getSettings().liveTips === 'voice') void say(c.spoken, true); }), []);
 
   const status =
     midi.status === 'unsupported' ? { text: 'MIDI not supported — open in Google Chrome', cls: 'bad' }

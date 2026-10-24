@@ -13,6 +13,7 @@ import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { AUDIO_DIR, db } from './db.ts';
 import { searchYouTube, YtError } from './youtube.ts';
+import { speech, ttsStatus } from './tts.ts';
 import { GridSchema, GrooveRequestSchema, YtSongCreateSchema, YtSongPatchSchema, type YtSong } from '../src/youtube/schemas.ts';
 
 const PORT = Number(process.env.PORT || 8787);
@@ -182,6 +183,17 @@ app.post('/api/coach/chat', async (req, reply) => {
   const b = ChatRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
   try { return await ask('chat', ChatReplySchema, { messages: b.data.messages, library: catalog() }); } catch (e) { return aiFail(reply, e); }
+});
+
+// ---------- coach voice (Piper, offline) ----------
+app.get('/api/tts/status', async () => ttsStatus());
+app.get('/api/tts', async (req, reply) => {
+  const p = z.object({ text: z.string().trim().min(1).max(400) }).safeParse(req.query);
+  if (!p.success) return bad(reply, 'Text must be 1–400 characters');
+  try {
+    const file = await speech(p.data.text.replace(/\s+/g, ' '));
+    return reply.type('audio/wav').header('cache-control', 'max-age=31536000, immutable').send(createReadStream(file));
+  } catch (e) { return reply.code(503).send({ error: (e as Error).message }); }
 });
 
 // ---------- YouTube songs ----------

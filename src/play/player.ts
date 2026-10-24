@@ -4,6 +4,7 @@ import { computeStats, createMatcher, type Judgement, type NoteResult, type Play
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
+import { NUMBERS, sayAt } from '../voice/voice';
 import { audio, audioToPerf, click, playBuffer, playDrum } from './audio';
 
 export type PlayOptions = RunOptions & {
@@ -168,6 +169,7 @@ export function start(chart: Chart, options: PlayOptions) {
   }));
 
   startLive(options, extras);
+  const countVoice = getSettings().countIn && !options.demo;
   // Lookahead scheduler for clicks, app-played notes, live tips and the end of the run.
   const sub = options.subdivision, bpb = beatsPerBar(chart);
   const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
@@ -180,6 +182,7 @@ export function start(chart: Chart, options: PlayOptions) {
       const onBeat = k % sub === 0;
       if (!onBeat && !options.metronome) continue;
       const barStart = onBeat && (((k / sub) % bpb) + bpb) % bpb < 1e-6;
+      if (k < 0 && onBeat && countVoice) sayAt(NUMBERS[Math.floor((((k / sub) % bpb) + bpb) % bpb + 1e-6)], timeOf(k)); // "one, two, three, four"
       const gap = options.gapBars && k >= 0 && (Math.floor(k / sub / bpb + 1e-6) + 1) % options.gapBars === 0;
       if (!gap) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1);
     }

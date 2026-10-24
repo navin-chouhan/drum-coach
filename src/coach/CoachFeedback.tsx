@@ -4,8 +4,17 @@ import { getSettings, subscribeSettings } from '../input/settings';
 import type { Finished } from '../play/player';
 import { requestPlay } from '../ui/nav';
 import { askCoach, Thinking, useCoachEntry } from './api';
+import { say } from '../voice/voice';
 import type { Feedback } from './schemas';
 import { summarizeRun } from './summary';
+
+const spokenKeys = new Set<string>();
+/** Says the coach's main point once per answer (when "speak" is on). */
+export function speakOnce(key: string, f: Feedback) {
+  if (spokenKeys.has(key) || !getSettings().voice) return;
+  spokenKeys.add(key);
+  void say(f.spoken ?? f.feedback.split(/(?<=[.!?])\s/)[0]);
+}
 
 export function CoachFeedback({ f }: { f: Finished }) {
   const settings = useSyncExternalStore(subscribeSettings, getSettings);
@@ -14,6 +23,7 @@ export function CoachFeedback({ f }: { f: Finished }) {
   const e = useCoachEntry<Feedback>(key);
   const ask = () => askCoach(key, 'feedback', { summary });
   useEffect(() => { if (settings.autoCoach) askCoach(key, 'feedback', { summary }); }, [key, summary, settings.autoCoach]);
+  useEffect(() => { if (e?.status === 'done' && e.data) speakOnce(key, e.data); }, [key, e?.status, e?.data]);
 
   async function playDrill(d: Feedback['drill']) {
     if (d.chart) { const c = await saveChart(d.chart, 'ai'); requestPlay({ chartId: c.id, bpm: d.bpm }); }

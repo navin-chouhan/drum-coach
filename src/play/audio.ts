@@ -2,12 +2,13 @@ import type { PadId } from '../engine/kit';
 
 // One shared AudioContext. Sounds ported from prototype/drum-stage.html.
 let ctx: AudioContext | null = null;
-let master: GainNode, noiseBuf: AudioBuffer;
+let master: GainNode, voiceOut: GainNode, noiseBuf: AudioBuffer;
 
 export function audio(): AudioContext {
   if (!ctx) {
     ctx = new AudioContext({ latencyHint: 'interactive' });
     master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+    voiceOut = ctx.createGain(); voiceOut.gain.value = 1; voiceOut.connect(ctx.destination); // the coach's voice isn't ducked
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const ch = noiseBuf.getChannelData(0);
     for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
@@ -81,4 +82,13 @@ export function playBuffer(buf: AudioBuffer, when: number, offset: number, durat
   src.buffer = buf; src.playbackRate.value = rate; src.connect(master);
   src.start(when, offset, duration);
   return src;
+}
+
+/** The coach's voice at audio time `when`; clicks and synth drums dip while it talks. */
+export function playVoice(buf: AudioBuffer, when = audio().currentTime) {
+  const c = audio(), src = c.createBufferSource();
+  src.buffer = buf; src.connect(voiceOut); src.start(when);
+  master.gain.setTargetAtTime(0.35, when, 0.03);
+  master.gain.setTargetAtTime(0.8, when + buf.duration, 0.1);
+  return when + buf.duration;
 }

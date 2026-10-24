@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { askCoach, Thinking, useCoachEntry } from '../coach/api';
 import type { Feedback } from '../coach/schemas';
+import { speakOnce } from '../coach/CoachFeedback';
 import { scoreJam, type JamHit, type JamStats } from '../engine/jam';
 import { PAD_INFO } from '../engine/kit';
 import { beatAt, songSecAt } from '../engine/tempo';
@@ -82,6 +83,7 @@ export function JamMode({ song, videoId, yt, rate }: ModeProps) {
 
 function JamResults({ stats: s, keyId, summary }: { stats: JamStats; keyId: string; summary: Record<string, unknown> }) {
   const e = useCoachEntry<Feedback>(keyId);
+  useEffect(() => { if (e?.status === 'done' && e.data) speakOnce(keyId, e.data); }, [keyId, e?.status, e?.data]);
   return (
     <div className="jamResults">
       <div className="grid3">

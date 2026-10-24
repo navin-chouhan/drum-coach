@@ -72,3 +72,10 @@ export function createLiveCoach(chattiness: Chattiness) {
     return null;
   };
 }
+
+/** Everything the coach may say during play, so the voice can prepare it ahead of time. */
+export const SPOKEN_CUES = [
+  'Rushing. Sit back', 'Dragging. Push', 'Steady', 'Only the notes shown', 'Hi-hat foot down',
+  'Accents louder', 'Softer ghost notes', 'Even strokes', "That's it",
+  ...(['kick', 'snare', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'crash', 'ride'] as ChartDrum[]).map(d => `${name(d)}!`),
+];

@@ -114,7 +114,25 @@ Resets never delete your run history (Progress tab).
 - **Calibrate.** Hit-each-pad wizard, editable note map (with conflict warnings) and latency
   calibration.
 
-### Learning songs from YouTube
+### The coach while you play
+- **Tips while you play** (Coach tab): short banners on the highway such as "Dragging by 30 ms. Push a little",
+  "Bring the kick back in", "Hi-hat foot down" (the MPS-150 sends *open* unless the pedal is held). At most one
+  tip every couple of bars. **How chatty**: quiet (only big problems), normal, talkative (adds dynamics tips
+  and more praise). Tips also show on the results screen and go to the AI coach.
+- **Voice**: "on screen + spoken" says the tips; "Speak verdicts and the coach's feedback" reads lesson verdicts
+  and the AI coach's main point; "Count me in out loud" says "one, two, three, four" on the count-in clicks.
+  Clicks and synth drums dip while the coach talks.
+
+**Voice setup (offline, one time):**
+```bash
+uv tool install piper-tts
+~/.local/share/uv/tools/piper-tts/bin/python -m piper.download_voices en_US-lessac-medium --data-dir data/voices
+```
+Restart `npm run dev`. Coach tab → "test the voice". Without Piper the browser's voice is used (robotic on Linux).
+Other voices: https://huggingface.co/rhasspy/piper-voices (put the `.onnx` + `.onnx.json` in `data/voices/`,
+or set `PIPER_VOICE=/path/voice.onnx` in `.env`). Rendered phrases are cached in `data/tts/`.
+
+## Learning songs from YouTube
 1. **Songs** tab → search "artist song", or paste a YouTube / YouTube Music link → **Learn this**.
 2. **Versions** → *Find drumless & covers*. Pick a drumless version to play along with and a drum
    cover to watch.
