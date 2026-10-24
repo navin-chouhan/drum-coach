@@ -60,7 +60,7 @@ function tone(t: number, type: OscillatorType, f0: number, f1: number, sweep: nu
 
 /** Synth drum at audio time `at` (default: now). */
 export function playDrum(pad: PadId, vel: number, at?: number) {
-  const t = at ?? audio().currentTime + 0.002, v = vel / 127;
+  const t = at ?? audio().currentTime, v = vel / 127;
   switch (pad) {
     case 'kick': tone(t, 'sine', 160, 42, 0.11, 0.38, 1.1 * v); noise(t, 0.02, 0.25 * v, [['lowpass', 1500]]); break;
     case 'snare': noise(t, 0.2, 0.7 * v, [['highpass', 1100]]); tone(t, 'triangle', 220, 160, 0.05, 0.12, 0.45 * v); break;
@@ -107,5 +107,7 @@ export function playVoice(buf: AudioBuffer, when = audio().currentTime) {
 export function stopVoices() {
   voices.forEach(v => { try { v.stop(); } catch { /* not started */ } });
   voices.clear();
-  master.gain.setTargetAtTime(0.8, audio().currentTime, 0.05);
+  const t = audio().currentTime; // drop the dips scheduled for those clips, or they'd still quiet the clicks
+  master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t);
+  master.gain.setTargetAtTime(0.8, t, 0.05);
 }
