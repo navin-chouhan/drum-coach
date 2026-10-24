@@ -10,6 +10,8 @@ import { suggestNext, type RunRow } from '../src/engine/progress.ts';
 import { ask, getProvider } from './ai/coach.ts';
 import { AiError } from './ai/providers.ts';
 import { AUDIO_DIR, db } from './db.ts';
+import { searchYouTube, YtError } from './youtube.ts';
+import { GridSchema, GrooveRequestSchema, YtSongCreateSchema, YtSongPatchSchema, type YtSong } from '../src/youtube/schemas.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 1_000_000 });
@@ -178,6 +180,78 @@ app.post('/api/coach/chat', async (req, reply) => {
   const b = ChatRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
   try { return await ask('chat', ChatReplySchema, { messages: b.data.messages, library: catalog() }); } catch (e) { return aiFail(reply, e); }
+});
+
+// ---------- YouTube songs ----------
+const ytFail = (reply: FastifyReply, e: unknown) => {
+  if (e instanceof YtError) return reply.code(e.status).send({ error: e.message });
+  throw e;
+};
+const Q = z.object({ q: z.string().trim().min(1).max(200) });
+app.get('/api/youtube/search', async (req, reply) => {
+  const p = Q.safeParse(req.query);
+  if (!p.success) return bad(reply, 'Type something to search for');
+  try { return await searchYouTube(p.data.q); } catch (e) { return ytFail(reply, e); }
+});
+const DRUMLESS = /drumless|no drums|without drums|drum ?less|minus drums|drums? removed/i;
+const COVER = /drum (cover|playthrough|tutorial|lesson)|drumcam|drum cam/i;
+app.get('/api/youtube/versions', async (req, reply) => {
+  const p = z.object({ title: z.string().trim().min(1).max(200) }).safeParse(req.query);
+  if (!p.success) return bad(reply, 'Missing title');
+  const title = p.data.title.replace(/\(official.*?\)|\[official.*?\]|\b(official (music )?video|lyrics?|audio|hd|4k)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+  try {
+    const [drumless, covers] = await Promise.all([searchYouTube(`${title} drumless`), searchYouTube(`${title} drum cover`)]);
+    const first = (xs: typeof drumless, re: RegExp) => [...xs.filter(x => re.test(x.title)), ...xs.filter(x => !re.test(x.title))];
+    return { drumless: first(drumless, DRUMLESS), covers: first(covers, COVER) };
+  } catch (e) { return ytFail(reply, e); }
+});
+
+type YtRow = { id: string; title: string; original_id: string; drumless_id: string | null; cover_id: string | null; ts_num: number; ts_den: number; notes_json: string };
+function ytSong(r: YtRow): YtSong {
+  const ids = [r.original_id, r.drumless_id, r.cover_id].filter(Boolean) as string[];
+  const grids = Object.fromEntries((db.prepare(`SELECT * FROM yt_grids WHERE video_id IN (${ids.map(() => '?').join(',')})`).all(...ids) as { video_id: string; bpm: number; offset_sec: number }[])
+    .map(g => [g.video_id, { bpm: g.bpm, offsetSec: g.offset_sec }]));
+  return { id: r.id, title: r.title, originalId: r.original_id, drumlessId: r.drumless_id, coverId: r.cover_id,
+    timeSignature: [r.ts_num, r.ts_den as 4], notes: JSON.parse(r.notes_json), grids };
+}
+const ytById = (id: string) => db.prepare('SELECT * FROM yt_songs WHERE id = ?').get(id) as YtRow | undefined;
+
+app.get('/api/ytsongs', async () => (db.prepare('SELECT * FROM yt_songs ORDER BY created_at DESC').all() as YtRow[]).map(ytSong));
+app.post('/api/ytsongs', async (req, reply) => {
+  const b = YtSongCreateSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  const id = `yt-${b.data.originalId}`;
+  db.prepare('INSERT OR IGNORE INTO yt_songs (id, title, original_id, drumless_id, cover_id) VALUES (?, ?, ?, ?, ?)')
+    .run(id, b.data.title, b.data.originalId, b.data.drumlessId ?? null, b.data.coverId ?? null);
+  return ytSong(ytById(id)!);
+});
+app.patch('/api/ytsongs/:id', async (req, reply) => {
+  const p = IdParam.safeParse(req.params), b = YtSongPatchSchema.safeParse(req.body);
+  if (!p.success || !b.success) return bad(reply, b.success ? 'Invalid id' : b.error);
+  const row = ytById(p.data.id);
+  if (!row) return reply.code(404).send({ error: 'Not found' });
+  const d = b.data;
+  db.prepare('UPDATE yt_songs SET title = ?, drumless_id = ?, cover_id = ?, ts_num = ?, ts_den = ?, notes_json = ? WHERE id = ?').run(
+    d.title ?? row.title, d.drumlessId === undefined ? row.drumless_id : d.drumlessId, d.coverId === undefined ? row.cover_id : d.coverId,
+    d.timeSignature?.[0] ?? row.ts_num, d.timeSignature?.[1] ?? row.ts_den, d.notes ? JSON.stringify(d.notes) : row.notes_json, p.data.id);
+  return ytSong(ytById(p.data.id)!);
+});
+app.delete('/api/ytsongs/:id', async (req, reply) => {
+  const p = IdParam.safeParse(req.params);
+  if (!p.success) return bad(reply, p.error);
+  db.prepare('DELETE FROM yt_songs WHERE id = ?').run(p.data.id);
+  return { ok: true };
+});
+app.put('/api/ytgrids/:videoId', async (req, reply) => {
+  const p = z.object({ videoId: z.string().regex(/^[\w-]{11}$/) }).safeParse(req.params), b = GridSchema.safeParse(req.body);
+  if (!p.success || !b.success) return bad(reply, 'Invalid grid');
+  db.prepare('INSERT OR REPLACE INTO yt_grids (video_id, bpm, offset_sec) VALUES (?, ?, ?)').run(p.data.videoId, b.data.bpm, b.data.offsetSec);
+  return { ok: true };
+});
+app.post('/api/coach/groove', async (req, reply) => {
+  const b = GrooveRequestSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  try { return await ask('groove', ChatReplySchema, b.data); } catch (e) { return aiFail(reply, e); }
 });
 
 await app.listen({ port: PORT, host: '127.0.0.1' });
