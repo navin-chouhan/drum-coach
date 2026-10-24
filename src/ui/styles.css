@@ -317,3 +317,14 @@
   .talkClose{position:absolute;top:6px;right:10px;color:var(--text);text-decoration:none;font-weight:800}
   .talkAction{display:block;width:100%;margin-top:8px;font-size:16px;padding:10px}
   .talkBubble .listening{color:var(--bad);font-weight:700}
+
+  /* --- navigation: gear + setup sub-tabs --- */
+  .tabs .gear{font-size:17px;line-height:1;padding:5px 10px}
+  .subTabs{flex-basis:100%;justify-content:flex-end}
+  .subTabs button{font-size:12px}
+  /* --- focus mode: only the music and Stop while a take runs --- */
+  .app.focus header{display:none}
+  .app.focus .play{grid-template-columns:170px minmax(0,1fr)}
+  .app.focus .playSide>:not(.inFocus){display:none}
+  .app.focus .playSide{justify-content:flex-end}
+  .app.focus canvas.highway{height:calc(100vh - 34px)}

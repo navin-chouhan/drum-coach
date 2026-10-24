@@ -37,11 +37,6 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   }
 
   useEffect(() => () => stop(), []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') stop(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
   const from = Math.min(section?.from ?? 1, chart.bars), to = Math.min(section?.to ?? chart.bars, chart.bars);
@@ -136,7 +131,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
             </div>
           </div>
         )}
-        <button className="primary big" onClick={playing ? stop : () => void go()}>{playing ? 'Stop (Esc)' : 'Start'}</button>
+        <button className="primary big inFocus" onClick={playing ? stop : () => void go()}>{playing ? 'Stop (Esc)' : 'Start'}</button>
         {error && <p className="warn">{error}</p>}
       </div>
       <section className="highwayWrap"><NotesView idle={{ chart, fromBar: from, toBar: to, bpm: chart.bpm * o.speed }} /></section>

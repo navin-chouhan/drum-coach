@@ -11,7 +11,8 @@ type Msg = { role: 'user' | 'assistant'; content: string; chart?: Chart };
 type SavedPlan = { id: number; plan: Plan; checks: Record<string, boolean> };
 const CHAT_KEY = 'drumcoach.chat';
 
-export function CoachView() {
+/** The coach's settings (shown under Setup → Coach and voice). */
+export function CoachSettings() {
   const [status, setStatus] = useState<{ ready: boolean; message: string }>();
   const settings = useSyncExternalStore(subscribeSettings, getSettings);
   const [engine, setEngine] = useState<string>();
@@ -43,15 +44,11 @@ export function CoachView() {
         <label className="check"><input type="checkbox" checked={settings.liveCoach} onChange={e => setSettings({ liveCoach: e.target.checked })} /> The coach follows my practice: greets each exercise, reacts to every take, suggests the next step (Claude, one call each)</label>
         <label className="check"><input type="checkbox" checked={settings.handsFree} onChange={e => setSettings({ handsFree: e.target.checked })} /> Hands-free: when the coach asks me something, listen for my answer (no need to hold V)</label>
       </div>
-      <div className="grid2">
-        <div className="stack"><NextCard /><PlanCard /></div>
-        <ChatCard />
-      </div>
     </div>
   );
 }
 
-function NextCard() {
+export function NextCard() {
   const [n, setN] = useState(0);
   const key = `next:${n}`;
   const e = useCoachEntry<NextExercise>(key);
@@ -74,7 +71,7 @@ function NextCard() {
   );
 }
 
-function PlanCard() {
+export function PlanCard() {
   const [saved, setSaved] = useState<SavedPlan | null>(null);
   const [form, setForm] = useState({ goals: 'Steady time on rock grooves and cleaner fills', minutesPerDay: 20, daysPerWeek: 5 });
   const [n, setN] = useState(0);
@@ -132,7 +129,7 @@ function PlanCard() {
   );
 }
 
-function ChatCard() {
+export function ChatCard() {
   const [msgs, setMsgs] = useState<Msg[]>(() => { try { return JSON.parse(localStorage.getItem(CHAT_KEY) ?? '[]'); } catch { return []; } });
   const [text, setText] = useState('');
   const [pendingKey, setPendingKey] = useState<string | null>(null);

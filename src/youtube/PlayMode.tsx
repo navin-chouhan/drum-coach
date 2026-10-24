@@ -16,11 +16,7 @@ export function PlayMode({ song, videoId, yt, rate }: ModeProps) {
   const lastBar = notes.length ? Math.floor(notes[notes.length - 1].t / bpb) + 1 : 1;
   const firstBar = notes.length ? Math.floor(notes[0].t / bpb) + 1 : 1;
   const [range, setRange] = useState({ from: firstBar, to: lastBar });
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') stop(); };
-    window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('keydown', onKey); stop(); };
-  }, []);
+  useEffect(() => () => stop(), []);
 
   const chart: Chart & { id: string } = { id: song.id, title: song.title, kind: 'song', bpm: grid.bpm, timeSignature: song.timeSignature, bars: lastBar, notes };
   const go = () => start(chart, {

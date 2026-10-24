@@ -23,7 +23,7 @@ const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, surv
  */
 export function LessonPlayer(props: Parameters<typeof Lesson>[0]) {
   return lessonById(props.lessonId) ? <Lesson {...props} />
-    : <div className="today"><div className="card"><p>This lesson no longer exists.</p><button onClick={props.onBack}>Back to Today</button></div></div>;
+    : <div className="today"><div className="card"><p>This lesson no longer exists.</p><button onClick={props.onBack}>Back to Journey</button></div></div>;
 }
 
 function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
@@ -139,22 +139,22 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
             {timeUp && !outcome.itemDone && <p className="small">That's your {minutes} minutes for this one. Move on, or keep going if you're in the zone.</p>}
             <button className="link" onClick={() => setDetails(true)}>Details and coach</button>
             {helpKey && (help?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson for this" />
-              : help?.status === 'done' ? <p className="small">Your coach wrote "{help.data?.title}". It's on the Today tab.</p>
+              : help?.status === 'done' ? <p className="small">Your coach wrote "{help.data?.title}". It's on Journey.</p>
               : <>{help?.status === 'error' && <p className="warn">{help.error}</p>}
                 <button className="link" onClick={askHelp}>Ask the coach for a lesson that fixes this</button></>)}
           </div>
         )}
-        <div className="actions">
-          {playing ? <button className="primary big" onClick={stop}>Stop</button> : <>
+        <div className="actions inFocus">
+          {playing ? <button className="primary big" onClick={stop}>Stop (Esc)</button> : <>
             <button onClick={() => play(true)}>Hear it</button>
             {!(oneTake && outcome) && <button className="primary big" autoFocus onClick={() => play(false)}>{outcome ? 'Next take' : 'Play'}</button>}
           </>}
         </div>
         <div className="actions">
           {itemDone && onNext && <button className="primary" onClick={onNext}>Next in today's session →</button>}
-          <button onClick={onBack}>Back to Today</button>
+          <button onClick={onBack}>Back to Journey</button>
  {lesson.source === 'ai' && <button className="link danger" onClick={() => { if (confirm(`Delete the coach's lesson "${lesson.title}"?`)) { stop(); void deleteCoachLesson(lesson.id).then(onBack); } }}>Delete this lesson</button>}
-          {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Progress.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
+          {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Trophies.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
         </div>
       </div>
       <section className="highwayWrap"><NotesView idle={{ chart: step.chart, bpm, goal: step.text }} /></section>

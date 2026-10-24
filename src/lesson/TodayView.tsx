@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
+import { ChatCard, NextCard, PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
 import type { Genre, Lesson } from '../engine/lesson';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
@@ -57,12 +58,12 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
         </div>
         {firstUndone >= 0
           ? <button className="primary big" autoFocus onClick={() => openItem(firstUndone)}>{session.done.length ? 'Continue' : 'Start today\'s session'}</button>
-          : <p className="doneMsg">Session done. Nice work! Play anything from your path, or try Free play.</p>}
+          : <p className="doneMsg">Session done. Nice work! Play anything from your path, or try Practice.</p>}
       </div>
 
       <div className="card">
         <h3>Today's session</h3>
-        {session.items.length === 0 && <p className="small">You've finished the whole path. Reviews will keep coming back; the Coach tab can make new exercises.</p>}
+        {session.items.length === 0 && <p className="small">You've finished the whole path. Reviews will keep coming back; ask the coach for new exercises below.</p>}
         <ol className="session">
           {session.items.map((it, i) => {
             const l = lessonById(it.lessonId), done = session.done.includes(i);
@@ -97,6 +98,11 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
         </div>
       )}
 
+      <div className="grid2">
+        <div className="stack"><NextCard /><PlanCard /></div>
+        <ChatCard />
+      </div>
+
       <div className="card">
         <h3>Your path</h3>
         {MILESTONES.map(m => {
@@ -128,7 +134,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
       </div>
 
       <div className="actions">
-        <button className="link danger" onClick={() => { if (confirm('Reset all lesson progress and redo the setup questions? Your run history in Progress is kept.')) resetAllLessons(); }}>Reset all lesson progress</button>
+        <button className="link danger" onClick={() => { if (confirm('Reset all lesson progress and redo the setup questions? Your run history in Trophies is kept.')) resetAllLessons(); }}>Reset all lesson progress</button>
       </div>
     </div>
   );
@@ -158,7 +164,7 @@ function Onboarding({ onCalibrate, onDone }: { onCalibrate: () => void; onDone: 
             {[15, 20, 25, 30, 45].map(m => <option key={m} value={m}>{m} minutes{m === 25 ? ' (recommended)' : ''}</option>)}
           </select>
         </label>
-        {!profile.onboarded && <p className="small">Before your first lesson: check that every pad is recognised and measure the latency, on the <button className="link" onClick={onCalibrate}>Calibrate tab</button>. No kit? The keyboard works too (keys are shown under the highway).</p>}
+        {!profile.onboarded && <p className="small">Before your first lesson: check that every pad is recognised and measure the latency, under <button className="link" onClick={onCalibrate}>Setup → Pads</button> (the gear, top right). No kit? The keyboard works too (keys are shown under the highway).</p>}
         <div className="actions"><button className="primary big" onClick={save}>{profile.onboarded ? 'Save' : 'Let\'s start'}</button>
           {profile.onboarded && <button onClick={onDone}>Cancel</button>}</div>
       </div>

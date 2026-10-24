@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CoachView } from '../coach/CoachView';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { CoachSettings } from '../coach/CoachView';
 import { SongsPage } from '../youtube/SongsPage';
 import { onHit } from '../input/hits';
 import { startKeyboard } from '../input/keyboard';
@@ -8,7 +8,7 @@ import { useMidi } from '../input/useMidi';
 import { TodayView } from '../lesson/TodayView';
 import { playDrum } from '../play/audio';
 import { PlayView } from '../play/PlayView';
-import { onCue, stop } from '../play/player';
+import { onCue, player, playerVersion, stop, subscribePlayer } from '../play/player';
 import { NUMBERS, prepare, say } from '../voice/voice';
 import { TalkToCoach } from '../voice/TalkToCoach';
 import { SPOKEN_CUES } from '../engine/liveCoach';
@@ -19,14 +19,25 @@ import { onPlayRequest, type PlayRequest } from './nav';
 import { ProgressView } from './ProgressView';
 import { Timeline } from './Timeline';
 
-const TABS = { today: 'Today', play: 'Free play', songs: 'Songs', coach: 'Coach', progress: 'Progress', kit: 'Kit', calibrate: 'Calibrate' } as const;
-type Tab = keyof typeof TABS;
+const TABS = { today: 'Journey', songs: 'Songs', play: 'Practice', progress: 'Trophies' } as const;
+// Setup is used on day one and when a pad acts up, so it sits behind the gear instead of in the tab bar.
+const SETUP = { pads: 'Pads', kit: 'Kit test', coach: 'Coach and voice' } as const;
+type Tab = keyof typeof TABS | 'setup';
 
 export function App() {
   const midi = useMidi();
   const [tab, setTabState] = useState<Tab>('today');
+  const [setup, setSetup] = useState<keyof typeof SETUP>('pads');
   const [pending, setPending] = useState<PlayRequest>();
   const setTab = (t: Tab) => { if (t !== tab) stop(); setTabState(t); };
+  const openPads = () => { setSetup('pads'); setTab('setup'); };
+  useSyncExternalStore(subscribePlayer, playerVersion);
+  const focus = player.phase === 'playing' && !player.options?.demo; // hide the chrome while you play
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') stop(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   useEffect(startKeyboard, []);
   useEffect(() => onHit(h => { if (h.pad && getSettings().browserSounds) playDrum(h.pad, h.velocity); }), []);
   useEffect(() => onPlayRequest(r => { stop(); setPending(r); setTabState('play'); }), []);
@@ -42,7 +53,7 @@ export function App() {
     : { text: 'No MIDI device — plug in the kit (keyboard works)', cls: 'bad' };
 
   return (
-    <div className="app">
+    <div className={focus ? 'app focus' : 'app'}>
       <header>
         <div className="brand"><span className="logo" />Drum Coach</div>
         <button className={`chip ${status.cls}`} onClick={midi.status === 'blocked' ? midi.retry : undefined}
@@ -54,18 +65,27 @@ export function App() {
         )}
         <div className="spacer" />
         <nav className="tabs">
-          {(Object.keys(TABS) as Tab[]).map(t => (
+          {(Object.keys(TABS) as (keyof typeof TABS)[]).map(t => (
             <button key={t} className={tab === t ? 'on' : ''} aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>{TABS[t]}</button>
           ))}
+          <button className={`gear ${tab === 'setup' ? 'on' : ''}`} aria-label="Setup" title="Setup: pads, kit test, coach and voice"
+            aria-current={tab === 'setup' ? 'page' : undefined} onClick={() => setTab('setup')}>⚙</button>
         </nav>
+        {tab === 'setup' && (
+          <nav className="tabs subTabs" aria-label="Setup">
+            {(Object.keys(SETUP) as (keyof typeof SETUP)[]).map(p => (
+              <button key={p} className={setup === p ? 'on' : ''} aria-current={setup === p ? 'page' : undefined} onClick={() => setSetup(p)}>{SETUP[p]}</button>
+            ))}
+          </nav>
+        )}
       </header>
-      {tab === 'today' && <TodayView onCalibrate={() => setTab('calibrate')} />}
-      {tab === 'kit' && (
+      {tab === 'today' && <TodayView onCalibrate={openPads} />}
+      {tab === 'setup' && setup === 'kit' && (
         <>
           <main>
             <KitView />
             <aside>
-              <LastHit onCalibrate={() => setTab('calibrate')} />
+              <LastHit onCalibrate={() => setSetup('pads')} />
               <div className="card small">
                 No kit? Keys: <kbd>Space</kbd> kick · <kbd>S</kbd> snare · <kbd>A</kbd>/<kbd>Q</kbd> hi-hat closed/open ·
                 {' '}<kbd>Z</kbd> pedal · <kbd>E</kbd> <kbd>R</kbd> <kbd>F</kbd> toms · <kbd>W</kbd> crash · <kbd>T</kbd> ride ·
@@ -78,9 +98,9 @@ export function App() {
       )}
       {tab === 'play' && <PlayView pending={pending} />}
       {tab === 'songs' && <SongsPage />}
-      {tab === 'coach' && <CoachView />}
       {tab === 'progress' && <ProgressView />}
-      {tab === 'calibrate' && <Calibrate device={midi.device ?? 'keyboard'} />}
+      {tab === 'setup' && setup === 'pads' && <Calibrate device={midi.device ?? 'keyboard'} />}
+      {tab === 'setup' && setup === 'coach' && <CoachSettings />}
       <TalkToCoach />
     </div>
   );
