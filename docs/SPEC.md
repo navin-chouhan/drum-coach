@@ -79,3 +79,13 @@ Status (2026-10-24): M0–M6 built; see README for how to run. M7 in progress.
 
 ## Non-goals (for now)
 - Audio-only transcription of songs (MP3 → drums), mobile apps, multi-user accounts, cloud hosting.
+
+## Future improvements
+- **Real drum removal for "no drums"** (2026-10-24). The live reduction (`src/youtube/tabAudio.ts`, `public/drum-reducer.js`)
+  only ducks transients and cuts the kick/cymbal bands: about −5 dB on drum hits at 50 % and −13 dB at 100 %, so on a dense
+  mix (tested on "We Will Rock You" with the real kit) the drums are quieter, not gone. Drumless YouTube uploads remain the
+  reliable path. Real removal needs a source-separation model (Demucs best, Open-Unmix lighter) on the shared tab audio,
+  streamed through the local server and discarded. Blocker found: the owner's laptop (i3-1215U, integrated GPU, 6 GB RAM)
+  likely runs Demucs slower than real time; separating ahead of playback would mean holding separated audio in memory,
+  which bends the YouTube rule above. Next step when picked up: a ~300 MB speed spike (CPU PyTorch + Demucs/Open-Unmix on
+  synthetic audio via `uv`) to measure real-time factor and RAM before designing anything.
