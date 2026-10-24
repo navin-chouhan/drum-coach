@@ -33,3 +33,8 @@ Channel 10 for everything. Background messages: MIDI Clock (0xF8) ~every 24 ms, 
 amidi -l                      # should list: hw:1,0,0  e-Drum MIDI 1
 amidi -p hw:1,0,0 -d          # raw dump; close before opening the browser
 ```
+
+## Audio latency (Linux)
+App sounds (clicks, browser drum sounds) reach the speakers `baseLatency + outputLatency` late; the Latency card shows it.
+On PipeWire, start Chrome with `PIPEWIRE_LATENCY=128/48000 google-chrome` for a smaller output buffer. The kit module's
+own sound has no such delay: for playing, headphones on the module with browser drum sounds off is the fastest path.

@@ -16,6 +16,7 @@ export function LatencyCard() {
   const [taps, setTaps] = useState(0);
   const cancel = useRef<() => void>(() => {});
   useEffect(() => () => cancel.current(), []);
+  const speakerMs = state === 'done' ? Math.round((audio().baseLatency + (audio().outputLatency || 0)) * 1000) : 0; // known once the clock runs
   useEffect(() => { void prepare(NUMBERS.slice(0, COUNT_IN)); }, []); // the spoken count-in is ready before Start
 
   function run() {
@@ -42,6 +43,8 @@ export function LatencyCard() {
       <p className="small">Current correction: <b>{settings.latencyMs} ms</b>. Press Start: the coach counts you in "1, 2, 3, 4",
         then hit any pad exactly with each of the next {CLICKS} clicks (one per second). Use the same headphones/speakers you practise with.</p>
       {state === 'running' && <p className="prompt">Tap along… {taps}/{CLICKS}</p>}
+      {state === 'done' && speakerMs > 20 && <p className="small">Your speakers add <b>{speakerMs} ms</b> to every app sound.
+        {settings.browserSounds && <> The kit's own sound is instant: plug headphones into the module and <button onClick={() => setSettings({ browserSounds: false })}>turn off browser drum sounds</button></>}</p>}
       {state === 'done' && (result
         ? <p>You hit on average <b>{Math.abs(result.latencyMs)} ms {result.latencyMs >= 0 ? 'after' : 'before'}</b> the click
             ({result.n} taps, spread ±{result.spread} ms).{(result.spread > MAX_SPREAD || result.n < MIN_TAPS) && ' Not steady enough to trust: try again, playing along with the clicks rather than reacting to them.'}</p>
