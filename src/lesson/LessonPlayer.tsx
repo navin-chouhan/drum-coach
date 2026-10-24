@@ -29,8 +29,8 @@ export function LessonPlayer(props: Parameters<typeof Lesson>[0]) {
     : <div className="today"><div className="card"><p>This lesson no longer exists.</p><button onClick={props.onBack}>Back to Journey</button></div></div>;
 }
 
-function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
-  lessonId: string; role?: SessionRole; minutes?: number; onNext?: () => void; onBack: () => void; onItemDone?: () => void;
+function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }: {
+  lessonId: string; role?: SessionRole; minutes?: number; onNext?: () => void; onBack: () => void; onItemDone?: () => void; onOpen?: (id: string) => void;
 }) {
   const lesson = lessonById(lessonId)!;
   useSyncExternalStore(subscribePlayer, playerVersion);
@@ -110,7 +110,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
   const timeUp = minutes !== undefined && secs >= minutes * 60;
   const itemDone = outcome?.itemDone || timeUp;
   const helpKey = f && outcome && !outcome.passed ? `help-${lesson.id}-${f.startedAt}` : null;
-  const help = useCoachEntry<{ title: string }>(helpKey);
+  const help = useCoachEntry<{ id: string; title: string }>(helpKey);
   const askHelp = () => f && helpKey && requestCoachLesson(helpKey, { lessonId: lesson.id, step: stepIdx + 1, reason: outcome?.reason ?? '', run: summarizeRun(f) });
 
   if (f && details) return <Results f={f} onAgain={() => play(false)} onBack={() => setDetails(false)} />;
@@ -161,7 +161,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
             {timeUp && !outcome.itemDone && <p className="small">That's your {minutes} minutes for this one. Move on, or keep going if you're in the zone.</p>}
             <button className="link" onClick={() => setDetails(true)}>Details and coach</button>
             {helpKey && (help?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson for this" />
-              : help?.status === 'done' ? <p className="small">Your coach wrote "{help.data?.title}". It's on Journey.</p>
+              : help?.status === 'done' ? <p className="small">Your coach wrote "{help.data?.title}".{' '}
+                {onOpen && help.data?.id ? <button className="primary" onClick={() => onOpen(help.data!.id)}>Open it</button> : "It's on Journey."}</p>
               : <>{help?.status === 'error' && <p className="warn">{help.error}</p>}
                 <button className="link" onClick={askHelp}>Ask the coach for a lesson that fixes this</button></>)}
           </div>

@@ -336,7 +336,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
     .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
   const existing = aiLessons();
   const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle });
-  if (!input) return bad(reply, 'You have finished every milestone. Ask the coach in chat for new challenges.');
+  if (!input) return bad(reply, 'You have finished every milestone. Hold V or the mic button and ask the coach for new challenges.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
     const same = existing.find(l => l.title === r.data.title && l.level === input.milestone.level);

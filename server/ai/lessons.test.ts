@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AiLessonSchema } from '../../src/coach/schemas';
+import { AiLessonSchema, RunRecordSchema } from '../../src/coach/schemas';
 import { CURRICULUM } from '../../src/content/curriculum';
 import { startProgress } from '../../src/engine/lesson';
 import { lessonInput, toLesson } from './lessons';
@@ -30,5 +30,12 @@ describe('coach lessons', () => {
     const out = toLesson({ ...l, focus: 'f' }, 2, 'abcde');
     expect(out).toMatchObject({ id: 'ai-the-money-beat-abcde', level: 2, source: 'ai' });
     expect(out.steps[1].chart.id).toBe('lesson/ai-the-money-beat-abcde/2');
+  });
+  it('takes of a stage-1 coach lesson with the longest titles can be saved', () => {
+    const l = CURRICULUM.find(x => x.id === 'money-8ths')!;
+    const out = toLesson({ ...l, focus: 'f', title: 'x'.repeat(80), steps: l.steps.map(s => ({ ...s, title: 'y'.repeat(60) })) }, 0);
+    const c = out.steps[0].chart;
+    expect(RunRecordSchema.safeParse({ chartId: c.id, chartTitle: c.title, level: out.level, startedAt: '2026-10-24T20:00:00.000Z',
+      durationS: 20, bpm: 60, speed: 1, accuracy: 90, meanOffset: 0, spread: 10, summary: {} }).success).toBe(true);
   });
 });

@@ -48,7 +48,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
     const item = open.item !== undefined ? session.items[open.item] : undefined;
     const nextIdx = session.items.findIndex((_, i) => i !== open.item && playable(i) && !session.done.includes(i));
     return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role} minutes={item?.minutes}
-      onBack={() => setOpen(undefined)}
+      onBack={() => setOpen(undefined)} onOpen={id => setOpen({ lessonId: id })}
       onItemDone={open.item === undefined ? undefined : () => markDone(open.item!)}
       onNext={open.item === undefined ? undefined : () => { markDone(open.item!); setOpen(nextIdx >= 0 ? { lessonId: session.items[nextIdx].lessonId, item: nextIdx } : undefined); }} />;
   }
@@ -81,7 +81,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
 
       <div className="card">
         <h3>Today's session</h3>
-        {session.items.length === 0 && <p className="small">You've finished the whole path. Reviews will keep coming back; ask the coach for new exercises below.</p>}
+        {session.items.length === 0 && <p className="small">You've finished the whole path. Reviews will keep coming back; hold V or the mic button to ask the coach for new exercises.</p>}
         <ol className="session">
           {session.items.map((it, i) => {
             const l = lessonById(it.lessonId), done = session.done.includes(i);

@@ -92,17 +92,18 @@ export function say(text: string) {
     proposed: state.reply?.action, lastTakeAccuracyPct: f?.stats.accuracy });
 }
 
-const toldTakes = new WeakSet<Finished>(), opened = new Map<string, number>();
+const toldTakes = new WeakSet<Finished>();
+let lastOpen = { id: '', at: 0 };
 /** A finished take (once per take; lessons add their verdict). Wait mode isn't a real take. */
 export function coachTake(f: Finished, lesson?: Record<string, unknown>) {
   if (toldTakes.has(f) || f.options.wait || !f.stats.total) return;
   toldTakes.add(f);
   void coachEvent({ type: 'take', ...summarizeRun(f), ...(lesson && { lessonResult: lesson }) });
 }
-/** Opened an exercise or lesson step (at most once per 3 minutes per exercise). */
+/** Opened an exercise or lesson step. Re-opening the same one within 3 minutes isn't news; switching back to it is. */
 export function coachOpen(chart: Chart & { id?: string }, bpm: number, goal?: string) {
   const id = chart.id ?? chart.title;
-  if (Date.now() - (opened.get(id) ?? 0) < 180_000) return;
-  opened.set(id, Date.now());
+  if (id === lastOpen.id && Date.now() - lastOpen.at < 180_000) return;
+  lastOpen = { id, at: Date.now() };
   void coachEvent({ type: 'open', chartId: id, title: chart.title, kind: chart.kind, level: chart.level, bpm: Math.round(bpm), goal: goal ?? chart.description });
 }

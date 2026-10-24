@@ -15,7 +15,13 @@ export function NotesView({ idle }: { idle?: { chart: Chart & { id?: string }; f
   const settings = useSyncExternalStore(subscribeSettings, getSettings), view = settings.playView;
   const idleChart = idle?.chart, goal = idle?.goal;
   const idleBpm = idle?.bpm ?? idle?.chart.bpm ?? 0;
-  useEffect(() => { if (idleChart) { loadTips(idleChart, goal); coachOpen(idleChart, idleBpm, goal); } }, [idleChart, goal, idleBpm]); // tips ready before the first take; the coach knows what's next
+  // Tips ready before the first take; the coach knows what's next. Waits until you stay on an exercise:
+  // browsing the list shouldn't cost two Claude calls per item.
+  useEffect(() => {
+    if (!idleChart) return;
+    const t = setTimeout(() => { loadTips(idleChart, goal); coachOpen(idleChart, idleBpm, goal); }, 1500);
+    return () => clearTimeout(t);
+  }, [idleChart, goal, idleBpm]);
   useSyncExternalStore(subscribePlayer, playerVersion);
   const playing = player.phase === 'playing';
   return (

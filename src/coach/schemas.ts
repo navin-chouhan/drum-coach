@@ -31,8 +31,12 @@ export type ShowoffSongs = { songs: (z.infer<typeof ShowoffSchema>['songs'][numb
 export const ChatReplySchema = z.object({ reply: z.string().min(1).max(4000), spoken: z.string().max(500).optional(), chart: ChartSchema.optional() });
 
 /** Live-tip wording written by the coach for one exercise (ids = engine/liveCoach.ts cue ids). "{ms}" = the measured ms. */
+// A tip that's too long for the banner (70) or to say mid-bar (45) is dropped on its own (that cue keeps the
+// built-in wording) instead of failing the whole answer.
+const fits = (t: { text: string; spoken: string }) => t.text.length <= 70 && t.spoken.length <= 45;
 export const TipsSchema = z.object({
-  tips: z.record(z.string().max(40), z.object({ text: z.string().min(1).max(70), spoken: z.string().min(1).max(45) })),
+  tips: z.record(z.string().max(40), z.object({ text: z.string().min(1).max(500), spoken: z.string().min(1).max(500) }))
+    .transform(tips => Object.fromEntries(Object.entries(tips).filter(([, t]) => fits(t)))),
 });
 export const TipsRequestSchema = z.object({
   title: z.string().min(1).max(160), kind: z.string().max(20).optional(), level: z.number().int().min(0).max(10).optional(),
@@ -71,7 +75,7 @@ export type ChatReply = z.infer<typeof ChatReplySchema>;
 
 // Requests from the browser (validated at the server boundary).
 export const RunRecordSchema = z.object({
-  chartId: z.string().max(80), chartTitle: z.string().max(120), level: z.number().int().min(1).max(10).optional(),
+  chartId: z.string().max(80), chartTitle: z.string().max(200), level: z.number().int().min(0).max(10).optional(),
   startedAt: z.string().datetime(), durationS: z.number().min(0).max(36_000),
   bpm: z.number().min(10).max(400), speed: z.number().min(0.25).max(2),
   accuracy: z.number().min(0).max(100), meanOffset: z.number(), spread: z.number().min(0),
