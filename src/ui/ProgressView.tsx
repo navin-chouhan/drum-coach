@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { dashboard, type Dashboard, type RunRow } from '../engine/progress';
 import { requestPlay } from './nav';
 
-const ACCENT = '#1E3550';
+const ACCENT = '#2F6FE4';
 
 export function ProgressView() {
   const [d, setD] = useState<Dashboard | null>(null);

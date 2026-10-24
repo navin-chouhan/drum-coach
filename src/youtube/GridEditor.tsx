@@ -29,12 +29,12 @@ export function GridEditor({ notes, take, suggestions = [], fromBeat, toBeat, st
       const cw = (W - LABEL) / cols;
       ROWS.forEach((d, r) => {
         if (r % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.03)'; c.fillRect(0, r * ROW_H, W, ROW_H); }
-        c.fillStyle = '#C9D8E8'; c.font = '11px system-ui'; c.textBaseline = 'middle'; c.textAlign = 'left';
+        c.fillStyle = '#E6E6E6'; c.font = '11px system-ui'; c.textBaseline = 'middle'; c.textAlign = 'left';
         c.fillText(NAMES[d], 6, r * ROW_H + ROW_H / 2);
       });
       for (let i = 0; i <= cols; i++) {
         const beat = i / stepsPerBeat, bar = Math.abs(((fromBeat + beat) / beatsPerBar) % 1) < 1e-6, onBeat = i % stepsPerBeat === 0;
-        c.strokeStyle = bar ? 'rgba(242,213,122,.5)' : onBeat ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.06)';
+        c.strokeStyle = bar ? 'rgba(255,225,77,.5)' : onBeat ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.06)';
         c.beginPath(); c.moveTo(LABEL + i * cw + 0.5, 0); c.lineTo(LABEL + i * cw + 0.5, H); c.stroke();
       }
       const x = (t: number) => LABEL + (t - fromBeat) * stepsPerBeat * cw + cw / 2;
@@ -59,7 +59,7 @@ export function GridEditor({ notes, take, suggestions = [], fromBeat, toBeat, st
       const b = beatAt(yt.songTime(), grid);
       if (b >= fromBeat && b < toBeat) {
         const px = LABEL + (b - fromBeat) * stepsPerBeat * cw;
-        c.strokeStyle = '#F2D57A'; c.lineWidth = 2; c.beginPath(); c.moveTo(px, 0); c.lineTo(px, H); c.stroke();
+        c.strokeStyle = '#FFE14D'; c.lineWidth = 2; c.beginPath(); c.moveTo(px, 0); c.lineTo(px, H); c.stroke();
       }
     };
     raf = requestAnimationFrame(draw);

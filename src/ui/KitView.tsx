@@ -4,6 +4,10 @@ import { emitPad, onHit } from '../input/hits';
 import { DRUMS, DRUM_BY_ID, type DrumGfx } from './drums';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
+const INK = '#141414';
+const FONT = '"Arial Black", Impact, sans-serif';
+// Comic sound words popped off a pad on each hit.
+const BURST: Record<PadId, string> = { kick: 'BOOM!', snare: 'BAM!', tom1: 'DUM!', tom2: 'DUM!', floor: 'DOOM!', crash: 'KRASH!', ride: 'TING!', hhClosed: 'TSS!', hhOpen: 'TSSSH!', hhPedal: 'CHK!' };
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 type PadEls = { body: SVGGElement; glow: SVGCircleElement; flash: SVGCircleElement; ripples: SVGGElement; hhTop?: SVGGElement };
@@ -11,12 +15,12 @@ type PadEls = { body: SVGGElement; glow: SVGCircleElement; flash: SVGCircleEleme
 function Cymbal({ d, shade = 1 }: { d: DrumGfx; shade?: number }) {
   return (
     <g>
-      <circle cx={d.x} cy={d.y} r={d.r} fill="url(#gCym)" stroke="#5e4214" strokeWidth={1.5} opacity={shade} />
+      <circle cx={d.x} cy={d.y} r={d.r} fill="#FFE14D" stroke={INK} strokeWidth={4} opacity={shade} />
       {[1, 2, 3, 4, 5].map(k => (
-        <circle key={k} cx={d.x} cy={d.y} r={d.r * (0.25 + k * 0.14)} fill="none" stroke="#5e4214" strokeWidth={0.8} opacity={0.28} />
+        <circle key={k} cx={d.x} cy={d.y} r={d.r * (0.25 + k * 0.14)} fill="none" stroke={INK} strokeWidth={1.5} opacity={0.35} />
       ))}
-      <circle cx={d.x} cy={d.y} r={d.r * 0.2} fill="#f0c766" stroke="#8a6420" strokeWidth={1} />
-      <circle cx={d.x} cy={d.y} r={4} fill="#3b2a0c" />
+      <circle cx={d.x} cy={d.y} r={d.r * 0.2} fill="#FF9F1C" stroke={INK} strokeWidth={3} />
+      <circle cx={d.x} cy={d.y} r={4} fill={INK} />
     </g>
   );
 }
@@ -24,10 +28,10 @@ function Cymbal({ d, shade = 1 }: { d: DrumGfx; shade?: number }) {
 function Label({ d }: { d: DrumGfx }) {
   const isCym = d.type === 'cymbal' || d.type === 'hihat';
   const dark = d.type === 'kick';
-  const dy = dark ? 40 : isCym ? d.r * 0.5 : 2;
+  const dy = dark ? 40 : isCym ? d.r * 0.5 : d.id === 'snare' ? d.r * 0.58 : 2;
   return (
-    <text x={d.x} y={d.y + dy} textAnchor="middle" fontSize={d.r > 90 ? 20 : 16} fontWeight={700}
-      fill={dark ? '#1E3550' : isCym ? '#4a3510' : '#2A2A2A'} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+    <text x={d.x} y={d.y + dy} textAnchor="middle" fontSize={d.r > 90 ? 20 : 15} fontFamily={FONT}
+      fill={INK} stroke="#fff" strokeWidth={dark ? 5 : 0} paintOrder="stroke" style={{ pointerEvents: 'none', userSelect: 'none' }}>
       {d.name}
     </text>
   );
@@ -41,12 +45,13 @@ export function KitView() {
   const hhState = useRef<SVGTextElement>(null);
   const thump = useRef<HTMLDivElement>(null);
   const hhOpen = useRef(false);
+  const pupil = useRef<SVGGElement>(null);
 
   function setHiHat(open: boolean) {
     const top = els.current.hihat.hhTop!;
     hhOpen.current = open;
     hhState.current!.textContent = open ? 'open' : 'closed';
-    hhState.current!.setAttribute('fill', open ? DRUM_BY_ID.hihat.color : '#C9D8E8');
+    hhState.current!.setAttribute('fill', open ? DRUM_BY_ID.hihat.color : '#fff');
     top.style.transition = 'translate .12s ease-out';
     top.style.translate = open ? '-7px -10px' : '0px 0px';
   }
@@ -96,15 +101,37 @@ export function KitView() {
           { duration: 450 + Math.random() * 300, easing: 'cubic-bezier(.1,.7,.3,1)' }).onfinish = () => s.remove();
       }
     }
+    const word = document.createElementNS(SVGNS, 'text');
+    const wx = d.x + (Math.random() - 0.5) * d.r, wy = d.y - d.r * 0.75;
+    Object.entries({ class: 'burst', x: wx, y: wy, 'text-anchor': 'middle', 'font-family': FONT, 'font-size': 22 + 16 * v,
+      fill: d.type === 'cymbal' || d.type === 'hihat' ? '#FF5FA2' : '#FFE14D', stroke: INK, 'stroke-width': 5, 'paint-order': 'stroke' })
+      .forEach(([k, val]) => word.setAttribute(k, String(val)));
+    word.textContent = BURST[pad];
+    p.ripples.appendChild(word);
+    const tilt = (Math.random() - 0.5) * 24;
+    word.animate([
+      { transform: `rotate(${tilt}deg) scale(.3)`, opacity: 1 },
+      { transform: `rotate(${tilt}deg) scale(1.15) translateY(-6px)`, opacity: 1, offset: 0.25 },
+      { transform: `rotate(${tilt}deg) scale(1) translateY(-26px)`, opacity: 0 },
+    ], { duration: 650, easing: 'ease-out' }).onfinish = () => word.remove();
+
     if (id === 'kick') {
       thump.current?.animate([{ opacity: 0.4 + 0.6 * v }, { opacity: 0 }], { duration: 380, easing: 'ease-out' });
       kickPedal.current?.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(.6)' }, { transform: 'scaleY(1)' }], { duration: 200 });
     }
   }
 
+  // The snare's eye glances toward the pad you just hit.
+  function look(id: DrumId) {
+    const s = DRUM_BY_ID.snare, d = DRUM_BY_ID[id], dx = d.x - s.x, dy = d.y - s.y, len = Math.hypot(dx, dy) || 1;
+    const k = id === 'snare' ? 0 : s.r * 0.22;
+    if (pupil.current) pupil.current.style.translate = `${(dx / len) * k}px ${(dy / len) * k * 0.45}px`;
+  }
+
   useEffect(() => onHit(h => {
     if (!h.pad) return;
     const drum = PAD_INFO[h.pad].drum;
+    look(drum);
     if (drum === 'hihat') {
       setHiHat(h.pad === 'hhOpen');
       hhPedal.current?.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(.6)' }, { transform: 'scaleY(1)' }], { duration: 200 });
@@ -126,28 +153,21 @@ export function KitView() {
       <div className="thump" ref={thump} />
       <svg className="kit" viewBox="0 0 1000 640" role="img" aria-label="Drum kit">
         <defs>
-          <radialGradient id="gHead" cx="45%" cy="40%" r="65%">
-            <stop offset="0" stopColor="#f4f1ea" /><stop offset=".7" stopColor="#d9d4c9" /><stop offset="1" stopColor="#b9b3a6" />
-          </radialGradient>
-          <radialGradient id="gKick" cx="45%" cy="30%" r="80%">
-            <stop offset="0" stopColor="#CFE6F7" /><stop offset="1" stopColor="#8FBFE6" />
-          </radialGradient>
-          <radialGradient id="gCym" cx="38%" cy="32%" r="75%">
-            <stop offset="0" stopColor="#ffe7a3" /><stop offset=".35" stopColor="#e2b24f" />
-            <stop offset=".75" stopColor="#b07d2a" /><stop offset="1" stopColor="#7a5418" />
-          </radialGradient>
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10" /></filter>
           <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="10" stdDeviation="10" floodColor="#000" floodOpacity=".55" />
+            <feDropShadow dx="7" dy="7" stdDeviation="0" floodColor="#FF5FA2" floodOpacity="1" />
           </filter>
+          <pattern id="dots" width="12" height="12" patternUnits="userSpaceOnUse">
+            <rect width="12" height="12" fill="#FFE14D" /><circle cx="6" cy="6" r="2.6" fill="#E8423F" />
+          </pattern>
         </defs>
-        <ellipse cx={480} cy={622} rx={400} ry={16} fill="#0B1626" opacity={0.45} />
+        <ellipse cx={480} cy={622} rx={400} ry={16} fill="#FF5FA2" opacity={0.3} />
         <g opacity={0.9}>
-          <rect x={470} y={588} width={60} height={40} rx={8} fill="#3A2E22" stroke="#6B5A43" />
-          <rect ref={kickPedal} x={480} y={594} width={40} height={28} rx={5} fill="#5A4630" style={pedalStyle} />
-          <rect x={120} y={438} width={60} height={40} rx={8} fill="#3A2E22" stroke="#6B5A43" />
-          <rect ref={hhPedal} x={130} y={444} width={40} height={28} rx={5} fill="#5A4630" style={pedalStyle} />
-          <text x={150} y={496} textAnchor="middle" fill="#C9D8E8" fontSize={12} fontFamily="Georgia, serif" fontStyle="italic">hi-hat pedal</text>
+          <rect x={470} y={588} width={60} height={40} rx={8} fill={INK} stroke="#FFE14D" strokeWidth={3} />
+          <rect ref={kickPedal} x={480} y={594} width={40} height={28} rx={5} fill="#2F6FE4" style={pedalStyle} />
+          <rect x={120} y={438} width={60} height={40} rx={8} fill={INK} stroke="#FFE14D" strokeWidth={3} />
+          <rect ref={hhPedal} x={130} y={444} width={40} height={28} rx={5} fill="#2F6FE4" style={pedalStyle} />
+          <text x={150} y={496} textAnchor="middle" fill="#fff" fontSize={12} fontFamily={FONT}>HH pedal</text>
         </g>
         {DRUMS.map(d => {
           const isKick = d.type === 'kick';
@@ -158,15 +178,20 @@ export function KitView() {
               <g ref={reg(d.id, 'body')} className="body" filter="url(#shadow)">
                 {d.type === 'drum' || isKick ? (
                   <>
-                    <circle cx={d.x} cy={d.y} r={d.r} fill={d.color} stroke="#2A2118" strokeWidth={3} />
+                    <circle cx={d.x} cy={d.y} r={d.r} fill={d.color} stroke={INK} strokeWidth={4} />
                     {Array.from({ length: lugs }, (_, i) => {
                       const a = (i / lugs) * Math.PI * 2;
-                      return <circle key={i} cx={d.x + Math.cos(a) * (d.r - 4)} cy={d.y + Math.sin(a) * (d.r - 4)} r={3.2} fill="#E2C27A" stroke="#5A4630" strokeWidth={0.8} />;
+                      return <circle key={i} cx={d.x + Math.cos(a) * (d.r - 4)} cy={d.y + Math.sin(a) * (d.r - 4)} r={3.6} fill="#fff" stroke={INK} strokeWidth={1.5} />;
                     })}
-                    <circle cx={d.x} cy={d.y} r={d.r * 0.88} fill={isKick ? 'url(#gKick)' : 'url(#gHead)'} />
-                    <circle cx={d.x} cy={d.y} r={d.r * 0.88} fill="none" stroke="#2A2118" strokeWidth={1.5} opacity={0.5} />
-                    {isKick && <g fill="#fff" opacity={0.9}>{/* a Magritte sky painted on the kick head */}
-                      <ellipse cx={d.x - 20} cy={d.y - 22} rx={42} ry={12} /><ellipse cx={d.x + 6} cy={d.y - 30} rx={26} ry={11} />
+                    <circle cx={d.x} cy={d.y} r={d.r * 0.88} fill={isKick ? 'url(#dots)' : '#fff'} stroke={INK} strokeWidth={3} />
+                    {d.id === 'snare' && <g pointerEvents="none">{/* the snare is watching */}
+                      <ellipse cx={d.x} cy={d.y - 6} rx={d.r * 0.55} ry={d.r * 0.27} fill="#fff" stroke={INK} strokeWidth={3} />
+                      <g ref={pupil} style={{ transition: 'translate .18s ease-out' }}>
+                        <circle cx={d.x} cy={d.y - 6} r={d.r * 0.19} fill="#2F6FE4" stroke={INK} strokeWidth={2.5} />
+                        <circle cx={d.x} cy={d.y - 6} r={d.r * 0.08} fill={INK} />
+                        <circle cx={d.x + d.r * 0.06} cy={d.y - 6 - d.r * 0.07} r={d.r * 0.04} fill="#fff" />
+                      </g>
+                      <ellipse className="lid" cx={d.x} cy={d.y - 6} rx={d.r * 0.57} ry={d.r * 0.29} fill={d.color} stroke={INK} strokeWidth={3} />
                     </g>}
                     <circle ref={reg(d.id, 'flash')} cx={d.x} cy={d.y} r={d.r * 0.88} fill={d.color} opacity={0} />
                     <Label d={d} />
@@ -188,7 +213,7 @@ export function KitView() {
                   </>
                 )}
               </g>
-              {d.type === 'hihat' && <text ref={hhState} x={d.x} y={d.y + d.r + 22} textAnchor="middle" fontSize={12} fill="#C9D8E8" fontFamily="Georgia, serif" fontStyle="italic">closed</text>}
+              {d.type === 'hihat' && <text ref={hhState} x={d.x} y={d.y + d.r + 22} textAnchor="middle" fontSize={12} fill="#fff" fontFamily={FONT}>closed</text>}
               <g ref={reg(d.id, 'ripples')} />
             </g>
           );
