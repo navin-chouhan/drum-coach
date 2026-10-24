@@ -4,6 +4,7 @@ import { MAX_SPEED } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { audio } from './audio';
 import { NotesView } from './NotesView';
+import { onCoachAction } from '../coach/session';
 import { player, playerVersion, start, stop, subscribePlayer, type PlayOptions } from './player';
 import { Results } from './Results';
 
@@ -45,15 +46,28 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
   const from = Math.min(section?.from ?? 1, chart.bars), to = Math.min(section?.to ?? chart.bars, chart.bars);
 
-  async function go() {
+  async function go(speed = o.speed) {
     setError('');
     let backing: PlayOptions['backing'];
     if (chart.hasAudio) {
       try { backing = { buffer: await loadBacking(chart.id, audio()), syncOffsetMs: chart.syncOffsetMs ?? 0 }; }
       catch { setError('Could not load the backing audio; playing without it.'); }
     }
-    start(chart, { ...o, fromBar: from, toBar: to, backing });
+    start(chart, { ...o, speed, fromBar: from, toBar: to, backing });
   }
+  // The coach's suggested next step: again / slower / faster replays this exercise, next picks the next one.
+  useEffect(() => onCoachAction(a => {
+    if (a.kind === 'next') {
+      const n = charts[charts.findIndex(c => c.id === chart.id) + 1];
+      if (n) { set({ chartId: n.id }); setSection(null); }
+      return true;
+    }
+    const want = a.bpm ? a.bpm / chart.bpm : a.kind === 'slower' ? o.speed - 0.1 : a.kind === 'faster' ? o.speed + 0.05 : o.speed;
+    const speed = Math.max(0.5, Math.min(MAX_SPEED, a.bpm ? want : Math.round(want * 20) / 20)); // the coach's tempo exactly
+    set({ speed });
+    void go(speed);
+    return true;
+  }));
 
   async function nudge(ms: number) {
     const syncOffsetMs = (chart.syncOffsetMs ?? 0) + ms;
@@ -62,7 +76,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   }
 
   if (player.phase === 'done' && player.finished) {
-    return <Results f={player.finished} onAgain={go} onBack={stop} />;
+    return <Results f={player.finished} onAgain={() => void go()} onBack={stop} />;
   }
 
   const playing = player.phase === 'playing';
@@ -122,7 +136,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
             </div>
           </div>
         )}
-        <button className="primary big" onClick={playing ? stop : go}>{playing ? 'Stop (Esc)' : 'Start'}</button>
+        <button className="primary big" onClick={playing ? stop : () => void go()}>{playing ? 'Stop (Esc)' : 'Start'}</button>
         {error && <p className="warn">{error}</p>}
       </div>
       <section className="highwayWrap"><NotesView idle={{ chart, fromBar: from, toBar: to, bpm: chart.bpm * o.speed }} /></section>

@@ -4,6 +4,7 @@ import { beatAt, songSecAt } from '../engine/tempo';
 import { NotesView } from '../play/NotesView';
 import { player, playerVersion, start, stop, subscribePlayer } from '../play/player';
 import { Results } from '../play/Results';
+import { onCoachAction } from '../coach/session';
 import type { ModeProps } from './SongView';
 
 /** Your transcription on the note highway, synced to the video (drumless version recommended), scored like any exercise. */
@@ -21,8 +22,6 @@ export function PlayMode({ song, videoId, yt, rate }: ModeProps) {
     return () => { window.removeEventListener('keydown', onKey); stop(); };
   }, []);
 
-  if (!notes.length) return <div className="card"><h3>Play (scored)</h3><p className="small">Transcribe some bars in "Learn by ear" first, then play them here with the song.</p></div>;
-
   const chart: Chart & { id: string } = { id: song.id, title: song.title, kind: 'song', bpm: grid.bpm, timeSignature: song.timeSignature, bars: lastBar, notes };
   const go = () => start(chart, {
     fromBar: range.from, toBar: Math.max(range.from, range.to), repeats: 1, speed: rate,
@@ -34,6 +33,10 @@ export function PlayMode({ song, videoId, yt, rate }: ModeProps) {
     },
   });
 
+  // the song can't change speed mid-way, so any step the coach suggests = play again
+  useEffect(() => (notes.length ? onCoachAction(() => { go(); return true; }) : undefined));
+
+  if (!notes.length) return <div className="card"><h3>Play (scored)</h3><p className="small">Transcribe some bars in "Learn by ear" first, then play them here with the song.</p></div>;
   if (player.phase === 'done' && player.finished) return <Results f={player.finished} onAgain={go} onBack={stop} />;
   const playing = player.phase === 'playing';
   return (

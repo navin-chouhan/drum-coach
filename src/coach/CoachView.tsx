@@ -40,9 +40,8 @@ export function CoachView() {
           {' '}<button className="link" onClick={() => void say('Ready when you are. One, two, three, four.', true)}>test the voice</button></p>
         <label className="check"><input type="checkbox" checked={settings.countIn} onChange={e => setSettings({ countIn: e.target.checked })} /> Count me in out loud ("one, two, three, four")</label>
         <label className="check"><input type="checkbox" checked={settings.aiTips} onChange={e => setSettings({ aiTips: e.target.checked })} /> The coach writes the tips for each exercise (one Claude call per exercise, then cached)</label>
-        <label className="check"><input type="checkbox" checked={settings.aiBriefing} onChange={e => setSettings({ aiBriefing: e.target.checked })} /> Brief me before a take (one Claude call when you open an exercise)</label>
-        <label className="check"><input type="checkbox" checked={settings.autoCoach} onChange={e => setSettings({ autoCoach: e.target.checked })} />
-          AI debrief after every take, spoken when "Speak" is on (one Claude call per take)</label>
+        <label className="check"><input type="checkbox" checked={settings.liveCoach} onChange={e => setSettings({ liveCoach: e.target.checked })} /> The coach follows my practice: greets each exercise, reacts to every take, suggests the next step (Claude, one call each)</label>
+        <label className="check"><input type="checkbox" checked={settings.handsFree} onChange={e => setSettings({ handsFree: e.target.checked })} /> Hands-free: when the coach asks me something, listen for my answer (no need to hold V)</label>
       </div>
       <div className="grid2">
         <div className="stack"><NextCard /><PlanCard /></div>

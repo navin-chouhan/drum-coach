@@ -7,17 +7,18 @@ import type { Chattiness } from '../engine/liveCoach';
 const KEY = 'drumcoach.settings';
 export type Session = { date: string; items: SessionItem[]; done: number[] }; // frozen when the day's session starts
 export type Settings = {
-  latencyMs: number; browserSounds: boolean; autoCoach: boolean;
+  latencyMs: number; browserSounds: boolean;
   profile: Profile; lessons: Record<string, LessonProgress>; session?: Session;
   updatedAt?: number; // ms; the newer copy wins when browser and server disagree
   liveTips: 'off' | 'screen' | 'voice'; chattiness: Chattiness;
   voice: boolean; countIn: boolean; // speak verdicts and coach feedback; spoken count-in
   playView: 'sheet' | 'highway';     // how notes are shown while playing
-  aiTips: boolean; aiBriefing: boolean; // the coach writes the live tips / briefs you before a take (Claude calls)
+  aiTips: boolean;                    // the coach writes the live tip wording per exercise (one Claude call each)
+  liveCoach: boolean; handsFree: boolean; // the live coaching conversation; listen for answers without holding V
   v?: number; // settings version, for one-time migrations
 };
 const DEFAULTS: Settings = {
-  latencyMs: 0, browserSounds: false, autoCoach: true, liveTips: 'voice', chattiness: 'normal', voice: true, countIn: true, playView: 'sheet', aiTips: true, aiBriefing: true, v: 2,
+  latencyMs: 0, browserSounds: false, liveTips: 'voice', chattiness: 'normal', voice: true, countIn: true, playView: 'sheet', aiTips: true, liveCoach: true, handsFree: true, v: 2,
   profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
 };
 

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { AiLessonSchema, BriefingRequestSchema, BriefingSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
+import { SessionEventSchema, AiLessonSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import { suggestNext, type RunRow } from '../src/engine/progress.ts';
@@ -11,6 +11,7 @@ import { ask, getProvider } from './ai/coach.ts';
 import { lessonInput, toLesson } from './ai/lessons.ts';
 import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
+import { coachTurn } from './ai/session.ts';
 import { AUDIO_DIR, db } from './db.ts';
 import { searchYouTube, YtError } from './youtube.ts';
 import { speech, ttsStatus } from './tts.ts';
@@ -186,7 +187,26 @@ app.post('/api/coach/chat', async (req, reply) => {
   try { return await ask('chat', ChatReplySchema, { messages: b.data.messages, context: b.data.context, library: catalog() }); } catch (e) { return aiFail(reply, e); }
 });
 
-// ---------- coach: live-tip wording and pre-take briefings ----------
+// ---------- the live coaching conversation (streams sentences as server-sent events) ----------
+app.post('/api/coach/session', async (req, reply) => {
+  const b = SessionEventSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  const event: Record<string, unknown> = { ...b.data };
+  if (event.type === 'open' && typeof event.chartId === 'string') { // give the coach their history on this exercise
+    event.pastTakes = (db.prepare('SELECT started_at, bpm, accuracy, mean_offset, spread FROM runs WHERE chart_id = ? ORDER BY started_at DESC LIMIT 5').all(event.chartId) as
+      { started_at: string; bpm: number; accuracy: number; mean_offset: number; spread: number }[]).reverse()
+      .map(r => ({ at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracyPct: r.accuracy, meanOffsetMs: r.mean_offset, spreadMs: r.spread }));
+  }
+  reply.hijack();
+  const res = reply.raw;
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
+  const sse = (name: string, data: unknown) => res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+  try { sse('reply', await coachTurn(event, s => sse('say', s))); }
+  catch (e) { sse('error', { error: e instanceof AiError ? e.message : String(e) }); }
+  res.end();
+});
+
+// ---------- coach: live-tip wording (written once per exercise) ----------
 app.post('/api/coach/tips', async (req, reply) => {
   const b = TipsRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
@@ -194,16 +214,6 @@ app.post('/api/coach/tips', async (req, reply) => {
     const r = await ask('tips', TipsSchema, b.data);
     return { data: { tips: Object.fromEntries(Object.entries(r.data.tips).filter(([id]) => b.data.cueIds.includes(id))) }, cached: r.cached };
   } catch (e) { return aiFail(reply, e); }
-});
-app.post('/api/coach/briefing', async (req, reply) => {
-  const b = BriefingRequestSchema.safeParse(req.body);
-  if (!b.success) return bad(reply, b.error);
-  const recentTakes = (db.prepare('SELECT started_at, bpm, accuracy, mean_offset, spread, summary_json FROM runs WHERE chart_id = ? ORDER BY started_at DESC LIMIT 5').all(b.data.chartId) as
-    { started_at: string; bpm: number; accuracy: number; mean_offset: number; spread: number; summary_json: string }[]).reverse().map(r => {
-    const s = JSON.parse(r.summary_json);
-    return { at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracyPct: r.accuracy, meanOffsetMs: r.mean_offset, spreadMs: r.spread, perDrum: s.perDrum, weakSpots: s.weakSpots, liveTips: s.liveTips };
-  });
-  try { return await ask('briefing', BriefingSchema, { title: b.data.title, goal: b.data.goal, recentTakes }); } catch (e) { return aiFail(reply, e); }
 });
 
 // ---------- coach voice (Piper, offline) ----------

@@ -34,9 +34,6 @@ export const TipsRequestSchema = z.object({
   title: z.string().min(1).max(160), kind: z.string().max(20).optional(), level: z.number().int().min(0).max(10).optional(),
   goal: z.string().max(400).optional(), cueIds: z.array(z.string().max(40)).min(1).max(30),
 });
-/** A short spoken briefing before a take. */
-export const BriefingSchema = z.object({ text: z.string().min(1).max(400), spoken: z.string().min(1).max(300) });
-export const BriefingRequestSchema = z.object({ chartId: z.string().min(1).max(120), title: z.string().min(1).max(160), goal: z.string().max(400).optional() });
 
 /** A lesson the coach writes for this student (see server/prompts/lesson.md). */
 export const AiLessonSchema = z.object({
@@ -84,3 +81,19 @@ export const ChatRequestSchema = z.object({
 export const PlanRequestSchema = z.object({
   goals: z.string().min(1).max(500), minutesPerDay: z.number().int().min(5).max(180), daysPerWeek: z.number().int().min(1).max(7),
 });
+
+/** The live coaching conversation (server/ai/session.ts, server/prompts/session.md). */
+export const SessionEventSchema = z.object({
+  type: z.enum(['open', 'take', 'said']),
+}).catchall(z.unknown()).refine(e => JSON.stringify(e).length < 20_000, { message: 'event too large' });
+export const CoachReplySchema = z.object({
+  say: z.string().min(1).max(400),
+  show: z.string().max(500).optional(),
+  action: z.object({
+    kind: z.enum(['again', 'slower', 'faster', 'next', 'drill']), label: z.string().min(1).max(40),
+    bpm: z.number().min(30).max(300).optional(), chartId: z.string().max(80).optional(), chart: ChartSchema.optional(), now: z.boolean().optional(),
+  }).optional(),
+  ask: z.boolean().optional(),
+});
+export type SessionEvent = z.infer<typeof SessionEventSchema>;
+export type CoachReply = z.infer<typeof CoachReplySchema>;

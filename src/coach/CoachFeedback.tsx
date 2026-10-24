@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo } from 'react';
 import { saveChart } from '../content/charts';
-import { getSettings, subscribeSettings } from '../input/settings';
+import { getSettings } from '../input/settings';
 import type { Finished } from '../play/player';
 import { requestPlay } from '../ui/nav';
 import { askCoach, Thinking, useCoachEntry } from './api';
@@ -16,19 +16,11 @@ export function speakOnce(key: string, f: Feedback) {
   void say(f.spoken ?? f.feedback.split(/(?<=[.!?])\s/)[0]);
 }
 
-/** Asks the coach about a finished take in the background and speaks the answer (lessons use this; results show it too). */
-export function debrief(f: Finished) {
-  const key = `feedback:${f.startedAt}`;
-  askCoach<Feedback>(key, 'feedback', { summary: summarizeRun(f) }, d => speakOnce(key, d));
-}
-
 export function CoachFeedback({ f }: { f: Finished }) {
-  const settings = useSyncExternalStore(subscribeSettings, getSettings);
   const summary = useMemo(() => summarizeRun(f), [f]);
   const key = `feedback:${f.startedAt}`;
   const e = useCoachEntry<Feedback>(key);
   const ask = () => askCoach(key, 'feedback', { summary });
-  useEffect(() => { if (settings.autoCoach) askCoach(key, 'feedback', { summary }); }, [key, summary, settings.autoCoach]);
   useEffect(() => { if (e?.status === 'done' && e.data) speakOnce(key, e.data); }, [key, e?.status, e?.data]);
 
   async function playDrill(d: Feedback['drill']) {
@@ -39,7 +31,7 @@ export function CoachFeedback({ f }: { f: Finished }) {
   return (
     <div className="card coach">
       <h3>Coach</h3>
-      {!e && <button className="primary" onClick={ask}>Ask the coach about this run</button>}
+      {!e && <button onClick={ask}>Detailed feedback and a drill</button>}
       {e?.status === 'thinking' && <Thinking />}
       {e?.status === 'error' && <><p className="warn">{e.error}</p><button onClick={ask}>Try again</button></>}
       {e?.status === 'done' && e.data && (

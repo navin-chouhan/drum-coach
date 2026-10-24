@@ -9,7 +9,7 @@ import { player, playerVersion, start, stop, subscribePlayer, type Finished, typ
 import { Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
-import { debrief } from '../coach/CoachFeedback';
+import { coachTake, onCoachAction } from '../coach/session';
 import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -71,7 +71,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
     }
     outcomes.set(f, o);
     if (getSettings().voice) void say(o.text);
-    if (getSettings().autoCoach && !f.options.wait) debrief(f); // spoken AI debrief after the verdict
+    coachTake(f, { lesson: lesson.title, step: step.title, passed: check.ok, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target });
     if (o.itemDone) onItemDone?.();
     saveRun(f, { passed: check.ok });
     setSecs(s => s + f.durationS);
@@ -85,7 +85,17 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
     activeLanes: step.activeLanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1,
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
   });
-  const play = (demo: boolean) => { setDetails(false); start(step.chart, options(demo)); };
+  const play = (demo: boolean, atBpm = bpm) => { setDetails(false); start(step.chart, { ...options(demo), speed: atBpm / step.chart.bpm }); };
+  // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.
+  useEffect(() => onCoachAction(a => {
+    if (a.kind === 'next') { onNext?.(); return !!onNext; }
+    const cur = progressOf(lesson).bpm;
+    const want = a.bpm ?? (a.kind === 'slower' ? cur - 5 : a.kind === 'faster' ? cur + 5 : cur);
+    const nb = oneTake ? bpm : Math.max(step.bpm.start, Math.min(step.bpm.target, Math.round(want)));
+    if (!oneTake && nb !== cur) saveProgress(lesson.id, { ...progressOf(lesson), bpm: nb });
+    play(false, nb);
+    return true;
+  }));
   const timeUp = minutes !== undefined && secs >= minutes * 60;
   const itemDone = outcome?.itemDone || timeUp;
   const helpKey = f && outcome && !outcome.passed ? `help-${lesson.id}-${f.startedAt}` : null;

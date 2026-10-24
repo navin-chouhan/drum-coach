@@ -313,3 +313,7 @@
   @media (prefers-reduced-motion: reduce){.talkBtn.on{animation:none}}
   .talkBubble{background:var(--panel);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);padding:10px 14px;cursor:pointer;max-height:50vh;overflow:auto}
   .talkBubble p{margin:4px 0}
+  .talkBubble{position:relative;min-width:260px}
+  .talkClose{position:absolute;top:6px;right:10px;color:var(--text);text-decoration:none;font-weight:800}
+  .talkAction{display:block;width:100%;margin-top:8px;font-size:16px;padding:10px}
+  .talkBubble .listening{color:var(--bad);font-weight:700}

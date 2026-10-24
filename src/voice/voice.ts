@@ -57,3 +57,30 @@ export async function say(text: string, urgent = false) {
   busyUntil = now + 300 + text.length * 70; // rough length, the browser doesn't tell us
   speechSynthesis.speak(u);
 }
+
+// Sentences of one reply play back to back (the live coach streams them as they're written).
+let queueEnd = 0;
+/** Says `text` after whatever the coach is already saying. Resolves when it has been scheduled. */
+export async function sayNext(text: string) {
+  if (await voiceEngine() === 'piper') {
+    const buf = await clip(text);
+    if (buf) {
+      const c = audio(), at = Math.max(c.currentTime + 0.02, queueEnd);
+      log(`next:${text}`);
+      queueEnd = playVoice(buf, at);
+      busyUntil = performance.now() + (queueEnd - c.currentTime) * 1000;
+      return;
+    }
+  }
+  if (!('speechSynthesis' in window)) return;
+  log(`browser:${text}`);
+  speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { rate: 1.05 }));
+  busyUntil = Math.max(busyUntil, performance.now()) + 300 + text.length * 70;
+}
+/** Resolves when the coach has finished talking (for hands-free listening). */
+export function untilQuiet(): Promise<void> {
+  return new Promise(res => {
+    const check = () => (performance.now() >= busyUntil && !(('speechSynthesis' in window) && speechSynthesis.speaking) ? res() : setTimeout(check, 150));
+    check();
+  });
+}

@@ -27,8 +27,8 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
   const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
   // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone.
   useEffect(() => {
-    if (s.autoCoach && s.profile.onboarded && milestone && !coachOpen.length) requestCoachLesson(coachKey);
-  }, [s.autoCoach, s.profile.onboarded, milestone, coachOpen.length, coachKey]);
+    if (s.liveCoach && s.profile.onboarded && milestone && !coachOpen.length) requestCoachLesson(coachKey);
+  }, [s.liveCoach, s.profile.onboarded, milestone, coachOpen.length, coachKey]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 

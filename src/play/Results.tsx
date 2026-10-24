@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { DrumId } from '../engine/kit';
 import { CoachFeedback } from '../coach/CoachFeedback';
+import { coachTake } from '../coach/session';
 import { summarizeRun } from '../coach/summary';
 import { DRUM_BY_ID } from '../ui/drums';
 import { HIGHWAY_LANES } from './Highway';
@@ -28,7 +29,7 @@ export function saveRun(f: Finished, extra?: Record<string, unknown>) {
 
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
   const s = f.stats, wait = f.options.wait;
-  useEffect(() => saveRun(f), [f]);
+  useEffect(() => { saveRun(f); coachTake(f); }, [f]);
   const slotLabel = (i: number) => (i % 4 === 0 ? String(i / 4 + 1) : COUNT[i % 4]);
   return (
     <div className="results">
