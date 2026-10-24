@@ -44,6 +44,7 @@ export function LatencyCard() {
         then hit any pad exactly with each of the next {CLICKS} clicks (one per second). Use the same headphones/speakers you practise with.</p>
       {state === 'running' && <p className="prompt">Tap along… {taps}/{CLICKS}</p>}
       {state === 'done' && speakerMs > 20 && <p className="small">Your speakers add <b>{speakerMs} ms</b> to every app sound.
+        {speakerMs > 100 && <b> That's Bluetooth-size delay: every click and count reaches you late. Use wired headphones (or the module's PHONES with the laptop in its AUX IN).</b>}
         {settings.browserSounds && <> The kit's own sound is instant: plug headphones into the module and <button onClick={() => setSettings({ browserSounds: false })}>turn off browser drum sounds</button></>}</p>}
       {state === 'done' && (result
         ? <p>You hit on average <b>{Math.abs(result.latencyMs)} ms {result.latencyMs >= 0 ? 'after' : 'before'}</b> the click

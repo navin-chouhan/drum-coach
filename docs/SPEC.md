@@ -34,8 +34,9 @@ plan that adapts over time.
 - Metronome with accents and subdivisions.
 
 ### 4. Scoring
-- Match hits to expected notes per drum with windows: Perfect ±25 ms, Good ±60 ms, else miss.
-  A stroke further off but within 30 % of a beat (at least 200 ms) of its note is that note's miss, not also an
+- Match hits to expected notes per drum with windows: Perfect ±40 ms, Good ±100 ms, else miss. For fast notes Good
+  shrinks to 40 % of the closest gap between two notes on one drum (Perfect to half of Good), so a 16th can't be
+  "good" halfway to the next one. A stroke further off but within 30 % of a beat (at least 250 ms) of its note is that note's miss, not also an
   extra; only strokes that belong to no note are extra hits. A repeat of the same note within 60 ms that isn't
   louder (stick bounce, pad retrigger) is ignored at input. Hi-hat 42/46 both count as "hi-hat" unless the chart
   asks for open.

@@ -300,7 +300,7 @@ prototype/   the original single-file prototype
 
 **Data flow.** A MIDI or keyboard hit goes onto the hit bus with a `performance.now()` timestamp and
 the pad from your note map. The player matches it against the expected notes, after subtracting
-your latency, using Perfect ±25 ms and Good ±60 ms windows (a stroke slightly further off is a miss
+your latency, using Perfect ±40 ms and Good ±100 ms windows, tighter for fast notes (a stroke slightly further off is a miss
 for its note rather than an extra; stick bounces within 60 ms are ignored). The finished take gives `RunStats`, which
 drives the verdict, the tempo ladder and the saved run. The coach later reads those saved runs to
 write lessons.

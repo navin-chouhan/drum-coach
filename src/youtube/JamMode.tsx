@@ -3,6 +3,7 @@ import { askCoach, Thinking, useCoachEntry } from '../coach/api';
 import type { Feedback } from '../coach/schemas';
 import { speakOnce } from '../coach/CoachFeedback';
 import { scoreJam, type JamHit, type JamStats } from '../engine/jam';
+import { WINDOWS } from '../engine/scoring';
 import { PAD_INFO } from '../engine/kit';
 import { beatAt, songSecAt } from '../engine/tempo';
 import { onHit } from '../input/hits';
@@ -87,7 +88,7 @@ function JamResults({ stats: s, keyId, summary }: { stats: JamStats; keyId: stri
   return (
     <div className="jamResults">
       <div className="grid3">
-        <div><div className="big">{s.onGridPct}%</div><div className="small">hits on the beat (±60 ms) · {s.perfectPct}% within ±25 ms</div></div>
+        <div><div className="big">{s.onGridPct}%</div><div className="small">hits on the beat (±{WINDOWS.good} ms) · {s.perfectPct}% within ±{WINDOWS.perfect} ms</div></div>
         <div><div className="big">{timing(s.meanOffset)}</div><div className="small">consistency ±{s.spread} ms</div></div>
         <div><div className="big">{s.driftMsPerMin === null ? '—' : Math.abs(s.driftMsPerMin) < 30 ? 'steady tempo' : s.driftMsPerMin < 0 ? 'speeding up' : 'slowing down'}</div>
           <div className="small">{s.driftMsPerMin === null ? 'play 20 s or more to measure drift' : `drift ${s.driftMsPerMin} ms per minute`}</div></div>
