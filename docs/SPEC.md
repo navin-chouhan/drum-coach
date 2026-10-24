@@ -30,7 +30,7 @@ plan that adapts over time.
 
 ### 3. Play-along engine
 - Note highway (Canvas), lanes in kit order, hit line, beat/bar grid, count-in.
-- Tempo control (practice at 50–100% speed), loop a section (bars A–B), wait mode (song waits for the right hit).
+- Tempo control (practice at 50–125% speed), loop a section (bars A–B), wait mode (song waits for the right hit).
 - Metronome with accents and subdivisions.
 
 ### 4. Scoring
@@ -55,8 +55,16 @@ plan that adapts over time.
 - SQLite: sessions, runs, per-run stats, charts, settings.
 - Dashboard: practice streak, minutes, accuracy trend per exercise, BPM progress.
 
+### 7. Guided learning (see `docs/LEARNING.md`)
+- Curriculum of levelled lessons (`src/content/curriculum.ts`): what / why / how text and steps.
+  Each step has a chart, the lanes the student plays (`activeLanes`, the app plays the rest),
+  a start and target tempo, and pass criteria.
+- Tempo ladder per step, spaced review of finished lessons, and a daily session planner
+  (warm-up, review, skill, groove) on the **Today** tab. Onboarding asks for goals and minutes per day.
+- Profile and lesson progress live in the app settings (localStorage, mirrored to SQLite).
+
 ## Milestones
-Status (2026-10-24): M0–M6 built; see README for how to run.
+Status (2026-10-24): M0–M6 built; see README for how to run. M7 in progress.
 
 - **M0 — Scaffold**: Vite+React+TS app, Node server, Vitest, lint, `npm run dev` starts both.
 - **M1 — Input**: MIDI service, keyboard fallback, kit view with animations, calibration and note map.
@@ -65,6 +73,7 @@ Status (2026-10-24): M0–M6 built; see README for how to run.
 - **M4 — AI coach**: `AiProvider` (CLI provider default, API fallback), backend endpoints, post-run feedback, next-exercise, chart generation with validation.
 - **M5 — Songs**: MIDI and audio import, sync tool, song library.
 - **M6 — Progress**: SQLite persistence, dashboard, weekly plan.
+- **M7 — Guided path**: LEARNING.md, curriculum, player active lanes/demo/gap click, tempo ladder, spaced review, Today planner, onboarding, path map.
 
 ## Non-goals (for now)
 - Audio-only transcription of songs (MP3 → drums), mobile apps, multi-user accounts, cloud hosting.

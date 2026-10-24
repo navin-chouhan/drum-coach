@@ -1,0 +1,72 @@
+# How Drum Coach teaches
+
+The owner is an adult learning drums as a first instrument, with mixed music goals and 20–30
+minutes a day. The app should feel like a patient teacher: it decides what to practise today,
+explains why, demonstrates, listens, and moves the tempo for you. This file is the pedagogy the
+code follows. Lesson content lives in `src/content/curriculum.ts`.
+
+## What an adult beginner has to learn
+1. **Setup and body.** Throne height, pad placement, posture, matched grip and fulcrum, letting the
+   stick rebound, relaxed wrists, heel-up and heel-down kick, hi-hat pedal control, warm-ups,
+   hearing and wrist safety. On this e-kit the hi-hat pad sends *open* (46) unless the pedal is
+   held down, so "pedal down" is a habit to build from day one.
+2. **Rhythm literacy.** This is the biggest gap without any music background: pulse, tempo,
+   counting out loud (1 2 3 4, 1 & 2 &, 1 e & a), quarter, 8th, 16th and triplet notes, rests,
+   4/4 then 6/8, straight versus swung feel, rushing versus dragging.
+3. **Limb independence.** Build a groove one limb at a time (hi-hat, then kick, then snare).
+   Later, ostinatos and four-way coordination.
+4. **Rudiments.** Single strokes, double strokes, the paradiddle, flam, drag and buzz. About eight
+   cover a beginner.
+5. **Grooves.** The money beat and its variations, kick on the and-of-3, 16th hi-hats, open
+   hi-hats, ride grooves, half-time, shuffle, basic funk, 6/8, the jazz ride pattern.
+6. **Fills and phrasing.** 8th and 16th fills around the toms, crash on 1, 4- and 8-bar phrases.
+7. **Dynamics.** Even volume, accents, ghost notes. The kit reports velocity, so this is measurable.
+8. **Reading.** Basic notation is optional, but adults like to see structure.
+9. **Musicality and songs.** Song form, playing along to music early.
+10. **Practice skills and mindset.** Short daily practice beats one long weekly session. Go slow,
+    get it right, then go faster. Isolate the hard bar. Use the metronome, including a gap click.
+    Review old material. Measure instead of guessing. Expect plateaus. Adults want the *why*,
+    and need quick wins in week one.
+
+## Teaching methods the app uses
+| Method | How the app does it |
+|---|---|
+| Layered groove building | A lesson step lists its `activeLanes`. The app plays the other lanes, so you learn hi-hat alone, then add kick, then snare. |
+| Demo first | Every step has **Hear it**: the app plays the whole pattern at your tempo. |
+| Count out loud | A one-bar count-in, and big beat numbers on the highway for the counting lessons. |
+| Tempo ladder | Two clean takes (≥ 90%) → +5 BPM until the step's target. Three misses in a row → −5 BPM, never below the start tempo. |
+| Specific feedback, one fix | After each take, one line: pass or the main reason it failed. The AI coach is one click away. |
+| Gap click | Later steps silence the click every other bar, so you keep time on your own. |
+| Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |
+| Interleaving | A day's session is warm-up, review, one new skill and one groove or song. It isn't 30 minutes of one thing. |
+| Daily plan, not a menu | The **Today** tab builds the session from your progress. You press Start. |
+| Progress you can see | Path map by level, BPM per lesson, streak and minutes. |
+| Expectations | Each lesson says what it is, why it matters, how to play it, and what passing means. |
+
+Distilled from common beginner methods: levelled courses (technique, timing, independence,
+musicality), scored play-along apps, the Stick Control and Syncopation drill books, and
+groove-essentials-style play-along libraries.
+
+## Curriculum shape
+Levels 0–6. Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
+if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.
+
+| Level | Theme |
+|---|---|
+| 0 | Setup, posture, counting quarters and 8ths |
+| 1 | One limb at a time; single strokes and accents |
+| 2 | The money beat, built layer by layer; double strokes; four on the floor; first song |
+| 3 | Kick variations, open hi-hat, crash phrasing, first fills, a rock song |
+| 4 | 16ths, paradiddle, ghost notes, open-hat grooves, ride groove |
+| 5 | Triplets, shuffle, half-time, funk, 6/8, a shuffle song |
+| 6 | Jazz ride, feathered kick, comping, a swing tune |
+
+Songs are written "in the style of" and played by the built-in synth. No copyrighted audio ships.
+Real songs come in through the Songs tab (MIDI import with an optional backing track).
+
+## Rules of thumb in the code
+- Pass criteria default to 90% accuracy with at most 15% extra hits. A step can add a timing limit
+  (|mean offset|), a velocity-evenness limit (CV %) or a ghost-to-accent volume ratio.
+- Keyboard timing is 10–30 ms late, so expect *Good* rather than *Perfect*. Never calibrate latency
+  from the keyboard. Ghost-note checks need the real kit.
+- Wait mode is for learning the pattern only; it never counts as a pass.

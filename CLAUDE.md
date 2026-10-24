@@ -4,7 +4,8 @@ Personal AI drum instructor app. The owner plays a **Millenium MPS-150** electro
 connected over USB to a **Linux laptop** (also has a MacBook and iPad). The app runs locally in
 **Google Chrome** and reads the kit via the **Web MIDI API**.
 
-Read `docs/SPEC.md` for the product plan and milestones, and `docs/KIT.md` for verified hardware facts.
+Read `docs/SPEC.md` for the product plan and milestones, `docs/KIT.md` for verified hardware facts, and
+`docs/LEARNING.md` for how the app teaches (lessons are authored in `src/content/curriculum.ts` with `pattern()`).
 `prototype/drum-stage.html` is a working single-file prototype (animated kit, hit timeline,
 metronome with timing scoring). Reuse its ideas and code; don't throw away what works.
 
