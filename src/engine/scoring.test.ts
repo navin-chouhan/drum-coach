@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { computeStats, createMatcher, estimateLatency, latencySuspect, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { computeStats, createMatcher, estimateLatency, latencySuspect, minGapBeats, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -78,7 +78,7 @@ describe('stats', () => {
     const hits = perfectHits().map((h, i) => ({ ...h, velocity: run.notes[i].accent ? 120 : run.notes[i].ghost ? 30 : 80 }));
     const { results } = scoreRun(expected, hits);
     const s = computeStats(run, results, 0);
-    expect(s.velocity).toEqual({ normalMean: 80, normalCv: 0, accentMean: 120, ghostMean: 30 });
+    expect(s.velocity).toEqual({ normalMean: 80, normalCv: 0, accentMean: 120, ghostMean: 30, pairDrop: 0 });
   });
 });
 
@@ -103,5 +103,33 @@ describe('latencySuspect', () => {
     expect(latencySuspect(hits([20, -30, 50, -10, 60, -40, 15, 5]))).toBeNull();
     expect(latencySuspect(hits([90, 80, 70]))).toBeNull();
     expect(latencySuspect(hits([90, 80, 70, 60, 50, -40, -30, 60]))).toBeNull(); // 75% late: could be the hands
+  });
+});
+
+describe('windows shrink for fast notes', () => {
+  it('Good is 40% of the closest same-drum gap, capped at ±100', () => {
+    expect(windowsFor(1000)).toMatchObject({ good: 100, perfect: 40 });
+    const gap = minGapBeats(pattern({ snare: 'xxxxxxxxxxxxxxxx', kick: 'x...x...x...x...' }, 4)); // snare 16ths
+    expect(gap).toBe(0.25);
+    expect(windowsFor(600, gap * 600)).toMatchObject({ good: 60, perfect: 30 }); // 16ths at 100 BPM: 150 ms apart
+    expect(minGapBeats([{ t: 0, drum: 'kick' }, { t: 0, drum: 'hihat' }])).toBe(Infinity); // different drums don't count
+  });
+});
+
+describe('flam and pair drop', () => {
+  const together = buildRun({ title: 'f', bpm: 60, timeSignature: [4, 4], bars: 1, notes: pattern({ hihat: 'xxxx', kick: 'xxxx' }, 1) }, { fromBar: 1, toBar: 1, repeats: 1 });
+  const res = (offsets: number[], vel = 90) => offsets.map(offset => ({ judgement: 'good' as const, offset, velocity: vel }));
+  it('flam is the mean split between notes meant to land together', () => {
+    // notes sorted by t: pairs (hihat, kick) at each beat
+    expect(computeStats(together, res([30, -10, 30, -10, 30, -10, 30, -10]), 0).flam).toBe(40);
+    expect(computeStats(together, res([5, 5, 5, 5, 5, 5, 5, 5]), 0).flam).toBe(0);
+  });
+  it('pair drop: the 2nd of each pair softer than the 1st; a miss does not shift the pairing', () => {
+    const singles = buildRun({ title: 'd', bpm: 60, timeSignature: [4, 4], bars: 1, notes: pattern({ snare: 'xxxxxxxxxxxxxxxx' }, 4) }, { fromBar: 1, toBar: 1, repeats: 1 });
+    const vels = Array.from({ length: 16 }, (_, i) => (i % 2 ? 70 : 100));
+    const r = vels.map(velocity => ({ judgement: 'good' as const, offset: 0, velocity }));
+    expect(computeStats(singles, r, 0).velocity.pairDrop).toBe(30);
+    const missed = [{ judgement: 'miss' as const }, ...r.slice(1)];
+    expect(computeStats(singles, missed, 0).velocity.pairDrop).toBe(30);
   });
 });

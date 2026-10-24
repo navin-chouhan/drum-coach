@@ -97,7 +97,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   useEffect(() => () => { stop(); dropCoachAction(); }, []);
 
   const options = (demo: boolean): PlayOptions => ({
-    fromBar: 1, toBar: step.chart.bars, repeats: Math.max(1, Math.round(4 / step.chart.bars)),
+    // 8 bars a take; the proving take (last step at its target tempo) is 16, since grooves drift around bar 12.
+    fromBar: 1, toBar: step.chart.bars, repeats: Math.max(1, Math.ceil((stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target ? 16 : 8) / step.chart.bars)),
     speed: bpm / step.chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait: false,
     activeLanes: step.activeLanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1,
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },

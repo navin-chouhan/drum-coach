@@ -10,6 +10,9 @@ export type Pass = {
   maxAbsOffsetMs?: number;    // rushing/dragging limit
   maxVelocityCv?: number;     // evenness: velocity variation % of normal notes
   maxGhostToAccent?: number;  // dynamics: ghost (or unaccented) volume / accent volume
+  maxSpreadMs?: number;       // consistency: std dev of hit offsets
+  maxFlamMs?: number;         // limbs meant to land together: mean split between them
+  maxPairDropPct?: number;    // doubles: how much softer the 2nd note of each pair may be
 };
 export const DEFAULT_PASS: Pass = { accuracy: 90, maxExtraPct: 15 };
 
@@ -56,6 +59,12 @@ export function checkPass(s: RunStats, p?: Partial<Pass>): { ok: boolean; reason
     const soft = s.velocity.ghostMean ?? s.velocity.normalMean, loud = s.velocity.accentMean;
     if (loud && soft / loud > c.maxGhostToAccent) return { ok: false, reason: 'Make the accents louder and the other notes softer.' };
   }
+  if (c.maxSpreadMs !== undefined && s.spread > c.maxSpreadMs)
+    return { ok: false, reason: `Your hits wander ±${s.spread} ms. Keep each one the same distance from the click.` };
+  if (c.maxFlamMs !== undefined && s.flam !== null && s.flam > c.maxFlamMs)
+    return { ok: false, reason: `Hands and feet split by ${s.flam} ms. Make them land as one sound.` };
+  if (c.maxPairDropPct !== undefined && s.velocity.pairDrop !== null && s.velocity.pairDrop > c.maxPairDropPct)
+    return { ok: false, reason: `The second note of each double is ${s.velocity.pairDrop}% softer. Let it bounce, then help it with your fingers.` };
   return { ok: true };
 }
 
@@ -72,11 +81,11 @@ function worstDrum(s: RunStats) {
 
 /**
  * Stars for the take that completed a lesson (always at the target tempo):
- * ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra and ≥70% of notes perfect.
+ * ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra, ≥70% of notes perfect and spread ≤15 ms.
  */
 export function starsFor(s: RunStats): 1 | 2 | 3 {
   const extraPct = s.total ? (s.extra / s.total) * 100 : 0, perfectPct = s.total ? (s.perfect / s.total) * 100 : 0;
-  if (s.accuracy >= 98 && extraPct <= 2 && perfectPct >= 70) return 3;
+  if (s.accuracy >= 98 && extraPct <= 2 && perfectPct >= 70 && s.spread <= 15) return 3;
   if (s.accuracy >= 95 && extraPct <= 5) return 2;
   return 1;
 }

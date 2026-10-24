@@ -31,5 +31,6 @@ Answer shape:
   "focus": string, "checkpoint"?: string, "what": string, "why": string, "how": string,
   "steps": [ { "title": string (≤ 40 chars), "text": "one instruction line",
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
-    "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1 },
+    "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
+      "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles) },
     "gapBars"?: 2 } ] }

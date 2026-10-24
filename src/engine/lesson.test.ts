@@ -12,7 +12,7 @@ const D = '2026-10-24';
 const stats = (o: Partial<RunStats> = {}): RunStats => ({
   total: 20, perfect: 18, good: 1, miss: 1, extra: 0, accuracy: 95, meanOffset: 5, spread: 10,
   perDrum: { snare: { total: 20, hit: 19, accuracy: 95, meanOffset: 5 } },
-  velocity: { normalMean: 90, normalCv: 8, accentMean: null, ghostMean: null }, heat: [], ...o,
+  velocity: { normalMean: 90, normalCv: 8, accentMean: null, ghostMean: null, pairDrop: null }, flam: null, heat: [], ...o,
 });
 
 describe('checkPass', () => {
@@ -26,8 +26,17 @@ describe('checkPass', () => {
     expect(checkPass(stats({ extra: 5 })).ok).toBe(false);
     expect(checkPass(stats({ meanOffset: -40 }), { maxAbsOffsetMs: 30 }).reason).toMatch(/Rushing by 40/);
     expect(checkPass(stats(), { maxVelocityCv: 5 }).ok).toBe(false);
-    expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: null } }), { maxGhostToAccent: 0.8 }).ok).toBe(true);
-    expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: 96 } }), { maxGhostToAccent: 0.6 }).ok).toBe(false);
+    expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: null, pairDrop: null } }), { maxGhostToAccent: 0.8 }).ok).toBe(true);
+    expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: 96, pairDrop: null } }), { maxGhostToAccent: 0.6 }).ok).toBe(false);
+  });
+
+  it('spread, flam and weak doubles fail with one plain reason', () => {
+    expect(checkPass(stats({ spread: 45 }), { maxSpreadMs: 40 }).reason).toMatch(/wander ±45 ms/);
+    expect(checkPass(stats({ spread: 30 }), { maxSpreadMs: 40 }).ok).toBe(true);
+    expect(checkPass(stats({ flam: 40 }), { maxFlamMs: 25 }).reason).toMatch(/split by 40 ms/);
+    expect(checkPass(stats(), { maxFlamMs: 25 }).ok).toBe(true); // nothing landing together: no check
+    const v = stats().velocity;
+    expect(checkPass(stats({ velocity: { ...v, pairDrop: 30 } }), { maxPairDropPct: 15 }).reason).toMatch(/30% softer/);
   });
 });
 
@@ -84,5 +93,6 @@ describe('starsFor', () => {
     expect(starsFor(stats({ accuracy: 98, perfect: 14 }))).toBe(3); // 70% perfect
     expect(starsFor(stats({ accuracy: 98, perfect: 13 }))).toBe(2);
     expect(starsFor(stats({ accuracy: 100, perfect: 20, extra: 1 }))).toBe(2); // 5% extra is too many for three
+    expect(starsFor(stats({ accuracy: 100, perfect: 20, spread: 20 }))).toBe(2); // hits wandering ±20 ms is not three
   });
 });

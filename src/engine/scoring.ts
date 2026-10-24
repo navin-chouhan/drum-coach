@@ -3,8 +3,25 @@ import type { PadId } from './kit.ts';
 import type { Run } from './run.ts';
 
 export const WINDOWS = { perfect: 40, good: 100, near: 250 }; // near: an off-time stroke still belongs to its note (a miss, not an extra)
-/** Windows for a tempo: "near" grows with the beat (30% of it), so a slow-tempo slip isn't an extra; a hit on the & still is. */
-export const windowsFor = (beatMs: number) => ({ ...WINDOWS, near: Math.max(WINDOWS.near, beatMs * 0.3) });
+/**
+ * Windows for a tempo: "near" grows with the beat (30% of it), so a slow-tempo slip isn't an extra; a hit on the & still is.
+ * Fast notes shrink Good to 40% of the closest gap between two notes on one drum (`gapMs`), so a 16th can't be "good" halfway to the next one.
+ */
+export function windowsFor(beatMs: number, gapMs = Infinity) {
+  const good = Math.min(WINDOWS.good, Math.round(gapMs * 0.4));
+  return { good, perfect: Math.min(WINDOWS.perfect, Math.round(good / 2)), near: Math.max(WINDOWS.near, beatMs * 0.3) };
+}
+/** Closest gap, in beats, between two notes on the same drum (Infinity if none repeat). */
+export function minGapBeats(notes: { t: number; drum: ChartDrum }[]) {
+  const last = new Map<ChartDrum, number>();
+  let gap = Infinity;
+  for (const n of [...notes].sort((a, b) => a.t - b.t)) {
+    const prev = last.get(n.drum);
+    if (prev !== undefined && n.t - prev > 1e-6) gap = Math.min(gap, n.t - prev);
+    last.set(n.drum, n.t);
+  }
+  return gap;
+}
 export type Judgement = 'perfect' | 'good' | 'miss';
 /** time = ms on the performance.now() clock (latency already removed for hits). */
 export type Expected = { time: number; drum: ChartDrum };
@@ -86,7 +103,9 @@ export type RunStats = {
   meanOffset: number; // ms; negative = rushing, positive = dragging
   spread: number;     // ms standard deviation of offsets (consistency)
   perDrum: Partial<Record<ChartDrum, DrumStats>>;
-  velocity: { normalMean: number; normalCv: number; accentMean: number | null; ghostMean: number | null };
+  velocity: { normalMean: number; normalCv: number; accentMean: number | null; ghostMean: number | null;
+    pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
+  flam: number | null; // ms, mean split between limbs on notes meant to land together (null: none played)
   heat: HeatCell[];   // one cell per 16th position in the bar
 };
 
@@ -118,14 +137,24 @@ export function computeStats(run: Run, results: NoteResult[], extra: number): Ru
   });
   heat.forEach((c, s) => { c.meanAbsOffset = absN[s] ? r1(absSum[s] / absN[s]) : 0; });
 
+  // Pairs by position (a missed note doesn't shift the pairing); only pairs with both notes played count.
+  const plain = run.notes.flatMap((n, i) => (!n.accent && !n.ghost ? [results[i].velocity] : []));
+  const pairs = plain.flatMap((v, i) => (i % 2 === 0 && v !== undefined && plain[i + 1] !== undefined ? [[v, plain[i + 1]!]] : []));
+  const pairDrop = pairs.length >= 4 ? r1(((mean(pairs.map(p => p[0])) - mean(pairs.map(p => p[1]))) / mean(pairs.map(p => p[0]))) * 100) : null;
+
+  const together = new Map<number, number[]>(); // t → offsets of the notes played there
+  run.notes.forEach((n, i) => { if (results[i].offset !== undefined) together.set(n.t, [...(together.get(n.t) ?? []), results[i].offset!]); });
+  const splits = [...together.values()].filter(o => o.length > 1).map(o => Math.max(...o) - Math.min(...o));
+
   return {
     total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
     accuracy: pct(hitOffsets.length, results.length),
     meanOffset: r1(mean(hitOffsets)), spread: r1(std(hitOffsets)), perDrum,
     velocity: {
       normalMean: r1(mean(normal)), normalCv: normal.length ? r1((std(normal) / mean(normal)) * 100) : 0,
-      accentMean: accents.length ? r1(mean(accents)) : null, ghostMean: ghosts.length ? r1(mean(ghosts)) : null,
+      accentMean: accents.length ? r1(mean(accents)) : null, ghostMean: ghosts.length ? r1(mean(ghosts)) : null, pairDrop,
     },
+    flam: splits.length ? r1(mean(splits)) : null,
     heat,
   };
 }

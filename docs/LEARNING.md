@@ -66,7 +66,7 @@ Learning should feel like a journey with a win at every step, and the best win f
 song for friends.
 
 - **Stars per lesson** (`starsFor` in `src/engine/lesson.ts`), from the take that completes it, best kept:
-  ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra and ≥70% perfect.
+  ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra, ≥70% perfect and spread ≤15 ms.
   The coach sees stars: 1 star means shaky, so strengthening it beats a new topic.
 - **Celebration** after every finished lesson: stars, a drum fill, progress to the next rank, one Next button.
 - **Ranks**: each milestone has a title (`rank` in `MILESTONES`), earned when its checkpoints pass:
@@ -97,7 +97,12 @@ and sheet music), jam along or play it scored with the drumless version. MIDI + 
 
 ## Rules of thumb in the code
 - Pass criteria default to 90% accuracy with at most 15% extra hits. A step can add a timing limit
-  (|mean offset|), a velocity-evenness limit (CV %) or a ghost-to-accent volume ratio.
+  (|mean offset|), a consistency limit (spread, std dev of offsets), a hand–foot flam limit, a velocity-evenness
+  limit (CV %), a weak-second-double limit or a ghost-to-accent volume ratio. Every checkpoint's last step limits
+  spread (40 ms at levels 0–2, 30 at 3–4, 25 at 5–6): averaging on time isn't enough, each hit has to be.
+- A take is 8 bars; the proving take (last step at its target tempo) is 16.
+- Good is ±100 ms (Perfect ±40), shrunk to 40% of the closest gap between notes on one drum, so fast 16ths are judged
+  tighter.
 - Keyboard timing is 10–30 ms late, so expect *Good* rather than *Perfect*. Never calibrate latency
   from the keyboard. Ghost-note checks need the real kit.
 - Wait mode is for learning the pattern only; it never counts as a pass.

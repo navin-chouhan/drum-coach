@@ -89,8 +89,8 @@ export const CURRICULUM: Lesson[] = [
     'Some notes loud, the rest soft.',
     'Dynamics turn a pattern into music. The same groove with accents sounds twice as good.',
     'Accents come from height, not force: lift the stick high for the loud note and keep the soft ones low (a few cm). Keyboard: hold Shift for an accent.',
-    [step('Accent the beat', 'Loud on the numbers, soft on the "&".', P(2, { snare: 'XxXxXxXx' }), [60, 90], { pass: { maxGhostToAccent: 0.8 } }),
-      step('Accent every 4th', 'Loud only on the numbers, 16ths in between: "1 e & a".', P(4, { snare: 'XxxxXxxxXxxxXxxx' }), [60, 80], { pass: { maxGhostToAccent: 0.8 } })]),
+    [step('Accent the beat', 'Loud on the numbers, soft on the "&".', P(2, { snare: 'XxXxXxXx' }), [60, 90], { pass: { maxGhostToAccent: 0.7 } }),
+      step('Accent every 4th', 'Loud only on the numbers, 16ths in between: "1 e & a".', P(4, { snare: 'XxxxXxxxXxxxXxxx' }), [60, 80], { pass: { maxGhostToAccent: 0.7 } })]),
   lesson(1, 'hh-8ths', 'exercise', 'Hi-hat 8th notes',
     '8th notes on the closed hi-hat with one hand.',
     'This is the right-hand part of the most common groove in pop and rock.',
@@ -101,7 +101,7 @@ export const CURRICULUM: Lesson[] = [
     'Hi-hat and kick landing at exactly the same moment.',
     'Your first taste of coordination. Flams between hand and foot are the most common beginner timing problem.',
     'Aim to hear one sound, not two. If they split, slow down and think "foot leads".',
-    [step('Together on every beat', 'Hi-hat and kick together on 1 2 3 4.', P(1, { hihat: 'xxxx', kick: 'xxxx' }), [60, 90])]),
+    [step('Together on every beat', 'Hi-hat and kick together on 1 2 3 4.', P(1, { hihat: 'xxxx', kick: 'xxxx' }), [60, 90], { pass: { maxFlamMs: 25 } })]),
 
   // ───────── Level 2: the money beat ─────────
   lesson(2, 'money-quarters', 'groove', 'Your first beat',
@@ -110,7 +110,7 @@ export const CURRICULUM: Lesson[] = [
     'Step 1: you play only the hi-hat while the app plays kick and snare. Step 2: add the kick. Step 3: everything. Count out loud the whole time. Snare is the left hand.',
     [step('Hi-hat only', 'Hi-hat quarters. The app plays the kick and snare; listen to how they fit.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 70], { lanes: ['hihat'] }),
       step('+ kick', 'Add the kick on 1 and 3. The app still plays the snare.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 70], { lanes: ['hihat', 'kick'] }),
-      step('Everything', 'Hi-hat on every beat, kick 1 and 3, snare 2 and 4.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 90], { lanes: HH_K_S, pass: { maxAbsOffsetMs: 30 } })]),
+      step('Everything', 'Hi-hat on every beat, kick 1 and 3, snare 2 and 4.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 90], { lanes: HH_K_S, pass: { maxAbsOffsetMs: 30, maxFlamMs: 25 } })]),
   lesson(2, 'money-8ths', 'groove', 'The money beat',
     'Hi-hat 8ths, kick on 1 and 3, snare on 2 and 4.',
     'The single most useful groove in pop and rock. Get this solid and you can play along to a huge number of songs.',
@@ -123,8 +123,8 @@ export const CURRICULUM: Lesson[] = [
     'Two notes per hand: R R L L.',
     'Doubles lead to rolls and fast fills, and they train your weaker hand.',
     'At slow tempos play both notes with the wrist. Later the second note comes from letting the stick bounce. Keep both notes the same volume.',
-    [step('8th notes', 'R R L L, count "1 & 2 &".', P(2, { snare: 'xxxxxxxx' }), [60, 100], { pass: { maxVelocityCv: 20 } }),
-      step('16th notes', 'R R L L, four per beat.', P(4, { snare: 'xxxxxxxxxxxxxxxx' }), [60, 80], { pass: { maxVelocityCv: 20 } })]),
+    [step('8th notes', 'R R L L, count "1 & 2 &". Second note as loud as the first.', P(2, { snare: 'xxxxxxxx' }), [60, 100], { pass: { maxVelocityCv: 20, maxPairDropPct: 15 } }),
+      step('16th notes', 'R R L L, four per beat.', P(4, { snare: 'xxxxxxxxxxxxxxxx' }), [60, 80], { pass: { maxVelocityCv: 20, maxPairDropPct: 15 } })]),
   lesson(2, 'four-floor', 'groove', 'Four on the floor',
     'Kick on every beat under the money beat.',
     'Dance, disco and lots of pop live here. It also strengthens your foot.',
@@ -187,8 +187,8 @@ export const CURRICULUM: Lesson[] = [
     'R L R R  L R L L, accent the first note of each group.',
     'Paradiddles teach your hands to switch lead. They show up in grooves and fills everywhere.',
     'Say the sticking out loud: "R L R R, L R L L". Accent only the first note. Start slow enough that you never stop.',
-    [step('8th notes', 'R L R R L R L L, accent the first of each four.', P(2, { snare: 'XxxxXxxx' }), [60, 90], { pass: { maxGhostToAccent: 0.8 } }),
-      step('16th notes', 'Same sticking, twice as fast.', P(4, { snare: 'XxxxXxxxXxxxXxxx' }), [60, 80], { pass: { maxGhostToAccent: 0.8 } })]),
+    [step('8th notes', 'R L R R L R L L, accent the first of each four.', P(2, { snare: 'XxxxXxxx' }), [60, 90], { pass: { maxGhostToAccent: 0.7 } }),
+      step('16th notes', 'Same sticking, twice as fast.', P(4, { snare: 'XxxxXxxxXxxxXxxx' }), [60, 80], { pass: { maxGhostToAccent: 0.7 } })]),
   lesson(4, 'hh-16ths', 'groove', '16th-note hi-hat',
     'One hand playing 16ths on the hi-hat over kick and snare.',
     'Busier hi-hats give ballads and pop grooves a smooth, driving feel.',
@@ -204,8 +204,8 @@ export const CURRICULUM: Lesson[] = [
     'Very quiet snare notes between the loud backbeats.',
     'Ghost notes are what make funk and R&B grooves feel alive.',
     'Accents from about 30 cm, ghosts from 2–3 cm. The ghosts should be felt more than heard. This needs the real kit: the keyboard can\'t play soft enough.',
-    [step('Snare only', 'Accent on 2 and 4, ghosts in between.', P(4, { snare: '....X..g.g..X..g' }), [60, 80], { pass: { maxGhostToAccent: 0.6 } }),
-      step('Full groove', 'With hi-hat 8ths and kick.', P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....X..g.g..X..g', kick: 'x.x....x..x.....' }), [60, 85], { lanes: HH_K_S, pass: { maxGhostToAccent: 0.6 } })], ['funk']),
+    [step('Snare only', 'Accent on 2 and 4, ghosts in between.', P(4, { snare: '....X..g.g..X..g' }), [60, 80], { pass: { maxGhostToAccent: 0.45 } }),
+      step('Full groove', 'With hi-hat 8ths and kick.', P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....X..g.g..X..g', kick: 'x.x....x..x.....' }), [60, 85], { lanes: HH_K_S, pass: { maxGhostToAccent: 0.45 } })], ['funk']),
   lesson(4, 'open-hats', 'groove', 'Open hi-hat on every &',
     'Closed on the beat, open on the "&": the disco hi-hat.',
     'A great workout for the hi-hat foot and an instantly recognisable sound.',
@@ -230,7 +230,7 @@ export const CURRICULUM: Lesson[] = [
     'Triplets are the basis of shuffles, 6/8 and swing.',
     'Alternate hands; the lead switches every beat. Accent the first of each three in step 2.',
     [step('Even triplets', 'R L R L R L…, count "1 trip let".', P(3, { snare: 'xxxxxxxxxxxx' }), [60, 90]),
-      step('Accent the beat', 'Loud on each number.', P(3, { snare: 'XxxXxxXxxXxx' }), [60, 90], { pass: { maxGhostToAccent: 0.8 } })]),
+      step('Accent the beat', 'Loud on each number.', P(3, { snare: 'XxxXxxXxxXxx' }), [60, 90], { pass: { maxGhostToAccent: 0.7 } })]),
   lesson(5, 'shuffle', 'groove', 'The shuffle',
     'Hi-hat on the first and last note of each triplet.',
     'Blues, rock\'n\'roll and lots of classic rock swing like this.',
@@ -313,3 +313,10 @@ export const MILESTONES: Milestone[] = [
   { level: 6, title: 'Swing', rank: 'Swing Cat', checkpoints: ['jazz-ride', 'comping', 'song-swing'],
     canDo: ['The jazz ride pattern with the foot on 2 and 4', 'Comping on the snare', 'A 16-bar swing tune'] },
 ];
+
+// Checkpoints prove steady time: their last step also limits how much your hits wander (looser for beginners).
+const SPREAD_MS = [40, 40, 40, 30, 30, 25, 25];
+for (const m of MILESTONES) for (const id of m.checkpoints) {
+  const last = LESSON_BY_ID[id].steps.at(-1)!;
+  last.pass = { maxSpreadMs: SPREAD_MS[m.level], ...last.pass };
+}
