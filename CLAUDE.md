@@ -50,6 +50,13 @@ metronome with timing scoring). Reuse its ideas and code; don't throw away what 
 - Prompts live in `server/prompts/`; JSON outputs the app uses are validated with zod.
 - Personal use only; the app is not distributed.
 
+## YouTube rules
+- Songs come from YouTube via the official IFrame Player API (playback) and Data API v3 (search, key in `.env`,
+  only used server-side). Never download, rip, record or store YouTube audio/video.
+- "No drums" = a drumless upload on YouTube, or the experimental live reduction: Chrome tab capture of the
+  popup player tab (`getDisplayMedia` + `suppressLocalAudioPlayback`), processed in real time and discarded.
+- Song timing runs on the YouTube clock (`src/youtube/yt.ts`) and the per-video beat grid (`src/engine/tempo.ts`).
+
 ## Working rules
 - Keep the input → scoring path dependency-light and testable: pure functions in `src/engine/`
   with unit tests (Vitest). Timing math must be tested with synthetic hit streams.

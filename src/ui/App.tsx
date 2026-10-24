@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CoachView } from '../coach/CoachView';
-import { SongsView } from '../content/SongsView';
+import { SongsPage } from '../youtube/SongsPage';
 import { onHit } from '../input/hits';
 import { startKeyboard } from '../input/keyboard';
 import { getSettings } from '../input/settings';
@@ -69,7 +69,7 @@ export function App() {
         </>
       )}
       {tab === 'play' && <PlayView pending={pending} />}
-      {tab === 'songs' && <SongsView />}
+      {tab === 'songs' && <SongsPage />}
       {tab === 'coach' && <CoachView />}
       {tab === 'progress' && <ProgressView />}
       {tab === 'calibrate' && <Calibrate device={midi.device ?? 'keyboard'} />}

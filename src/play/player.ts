@@ -12,6 +12,8 @@ export type PlayOptions = RunOptions & {
   countInBars: number;
   wait: boolean;
   backing?: { buffer: AudioBuffer; syncOffsetMs: number };
+  /** Run on someone else's clock (a YouTube video): beats from the run start at performance time `now`. */
+  external?: { position: (now: number) => number; begin: () => void; end: () => void };
 };
 export type Finished = { zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
 export type Feedback = { lane: string; judgement: Judgement | 'extra'; time: number };
@@ -37,6 +39,7 @@ let cleanup: (() => void)[] = [];
 
 /** Current position in run beats (negative during count-in). */
 export function position(now = performance.now()) {
+  if (player.options?.external) return player.options.external.position(now);
   if (player.options?.wait) {
     // Advance to the next group of notes and wait there until it's played.
     const groups = waitGroups();
@@ -65,6 +68,7 @@ export function start(chart: Chart, options: PlayOptions) {
   stop();
   const run = buildRun(chart, options);
   const beatMs = toBeatMs(chart.bpm, options.speed);
+  if (options.external) return startExternal(chart, run, options, beatMs);
   const c = audio();
   const countIn = options.wait ? 0 : options.countInBars * beatsPerBar(chart);
   const t0 = c.currentTime + 0.15; // audio time of the first count-in click
@@ -151,6 +155,36 @@ export function start(chart: Chart, options: PlayOptions) {
     }
     cleanup.push(() => sources.forEach(s => { try { s.stop(); } catch { /* already stopped */ } }));
   }
+  notify();
+}
+
+// Same scoring as a normal run, but times are "beats on the external clock × beatMs" (zero = 0).
+function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: number) {
+  const ext = options.external!, latency = getSettings().latencyMs, startedAt = new Date().toISOString();
+  Object.assign(player, {
+    phase: 'playing', chart, run, options, beatMs, zero: 0,
+    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], finished: undefined,
+  } satisfies Partial<State>);
+  const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
+  const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
+  const match = createMatcher(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })));
+  cleanup.push(onHit(h => {
+    const hit = { time: ext.position(h.time - latency) * beatMs, pad: h.pad, velocity: h.velocity };
+    if (hit.time < -beatMs * run.beatsPerBar) return; // pre-roll noodling
+    hits.push(hit);
+    const m = match(hit);
+    if (m) {
+      player.results[m.index] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity };
+      player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });
+    } else {
+      extras.push(hit);
+      player.feedback.push({ lane: laneOf(h.pad ?? 'snare'), judgement: 'extra', time: h.time });
+    }
+    if (player.feedback.length > 64) player.feedback.splice(0, 32);
+  }));
+  const timer = setInterval(() => { if (ext.position(performance.now()) > run.beats + 0.5) finish(hits, extras, startedAt); }, 50);
+  cleanup.push(() => { clearInterval(timer); ext.end(); });
+  ext.begin();
   notify();
 }
 

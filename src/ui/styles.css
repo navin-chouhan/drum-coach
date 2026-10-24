@@ -171,3 +171,34 @@
   .exTable td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}
   .tabs{flex-wrap:wrap}
   @media (max-width:900px){ .play{grid-template-columns:1fr} canvas.highway{height:60vh} }
+
+  /* --- YouTube songs --- */
+  .ytPage,.songView{grid-row:2/4;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto;min-height:0}
+  .ytSearch{display:flex;gap:8px}
+  .ytSearch input{flex:1;font:inherit;font-size:15px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .ytResults{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+  .ytResults li{display:flex;align-items:center;gap:12px}
+  .ytResults img{border-radius:6px;object-fit:cover;flex:none;background:var(--panel2)}
+  .ytResults.compact li{gap:8px}
+  .grow{flex:1;min-width:0}
+  details.card summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+  details.card[open] summary{margin-bottom:12px}
+  .songHead{display:flex;align-items:center;gap:12px}
+  .songHead h2{margin:0;font-size:18px}
+  .songGrid{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr);gap:16px;align-items:start}
+  .videoBox{aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  .videoBox>div,.videoBox iframe{width:100%;height:100%;display:block}
+  .videoBox p{padding:16px}
+  label.inline{display:inline-flex;flex-direction:row;align-items:center;gap:6px;color:var(--muted);font-size:12.5px}
+  .modeTabs button:disabled{opacity:.4}
+  .tempoBig{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+  .meter{position:relative;height:34px;margin-top:8px;border-radius:8px;background:var(--panel2);overflow:hidden}
+  .meter .zone{position:absolute;top:0;bottom:0;left:40%;width:20%;background:rgba(52,211,153,.12)}
+  .meter .center{position:absolute;top:0;bottom:0;left:50%;width:1px;background:#3b4456}
+  .meter .tick{position:absolute;top:7px;width:3px;height:20px;border-radius:2px;margin-left:-1.5px}
+  .jamResults{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+  .gridEditor{overflow-x:auto}
+  .gridEditor canvas{display:block;width:100%;min-width:560px;cursor:pointer;background:#0e1219;border:1px solid var(--line);border-radius:8px}
+  .ytHighway canvas.highway{height:60vh}
+  .songView .results{padding:0}
+  @media (max-width:1000px){ .songGrid{grid-template-columns:1fr} }
