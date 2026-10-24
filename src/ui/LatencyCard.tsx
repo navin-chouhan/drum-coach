@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { estimateLatency } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
-import { audio, audioToPerf, click } from '../play/audio';
+import { audio, audioToPerf, click, whenRunning } from '../play/audio';
 
 const BPM = 90, COUNT_IN = 4, CLICKS = 16;
 const MAX_SPREAD = 50, MIN_TAPS = 10; // fewer or more scattered taps measure the player, not the latency
@@ -44,7 +44,7 @@ export function LatencyCard() {
             ({result.n} taps, spread ±{result.spread} ms).{(result.spread > MAX_SPREAD || result.n < MIN_TAPS) && ' Not steady enough to trust: try again, playing along with the clicks rather than reacting to them.'}</p>
         : <p className="warn">Not enough taps close to the clicks. Try again.</p>)}
       <div className="actions">
-        <button onClick={run} disabled={state === 'running'}>Start</button>
+        <button onClick={() => whenRunning(run)} disabled={state === 'running'}>Start</button>
         {state === 'done' && result && result.spread <= MAX_SPREAD && result.n >= MIN_TAPS && <button className="primary" onClick={() => setSettings({ latencyMs: result.latencyMs })}>Save {result.latencyMs} ms</button>}
         {settings.latencyMs !== 0 && <button onClick={() => setSettings({ latencyMs: 0 })}>Reset to 0</button>}
       </div>

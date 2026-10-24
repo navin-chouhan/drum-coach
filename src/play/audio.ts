@@ -17,12 +17,21 @@ export function audio(): AudioContext {
   return ctx;
 }
 
-/** AudioContext time (s) → performance.now() ms, accounting for output latency when the browser reports it. */
+/** AudioContext time (s) → performance.now() ms when it is heard (output latency included). */
 export function audioToPerf(t: number): number {
-  const c = audio();
+  const c = audio(), now = performance.now();
   const ts = c.getOutputTimestamp?.();
-  if (ts?.performanceTime && ts.contextTime !== undefined) return ts.performanceTime + (t - ts.contextTime) * 1000;
-  return performance.now() + (t - c.currentTime) * 1000;
+  // The output timestamp is exact, but it's 0 before the first render and can be stale right after a resume
+  // (it would put every note seconds off): only trust it when it agrees with the clock now.
+  if (ts?.performanceTime && ts.contextTime !== undefined && Math.abs(ts.performanceTime + (c.currentTime - ts.contextTime) * 1000 - now) < 250)
+    return ts.performanceTime + (t - ts.contextTime) * 1000;
+  return now + (t - c.currentTime + c.baseLatency + (c.outputLatency || 0)) * 1000;
+}
+
+/** Runs `fn` once the audio clock is really running: scheduling on a paused clock puts every note late by the resume time. */
+export function whenRunning(fn: () => void) {
+  const c = audio();
+  if (c.state === 'running') fn(); else void c.resume().then(fn);
 }
 
 const env = (g: GainNode, t: number, peak: number, decay: number) => {

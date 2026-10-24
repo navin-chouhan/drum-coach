@@ -6,7 +6,7 @@ import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
 import { hush, NUMBERS, sayAt } from '../voice/voice';
 import { applyTip, loadTips } from '../coach/aiTips';
-import { audio, audioToPerf, click, playBuffer, playDrum } from './audio';
+import { audio, audioToPerf, click, playBuffer, playDrum, whenRunning } from './audio';
 
 export type PlayOptions = RunOptions & {
   speed: number; // 0.5–1
@@ -105,6 +105,7 @@ function waitGroups() {
 }
 
 export function start(chart: Chart, options: PlayOptions) {
+  if (!options.external && audio().state !== 'running') { whenRunning(() => start(chart, options)); return; }
   stop();
   hush();
   if (!options.demo && !options.wait) loadTips(chart, options.lesson?.goal);
