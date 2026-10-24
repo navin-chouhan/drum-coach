@@ -10,6 +10,7 @@ import { playDrum } from '../play/audio';
 import { PlayView } from '../play/PlayView';
 import { onCue, stop } from '../play/player';
 import { NUMBERS, prepare, say } from '../voice/voice';
+import { TalkToCoach } from '../voice/TalkToCoach';
 import { SPOKEN_CUES } from '../engine/liveCoach';
 import { Calibrate } from './Calibrate';
 import { KitView } from './KitView';
@@ -80,6 +81,7 @@ export function App() {
       {tab === 'coach' && <CoachView />}
       {tab === 'progress' && <ProgressView />}
       {tab === 'calibrate' && <Calibrate device={midi.device ?? 'keyboard'} />}
+      <TalkToCoach />
     </div>
   );
 }

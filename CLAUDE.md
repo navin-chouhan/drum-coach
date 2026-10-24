@@ -49,6 +49,9 @@ metronome with timing scoring). Reuse its ideas and code; don't throw away what 
   send compact JSON summaries (not raw MIDI), cache answers.
 - If the CLI is missing or logged out, show a clear message; everything else keeps working.
 - Prompts live in `server/prompts/`; JSON outputs the app uses are validated with zod.
+- Voice: Piper TTS (`server/tts.ts`) and Whisper speech-to-text (`server/stt.ts`, via `uv run --with faster-whisper`)
+  run locally; recordings are deleted right after transcription. Live tips are rule-based (`src/engine/liveCoach.ts`);
+  Claude only writes their wording ahead of time (`/api/coach/tips`), never in the real-time path.
 - Personal use only; the app is not distributed.
 
 ## YouTube rules

@@ -129,6 +129,17 @@ are grey, and the page turns after each page of bars. Before you press Start it 
   and the AI coach's main point; "Count me in out loud" says "one, two, three, four" on the count-in clicks.
   Clicks and synth drums dip while the coach talks.
 
+- **AI coach voice** (Coach tab switches; each uses your Claude subscription):
+  - *Brief me before a take*: when you open an exercise or lesson step, the coach looks at your last takes on it and
+    tells you what to focus on (shown above the sheet, spoken).
+  - *The coach writes the tips*: once per exercise the coach writes its own wording for the live tips ("Push the
+    hats onto the click"); the rules still decide when they fire. Cached, so it costs one call per exercise.
+  - *AI debrief after every take*: the coach's 2–3 sentence take on what happened and what to try next, spoken.
+  - **Talk to the coach**: hold **V** (or the 🎙 button, bottom right), ask out loud, let go. Your words are transcribed
+    on this laptop (Whisper, offline) and the coach answers with what you're doing as context; the answer is spoken,
+    and if it suggests an exercise you can play it straight away. The first time, the speech model (~140 MB) is
+    downloaded into `data/whisper`; needs `uv` (already used for Piper).
+
 **Voice setup (offline, one time):**
 ```bash
 uv tool install piper-tts

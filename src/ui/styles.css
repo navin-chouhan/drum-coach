@@ -306,3 +306,10 @@
   @media (prefers-reduced-motion: reduce){ .sheetBar{transition:none} }
   .briefing{display:flex;gap:10px;align-items:baseline;margin:0 0 12px;padding:10px 14px;background:var(--panel);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);font-size:15px}
   .briefingWho{font:800 12px var(--display);text-transform:uppercase;background:var(--pop);border:2px solid var(--line);padding:1px 8px;flex:none}
+  .talk{position:fixed;right:18px;bottom:18px;z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:10px;max-width:min(420px,calc(100vw - 36px))}
+  .talkBtn{width:58px;height:58px;border-radius:50%;font-size:26px;background:var(--pop);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);touch-action:none}
+  .talkBtn.on{background:#FF5A4F;animation:talkPulse 1s ease-in-out infinite}
+  @keyframes talkPulse{50%{transform:scale(1.12)}}
+  @media (prefers-reduced-motion: reduce){.talkBtn.on{animation:none}}
+  .talkBubble{background:var(--panel);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);padding:10px 14px;cursor:pointer;max-height:50vh;overflow:auto}
+  .talkBubble p{margin:4px 0}

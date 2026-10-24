@@ -14,6 +14,7 @@ import { AiError } from './ai/providers.ts';
 import { AUDIO_DIR, db } from './db.ts';
 import { searchYouTube, YtError } from './youtube.ts';
 import { speech, ttsStatus } from './tts.ts';
+import { sttStatus, transcribe } from './stt.ts';
 import { GridSchema, GrooveRequestSchema, YtSongCreateSchema, YtSongPatchSchema, type YtSong } from '../src/youtube/schemas.ts';
 
 const PORT = Number(process.env.PORT || 8787);
@@ -208,12 +209,19 @@ app.post('/api/coach/briefing', async (req, reply) => {
 // ---------- coach voice (Piper, offline) ----------
 app.get('/api/tts/status', async () => ttsStatus());
 app.get('/api/tts', async (req, reply) => {
-  const p = z.object({ text: z.string().trim().min(1).max(400) }).safeParse(req.query);
-  if (!p.success) return bad(reply, 'Text must be 1–400 characters');
+  const p = z.object({ text: z.string().trim().min(1).max(600) }).safeParse(req.query);
+  if (!p.success) return bad(reply, 'Text must be 1–600 characters');
   try {
     const file = await speech(p.data.text.replace(/\s+/g, ' '));
     return reply.type('audio/wav').header('cache-control', 'max-age=31536000, immutable').send(createReadStream(file));
   } catch (e) { return reply.code(503).send({ error: (e as Error).message }); }
+});
+
+// ---------- talk to the coach (offline speech-to-text) ----------
+app.get('/api/stt/status', async () => sttStatus());
+app.post('/api/stt', async (req, reply) => {
+  if (!Buffer.isBuffer(req.body) || req.body.length < 200 || req.body.length > 10_000_000) return bad(reply, 'Send a short WAV recording');
+  try { return { text: await transcribe(req.body) }; } catch (e) { return reply.code(503).send({ error: (e as Error).message }); }
 });
 
 // ---------- YouTube songs ----------
