@@ -11,15 +11,19 @@ const log = (what: string) => { if (import.meta.env.DEV) ((window as unknown as 
 
 export const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen'];
 
-/** Seconds of near-silence before a clip's sound starts, so a word can be placed with its start on the beat. */
+/**
+ * Seconds from a clip's start to where its word "lands": the first 10 ms where the loudness reaches half its peak,
+ * which is the vowel (we hear a word's beat there, not at the "s" or "t" before it). Placing that on the beat makes
+ * "two" and "five" land alike.
+ */
 const onsets = new WeakMap<AudioBuffer, number>();
 export function onsetOf(buf: AudioBuffer) {
   let at = onsets.get(buf);
   if (at === undefined) {
-    const x = buf.getChannelData(0);
-    let peak = 0; for (const v of x) peak = Math.max(peak, Math.abs(v));
-    const i = x.findIndex(v => Math.abs(v) > peak * 0.1);
-    at = i > 0 ? i / buf.sampleRate : 0;
+    const x = buf.getChannelData(0), win = Math.max(1, Math.round(buf.sampleRate * 0.01)), env: number[] = [];
+    for (let i = 0; i + win <= x.length; i += win) { let s = 0; for (let j = i; j < i + win; j++) s += x[j] * x[j]; env.push(Math.sqrt(s / win)); }
+    const peak = Math.max(0, ...env), k = env.findIndex(e => e >= peak * 0.5);
+    at = k > 0 ? (k * win) / buf.sampleRate : 0;
     onsets.set(buf, at);
   }
   return at;
@@ -51,7 +55,7 @@ export function sayAt(text: string, when: number) {
   const buf = ready.get(text);
   if (!buf) return false;
   log(`at:${text}`);
-  playVoice(buf, Math.max(audio().currentTime, when - onsetOf(buf))); // the word starts on the beat, not its silent lead-in
+  playVoice(buf, Math.max(audio().currentTime, when - onsetOf(buf))); // the word's vowel lands on the beat
   return true;
 }
 

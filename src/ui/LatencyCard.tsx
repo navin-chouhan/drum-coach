@@ -16,14 +16,14 @@ export function LatencyCard() {
   const [taps, setTaps] = useState(0);
   const cancel = useRef<() => void>(() => {});
   useEffect(() => () => cancel.current(), []);
-  useEffect(() => { void prepare(NUMBERS); }, []); // the spoken count is ready before Start
+  useEffect(() => { void prepare(NUMBERS.slice(0, COUNT_IN)); }, []); // the spoken count-in is ready before Start
 
   function run() {
     const c = audio(), beat = 60 / BPM, t0 = c.currentTime + 0.3;
     const clicks: number[] = [], hits: number[] = [];
     for (let i = 0; i < COUNT_IN + CLICKS; i++) {
       click(t0 + i * beat, i % 4 === 0 ? 0 : 1); // the click stays the exact reference
-      sayAt(NUMBERS[i < COUNT_IN ? i : i - COUNT_IN], t0 + i * beat); // and the coach counts: 1-4, then 1-16
+      if (i < COUNT_IN) sayAt(NUMBERS[i], t0 + i * beat); // spoken count-in only: we hear a word's beat less exactly than a click
       if (i >= COUNT_IN) clicks.push(audioToPerf(t0 + i * beat));
     }
     setState('running'); setTaps(0); setResult(null);
@@ -40,7 +40,7 @@ export function LatencyCard() {
     <section className="card">
       <h3>Latency</h3>
       <p className="small">Current correction: <b>{settings.latencyMs} ms</b>. Press Start: the coach counts you in "1, 2, 3, 4",
-        then counts 1 to {CLICKS}. Hit any pad on each number, together with the click. Use the same headphones/speakers you practise with.</p>
+        then hit any pad exactly with each of the next {CLICKS} clicks (one per second). Use the same headphones/speakers you practise with.</p>
       {state === 'running' && <p className="prompt">Tap along… {taps}/{CLICKS}</p>}
       {state === 'done' && (result
         ? <p>You hit on average <b>{Math.abs(result.latencyMs)} ms {result.latencyMs >= 0 ? 'after' : 'before'}</b> the click
