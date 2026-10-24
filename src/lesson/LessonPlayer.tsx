@@ -12,7 +12,7 @@ import { player, playerVersion, start, stop, subscribePlayer, type Finished, typ
 import { Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
-import { coachTake, onCoachAction } from '../coach/session';
+import { coachTake, dropCoachAction, onCoachAction } from '../coach/session';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -88,7 +88,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     setSecs(s => s + f.durationS);
     setVersion(v => v + 1);
   }), [lesson, step, oneTake, role, onItemDone]);
-  useEffect(() => () => stop(), []);
+  useEffect(() => () => { stop(); dropCoachAction(); }, []);
 
   const options = (demo: boolean): PlayOptions => ({
     fromBar: 1, toBar: step.chart.bars, repeats: Math.max(1, Math.round(4 / step.chart.bars)),

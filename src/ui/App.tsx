@@ -10,6 +10,7 @@ import { playDrum } from '../play/audio';
 import { PlayView } from '../play/PlayView';
 import { onCue, player, playerVersion, stop, subscribePlayer } from '../play/player';
 import { NUMBERS, prepare, say } from '../voice/voice';
+import { dropCoachAction } from '../coach/session';
 import { TalkToCoach } from '../voice/TalkToCoach';
 import { SPOKEN_CUES } from '../engine/liveCoach';
 import { Calibrate } from './Calibrate';
@@ -30,7 +31,7 @@ export function App() {
   const [setup, setSetup] = useState<keyof typeof SETUP>('pads');
   const [pending, setPending] = useState<PlayRequest>();
   const [song, setSong] = useState<{ id: string; n: number }>();
-  const setTab = (t: Tab) => { if (t !== tab) stop(); setTabState(t); };
+  const setTab = (t: Tab) => { if (t !== tab) { stop(); dropCoachAction(); } setTabState(t); };
   const openPads = () => { setSetup('pads'); setTab('setup'); };
   useSyncExternalStore(subscribePlayer, playerVersion);
   const focus = player.phase === 'playing' && !player.options?.demo; // hide the chrome while you play

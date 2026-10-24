@@ -22,7 +22,19 @@ export const useCoach = () => useSyncExternalStore(fn => { listeners.add(fn); re
 // Play screens register how to carry out the coach's actions (again, slower, faster, next).
 type ActionHandler = (a: NonNullable<CoachReply['action']>) => boolean;
 const handlers: ActionHandler[] = [];
-export function onCoachAction(fn: ActionHandler) { handlers.unshift(fn); return () => { handlers.splice(handlers.indexOf(fn), 1); }; }
+export function onCoachAction(fn: ActionHandler) {
+  handlers.unshift(fn);
+  return () => {
+    handlers.splice(handlers.indexOf(fn), 1);
+    // The last screen that could carry out a suggestion closed (re-renders re-register before the microtask).
+    queueMicrotask(() => { if (!handlers.length) dropCoachAction(); });
+  };
+}
+
+/** Leaving the screen a suggestion was for: keep the coach's words, drop its button (a drill can start anywhere). */
+export function dropCoachAction() {
+  if (state.reply?.action && state.reply.action.kind !== 'drill') set({ reply: { ...state.reply, action: undefined } });
+}
 
 export async function runAction(a: NonNullable<CoachReply['action']>) {
   if (a.kind === 'drill' && (a.chart || a.chartId)) {

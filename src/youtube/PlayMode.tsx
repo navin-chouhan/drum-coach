@@ -4,7 +4,7 @@ import { beatAt, songSecAt } from '../engine/tempo';
 import { NotesView } from '../play/NotesView';
 import { player, playerVersion, start, stop, subscribePlayer } from '../play/player';
 import { Results, saveRun } from '../play/Results';
-import { onCoachAction } from '../coach/session';
+import { coachTake, onCoachAction } from '../coach/session';
 import { flourish } from '../lesson/Celebration';
 import type { ModeProps } from './SongView';
 
@@ -19,7 +19,7 @@ export function PlayMode({ song, videoId, yt, rate }: ModeProps) {
   const [range, setRange] = useState({ from: firstBar, to: lastBar });
   const [stage, setStage] = useState(false); // Stage mode: for playing in front of friends
   const encore = stage && player.phase === 'done' ? player.finished : undefined;
-  useEffect(() => { if (encore) { saveRun(encore); flourish(true); } }, [encore]);
+  useEffect(() => { if (encore) { saveRun(encore); coachTake(encore); flourish(true); } }, [encore]); // the coach must hear this take, or it answers an older one
   useEffect(() => () => stop(), []);
 
   const chart: Chart & { id: string } = { id: song.id, title: song.title, kind: 'song', bpm: grid.bpm, timeSignature: song.timeSignature, bars: lastBar, notes };

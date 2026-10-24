@@ -77,7 +77,8 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
       prev = t;
       if (t >= end + 0.05) {
         const q = quantizeTake(pass.current, fromBeat, toBeat, steps);
-        if (q.length) setTake(q);
+        // A pass where you mostly listened shouldn't wipe a fuller take you just played.
+        if (q.length) setTake(prev => (q.length * 2 >= prev.length ? q : prev));
         pass.current = [];
         if (live.current.suggest) { const found = onsetsToNotes(heard.current, fromBeat, toBeat, steps); setPasses(p => [...p, found].slice(-4)); }
         heard.current = [];
