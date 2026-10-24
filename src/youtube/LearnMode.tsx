@@ -10,7 +10,7 @@ import { getSettings } from '../input/settings';
 import { playDrum } from '../play/audio';
 import { patchSong } from './api';
 import { GridEditor } from './GridEditor';
-import { SheetMusic } from '../notation/SheetMusic';
+import { SheetMusic } from '../notation';
 import type { ModeProps } from './SongView';
 
 /** Loop a few bars, play what you hear, keep the best take, fix it by clicking, hear it back over the song. */

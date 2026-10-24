@@ -111,11 +111,3 @@ export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bp
     </div>
   );
 }
-
-/** Prints only the sheet: the page hides everything else while printing. */
-export function printSheet() {
-  document.body.classList.add('printingSheet');
-  const done = () => { document.body.classList.remove('printingSheet'); window.removeEventListener('afterprint', done); };
-  window.addEventListener('afterprint', done);
-  window.print();
-}

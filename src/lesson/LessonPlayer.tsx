@@ -7,7 +7,7 @@ import { getSettings, subscribeSettings } from '../input/settings';
 import { Highway } from '../play/Highway';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { Results, saveRun } from '../play/Results';
-import { SheetMusic } from '../notation/SheetMusic';
+import { SheetMusic } from '../notation';
 import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 

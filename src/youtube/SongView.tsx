@@ -6,7 +6,7 @@ import { PlayMode } from './PlayMode';
 import { startReducer, type Reducer } from './reducer';
 import type { YtResult, YtSong } from './schemas';
 import { TempoMode } from './TempoMode';
-import { printSheet, SheetMusic } from '../notation/SheetMusic';
+import { printSheet, SheetMusic } from '../notation';
 import { YtPlayer } from './yt';
 import { parseYouTubeId } from '../engine/youtube';
 import { stop as stopPlayer } from '../play/player';

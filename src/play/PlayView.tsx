@@ -4,7 +4,7 @@ import { MAX_SPEED } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { audio } from './audio';
 import { Highway } from './Highway';
-import { SheetMusic } from '../notation/SheetMusic';
+import { SheetMusic } from '../notation';
 import { player, playerVersion, start, stop, subscribePlayer, type PlayOptions } from './player';
 import { Results } from './Results';
 
