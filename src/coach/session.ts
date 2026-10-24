@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { saveChart } from '../content/charts';
 import { getSettings } from '../input/settings';
 import { player } from '../play/player';
-import { requestPlay } from '../ui/nav';
+import { requestLesson, requestPlay } from '../ui/nav';
 import { listenForAnswer, transcribe } from '../voice/listen';
 import { sayNext, untilQuiet } from '../voice/voice';
 import type { Chart } from '../engine/chart';
@@ -37,6 +37,7 @@ export function dropCoachAction() {
 }
 
 export async function runAction(a: NonNullable<CoachReply['action']>) {
+  if (a.kind === 'drill' && a.chartId?.startsWith('lesson/')) { requestLesson(a.chartId.split('/')[1]); return; } // lesson steps live on Journey
   if (a.kind === 'drill' && (a.chart || a.chartId)) {
     const id = a.chart ? (await saveChart(a.chart, 'ai')).id : a.chartId!;
     requestPlay({ chartId: id, bpm: a.bpm });
@@ -99,13 +100,14 @@ async function handsFree() {
 export function say(text: string) {
   set({ heard: text });
   const f = player.finished;
-  return coachEvent({ type: 'said', text, doing: player.phase === 'playing' ? 'playing right now' : 'between takes',
-    exercise: player.chart?.title, bpm: player.chart && player.options ? Math.round(player.chart.bpm * player.options.speed) : undefined,
+  const playing = player.phase === 'playing', played = player.chart && player.options ? Math.round(player.chart.bpm * player.options.speed) : undefined;
+  return coachEvent({ type: 'said', text, doing: playing ? 'playing right now' : 'between takes',
+    exercise: playing || !lastOpen.title ? player.chart?.title : lastOpen.title, bpm: playing || !lastOpen.title ? played : lastOpen.bpm,
     proposed: state.reply?.action, lastTakeAccuracyPct: f?.stats.accuracy });
 }
 
 const toldTakes = new WeakSet<Finished>();
-let lastOpen = { id: '', at: 0 };
+let lastOpen = { id: '', at: 0, title: '', bpm: 0 }; // the exercise on screen (what "this" means between takes)
 /** A finished take (once per take; lessons add their verdict). Wait mode isn't a real take. */
 export function coachTake(f: Finished, lesson?: Record<string, unknown>) {
   if (toldTakes.has(f) || f.options.wait || !f.stats.total) return;
@@ -116,6 +118,6 @@ export function coachTake(f: Finished, lesson?: Record<string, unknown>) {
 export function coachOpen(chart: Chart & { id?: string }, bpm: number, goal?: string) {
   const id = chart.id ?? chart.title;
   if (id === lastOpen.id && Date.now() - lastOpen.at < 180_000) return;
-  lastOpen = { id, at: Date.now() };
+  lastOpen = { id, at: Date.now(), title: chart.title, bpm: Math.round(bpm) };
   void coachEvent({ type: 'open', chartId: id, title: chart.title, kind: chart.kind, level: chart.level, bpm: Math.round(bpm), goal: goal ?? chart.description });
 }
