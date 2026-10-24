@@ -35,6 +35,10 @@ describe('milestones and planner', () => {
     expect(candidates(milestones, [...lessons, ai], p, { ...profile, goals: ['jazz'] }).map(l => l.id)).toEqual(['ai-kick-fix', 'money', 'doubles', 'jazz-only']);
     expect(ids(buildSession(milestones, [...lessons, ai], p, profile, D))).toEqual(['doubles', 'ai-kick-fix']);
   });
+  it('only one coach lesson jumps the queue; built-in basics still get a slot', () => {
+    const a1 = L('ai-1', 0, 'exercise', { source: 'ai' }), a2 = L('ai-2', 0, 'exercise', { source: 'ai' });
+    expect(candidates(milestones, [...lessons, a1, a2], {}, profile).map(l => l.id)).toEqual(['ai-1', 'count', 'rests', 'ai-2']);
+  });
   it('hidden checkpoints do not block a milestone', () => {
     expect(currentMilestone(milestones, lessons, done('rests', 'hands-feet', 'money'), { ...profile, goals: ['rock'] })).toBeUndefined();
   });

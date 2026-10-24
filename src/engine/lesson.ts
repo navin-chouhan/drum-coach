@@ -63,7 +63,10 @@ function worstDrum(s: RunStats) {
   if (!worst || worst[1].accuracy >= 90) return '';
   const name = worst[0] === 'hhOpen' ? 'open hi-hat' : worst[0] === 'hhPedal' ? 'hi-hat foot' : worst[0] === 'hihat' ? 'hi-hat' : worst[0];
   const t = worst[1].meanOffset;
-  return `The ${name} was weakest${Math.abs(t) >= 15 ? ` (${t < 0 ? 'early' : 'late'} by ${Math.abs(t)} ms)` : ''}.`;
+  const when = Math.abs(t) >= 15 ? `${t < 0 ? 'early' : 'late'} by ${Math.abs(t)} ms` : '';
+  // One drum only: "weakest" means nothing, the timing hint is the useful part.
+  if (Object.keys(s.perDrum).length === 1) return when ? `On average you were ${when}.` : '';
+  return `The ${name} was weakest${when ? ` (${when})` : ''}.`;
 }
 
 /**

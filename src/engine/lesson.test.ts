@@ -18,8 +18,11 @@ const stats = (o: Partial<RunStats> = {}): RunStats => ({
 describe('checkPass', () => {
   it('passes a clean take and explains failures', () => {
     expect(checkPass(stats()).ok).toBe(true);
-    expect(checkPass(stats({ accuracy: 80, perDrum: { kick: { total: 8, hit: 4, accuracy: 50, meanOffset: 30 } } })))
+    const snare = { total: 12, hit: 12, accuracy: 100, meanOffset: 0 };
+    expect(checkPass(stats({ accuracy: 80, perDrum: { snare, kick: { total: 8, hit: 4, accuracy: 50, meanOffset: 30 } } })))
       .toEqual({ ok: false, reason: expect.stringMatching(/80%.*kick.*late by 30/) });
+    expect(checkPass(stats({ accuracy: 50, perDrum: { snare: { ...snare, accuracy: 50, meanOffset: -25 } } })).reason)
+      .toMatch(/^(?!.*weakest).*early by 25/); // one drum: no "weakest"
     expect(checkPass(stats({ extra: 5 })).ok).toBe(false);
     expect(checkPass(stats({ meanOffset: -40 }), { maxAbsOffsetMs: 30 }).reason).toMatch(/Rushing by 40/);
     expect(checkPass(stats(), { maxVelocityCv: 5 }).ok).toBe(false);

@@ -69,7 +69,8 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
   const ctx = r.getContext();
   ctx.scale(k, k);
   if (o.title) { ctx.setFont('Academico', 16, 'bold'); ctx.fillText(o.title, 10, 22); }
-  if (o.bpm) { ctx.setFont('Academico', 12); ctx.fillText(`${Math.round(o.bpm)} BPM`, width - 70, 22); }
+  // BPM under the title: long titles ran into it at the right edge.
+  if (o.bpm) { ctx.setFont('Academico', 12); ctx.fillText(`${Math.round(o.bpm)} BPM`, 10, o.title ? 42 : 22); }
   const boxes: MeasureBox[] = [], groups: NoteGroup[] = [];
   const compound = ts[1] === 8 && ts[0] % 3 === 0; // felt in groups of three 8ths
   measures.forEach((m, i) => {

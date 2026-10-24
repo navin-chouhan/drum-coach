@@ -99,10 +99,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
   const play = (demo: boolean, atBpm = bpm) => { setDetails(false); start(step.chart, { ...options(demo), speed: atBpm / step.chart.bpm }); };
   // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.
   useEffect(() => onCoachAction(a => {
-    if (a.kind === 'next') { onNext?.(); return !!onNext; }
+    if (a.kind === 'next') { (onNext ?? onBack)(); return true; } // opened outside today's session: back to the Journey
     const cur = progressOf(lesson).bpm;
     const want = a.bpm ?? (a.kind === 'slower' ? cur - 5 : a.kind === 'faster' ? cur + 5 : cur);
-    const nb = oneTake ? bpm : Math.max(step.bpm.start, Math.min(step.bpm.target, Math.round(want)));
+    const nb = oneTake ? bpm : Math.max(30, Math.min(step.bpm.target, Math.round(want))); // the coach may go below the start tempo when you struggle
     if (!oneTake && nb !== cur) saveProgress(lesson.id, { ...progressOf(lesson), bpm: nb });
     play(false, nb);
     return true;

@@ -20,14 +20,16 @@ export const currentMilestone = (milestones: Milestone[], lessons: Lesson[], pro
   milestones.find(m => checkpointsOf(m, lessons, profile).some(l => !done(progress, l.id)));
 
 /**
- * What to learn now, best first: the coach's lessons for this milestone, then the milestone's
- * built-in lessons in path order (checkpoints included). Never ahead of the current milestone.
+ * What to learn now, best first: the coach's newest-waiting lesson, then the milestone's built-in
+ * lessons in path order (checkpoints included), then any other coach lessons. Never ahead of the current milestone.
  */
 export function candidates(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile): Lesson[] {
   const m = currentMilestone(milestones, lessons, progress, profile);
   if (!m) return [];
   const open = visibleLessons(lessons, profile).filter(l => l.level === m.level && !done(progress, l.id));
-  return [...open.filter(l => l.source === 'ai'), ...open.filter(l => l.source !== 'ai')];
+  const ai = open.filter(l => l.source === 'ai');
+  // One coach lesson leads; the rest wait behind the built-in path so its basics (posture, counting) aren't crowded out.
+  return [...ai.slice(0, 1), ...open.filter(l => l.source !== 'ai'), ...ai.slice(1)];
 }
 
 /**

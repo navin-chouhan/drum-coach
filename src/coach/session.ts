@@ -58,6 +58,8 @@ export async function coachEvent(event: SessionEvent) {
       }
     }
     if (my !== seq) return; // a newer event took over
+    // Only the student's own "yes" starts something; the model sometimes sets `now` after a plain take (then it's a button).
+    if (reply?.action?.now && event.type !== 'said') reply = { ...reply, action: { ...reply.action, now: false } };
     set({ status: 'idle', reply, at: Date.now() });
     if (reply?.action?.now) void runAction(reply.action);
     else if (reply?.ask && getSettings().handsFree && player.phase !== 'playing') void handsFree();
