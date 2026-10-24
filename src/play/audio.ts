@@ -48,8 +48,9 @@ function tone(t: number, type: OscillatorType, f0: number, f1: number, sweep: nu
   o.start(t); o.stop(t + decay + 0.05);
 }
 
-export function playDrum(pad: PadId, vel: number) {
-  const t = audio().currentTime + 0.002, v = vel / 127;
+/** Synth drum at audio time `at` (default: now). */
+export function playDrum(pad: PadId, vel: number, at?: number) {
+  const t = at ?? audio().currentTime + 0.002, v = vel / 127;
   switch (pad) {
     case 'kick': tone(t, 'sine', 160, 42, 0.11, 0.38, 1.1 * v); noise(t, 0.02, 0.25 * v, [['lowpass', 1500]]); break;
     case 'snare': noise(t, 0.2, 0.7 * v, [['highpass', 1100]]); tone(t, 'triangle', 220, 160, 0.05, 0.12, 0.45 * v); break;

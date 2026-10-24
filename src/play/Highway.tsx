@@ -28,9 +28,12 @@ export function Highway() {
       const W = cv.clientWidth, H = cv.clientHeight, now = performance.now();
       const laneW = W / HIGHWAY_LANES.length, hitY = H - 64;
       c.clearRect(0, 0, W, H);
+      const active = player.phase !== 'idle' && player.options?.activeLanes && !player.options.demo
+        ? new Set(player.options.activeLanes.map(laneOf)) : null;
       HIGHWAY_LANES.forEach((id, i) => {
         if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.025)'; c.fillRect(i * laneW, 0, laneW, H); }
-        c.fillStyle = '#8a94a7'; c.font = '12px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        if (active?.has(id)) { c.fillStyle = 'rgba(255,181,71,.06)'; c.fillRect(i * laneW, 0, laneW, H); }
+        c.fillStyle = active && !active.has(id) ? '#4b5263' : '#8a94a7'; c.font = '12px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillText(DRUM_BY_ID[id].name, i * laneW + laneW / 2, H - 34);
         c.fillStyle = '#5c6578'; c.font = '10px ui-monospace, monospace';
         c.fillText(KEYS[id], i * laneW + laneW / 2, H - 16);
@@ -67,13 +70,14 @@ export function Highway() {
         const n = run.notes[i], y = yOf(n.t);
         if (y > H + 20) continue;
         if (y < -20) break;
-        const r = player.results[i];
+        const r = player.results[i], auto = player.auto[i];
         if (r.judgement !== 'miss') continue; // played
-        const late = (pos - n.t) * player.beatMs > 60 && !player.options?.wait;
+        if (auto && n.t < pos) continue; // the app played it
+        const late = !auto && (pos - n.t) * player.beatMs > 60 && !player.options?.wait;
         const lane = HIGHWAY_LANES.indexOf(laneOf(n.drum)), x = lane * laneW + laneW / 2;
         const color = late ? '#4b5263' : DRUM_BY_ID[laneOf(n.drum)].color;
         const w = (laneW - 14) * (n.ghost ? 0.6 : 1), h = n.accent ? 18 : n.ghost ? 9 : 13;
-        c.globalAlpha = n.ghost ? 0.6 : 1; c.fillStyle = color;
+        c.globalAlpha = (n.ghost ? 0.6 : 1) * (auto ? 0.3 : 1); c.fillStyle = color;
         if (n.drum === 'hhOpen') { // open hi-hat: ring
           c.strokeStyle = color; c.lineWidth = 4; c.beginPath(); c.arc(x, y, 10, 0, Math.PI * 2); c.stroke();
         } else if (n.drum === 'hhPedal') { // foot: small bar
@@ -88,6 +92,10 @@ export function Highway() {
       if (pos < 0) {
         c.fillStyle = '#e9edf4'; c.font = 'bold 72px system-ui, sans-serif';
         c.fillText(String(Math.ceil(-pos)), W / 2, H / 2 - 40);
+      } else if (player.options?.count && pos < run.beats) { // count out loud: 1 & 2 & …
+        const beat = Math.floor(pos % run.beatsPerBar) + 1;
+        c.fillStyle = 'rgba(233,237,244,.35)'; c.font = 'bold 64px system-ui, sans-serif';
+        c.fillText(pos % 1 < 0.5 ? String(beat) : '&', W / 2, 70);
       }
       c.fillStyle = '#ffb547'; c.fillRect(0, 0, (W * Math.max(0, Math.min(1, pos / run.beats))), 3);
     };

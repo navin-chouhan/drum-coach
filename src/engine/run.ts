@@ -1,4 +1,4 @@
-import { beatsPerBar, type Chart, type ChartNote } from './chart.ts';
+import { beatsPerBar, type Chart, type ChartDrum, type ChartNote } from './chart.ts';
 
 export type RunOptions = { fromBar: number; toBar: number; repeats: number }; // bars are 1-based, inclusive
 export type RunNote = ChartNote & { i: number; bar: number; pos: number }; // pos = beats into its bar
@@ -22,3 +22,12 @@ export function buildRun(chart: Chart, o: RunOptions): Run {
 }
 
 export const beatMs = (bpm: number, speed = 1) => 60000 / (bpm * speed);
+
+/**
+ * Splits a run into the notes the student plays (scored) and the notes the app plays (auto).
+ * No `activeLanes` means the student plays everything. Notes keep their run index `i`.
+ */
+export function splitRun(run: Run, activeLanes?: readonly ChartDrum[]): { scored: Run; auto: RunNote[] } {
+  const on = (n: RunNote) => !activeLanes || activeLanes.includes(n.drum);
+  return { scored: { ...run, notes: run.notes.filter(on) }, auto: run.notes.filter(n => !on(n)) };
+}

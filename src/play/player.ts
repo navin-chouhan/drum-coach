@@ -1,9 +1,9 @@
-import { beatsPerBar, padMatches, type Chart } from '../engine/chart';
-import { buildRun, beatMs as toBeatMs, type Run, type RunOptions } from '../engine/run';
+import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '../engine/chart';
+import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
 import { computeStats, createMatcher, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
-import { audio, audioToPerf, click, playBuffer } from './audio';
+import { audio, audioToPerf, click, playBuffer, playDrum } from './audio';
 
 export type PlayOptions = RunOptions & {
   speed: number; // 0.5–1
@@ -14,6 +14,11 @@ export type PlayOptions = RunOptions & {
   backing?: { buffer: AudioBuffer; syncOffsetMs: number };
   /** Run on someone else's clock (a YouTube video): beats from the run start at performance time `now`. */
   external?: { position: (now: number) => number; begin: () => void; end: () => void };
+  activeLanes?: ChartDrum[]; // lanes the student plays; the app plays the rest (layered practice)
+  demo?: boolean;            // the app plays every note and nothing is scored
+  gapBars?: number;          // the click is silent on every n-th bar
+  count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
+  lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach
 };
 export type Finished = { zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
 export type Feedback = { lane: string; judgement: Judgement | 'extra'; time: number };
@@ -23,12 +28,13 @@ type State = {
   chart?: Chart; run?: Run; options?: PlayOptions;
   zero: number; beatMs: number;   // perf ms of run beat 0, ms per beat
   results: NoteResult[]; feedback: Feedback[];
+  auto: boolean[];                // per run note: played by the app, not the student
   waitPos: number; waitGroup: number; waitLast: number;
   finished?: Finished;
 };
 
 /** Mutable player state; the highway reads it every frame, React re-renders on phase changes only. */
-export const player: State = { phase: 'idle', zero: 0, beatMs: 500, results: [], feedback: [], waitPos: 0, waitGroup: 0, waitLast: 0 };
+export const player: State = { phase: 'idle', zero: 0, beatMs: 500, results: [], feedback: [], auto: [], waitPos: 0, waitGroup: 0, waitLast: 0 };
 const listeners = new Set<() => void>();
 let version = 0;
 const notify = () => { version++; listeners.forEach(l => l()); };
@@ -56,6 +62,7 @@ function waitGroups() {
   if (groupsCache.run !== player.run) {
     const groups: { t: number; idx: number[] }[] = [];
     player.run!.notes.forEach((n, i) => {
+      if (player.auto[i]) return;
       const last = groups[groups.length - 1];
       if (last && Math.abs(last.t - n.t) < 1e-6) last.idx.push(i); else groups.push({ t: n.t, idx: [i] });
     });
@@ -67,6 +74,9 @@ function waitGroups() {
 export function start(chart: Chart, options: PlayOptions) {
   stop();
   const run = buildRun(chart, options);
+  const { scored, auto } = splitRun(run, options.demo ? [] : options.activeLanes);
+  const isAuto = run.notes.map(() => false);
+  auto.forEach(n => { isAuto[n.i] = true; });
   const beatMs = toBeatMs(chart.bpm, options.speed);
   if (options.external) return startExternal(chart, run, options, beatMs);
   const c = audio();
@@ -76,7 +86,7 @@ export function start(chart: Chart, options: PlayOptions) {
   const startedAt = new Date().toISOString();
   Object.assign(player, {
     phase: 'playing', chart, run, options, beatMs, zero: audioToPerf(zeroAudio),
-    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [],
+    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: isAuto,
     waitPos: -0.5, waitGroup: 0, waitLast: performance.now(), finished: undefined,
   } satisfies Partial<State>);
 
@@ -101,22 +111,25 @@ export function start(chart: Chart, options: PlayOptions) {
       player.feedback.push({ lane: laneOf(run.notes[idx].drum), judgement: 'good', time: h.time });
       if (g.idx.every(i => player.results[i].judgement !== 'miss')) {
         player.waitGroup++;
-        if (player.waitGroup >= groups.length) finish(hits, extras, startedAt);
+        if (player.waitGroup >= groups.length) finish(scored, hits, extras, startedAt);
       }
     }));
     notify();
     return;
   }
 
-  const match = createMatcher(run.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })));
-  cleanup.push(onHit(h => {
+  const match = createMatcher(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })));
+  if (!options.demo) cleanup.push(onHit(h => {
     const hit = { time: h.time - latency, pad: h.pad, velocity: h.velocity };
     if (hit.time < player.zero - 1000) return; // count-in noodling isn't scored
     hits.push(hit);
     const m = match(hit);
     if (m) {
-      player.results[m.index] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity };
-      player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });
+      const i = scored.notes[m.index].i;
+      player.results[i] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity };
+      player.feedback.push({ lane: laneOf(run.notes[i].drum), judgement: m.judgement, time: h.time });
+    } else if (h.pad && auto.some(n => padMatches(n.drum, h.pad!))) {
+      // playing along on a lane the app is playing: neither scored nor an extra
     } else {
       extras.push(hit);
       const pad = h.pad ?? 'snare';
@@ -125,8 +138,10 @@ export function start(chart: Chart, options: PlayOptions) {
     if (player.feedback.length > 64) player.feedback.splice(0, 32);
   }));
 
-  // Lookahead scheduler for clicks (and the end of the run).
+  // Lookahead scheduler for clicks, app-played notes and the end of the run.
   const sub = options.subdivision, bpb = beatsPerBar(chart);
+  const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
+  let a = 0;
   let k = -countIn * sub;
   const lastK = options.metronome ? run.beats * sub : 0; // metronome off → count-in only
   const timeOf = (k: number) => t0 + ((k / sub + countIn) * beatMs) / 1000;
@@ -135,9 +150,14 @@ export function start(chart: Chart, options: PlayOptions) {
       const onBeat = k % sub === 0;
       if (!onBeat && !options.metronome) continue;
       const barStart = onBeat && (((k / sub) % bpb) + bpb) % bpb < 1e-6;
-      click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1);
+      const gap = options.gapBars && k >= 0 && (Math.floor(k / sub / bpb + 1e-6) + 1) % options.gapBars === 0;
+      if (!gap) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1);
     }
-    if (performance.now() > player.zero + run.beats * beatMs + 400) finish(hits, extras, startedAt);
+    for (; a < auto.length && autoAt(auto[a]) < c.currentTime + 0.12; a++) {
+      const n = auto[a];
+      playDrum(DRUM_PAD[n.drum][0], n.accent ? 110 : n.ghost ? 40 : 80, autoAt(n));
+    }
+    if (performance.now() > player.zero + run.beats * beatMs + 400) finish(scored, hits, extras, startedAt);
   }, 25);
   cleanup.push(() => clearInterval(timer));
 
@@ -163,7 +183,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   const ext = options.external!, latency = getSettings().latencyMs, startedAt = new Date().toISOString();
   Object.assign(player, {
     phase: 'playing', chart, run, options, beatMs, zero: 0,
-    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], finished: undefined,
+    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: run.notes.map(() => false), finished: undefined,
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
@@ -182,18 +202,21 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
     }
     if (player.feedback.length > 64) player.feedback.splice(0, 32);
   }));
-  const timer = setInterval(() => { if (ext.position(performance.now()) > run.beats + 0.5) finish(hits, extras, startedAt); }, 50);
+  const timer = setInterval(() => { if (ext.position(performance.now()) > run.beats + 0.5) finish(run, hits, extras, startedAt); }, 50);
   cleanup.push(() => { clearInterval(timer); ext.end(); });
   ext.begin();
   notify();
 }
 
-function finish(hits: PlayedHit[], extras: PlayedHit[], startedAt: string) {
-  const { chart, run, options, results } = player;
+/** Results cover only the notes the student played (`scored`); a demo just ends. */
+function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: string) {
+  const { chart, options } = player;
+  if (options!.demo) { stop(); return; }
   cleanup.forEach(f => f()); cleanup = [];
-  const stats = computeStats(run!, results, extras.length);
+  const results = scored.notes.map(n => player.results[n.i]);
+  const stats = computeStats(scored, results, extras.length);
   player.phase = 'done';
-  player.finished = { zero: player.zero, chart: chart!, run: run!, options: options!, results, extras, hits, stats, startedAt, durationS: Math.round((Date.now() - Date.parse(startedAt)) / 1000) };
+  player.finished = { zero: player.zero, chart: chart!, run: scored, options: options!, results, extras, hits, stats, startedAt, durationS: Math.round((Date.now() - Date.parse(startedAt)) / 1000) };
   notify();
 }
 
