@@ -3,7 +3,7 @@
 class BandLevels extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.N = 256; this.acc = [0, 0, 0]; this.count = 0; this.start = 0; this.buf = [];
+    this.N = 256; this.acc = new Float64Array(3); this.count = 0; this.start = 0; this.buf = new Float64Array(4 * 12); this.len = 0; // reused: no garbage on the audio thread
   }
   process(inputs) {
     const inp = inputs[0];
@@ -13,9 +13,10 @@ class BandLevels extends AudioWorkletProcessor {
       if (this.count === 0) this.start = currentTime + i / sampleRate;
       for (let c = 0; c < 3; c++) { const x = (inp[c] ?? inp[0])[i]; this.acc[c] += x * x; }
       if (++this.count === this.N) {
-        this.buf.push(this.start, Math.sqrt(this.acc[0] / this.N), Math.sqrt(this.acc[1] / this.N), Math.sqrt(this.acc[2] / this.N));
-        this.acc = [0, 0, 0]; this.count = 0;
-        if (this.buf.length >= 4 * 12) { this.port.postMessage(this.buf); this.buf = []; }
+        const b = this.buf, a = this.acc;
+        b[this.len++] = this.start; for (let c = 0; c < 3; c++) b[this.len++] = Math.sqrt(a[c] / this.N);
+        a.fill(0); this.count = 0;
+        if (this.len === b.length) { this.port.postMessage(b); this.len = 0; } // postMessage copies it
       }
     }
     return true;

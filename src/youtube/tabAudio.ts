@@ -74,7 +74,7 @@ export function analyseNode(source: AudioNode, onOnset: (o: Onset) => void): () 
   chains.forEach((c, i) => { source.connect(c[0]); c[c.length - 1].connect(merger, 0, i); });
   merger.connect(levels);
   const detect = createOnsetDetector(256 / ctx.sampleRate);
-  levels.port.onmessage = (e: MessageEvent<number[]>) => {
+  levels.port.onmessage = (e: MessageEvent<Float64Array>) => {
     const d = e.data;
     for (let i = 0; i < d.length; i += 4) for (const o of detect([d[i + 1], d[i + 2], d[i + 3]], d[i])) onOnset(o);
   };

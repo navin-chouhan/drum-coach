@@ -1,6 +1,7 @@
 /** Recorded audio → 16 kHz mono 16-bit WAV (what the speech helper reads, no ffmpeg needed). */
 export async function toWav16k(blob: Blob): Promise<Blob> {
-  const decoded = await new AudioContext().decodeAudioData(await blob.arrayBuffer());
+  const ac = new AudioContext(); // closed right after: each open context keeps an audio thread running
+  const decoded = await ac.decodeAudioData(await blob.arrayBuffer()).finally(() => void ac.close());
   const len = Math.ceil(decoded.duration * 16000);
   const off = new OfflineAudioContext(1, Math.max(1, len), 16000);
   const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start();
