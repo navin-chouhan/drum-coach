@@ -1,0 +1,42 @@
+import { describe, expect, it } from 'vitest';
+import { candidateCues, createLiveCoach, type WindowNote } from './liveCoach';
+
+const groove = (offset: number, over: Partial<WindowNote> = {}): WindowNote[] =>
+  Array.from({ length: 16 }, (_, i) => ({ drum: i % 4 === 0 ? 'kick' : 'hihat', judgement: 'good', offset, velocity: 80, pad: 'hhClosed', ...over }));
+
+describe('candidate cues', () => {
+  it('dragging and rushing beyond the chattiness threshold', () => {
+    expect(candidateCues({ bar: 4, notes: groove(30), extras: 0 }, 'normal')[0].id).toBe('dragging');
+    expect(candidateCues({ bar: 4, notes: groove(-25), extras: 0 }, 'normal')[0].id).toBe('rushing');
+    expect(candidateCues({ bar: 4, notes: groove(-25), extras: 0 }, 'quiet')).toEqual([]); // quiet waits for 30 ms
+    expect(candidateCues({ bar: 4, notes: groove(5), extras: 0 }, 'normal')).toEqual([]);
+  });
+  it('a lane missed three times in a row outranks timing', () => {
+    const notes = groove(30).map(n => (n.drum === 'kick' ? { ...n, judgement: 'miss' as const, offset: undefined } : n));
+    expect(candidateCues({ bar: 4, notes, extras: 0 }, 'normal').map(c => c.id)).toEqual(['missing-kick', 'dragging']);
+  });
+  it('hi-hat pad sending open where the chart wants closed', () => {
+    expect(candidateCues({ bar: 4, notes: groove(0, { pad: 'hhOpen' }), extras: 0 }, 'quiet')[0].id).toBe('hh-open');
+  });
+  it('dynamics tips only when talkative', () => {
+    const notes = groove(0).map((n, i) => ({ ...n, accent: i % 4 === 2, velocity: 80 }));
+    expect(candidateCues({ bar: 4, notes, extras: 0 }, 'normal')).toEqual([]);
+    expect(candidateCues({ bar: 4, notes, extras: 0 }, 'talkative')[0].id).toBe('accents');
+  });
+  it('extra hits', () => {
+    expect(candidateCues({ bar: 4, notes: groove(0), extras: 4 }, 'normal')[0].id).toBe('extras');
+  });
+});
+
+describe('live coach gate', () => {
+  it('silent in the first bar, then at most once per gap, same tip once per 8 bars, praise after a fix', () => {
+    const coach = createLiveCoach('normal');
+    const said: string[] = [];
+    for (let bar = 0; bar < 20; bar++) {
+      const notes = bar < 12 ? groove(30) : groove(0); // drags for 12 bars, then fixed
+      const cue = coach({ bar, notes, extras: 0 });
+      if (cue) said.push(`${bar}:${cue.id}`);
+    }
+    expect(said).toEqual(['1:dragging', '9:dragging', '12:praise']);
+  });
+});

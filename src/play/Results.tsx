@@ -96,6 +96,12 @@ export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => vo
           </div>
         </div>
       )}
+      {f.cues.length > 0 && (
+        <div className="card">
+          <h3>Tips during this take</h3>
+          <ul className="tips">{f.cues.map((c, i) => <li key={i}>{c.text}</li>)}</ul>
+        </div>
+      )}
       <div className="card">
         <h3>Replay · expected (rings) vs played (dots), extra hits ✕</h3>
         <Replay f={f} />

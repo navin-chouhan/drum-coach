@@ -3,6 +3,7 @@ import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type Ru
 import { computeStats, createMatcher, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
+import { createLiveCoach, type Cue } from '../engine/liveCoach';
 import { audio, audioToPerf, click, playBuffer, playDrum } from './audio';
 
 export type PlayOptions = RunOptions & {
@@ -20,7 +21,7 @@ export type PlayOptions = RunOptions & {
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
   lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach
 };
-export type Finished = { zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
+export type Finished = { cues: Cue[]; zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
 export type Feedback = { lane: string; judgement: Judgement | 'extra'; time: number };
 
 type State = {
@@ -29,6 +30,7 @@ type State = {
   zero: number; beatMs: number;   // perf ms of run beat 0, ms per beat
   results: NoteResult[]; feedback: Feedback[];
   auto: boolean[];                // per run note: played by the app, not the student
+  cue?: { cue: Cue; at: number }; // latest live tip (performance.now() time)
   waitPos: number; waitGroup: number; waitLast: number;
   finished?: Finished;
 };
@@ -42,6 +44,33 @@ export const subscribePlayer = (fn: () => void) => { listeners.add(fn); return (
 export const playerVersion = () => version;
 
 let cleanup: (() => void)[] = [];
+
+// ---------- live tips (see engine/liveCoach.ts) ----------
+let live: { coach: ReturnType<typeof createLiveCoach>; bar: number; extras: PlayedHit[]; cues: Cue[] } | null = null;
+const cueListeners = new Set<(c: Cue) => void>();
+/** Called with every live tip as it's given (for the voice). */
+export const onCue = (fn: (c: Cue) => void) => { cueListeners.add(fn); return () => { cueListeners.delete(fn); }; };
+
+function startLive(options: PlayOptions, extras: PlayedHit[]) {
+  const s = getSettings();
+  live = s.liveTips === 'off' || options.wait || options.demo ? null : { coach: createLiveCoach(s.chattiness), bar: 0, extras, cues: [] };
+}
+/** Once per bar: look at the last two bars and maybe give one tip. */
+function liveCheck(pos: number) {
+  const run = player.run;
+  if (!live || !run) return;
+  const bpb = run.beatsPerBar, bar = Math.floor(pos / bpb);
+  if (bar <= live.bar) return;
+  live.bar = bar;
+  const from = (bar - 2) * bpb, to = bar * bpb;
+  const notes = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [{ drum: n.drum, accent: n.accent, ghost: n.ghost, ...player.results[i] }]));
+  const extras = live.extras.filter(h => { const b = (h.time - player.zero) / player.beatMs; return b >= from && b < to; }).length;
+  const cue = live.coach({ bar, notes, extras });
+  if (!cue) return;
+  player.cue = { cue, at: performance.now() };
+  live.cues.push(cue);
+  cueListeners.forEach(l => l(cue));
+}
 
 /** Current position in run beats (negative during count-in). */
 export function position(now = performance.now()) {
@@ -86,7 +115,7 @@ export function start(chart: Chart, options: PlayOptions) {
   const startedAt = new Date().toISOString();
   Object.assign(player, {
     phase: 'playing', chart, run, options, beatMs, zero: audioToPerf(zeroAudio),
-    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: isAuto,
+    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: isAuto, cue: undefined,
     waitPos: -0.5, waitGroup: 0, waitLast: performance.now(), finished: undefined,
   } satisfies Partial<State>);
 
@@ -107,7 +136,7 @@ export function start(chart: Chart, options: PlayOptions) {
         player.feedback.push({ lane: h.pad?.startsWith('hh') ? 'hihat' : (h.pad ?? 'snare'), judgement: 'extra', time: h.time });
         return;
       }
-      player.results[idx] = { judgement: 'good', offset: 0, velocity: h.velocity };
+      player.results[idx] = { judgement: 'good', offset: 0, velocity: h.velocity, pad: h.pad };
       player.feedback.push({ lane: laneOf(run.notes[idx].drum), judgement: 'good', time: h.time });
       if (g.idx.every(i => player.results[i].judgement !== 'miss')) {
         player.waitGroup++;
@@ -126,7 +155,7 @@ export function start(chart: Chart, options: PlayOptions) {
     const m = match(hit);
     if (m) {
       const i = scored.notes[m.index].i;
-      player.results[i] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity };
+      player.results[i] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity, pad: h.pad };
       player.feedback.push({ lane: laneOf(run.notes[i].drum), judgement: m.judgement, time: h.time });
     } else if (h.pad && auto.some(n => padMatches(n.drum, h.pad!))) {
       // playing along on a lane the app is playing: neither scored nor an extra
@@ -138,7 +167,8 @@ export function start(chart: Chart, options: PlayOptions) {
     if (player.feedback.length > 64) player.feedback.splice(0, 32);
   }));
 
-  // Lookahead scheduler for clicks, app-played notes and the end of the run.
+  startLive(options, extras);
+  // Lookahead scheduler for clicks, app-played notes, live tips and the end of the run.
   const sub = options.subdivision, bpb = beatsPerBar(chart);
   const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
   let a = 0;
@@ -157,6 +187,7 @@ export function start(chart: Chart, options: PlayOptions) {
       const n = auto[a];
       playDrum(DRUM_PAD[n.drum][0], n.accent ? 110 : n.ghost ? 40 : 80, autoAt(n));
     }
+    liveCheck(position());
     if (performance.now() > player.zero + run.beats * beatMs + 400) finish(scored, hits, extras, startedAt);
   }, 25);
   cleanup.push(() => clearInterval(timer));
@@ -183,7 +214,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   const ext = options.external!, latency = getSettings().latencyMs, startedAt = new Date().toISOString();
   Object.assign(player, {
     phase: 'playing', chart, run, options, beatMs, zero: 0,
-    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: run.notes.map(() => false), finished: undefined,
+    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: run.notes.map(() => false), cue: undefined, finished: undefined,
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
@@ -194,7 +225,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
     hits.push(hit);
     const m = match(hit);
     if (m) {
-      player.results[m.index] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity };
+      player.results[m.index] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity, pad: h.pad };
       player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });
     } else {
       extras.push(hit);
@@ -202,7 +233,8 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
     }
     if (player.feedback.length > 64) player.feedback.splice(0, 32);
   }));
-  const timer = setInterval(() => { if (ext.position(performance.now()) > run.beats + 0.5) finish(run, hits, extras, startedAt); }, 50);
+  startLive(options, extras);
+  const timer = setInterval(() => { const pos = ext.position(performance.now()); liveCheck(pos); if (pos > run.beats + 0.5) finish(run, hits, extras, startedAt); }, 50);
   cleanup.push(() => { clearInterval(timer); ext.end(); });
   ext.begin();
   notify();
@@ -216,7 +248,7 @@ function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: 
   const results = scored.notes.map(n => player.results[n.i]);
   const stats = computeStats(scored, results, extras.length);
   player.phase = 'done';
-  player.finished = { zero: player.zero, chart: chart!, run: scored, options: options!, results, extras, hits, stats, startedAt, durationS: Math.round((Date.now() - Date.parse(startedAt)) / 1000) };
+  player.finished = { cues: live?.cues ?? [], zero: player.zero, chart: chart!, run: scored, options: options!, results, extras, hits, stats, startedAt, durationS: Math.round((Date.now() - Date.parse(startedAt)) / 1000) };
   notify();
 }
 

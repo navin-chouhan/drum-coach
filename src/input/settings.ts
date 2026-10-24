@@ -1,5 +1,6 @@
 import type { LessonProgress, Profile } from '../engine/lesson';
 import type { SessionItem } from '../engine/planner';
+import type { Chattiness } from '../engine/liveCoach';
 
 // App settings that aren't per-kit, plus the student's lesson state.
 // Synced to the server (SQLite) when it's up; localStorage keeps it working offline.
@@ -9,9 +10,11 @@ export type Settings = {
   latencyMs: number; browserSounds: boolean; autoCoach: boolean;
   profile: Profile; lessons: Record<string, LessonProgress>; session?: Session;
   updatedAt?: number; // ms; the newer copy wins when browser and server disagree
+  liveTips: 'off' | 'screen' | 'voice'; chattiness: Chattiness;
+  voice: boolean; countIn: boolean; // speak verdicts and coach feedback; spoken count-in
 };
 const DEFAULTS: Settings = {
-  latencyMs: 0, browserSounds: false, autoCoach: false,
+  latencyMs: 0, browserSounds: false, autoCoach: false, liveTips: 'screen', chattiness: 'normal', voice: false, countIn: true,
   profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
 };
 

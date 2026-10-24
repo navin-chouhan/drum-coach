@@ -22,6 +22,18 @@ export function CoachView() {
       <div className={`card ${status && !status.ready ? 'warnCard' : ''}`}>
         <h3>AI coach</h3>
         <p className="small">{status?.message ?? 'Checking…'}</p>
+        <div className="row2">
+          <label className="inline">Tips while you play
+            <select value={settings.liveTips} onChange={e => setSettings({ liveTips: e.target.value as typeof settings.liveTips })}>
+              <option value="off">off</option><option value="screen">on screen</option><option value="voice">on screen + spoken</option>
+            </select></label>
+          <label className="inline">How chatty
+            <select value={settings.chattiness} onChange={e => setSettings({ chattiness: e.target.value as typeof settings.chattiness })}>
+              <option value="quiet">quiet: only big problems</option><option value="normal">normal</option><option value="talkative">talkative: dynamics and more praise</option>
+            </select></label>
+        </div>
+        <label className="check"><input type="checkbox" checked={settings.voice} onChange={e => setSettings({ voice: e.target.checked })} /> Speak verdicts and the coach's feedback</label>
+        <label className="check"><input type="checkbox" checked={settings.countIn} onChange={e => setSettings({ countIn: e.target.checked })} /> Count me in out loud ("one, two, three, four")</label>
         <label className="check"><input type="checkbox" checked={settings.autoCoach} onChange={e => setSettings({ autoCoach: e.target.checked })} />
           Ask for feedback automatically after every run (uses more of your Claude usage)</label>
       </div>

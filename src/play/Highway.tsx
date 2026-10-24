@@ -98,6 +98,16 @@ export function Highway() {
         c.fillText(pos % 1 < 0.5 ? String(beat) : '&', W / 2, 70);
       }
       c.fillStyle = '#ffb547'; c.fillRect(0, 0, (W * Math.max(0, Math.min(1, pos / run.beats))), 3);
+      const tip = player.cue, age = tip ? now - tip.at : Infinity;
+      if (tip && age < 2500) { // live tip banner
+        c.globalAlpha = Math.min(1, (2500 - age) / 400);
+        c.font = 'bold 20px system-ui, sans-serif';
+        const tw = c.measureText(tip.cue.text).width + 36;
+        c.fillStyle = tip.cue.id === 'praise' ? 'rgba(52,211,153,.92)' : 'rgba(255,181,71,.95)';
+        c.beginPath(); c.roundRect(W / 2 - tw / 2, 14, tw, 40, 10); c.fill();
+        c.fillStyle = '#1a1205'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(tip.cue.text, W / 2, 34);
+        c.globalAlpha = 1;
+      }
     };
     raf = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(raf); ro.disconnect(); };

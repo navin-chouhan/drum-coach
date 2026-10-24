@@ -254,3 +254,4 @@
     body.printingSheet .printTarget{position:absolute;left:0;top:0;width:100%}
     body.printingSheet .sheetPaper{background:#fff}
   }
+  .tips{margin:0;padding-left:20px}

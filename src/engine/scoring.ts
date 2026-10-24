@@ -8,7 +8,7 @@ export type Judgement = 'perfect' | 'good' | 'miss';
 export type Expected = { time: number; drum: ChartDrum };
 export type PlayedHit = { time: number; pad?: PadId; velocity: number };
 export type Match = { index: number; offset: number; judgement: Exclude<Judgement, 'miss'> };
-export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number };
+export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId };
 
 /**
  * Online matcher: each hit takes the nearest not-yet-matched expected note of a compatible drum

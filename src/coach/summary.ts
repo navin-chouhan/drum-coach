@@ -19,5 +19,6 @@ export function summarizeRun(f: Finished) {
     perDrum: Object.fromEntries(Object.entries(s.perDrum).map(([d, v]) => [d, { notes: v.total, accuracyPct: v.accuracy, meanOffsetMs: v.meanOffset }])),
     velocity: s.velocity, weakSpots,
     ...(f.options.lesson && { lesson: f.options.lesson }),
+    ...(f.cues.length && { liveTips: f.cues.map(c => c.text) }),
   };
 }
