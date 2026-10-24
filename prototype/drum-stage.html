@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drum Stage</title>
+<style>
+  :root{
+    --bg:#0a0c11; --panel:#12161e; --panel2:#171c26; --line:#232a37;
+    --text:#e9edf4; --muted:#8a94a7; --accent:#ffb547;
+    --good:#34d399; --ok:#fbbf24; --bad:#f87171;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg);color:var(--text);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;overflow-x:hidden;
+  }
+  header{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 20px;border-bottom:1px solid var(--line);background:#0c0f15;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:.01em}
+  .brand .logo{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:999px;
+    background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .chip .dot{width:8px;height:8px;border-radius:50%;background:#6b7280;flex:none}
+  .chip.ok{color:var(--text)} .chip.ok .dot{background:var(--good);box-shadow:0 0 8px var(--good)}
+  .chip.bad .dot{background:var(--bad)}
+  .chip.pulse .dot{animation:blink .25s ease-out}
+  @keyframes blink{0%{transform:scale(1.9)}100%{transform:scale(1)}}
+  .spacer{flex:1}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  select,input[type=number],button{
+    font:inherit;font-size:13px;color:var(--text);background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;padding:6px 10px;
+  }
+  button{cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+  button:hover{border-color:#3a4456}
+  button.on{border-color:var(--accent);color:var(--accent);background:#1d1910}
+  input[type=number]{width:64px}
+  .group{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px}
+
+  main{display:grid;grid-template-columns:minmax(0,1fr) 300px;min-height:0}
+  .stage{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    padding:10px 16px;overflow:hidden;
+    background:radial-gradient(ellipse 70% 60% at 50% 38%, #1c2332 0%, #10141c 55%, var(--bg) 100%);
+  }
+  .thump{position:absolute;inset:0;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse 60% 55% at 50% 70%, rgba(255,107,107,.35), transparent 70%)}
+  svg#kit{width:100%;height:100%;max-height:calc(100vh - 290px);min-height:300px;display:block}
+  .pad{cursor:pointer}
+  .pad .body,.pad .ripple,.pad .spark,.hhTop{transform-box:fill-box;transform-origin:center}
+  .pad text{pointer-events:none;user-select:none}
+  .hint{position:absolute;left:16px;top:12px;color:var(--muted);font-size:12px;
+    background:rgba(10,12,17,.7);border:1px solid var(--line);padding:6px 10px;border-radius:8px}
+  .hint kbd{font:11px ui-monospace,Menlo,monospace;background:var(--panel2);border:1px solid var(--line);
+    border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--text)}
+
+  aside{border-left:1px solid var(--line);background:#0d1016;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h3{margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  #lastName{font-size:26px;font-weight:700;line-height:1.1;transition:color .1s}
+  #lastMeta{color:var(--muted);font-size:12.5px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .velbar{height:6px;border-radius:3px;background:var(--panel2);margin-top:10px;overflow:hidden}
+  .velbar i{display:block;height:100%;width:0;border-radius:3px;background:var(--accent);transition:width .08s}
+  #timingBig{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  #timingSub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .meter{position:relative;height:34px;margin-top:12px;border-radius:8px;background:var(--panel2);overflow:hidden}
+  .meter .zone{position:absolute;top:0;bottom:0;left:40%;width:20%;background:rgba(52,211,153,.12)}
+  .meter .center{position:absolute;top:0;bottom:0;left:50%;width:1px;background:#3b4456}
+  .meter .tick{position:absolute;top:7px;width:3px;height:20px;border-radius:2px;margin-left:-1.5px;transition:opacity .3s}
+  .meter .lbl{position:absolute;bottom:2px;font-size:9.5px;color:var(--muted)}
+  .counts{display:flex;flex-direction:column;gap:7px}
+  .row{display:grid;grid-template-columns:72px 1fr 34px;align-items:center;gap:8px;font-size:12.5px}
+  .row .bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+  .row .bar i{display:block;height:100%;width:0;border-radius:3px;transition:width .2s}
+  .row .n{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+  .small{color:var(--muted);font-size:12px}
+  #resetBtn{margin-top:10px;width:100%}
+
+  footer{border-top:1px solid var(--line);background:#0c0f15;padding:8px 20px 12px}
+  footer .lanesHead{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+  canvas#lanes{width:100%;height:176px;display:block;border-radius:10px;background:#0e1219;border:1px solid var(--line)}
+
+  @media (max-width:900px){
+    main{grid-template-columns:1fr}
+    aside{border-left:none;border-top:1px solid var(--line)}
+    svg#kit{max-height:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo"></span>Drum Stage</div>
+  <span class="chip" id="status"><span class="dot"></span><span id="statusText">Starting…</span></span>
+  <div class="spacer"></div>
+  <div class="controls">
+    <select id="inputSel" title="MIDI input"><option value="all">All MIDI inputs</option></select>
+    <button id="soundBtn" title="Play drum sounds in the browser (keep off if you listen through the module)">Browser sounds: off</button>
+    <span class="group">
+      <button id="clickBtn" title="Metronome — also measures your timing">Click: off</button>
+      <input id="bpm" type="number" min="40" max="240" value="90" title="Tempo (BPM)"> BPM
+    </span>
+    <span class="group">Grid
+      <select id="grid" title="Timing is measured against this note grid">
+        <option value="1">1/4</option><option value="2" selected>1/8</option><option value="4">1/16</option>
+      </select>
+    </span>
+  </div>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <div class="thump" id="thump"></div>
+    <svg id="kit" viewBox="0 0 1000 640" aria-label="Drum kit">
+      <defs>
+        <radialGradient id="gHead" cx="45%" cy="40%" r="65%">
+          <stop offset="0" stop-color="#f4f1ea"/><stop offset=".7" stop-color="#d9d4c9"/><stop offset="1" stop-color="#b9b3a6"/>
+        </radialGradient>
+        <radialGradient id="gKick" cx="45%" cy="40%" r="70%">
+          <stop offset="0" stop-color="#2b3140"/><stop offset="1" stop-color="#151922"/>
+        </radialGradient>
+        <radialGradient id="gCym" cx="38%" cy="32%" r="75%">
+          <stop offset="0" stop-color="#ffe7a3"/><stop offset=".35" stop-color="#e2b24f"/>
+          <stop offset=".75" stop-color="#b07d2a"/><stop offset="1" stop-color="#7a5418"/>
+        </radialGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="10"/>
+        </filter>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity=".55"/>
+        </filter>
+      </defs>
+      <g id="kitLayer"></g>
+    </svg>
+    <div class="hint" id="hint">
+      No kit? Use keys: <kbd>Space</kbd> kick · <kbd>S</kbd> snare · <kbd>A</kbd>/<kbd>Q</kbd> hi-hat · <kbd>Z</kbd> hh pedal ·
+      <kbd>E</kbd> <kbd>R</kbd> <kbd>F</kbd> toms · <kbd>W</kbd> crash · <kbd>T</kbd> ride
+    </div>
+  </section>
+
+  <aside>
+    <div class="card">
+      <h3>Last hit</h3>
+      <div id="lastName">—</div>
+      <div id="lastMeta">Hit a pad to start</div>
+      <div class="velbar"><i id="velFill"></i></div>
+    </div>
+    <div class="card">
+      <h3>Timing</h3>
+      <div id="timingBig">—</div>
+      <div id="timingSub">Turn on the click to measure your timing</div>
+      <div class="meter" id="meter">
+        <div class="zone"></div><div class="center"></div>
+        <span class="lbl" style="left:6px">early</span><span class="lbl" style="right:6px">late</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Hits <span id="totalHits" style="float:right;color:var(--text)">0</span></h3>
+      <div class="counts" id="counts"></div>
+      <button id="resetBtn">Reset</button>
+    </div>
+    <div class="small">Open this page in <b>Chrome</b> (Safari doesn't support MIDI). Turn the module volume down if you use browser sounds.</div>
+  </aside>
+</main>
+
+<footer>
+  <div class="lanesHead"><span>Timeline · last 4 seconds</span><span>now →</span></div>
+  <canvas id="lanes"></canvas>
+</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- Kit definition (General MIDI notes, matches MPS-150 defaults) ---------- */
+  const DRUMS = [
+    { id:'kick',  name:'Kick',      notes:[36,35],       x:500, y:470, r:115, type:'kick',   color:'#ff6b6b' },
+    { id:'crash', name:'Crash',     notes:[49,57,55,52], x:255, y:160, r:100, type:'cymbal', color:'#f72585' },
+    { id:'ride',  name:'Ride',      notes:[51,59,53],    x:780, y:170, r:110, type:'cymbal', color:'#ff9f1c' },
+    { id:'hihat', name:'Hi-hat',    notes:[42,46,44],    x:150, y:320, r:78,  type:'hihat',  color:'#2ee6a6' },
+    { id:'tom1',  name:'Tom 1',     notes:[48,50],       x:405, y:235, r:66,  type:'drum',   color:'#4cc9f0' },
+    { id:'tom2',  name:'Tom 2',     notes:[45,47],       x:595, y:235, r:70,  type:'drum',   color:'#5b8cff' },
+    { id:'floor', name:'Floor tom', notes:[43,41],       x:705, y:410, r:90,  type:'drum',   color:'#9b7bff' },
+    { id:'snare', name:'Snare',     notes:[38,40,37],    x:315, y:400, r:78,  type:'drum',   color:'#ffd166' },
+  ];
+  const LANE_ORDER = ['crash','ride','hihat','tom1','tom2','floor','snare','kick'];
+  const byId = Object.fromEntries(DRUMS.map(d => [d.id, d]));
+  const noteMap = {};
+  DRUMS.forEach(d => d.notes.forEach(n => noteMap[n] = d.id));
+  const NOTE_LABEL = { 42:'closed', 46:'open', 44:'pedal' };
+
+  const KEYMAP = {
+    ' ':[36], x:[36], s:[38], a:[42], q:[46], z:[44], e:[48], r:[45], f:[43], w:[49], t:[51]
+  };
+
+  /* ---------- Settings (per-browser convenience only) ---------- */
+  const store = {
+    get(k, d){ try { const v = localStorage.getItem('drumstage.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v){ try { localStorage.setItem('drumstage.' + k, JSON.stringify(v)); } catch {} }
+  };
+
+  /* ---------- Build the SVG kit ---------- */
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const kitLayer = document.getElementById('kitLayer');
+  const el = (tag, attrs = {}, parent) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const padEls = {};
+
+  // stands & pedals drawn first (behind everything)
+  const back = el('g', { opacity: .9 }, kitLayer);
+  el('rect', { x:470, y:588, width:60, height:40, rx:8, fill:'#222833', stroke:'#394254' }, back);
+  const kickPedal = el('rect', { x:480, y:594, width:40, height:28, rx:5, fill:'#3a4252' }, back);
+  el('rect', { x:120, y:438, width:60, height:40, rx:8, fill:'#222833', stroke:'#394254' }, back);
+  const hhPedal = el('rect', { x:130, y:444, width:40, height:28, rx:5, fill:'#3a4252' }, back);
+  el('text', { x:150, y:496, 'text-anchor':'middle', fill:'#6f7a8e', 'font-size':12 }, back).textContent = 'HH pedal';
+  [kickPedal, hhPedal].forEach(p => p.style.cssText = 'transform-box:fill-box;transform-origin:center bottom');
+
+  function addLabel(g, d, dark) {
+    const isCym = d.type === 'cymbal' || d.type === 'hihat';
+    const dy = d.type === 'kick' ? 40 : isCym ? d.r * .5 : 2;
+    const t1 = el('text', { x:d.x, y:d.y + dy, 'text-anchor':'middle',
+      'font-size': d.r > 90 ? 20 : 16, 'font-weight':700, fill: dark ? '#e9edf4' : isCym ? '#4a3510' : '#2a2f3a' }, g);
+    t1.textContent = d.name;
+    const t2 = el('text', { x:d.x, y:d.y + dy + 18, 'text-anchor':'middle',
+      'font-size':11, fill: dark ? '#9aa4b6' : '#5c6270' }, g);
+    t2.textContent = d.notes.slice(0, d.id === 'hihat' ? 3 : 1).join(' / ');
+  }
+
+  DRUMS.forEach(d => {
+    const g = el('g', { class:'pad', 'data-id':d.id }, kitLayer);
+    const glow = el('circle', { cx:d.x, cy:d.y, r:d.r * 1.05, fill:d.color, filter:'url(#glow)', opacity:0 }, g);
+    const body = el('g', { class:'body', filter:'url(#shadow)' }, g);
+    let flash, hhTop = null, hhState = null;
+
+    if (d.type === 'drum' || d.type === 'kick') {
+      const isKick = d.type === 'kick';
+      el('circle', { cx:d.x, cy:d.y, r:d.r, fill:isKick ? '#1a1f2a' : '#2a2f3a', stroke:'#4a5263', 'stroke-width':3 }, body);
+      // lugs
+      const lugs = isKick ? 10 : 8;
+      for (let i = 0; i < lugs; i++) {
+        const a = i / lugs * Math.PI * 2;
+        el('circle', { cx:d.x + Math.cos(a) * (d.r - 4), cy:d.y + Math.sin(a) * (d.r - 4), r:3.2, fill:'#8a93a5' }, body);
+      }
+      el('circle', { cx:d.x, cy:d.y, r:d.r * .88, fill:isKick ? 'url(#gKick)' : 'url(#gHead)' }, body);
+      el('circle', { cx:d.x, cy:d.y, r:d.r * .93, fill:'none', stroke:d.color, 'stroke-width':3, opacity:.85 }, body);
+      if (isKick) {
+        el('circle', { cx:d.x, cy:d.y - 18, r:d.r * .32, fill:'none', stroke:'#3a4252', 'stroke-width':2 }, body);
+      }
+      flash = el('circle', { cx:d.x, cy:d.y, r:d.r * .88, fill:d.color, opacity:0 }, body);
+      addLabel(body, d, isKick);
+    } else {
+      // cymbal or hi-hat
+      const drawCym = (parent, dx = 0, dy = 0, shade = 1) => {
+        const cg = el('g', {}, parent);
+        el('circle', { cx:d.x + dx, cy:d.y + dy, r:d.r, fill:'url(#gCym)', stroke:'#5e4214', 'stroke-width':1.5, opacity:shade }, cg);
+        for (let k = 1; k <= 5; k++) {
+          el('circle', { cx:d.x + dx, cy:d.y + dy, r:d.r * (.25 + k * .14), fill:'none', stroke:'#5e4214', 'stroke-width':.8, opacity:.28 }, cg);
+        }
+        el('circle', { cx:d.x + dx, cy:d.y + dy, r:d.r * .2, fill:'#f0c766', stroke:'#8a6420', 'stroke-width':1 }, cg);
+        el('circle', { cx:d.x + dx, cy:d.y + dy, r:4, fill:'#3b2a0c' }, cg);
+        return cg;
+      };
+      if (d.type === 'hihat') {
+        drawCym(body, 0, 0, .55);             // bottom cymbal
+        hhTop = el('g', { class:'hhTop' }, body);
+        drawCym(hhTop);
+        hhState = el('text', { x:d.x, y:d.y + d.r + 22, 'text-anchor':'middle', 'font-size':12, fill:'#8a94a7' }, g);
+        hhState.textContent = 'closed';
+      } else {
+        drawCym(body);
+      }
+      const fg = hhTop || body;
+      flash = el('circle', { cx:d.x, cy:d.y, r:d.r, fill:'#fff6d8', opacity:0 }, fg);
+      addLabel(fg, d, false);
+    }
+    const rippleLayer = el('g', {}, g);
+    padEls[d.id] = { g, body, glow, flash, rippleLayer, hhTop, hhState, open:false };
+
+    g.addEventListener('pointerdown', ev => {
+      ev.preventDefault();
+      const note = d.id === 'hihat' ? (padEls.hihat.open ? 46 : 42) : d.notes[0];
+      handleNote(note, 100, ev.timeStamp || performance.now());
+    });
+  });
+
+  /* ---------- Animations ---------- */
+  const thump = document.getElementById('thump');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function animatePad(id, vel, note) {
+    const d = byId[id], p = padEls[id];
+    const v = Math.max(.15, vel / 127);
+    const ease = 'cubic-bezier(.2,.8,.25,1)';
+
+    p.glow.animate([{ opacity: .25 + .6 * v }, { opacity: 0 }],
+      { duration: d.type === 'cymbal' ? 900 : 420, easing: 'ease-out' });
+    p.flash.animate([{ opacity: .12 + .5 * v }, { opacity: 0 }],
+      { duration: d.type === 'cymbal' ? 800 : 300, easing: 'ease-out' });
+
+    if (!reduceMotion) {
+      if (d.type === 'cymbal' || (d.type === 'hihat' && note !== 44)) {
+        const target = d.type === 'hihat' ? p.hhTop : p.body;
+        const dir = Math.random() < .5 ? -1 : 1;
+        const amt = (d.type === 'hihat' ? 5 : 10) * v;
+        target.animate([
+          { transform: 'rotate(0deg) scale(1,1)' },
+          { transform: `rotate(${dir * amt}deg) scale(${1 - .05 * v},${1 - .12 * v})` },
+          { transform: `rotate(${-dir * amt * .5}deg) scale(1,${1 - .05 * v})` },
+          { transform: `rotate(${dir * amt * .2}deg) scale(1,1)` },
+          { transform: 'rotate(0deg) scale(1,1)' }
+        ], { duration: d.type === 'hihat' ? (note === 46 ? 600 : 260) : 1000 + 400 * v, easing: 'ease-out' });
+      } else if (d.type !== 'hihat') {
+        p.body.animate([
+          { transform: 'scale(1)' },
+          { transform: `scale(${1 - .07 * v})` },
+          { transform: `scale(${1 + .015 * v})` },
+          { transform: 'scale(1)' }
+        ], { duration: 260, easing: ease });
+      }
+
+      // expanding ring
+      const ring = el('circle', { class:'ripple', cx:d.x, cy:d.y, r:d.r, fill:'none', stroke:d.color, 'stroke-width':3 + 3 * v }, p.rippleLayer);
+      ring.animate([{ transform:'scale(1)', opacity:.9 }, { transform:`scale(${1.35 + .35 * v})`, opacity:0 }],
+        { duration: 650, easing: 'ease-out' }).onfinish = () => ring.remove();
+
+      // sparks on strong hits
+      if (v > .6) {
+        const n = 6 + Math.round(v * 6);
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const dist = d.r * (1.15 + Math.random() * .7);
+          const s = el('circle', { class:'spark', cx:d.x + Math.cos(a) * d.r * .9, cy:d.y + Math.sin(a) * d.r * .9, r:2 + Math.random() * 2.5, fill:d.color }, p.rippleLayer);
+          s.animate([
+            { transform:'translate(0,0)', opacity:1 },
+            { transform:`translate(${Math.cos(a) * (dist - d.r * .9)}px,${Math.sin(a) * (dist - d.r * .9)}px)`, opacity:0 }
+          ], { duration: 450 + Math.random() * 300, easing: 'cubic-bezier(.1,.7,.3,1)' }).onfinish = () => s.remove();
+        }
+      }
+      if (id === 'kick') {
+        thump.animate([{ opacity: .4 + .6 * v }, { opacity: 0 }], { duration: 380, easing: 'ease-out' });
+        kickPedal.animate([{ transform:'scaleY(1)' }, { transform:'scaleY(.6)' }, { transform:'scaleY(1)' }], { duration: 200 });
+      }
+    }
+  }
+
+  function setHiHat(open) {
+    const p = padEls.hihat;
+    if (p.open === open) return;
+    p.open = open;
+    p.hhState.textContent = open ? 'open' : 'closed';
+    p.hhState.setAttribute('fill', open ? '#2ee6a6' : '#8a94a7');
+    // top cymbal lifts (offset) when open
+    p.hhTop.style.transition = 'translate .12s ease-out';
+    p.hhTop.style.translate = open ? '-7px -10px' : '0px 0px';
+  }
+
+  /* ---------- Audio (metronome + optional synth drums) ---------- */
+  let ctx = null, master = null, noiseBuf = null;
+  function ensureAudio() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+      master = ctx.createGain(); master.gain.value = .8; master.connect(ctx.destination);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const ch = noiseBuf.getChannelData(0);
+      for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  const env = (g, t, peak, decay) => {
+    g.gain.setValueAtTime(Math.max(peak, .0002), t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + decay);
+  };
+  function noise(t, decay, peak, filters) {
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+    let node = src;
+    filters.forEach(([type, freq, q]) => {
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; if (q) f.Q.value = q;
+      node.connect(f); node = f;
+    });
+    const g = ctx.createGain(); env(g, t, peak, decay);
+    node.connect(g); g.connect(master);
+    src.start(t); src.stop(t + decay + .05);
+  }
+  function tone(t, type, f0, f1, sweep, decay, peak) {
+    const o = ctx.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + sweep);
+    const g = ctx.createGain(); env(g, t, peak, decay);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + decay + .05);
+  }
+  function playDrum(id, vel, note) {
+    ensureAudio();
+    const t = ctx.currentTime + .002, v = vel / 127;
+    switch (id) {
+      case 'kick':  tone(t, 'sine', 160, 42, .11, .38, 1.1 * v); noise(t, .02, .25 * v, [['lowpass', 1500]]); break;
+      case 'snare': noise(t, .2, .7 * v, [['highpass', 1100]]); tone(t, 'triangle', 220, 160, .05, .12, .45 * v); break;
+      case 'tom1':  tone(t, 'sine', 240, 150, .2, .45, .9 * v); break;
+      case 'tom2':  tone(t, 'sine', 185, 115, .22, .5, .9 * v); break;
+      case 'floor': tone(t, 'sine', 125, 78, .25, .6, 1 * v); break;
+      case 'hihat':
+        if (note === 44) noise(t, .04, .18 * v, [['highpass', 8000]]);
+        else noise(t, note === 46 ? .45 : .06, .38 * v, [['highpass', 7000], ['peaking', 10000, 1]]);
+        break;
+      case 'crash': noise(t, 1.6, .5 * v, [['highpass', 3500]]); break;
+      case 'ride':
+        noise(t, .9, .16 * v, [['highpass', 6000]]);
+        [1, 1.48, 2.13].forEach(m => tone(t, 'square', 620 * m, 610 * m, .3, .5, .035 * v));
+        break;
+    }
+  }
+
+  // metronome
+  let clickOn = false, bpm = +store.get('bpm', 90), grid = +store.get('grid', 2);
+  let nextBeat = 0, beatNo = 0, schedTimer = null;
+  const beats = []; // performance-time ms of each scheduled beat
+  function audioToPerf(t) {
+    if (ctx.getOutputTimestamp) {
+      const ts = ctx.getOutputTimestamp();
+      if (ts.performanceTime) return ts.performanceTime + (t - ts.contextTime) * 1000;
+    }
+    return performance.now() + (t - ctx.currentTime) * 1000;
+  }
+  function scheduleClicks() {
+    while (nextBeat < ctx.currentTime + .12) {
+      const accent = beatNo % 4 === 0;
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = accent ? 1600 : 1050;
+      const g = ctx.createGain(); env(g, nextBeat, accent ? .5 : .32, .04);
+      o.connect(g); g.connect(master); o.start(nextBeat); o.stop(nextBeat + .06);
+      beats.push(audioToPerf(nextBeat));
+      if (beats.length > 64) beats.shift();
+      nextBeat += 60 / bpm; beatNo++;
+    }
+  }
+  function startClick() {
+    ensureAudio();
+    clickOn = true; beatNo = 0; beats.length = 0;
+    nextBeat = ctx.currentTime + .1;
+    scheduleClicks();
+    schedTimer = setInterval(scheduleClicks, 25);
+    timingBig.textContent = '—';
+    timingSub.textContent = 'Play along with the click';
+  }
+  function stopClick() {
+    clickOn = false; clearInterval(schedTimer); schedTimer = null; beats.length = 0;
+    timingSub.textContent = 'Turn on the click to measure your timing';
+  }
+
+  /* ---------- Timing analysis ---------- */
+  const timingBig = document.getElementById('timingBig');
+  const timingSub = document.getElementById('timingSub');
+  const meter = document.getElementById('meter');
+  const recentOffsets = [];
+  function measureTiming(t, color) {
+    if (!clickOn || !beats.length) return;
+    // nearest beat at or before the hit (fall back to first)
+    let b0 = beats[0];
+    for (const b of beats) if (b <= t) b0 = b;
+    const step = 60000 / bpm / grid;
+    const k = Math.round((t - b0) / step);
+    const off = t - (b0 + k * step);
+    if (Math.abs(off) > step / 2 + 1) return;
+    recentOffsets.push(off); if (recentOffsets.length > 16) recentOffsets.shift();
+
+    const a = Math.abs(off);
+    const verdict = a <= 20 ? ['Perfect', 'var(--good)'] : a <= 45 ? ['Good', 'var(--ok)'] : ['Off', 'var(--bad)'];
+    timingBig.textContent = `${verdict[0]} · ${off >= 0 ? '+' : '−'}${Math.round(a)} ms`;
+    timingBig.style.color = verdict[1];
+    const mean = recentOffsets.reduce((s, x) => s + x, 0) / recentOffsets.length;
+    const avgAbs = recentOffsets.reduce((s, x) => s + Math.abs(x), 0) / recentOffsets.length;
+    const tend = Math.abs(mean) < 8 ? 'right on the grid' : mean < 0 ? `rushing by ${Math.round(-mean)} ms` : `dragging by ${Math.round(mean)} ms`;
+    timingSub.textContent = `Avg ±${Math.round(avgAbs)} ms · ${tend}`;
+
+    // meter tick (range ±100 ms)
+    const tick = document.createElement('i');
+    tick.className = 'tick';
+    tick.style.left = (50 + Math.max(-49, Math.min(49, off / 2))) + '%';
+    tick.style.background = color;
+    meter.appendChild(tick);
+    const ticks = meter.querySelectorAll('.tick');
+    ticks.forEach((tk, i) => tk.style.opacity = String(.15 + .85 * (i + 1) / ticks.length));
+    if (ticks.length > 16) ticks[0].remove();
+  }
+
+  /* ---------- Stats panel ---------- */
+  const countsEl = document.getElementById('counts');
+  const counts = Object.fromEntries(DRUMS.map(d => [d.id, 0]));
+  let total = 0;
+  const rows = {};
+  LANE_ORDER.slice().reverse().forEach(id => {
+    const d = byId[id];
+    const r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = `<span>${d.name}</span><span class="bar"><i style="background:${d.color}"></i></span><span class="n">0</span>`;
+    countsEl.appendChild(r);
+    rows[id] = { bar: r.querySelector('i'), n: r.querySelector('.n') };
+  });
+  function updateCounts() {
+    const max = Math.max(1, ...Object.values(counts));
+    for (const id in rows) {
+      rows[id].bar.style.width = (counts[id] / max * 100) + '%';
+      rows[id].n.textContent = counts[id];
+    }
+    document.getElementById('totalHits').textContent = total;
+  }
+  document.getElementById('resetBtn').onclick = () => {
+    for (const k in counts) counts[k] = 0;
+    total = 0; hits.length = 0; recentOffsets.length = 0;
+    meter.querySelectorAll('.tick').forEach(t => t.remove());
+    timingBig.textContent = '—'; timingBig.style.color = '';
+    updateCounts();
+  };
+
+  const lastName = document.getElementById('lastName');
+  const lastMeta = document.getElementById('lastMeta');
+  const velFill = document.getElementById('velFill');
+
+  /* ---------- Core note handler ---------- */
+  const hits = [];
+  const statusChip = document.getElementById('status');
+  function handleNote(note, vel, t) {
+    const id = noteMap[note];
+    statusChip.classList.remove('pulse'); void statusChip.offsetWidth; statusChip.classList.add('pulse');
+
+    if (!id) {
+      lastName.textContent = `Note ${note}`;
+      lastName.style.color = 'var(--muted)';
+      lastMeta.textContent = `Not mapped to a drum · velocity ${vel}`;
+      velFill.style.width = (vel / 127 * 100) + '%';
+      return;
+    }
+    const d = byId[id];
+    if (id === 'hihat') {
+      if (note === 44) setHiHat(false);
+      else setHiHat(note === 46);
+      hhPedal.animate([{ transform:'scaleY(1)' }, { transform:'scaleY(.6)' }, { transform:'scaleY(1)' }], { duration: 200 });
+    }
+    animatePad(id, vel, note);
+    if (soundOn) playDrum(id, vel, note);
+
+    counts[id]++; total++; updateCounts();
+    hits.push({ lane: LANE_ORDER.indexOf(id), t, v: vel / 127, color: d.color });
+    if (hits.length > 400) hits.splice(0, hits.length - 400);
+
+    lastName.textContent = d.name + (NOTE_LABEL[note] && id === 'hihat' ? ` (${NOTE_LABEL[note]})` : '');
+    lastName.style.color = d.color;
+    lastMeta.textContent = `Note ${note} · velocity ${vel}`;
+    velFill.style.width = (vel / 127 * 100) + '%';
+    velFill.style.background = d.color;
+
+    measureTiming(t, d.color);
+  }
+  window.drumStageHit = handleNote; // handy for testing in the console
+
+  /* ---------- Web MIDI ---------- */
+  const statusText = document.getElementById('statusText');
+  const inputSel = document.getElementById('inputSel');
+  let midi = null;
+  function setStatus(text, cls) {
+    statusText.textContent = text;
+    statusChip.classList.remove('ok', 'bad');
+    if (cls) statusChip.classList.add(cls);
+  }
+  function onMidiMessage(e) {
+    if (inputSel.value !== 'all' && e.currentTarget.id !== inputSel.value) return;
+    const [st, d1, d2] = e.data;
+    const cmd = st & 0xf0;
+    if (cmd === 0x90 && d2 > 0) handleNote(d1, d2, e.timeStamp || performance.now());
+  }
+  function refreshInputs() {
+    const prev = inputSel.value;
+    inputSel.innerHTML = '<option value="all">All MIDI inputs</option>';
+    const names = [];
+    midi.inputs.forEach(inp => {
+      inp.onmidimessage = onMidiMessage;
+      const o = document.createElement('option'); o.value = inp.id; o.textContent = inp.name; inputSel.appendChild(o);
+      names.push(inp.name);
+    });
+    if ([...inputSel.options].some(o => o.value === prev)) inputSel.value = prev;
+    if (names.length) {
+      setStatus(`${names.join(', ')} connected`, 'ok');
+      document.getElementById('hint').style.display = 'none';
+    } else {
+      setStatus('No MIDI device — plug in the kit', 'bad');
+      document.getElementById('hint').style.display = '';
+    }
+  }
+  async function initMidi() {
+    if (!navigator.requestMIDIAccess) {
+      setStatus('MIDI not supported here — open in Chrome', 'bad');
+      return;
+    }
+    try {
+      midi = await navigator.requestMIDIAccess({ sysex: false });
+      refreshInputs();
+      midi.onstatechange = refreshInputs;
+    } catch (err) {
+      setStatus('MIDI access blocked — click to retry', 'bad');
+      statusChip.style.cursor = 'pointer';
+      statusChip.onclick = () => { statusChip.onclick = null; statusChip.style.cursor = ''; initMidi(); };
+    }
+  }
+  initMidi();
+
+  /* ---------- Controls ---------- */
+  let soundOn = store.get('sound', false);
+  const soundBtn = document.getElementById('soundBtn');
+  const clickBtn = document.getElementById('clickBtn');
+  const bpmIn = document.getElementById('bpm');
+  const gridSel = document.getElementById('grid');
+  bpmIn.value = bpm; gridSel.value = String(grid);
+  const renderSound = () => { soundBtn.textContent = `Browser sounds: ${soundOn ? 'on' : 'off'}`; soundBtn.classList.toggle('on', soundOn); };
+  renderSound();
+  soundBtn.onclick = () => { soundOn = !soundOn; if (soundOn) ensureAudio(); store.set('sound', soundOn); renderSound(); };
+  clickBtn.onclick = () => {
+    clickOn ? stopClick() : startClick();
+    clickBtn.textContent = `Click: ${clickOn ? 'on' : 'off'}`;
+    clickBtn.classList.toggle('on', clickOn);
+  };
+  bpmIn.onchange = () => {
+    bpm = Math.max(40, Math.min(240, +bpmIn.value || 90)); bpmIn.value = bpm; store.set('bpm', bpm);
+    if (clickOn) { stopClick(); startClick(); }
+  };
+  gridSel.onchange = () => { grid = +gridSel.value; store.set('grid', grid); recentOffsets.length = 0; };
+
+  window.addEventListener('keydown', e => {
+    if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.matches('input, select')) return;
+    const notes = KEYMAP[e.key.toLowerCase()];
+    if (!notes) return;
+    e.preventDefault();
+    handleNote(notes[0], e.shiftKey ? 127 : 96, e.timeStamp || performance.now());
+  });
+
+  /* ---------- Timeline lanes ---------- */
+  const canvas = document.getElementById('lanes');
+  const c2d = canvas.getContext('2d');
+  const WINDOW = 4000, LABEL_W = 82;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(canvas.clientWidth * dpr); canvas.height = Math.round(canvas.clientHeight * dpr);
+    c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize); resize();
+
+  function draw() {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    const now = performance.now();
+    const laneH = H / LANE_ORDER.length;
+    const xOf = t => W - 14 - (now - t) / WINDOW * (W - 14 - LABEL_W);
+    c2d.clearRect(0, 0, W, H);
+
+    // lanes
+    LANE_ORDER.forEach((id, i) => {
+      const y = i * laneH;
+      if (i % 2 === 0) { c2d.fillStyle = 'rgba(255,255,255,.018)'; c2d.fillRect(0, y, W, laneH); }
+      c2d.fillStyle = byId[id].color; c2d.globalAlpha = .9;
+      c2d.fillRect(10, y + laneH / 2 - 4, 8, 8);
+      c2d.globalAlpha = 1;
+      c2d.fillStyle = '#8a94a7'; c2d.font = '11px system-ui, sans-serif'; c2d.textBaseline = 'middle';
+      c2d.fillText(byId[id].name, 24, y + laneH / 2);
+    });
+
+    // beat grid
+    if (clickOn && beats.length) {
+      const step = 60000 / bpm / grid;
+      const first = beats[0];
+      const startK = Math.ceil((now - WINDOW - first) / step);
+      const endK = Math.floor((now - first) / step);
+      for (let k = startK; k <= endK; k++) {
+        const t = first + k * step, x = xOf(t);
+        if (x < LABEL_W) continue;
+        const isBeat = k % grid === 0;
+        const isBar = isBeat && (k / grid) % 4 === 0;
+        c2d.strokeStyle = isBar ? 'rgba(255,181,71,.45)' : isBeat ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.06)';
+        c2d.lineWidth = isBar ? 1.5 : 1;
+        c2d.beginPath(); c2d.moveTo(x + .5, 0); c2d.lineTo(x + .5, H); c2d.stroke();
+      }
+    }
+
+    // now line
+    c2d.strokeStyle = 'rgba(255,181,71,.8)'; c2d.lineWidth = 2;
+    c2d.beginPath(); c2d.moveTo(W - 14, 0); c2d.lineTo(W - 14, H); c2d.stroke();
+
+    // hits
+    for (let i = hits.length - 1; i >= 0; i--) {
+      const h = hits[i];
+      const age = now - h.t;
+      if (age > WINDOW) break;
+      const x = xOf(h.t), y = h.lane * laneH + laneH / 2;
+      if (x < LABEL_W) continue;
+      const fresh = Math.max(0, 1 - age / 220);
+      const r = 3.5 + h.v * 6.5 + fresh * 5;
+      c2d.globalAlpha = .35 + .65 * (1 - age / WINDOW);
+      if (fresh > 0) { c2d.shadowColor = h.color; c2d.shadowBlur = 18 * fresh; }
+      c2d.fillStyle = h.color;
+      c2d.beginPath(); c2d.arc(x, y, r, 0, Math.PI * 2); c2d.fill();
+      c2d.shadowBlur = 0;
+    }
+    c2d.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
