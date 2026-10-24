@@ -14,14 +14,20 @@ export type Settings = {
   voice: boolean; countIn: boolean; // speak verdicts and coach feedback; spoken count-in
   playView: 'sheet' | 'highway';     // how notes are shown while playing
   aiTips: boolean; aiBriefing: boolean; // the coach writes the live tips / briefs you before a take (Claude calls)
+  v?: number; // settings version, for one-time migrations
 };
 const DEFAULTS: Settings = {
-  latencyMs: 0, browserSounds: false, autoCoach: false, liveTips: 'screen', chattiness: 'normal', voice: false, countIn: true, playView: 'sheet', aiTips: true, aiBriefing: true,
+  latencyMs: 0, browserSounds: false, autoCoach: true, liveTips: 'voice', chattiness: 'normal', voice: true, countIn: true, playView: 'sheet', aiTips: true, aiBriefing: true, v: 2,
   profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
 };
 
 let settings: Settings = { ...DEFAULTS };
-try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { /* defaults */ }
+try { settings = migrate({ ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }); } catch { /* defaults */ }
+
+/** v2: the coach talks by default, so settings saved before that get the voice switched on once. */
+export function migrate(s: Settings): Settings {
+  return (s.v ?? 1) < 2 ? { ...s, voice: true, liveTips: s.liveTips === 'off' ? 'off' : 'voice', v: 2 } : s;
+}
 const listeners = new Set<() => void>();
 
 export const getSettings = () => settings;

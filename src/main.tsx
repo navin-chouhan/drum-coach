@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './ui/App';
 import { syncFromServer } from './input/store';
-import { getSettings, serverIsNewer, setSettings, type Settings } from './input/settings';
+import { getSettings, migrate, serverIsNewer, setSettings, type Settings } from './input/settings';
 import { refreshAiLessons } from './lesson/aiLessons';
 import './ui/styles.css';
 
@@ -11,7 +11,7 @@ createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictM
 void refreshAiLessons();
 void syncFromServer().then(all => {
   const server = all.app as Partial<Settings> | undefined;
-  if (serverIsNewer(getSettings(), server)) setSettings(server!, false);
+  if (serverIsNewer(getSettings(), server)) setSettings(migrate({ ...getSettings(), ...server! }), true);
   else if (getSettings().updatedAt) setSettings({}, true); // browser is newer: push it, keeping its timestamp fresh
 });
 

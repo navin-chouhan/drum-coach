@@ -6,4 +6,4 @@ If there are no takes yet: say what to listen for and one thing to focus on. Oth
 one specific focus for this take (a drum, a beat position, timing or dynamics) and how to do it physically.
 Be warm and brief. No lists, no numbers longer than 3 digits.
 
-Answer shape: { "text": "1–2 sentences shown on screen", "spoken": "the same idea said out loud, 1–2 short sentences" }
+Answer shape: { "text": "1 sentence shown on screen", "spoken": "the same idea said out loud in 1 short sentence" }
