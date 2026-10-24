@@ -74,8 +74,7 @@ settings are under **Setup** (the ⚙ gear). While a take runs, the app goes int
 - **Your coach.** **Ask the coach for a new lesson** makes it read your recent takes and progress
   and write the next lesson. If the automatic AI debrief is on (Setup → Coach and voice), it
   also asks for a lesson once a day when none is waiting.
-- **What next / weekly plan / Ask the coach.** The coach's quick pick, a weekly plan, and a typed chat
-  (the same conversation as the mic button).
+- **Weekly plan from your coach** (folded). For questions, use the coach panel (bottom right) or hold **V**.
 - **Your path.** All stages, with their checkpoints and lessons. Finished lessons show their stars. Click any
   lesson to open it.
 

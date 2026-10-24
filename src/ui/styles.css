@@ -362,3 +362,4 @@
   .encore{text-align:center;padding:28px 18px}
   .stickers{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
   .rankSticker.locked{background:#EDEDED;color:#9A9A9A;transform:none;min-width:44px;text-align:center}
+  .planFold summary{margin:0 0 8px}

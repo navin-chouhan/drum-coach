@@ -1,15 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { saveChart, useCharts } from '../content/charts';
-import type { Chart } from '../engine/chart';
+import { useCharts } from '../content/charts';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { requestPlay } from '../ui/nav';
 import { askCoach, Thinking, useCoachEntry } from './api';
 import { say, voiceEngine } from '../voice/voice';
-import type { ChatReply, NextExercise, Plan } from './schemas';
+import type { Plan } from './schemas';
 
-type Msg = { role: 'user' | 'assistant'; content: string; chart?: Chart };
 type SavedPlan = { id: number; plan: Plan; checks: Record<string, boolean> };
-const CHAT_KEY = 'drumcoach.chat';
 
 /** The coach's settings (shown under Setup → Coach and voice). */
 export function CoachSettings() {
@@ -44,29 +41,6 @@ export function CoachSettings() {
         <label className="check"><input type="checkbox" checked={settings.liveCoach} onChange={e => setSettings({ liveCoach: e.target.checked })} /> The coach follows my practice: greets each exercise, reacts to every take, suggests the next step (Claude, one call each)</label>
         <label className="check"><input type="checkbox" checked={settings.handsFree} onChange={e => setSettings({ handsFree: e.target.checked })} /> Hands-free: when the coach asks me something, listen for my answer (no need to hold V)</label>
       </div>
-    </div>
-  );
-}
-
-export function NextCard() {
-  const [n, setN] = useState(0);
-  const key = `next:${n}`;
-  const e = useCoachEntry<NextExercise>(key);
-  const charts = useCharts();
-  const title = (id: string) => charts.find(c => c.id === id)?.title ?? id;
-  return (
-    <div className="card">
-      <h3>What next?</h3>
-      {e?.status === 'thinking' ? <Thinking /> : <button className="primary" onClick={() => { setN(n + 1); askCoach(`next:${n + 1}`, 'next'); }}>Pick my next exercise</button>}
-      {e?.status === 'error' && <p className="warn">{e.error}</p>}
-      {e?.status === 'done' && e.data && (
-        <div className="drill">
-          <b>{title(e.data.chartId)}</b> at {e.data.bpm} BPM
-          <p>{e.data.reason}</p>
-          {e.note && <p className="small">{e.note}</p>}
-          <button onClick={() => requestPlay({ chartId: e.data!.chartId, bpm: e.data!.bpm })}>Play it</button>
-        </div>
-      )}
     </div>
   );
 }
@@ -125,49 +99,6 @@ export function PlanCard() {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-export function ChatCard() {
-  const [msgs, setMsgs] = useState<Msg[]>(() => { try { return JSON.parse(localStorage.getItem(CHAT_KEY) ?? '[]'); } catch { return []; } });
-  const [text, setText] = useState('');
-  const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const e = useCoachEntry<ChatReply>(pendingKey);
-  const save = (m: Msg[]) => { setMsgs(m); try { localStorage.setItem(CHAT_KEY, JSON.stringify(m.slice(-30))); } catch { /* ignore */ } };
-
-  const send = () => {
-    const content = text.trim();
-    if (!content || (pendingKey && e?.status === 'thinking')) return;
-    const next = [...msgs, { role: 'user' as const, content }];
-    save(next); setText('');
-    const body = { messages: next.slice(-20).map(m => ({ role: m.role, content: m.content.slice(0, 4000) })) };
-    const key = `chat:${JSON.stringify(body)}`;
-    setPendingKey(key);
-    askCoach<ChatReply>(key, 'chat', body, r => {
-      save([...next, { role: 'assistant', content: r.reply, chart: r.chart }]);
-      setPendingKey(null);
-    });
-  };
-
-  return (
-    <div className="card chat">
-      <h3>Ask the coach <button className="link right" onClick={() => save([])}>clear</button></h3>
-      <div className="msgs" aria-live="polite">
-        {msgs.length === 0 && <p className="small">Ask about technique, or ask for an exercise ("give me a 2-bar hi-hat/kick coordination drill").</p>}
-        {msgs.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>
-            {m.content}
-            {m.chart && <div><button onClick={async () => { const c = await saveChart(m.chart!, 'ai'); requestPlay({ chartId: c.id }); }}>Save &amp; play "{m.chart.title}"</button></div>}
-          </div>
-        ))}
-        {e?.status === 'thinking' && <Thinking />}
-        {e?.status === 'error' && <p className="warn">{e.error} <button className="link" onClick={() => { setPendingKey(null); }}>dismiss</button></p>}
-      </div>
-      <form onSubmit={ev => { ev.preventDefault(); send(); }} className="chatInput">
-        <input value={text} onChange={ev => setText(ev.target.value)} placeholder="Type a question…" maxLength={4000} aria-label="Message to the coach" />
-        <button className="primary" disabled={!!pendingKey && e?.status === 'thinking'}>Send</button>
-      </form>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
-import { ChatCard, NextCard, PlanCard } from '../coach/CoachView';
+import { PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
 import type { Genre, Lesson } from '../engine/lesson';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
@@ -113,10 +113,10 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
         </div>
       )}
 
-      <div className="grid2">
-        <div className="stack"><NextCard /><PlanCard /></div>
-        <ChatCard />
-      </div>
+      <details className="planFold">
+        <summary>Weekly plan from your coach</summary>
+        <PlanCard />
+      </details>
 
       <div className="card">
         <h3>Your path</h3>
