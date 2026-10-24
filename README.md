@@ -129,16 +129,18 @@ are grey, and the page turns after each page of bars. Before you press Start it 
   and the AI coach's main point; "Count me in out loud" says "one, two, three, four" on the count-in clicks.
   Clicks and synth drums dip while the coach talks.
 
-- **AI coach voice** (Coach tab switches; each uses your Claude subscription):
-  - *Brief me before a take*: when you open an exercise or lesson step, the coach looks at your last takes on it and
-    tells you what to focus on (shown above the sheet, spoken).
-  - *The coach writes the tips*: once per exercise the coach writes its own wording for the live tips ("Push the
-    hats onto the click"); the rules still decide when they fire. Cached, so it costs one call per exercise.
-  - *AI debrief after every take*: the coach's 2–3 sentence take on what happened and what to try next, spoken.
-  - **Talk to the coach**: hold **V** (or the 🎙 button, bottom right), ask out loud, let go. Your words are transcribed
-    on this laptop (Whisper, offline) and the coach answers with what you're doing as context; the answer is spoken,
-    and if it suggests an exercise you can play it straight away. The first time, the speech model (~140 MB) is
-    downloaded into `data/whisper`; needs `uv` (already used for Piper).
+- **The live coach** (on by default; Coach tab → "The coach follows my practice"). One remembering conversation per
+  practice session: it greets each exercise, reacts to every take (it remembers the earlier ones: "the kick went from
+  40 to 20 ms late"), and suggests one next step as a big button in the coach panel (bottom right): tap it, or just
+  say "yes". It's written for a beginner: patient, one thing at a time, slows down readily.
+  - **Talk to it:** hold **V** (or the 🎙 button) and speak; let go to send. Speech is transcribed on this laptop
+    (Whisper, offline). **Hands-free:** when the coach asks you something, it listens for ~6 s by itself.
+  - Fast: one `claude` process stays running for the session, and the coach starts speaking as soon as its first
+    sentence is written (about 1–2 s). Model and effort: `CLAUDE_CLI_MODEL` / `CLAUDE_CLI_EFFORT` in `.env`
+    (Haiku + low by default).
+  - *The coach writes the tips*: once per exercise it writes its own wording for the live tips; the rules still
+    decide when they fire.
+  - Speech-to-text needs `uv`; the speech model (~140 MB) is downloaded into `data/whisper` the first time.
 
 **Voice setup (offline, one time):**
 ```bash
