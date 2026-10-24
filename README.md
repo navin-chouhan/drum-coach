@@ -8,7 +8,10 @@ subscription to write lessons for you and to give feedback.
 - **Guided path.** Seven fixed milestones, each with a "you can…" list and checkpoint lessons.
 - **Lessons curated for you.** The AI coach reads your recent takes and writes the next lesson for
   your weakest skill. Forty built-in lessons are the offline fallback.
-- **Daily session.** The Today tab gives you a 15–45 minute plan: warm-up, review, one skill and one
+- **A journey with rewards.** Every finished lesson earns 1–3 stars and a celebration; every stage passed
+  gives you a drummer rank (Stick Rookie → Swing Cat) and unlocks a **show-off song**: a real song the coach
+  picks for what you can now play, to learn and play for your friends in Stage mode.
+- **Daily session.** The Journey tab gives you a 15–45 minute plan: warm-up, review, one skill and one
   groove. You press Start and it walks you through.
 - **Hand-holding practice.** Build grooves one limb at a time while the app plays the other drums.
   Hear a demo first, count in, and get a one-line verdict after every take. The tempo goes up or
@@ -41,11 +44,11 @@ port first.
 ### First time
 1. **Answer the setup questions.** Pick the styles you want (rock/pop, funk/R&B, jazz, or none if
    you're not sure) and your minutes per day. 25 is recommended.
-2. **Calibrate.** On the **Calibrate** tab, hit each pad when asked, so the app knows your note map.
+2. **Calibrate.** Open **Setup** (the ⚙ gear, top right) → **Pads**, hit each pad when asked, so the app knows your note map.
    Then do **latency calibration** on the real kit: tap along with the clicks.
-3. **Go back to Today** and press **Start today's session**.
+3. **Go back to Journey** and press the **Next up** button.
 
-No kit? Use these keys, and hold Shift for an accent. You can also click a pad on the Kit tab.
+No kit? Use these keys, and hold Shift for an accent. You can also click a pad under Setup → Kit test.
 
 | Key | Drum | Key | Drum |
 |---|---|---|---|
@@ -56,16 +59,35 @@ No kit? Use these keys, and hold Shift for an accent. You can also click a pad o
 
 ## Using the app
 
-### Today (home)
-- **Header.** Shows the date, your streak, the planned minutes and your current milestone.
+The tabs are **Journey** (home), **Songs**, **Practice** and **Trophies**. Pads, the kit test and the coach's
+settings are under **Setup** (the ⚙ gear). While a take runs, the app goes into focus mode: only the music and
+**Stop** stay on screen. **Esc** stops a take anywhere. The mic button (or hold **V**) talks to the coach from any screen.
+
+### Journey (home)
+- **Header.** Your rank sticker, streak, current stage and the rank it leads to, and one **Next up** button:
+  the lesson your coach wrote for you if one is waiting, otherwise the next item of today's session.
+- **Your show-off song.** Once you have a rank: **Pick my show-off songs** asks the coach for 3 real songs you
+  can now play; **Learn this one** adds it and opens it in Songs.
 - **Today's session.** A warm-up (a rudiment you've finished), a due review, then up to two lessons
   for your current milestone. Coach lessons come first and carry a "by your coach" badge.
   **Start / Continue** opens the next unfinished item. **Open** jumps to any item.
 - **Your coach.** **Ask the coach for a new lesson** makes it read your recent takes and progress
-  and write the next lesson. If "Ask for feedback automatically" is ticked on the Coach tab, it
+  and write the next lesson. If the automatic AI debrief is on (Setup → Coach and voice), it
   also asks for a lesson once a day when none is waiting.
-- **Your path.** All milestones, with their checkpoints and lessons. ✓ means passed. Click any
+- **What next / weekly plan / Ask the coach.** The coach's quick pick, a weekly plan, and a typed chat
+  (the same conversation as the mic button).
+- **Your path.** All stages, with their checkpoints and lessons. Finished lessons show their stars. Click any
   lesson to open it.
+
+### Finishing a lesson
+The last clean take of a lesson brings up **LESSON COMPLETE!** with your stars (★ passed, ★★ 95%+ on time and few
+extra hits, ★★★ 98%+ with mostly perfect hits), a drum fill, and how close you are to the next rank. **Go for ★★★**
+plays it again; your best is kept. Passing a stage's last checkpoint shows **RANK UP!** with your new title. After
+every finished lesson the coach writes your next one in the background.
+
+### Trophies
+Rank stickers, total stars, and your **show-off set**: YouTube songs you've played scored at 85% or better.
+In a song's **Play (scored)** mode, tick **Stage mode** for a big video and an **ENCORE!** instead of the score sheet.
 
 ### A lesson
 1. **About this lesson** explains what, why and how. Coach lessons also say why the coach picked
@@ -91,16 +113,16 @@ lesson back the next day.
 ### Resets
 | What | Where |
 |---|---|
-| Change goals or minutes per day | Today → "Goals: … (change)" |
-| Plan today again from current progress | Today → "Rebuild today's plan" |
+| Change goals or minutes per day | Journey → "Goals: … (change)" |
+| Plan today again from current progress | Journey → "Rebuild today's plan" |
 | Start one lesson over | In the lesson → "Reset this lesson" |
 | Remove a coach lesson | In that lesson → "Delete this lesson" |
-| Start the whole path over and redo setup | Bottom of Today → "Reset all lesson progress" |
+| Start the whole path over and redo setup | Bottom of Journey → "Reset all lesson progress" |
 
-Resets never delete your run history (Progress tab).
+Resets never delete your run history (Trophies tab).
 
 ### Other tabs
-- **Free play.** Pick any exercise, coach-made chart or imported song. Set speed (50–125%),
+- **Practice.** Pick any exercise, coach-made chart or imported song. Set speed (50–125%),
   bars A–B, repeats, metronome and subdivision, count-in, wait mode (the song waits for the right
   hit) and browser drum sounds. `Esc` stops. The results screen shows accuracy, rushing or
   dragging, each drum, a where-in-the-bar heat map, a replay and coach feedback.
@@ -115,13 +137,13 @@ Resets never delete your run history (Progress tab).
   calibration.
 
 ### Sheet music while you play
-Free play, lessons and YouTube *Play (scored)* show the music as **drum notation** by default (switch *Sheet / Highway*
+Practice, lessons and YouTube *Play (scored)* show the music as **drum notation** by default (switch *Sheet / Highway*
 at the top right of the play area). A cursor glides through the current bar, played notes get a comic sticker
 (green on time, yellow a bit off, red "MISS!"), extra hits get a ✕, notes the app plays for you (layered lessons)
 are grey, and the page turns after each page of bars. Before you press Start it shows the music you're about to play.
 
 ## The coach while you play
-- **Tips while you play** (Coach tab): short banners on the highway such as "Dragging by 30 ms. Push a little",
+- **Tips while you play** (Setup → Coach and voice): short banners on the highway such as "Dragging by 30 ms. Push a little",
   "Bring the kick back in", "Hi-hat foot down" (the MPS-150 sends *open* unless the pedal is held). At most one
   tip every couple of bars. **How chatty**: quiet (only big problems), normal, talkative (adds dynamics tips
   and more praise). Tips also show on the results screen and go to the AI coach.
@@ -129,7 +151,7 @@ are grey, and the page turns after each page of bars. Before you press Start it 
   and the AI coach's main point; "Count me in out loud" says "one, two, three, four" on the count-in clicks.
   Clicks and synth drums dip while the coach talks.
 
-- **The live coach** (on by default; Coach tab → "The coach follows my practice"). One remembering conversation per
+- **The live coach** (on by default; Setup → Coach and voice → "The coach follows my practice"). One remembering conversation per
   practice session: it greets each exercise, reacts to every take (it remembers the earlier ones: "the kick went from
   40 to 20 ms late"), and suggests one next step as a big button in the coach panel (bottom right): tap it, or just
   say "yes". It's written for a beginner: patient, one thing at a time, slows down readily.
@@ -147,7 +169,7 @@ are grey, and the page turns after each page of bars. Before you press Start it 
 uv tool install piper-tts
 ~/.local/share/uv/tools/piper-tts/bin/python -m piper.download_voices en_US-lessac-medium --data-dir data/voices
 ```
-Restart `npm run dev`. Coach tab → "test the voice". Without Piper the browser's voice is used (robotic on Linux).
+Restart `npm run dev`. Setup → Coach and voice → "test the voice". Without Piper the browser's voice is used (robotic on Linux).
 Other voices: https://huggingface.co/rhasspy/piper-voices (put the `.onnx` + `.onnx.json` in `data/voices/`,
 or set `PIPER_VOICE=/path/voice.onnx` in `.env`). Rendered phrases are cached in `data/tts/`.
 
@@ -216,7 +238,7 @@ file: `feedback`, `next`, `plan`, `chat`, `groove` or `lesson`. The coach only e
 summaries, never raw MIDI. Every answer is validated with zod (`src/coach/schemas.ts`,
 `src/youtube/schemas.ts`), cached in SQLite and queued one at a time. Calls can take a minute and
 count toward your usage limits. The app shows "the coach is thinking" and never blocks playing. If
-the CLI is missing or logged out, the Coach tab says so and everything else keeps working.
+the CLI is missing or logged out, Setup → Coach and voice says so and everything else keeps working.
 
 ## Configuration (`.env`, all optional)
 | Variable | Purpose |
@@ -246,7 +268,7 @@ Everything stays on this machine.
     today's session
   - `drumcoach.noteMap.<device>`: the note map per kit
   - `drumcoach.midiInput`: the chosen MIDI input
-  - `drumcoach.playOptions`: Free play options
+  - `drumcoach.playOptions`: Practice options
   - `drumcoach.chat`: chat history
 
 The API only accepts requests from localhost and binds to 127.0.0.1.
@@ -262,10 +284,10 @@ src/
     midiImport                  Standard MIDI → chart
     youtube, tempo, transcribe, jam   link parsing, beat grid from taps, take quantizing, chartless jam scoring
   input/     MIDI (useMidi), keyboard fallback, hit event bus, note-map and settings stores
-  play/      Web Audio (click, synth drums), lookahead player, Highway canvas, Free play, Results
-  lesson/    Today tab, lesson player, lesson state + resets, coach-lesson store
+  play/      Web Audio (click, synth drums), lookahead player, Highway canvas, Practice (free play), Results
+  lesson/    Journey tab, lesson player, celebration, show-off card, lesson state + resets, coach-lesson store
   content/   curriculum (milestones + built-in lessons), exercise library, chart store, file import
-  coach/     coach API client, zod schemas, run summary, Coach tab, results feedback
+  coach/     coach API client, zod schemas, run summary, coach settings/cards, results feedback
   youtube/   Songs tab: search, versions, tempo, learn, jam, play, YouTube player, drum reducer
   ui/        App shell and tabs, kit view, calibration, latency, progress, timeline
 server/
@@ -328,7 +350,7 @@ npm run build   # type-check + production build
   practise with.
 - **The hi-hat counts as open.** The pad sends *open* unless the pedal is held down. Plain hi-hat
   notes accept both; open-hi-hat lessons need the pedal lifted.
-- **"Coach unavailable".** Run `claude` once in a terminal to log in. Check the Coach tab status.
+- **"Coach unavailable".** Run `claude` once in a terminal to log in. Check the status under Setup → Coach and voice.
 - **YouTube search errors.** Check `YOUTUBE_API_KEY` and the daily quota. Pasting a link always
   works.
 - **Port already in use.** Another `npm run dev` is running. Stop it, or set `PORT` and Vite's port.

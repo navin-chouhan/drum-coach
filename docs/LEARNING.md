@@ -39,7 +39,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |
 | Interleaving | A day's session is warm-up, review, one new skill and one groove or song. It isn't 30 minutes of one thing. |
-| Daily plan, not a menu | The **Today** tab builds the session from your progress. You press Start. |
+| Daily plan, not a menu | The **Journey** tab builds the session from your progress. You press Start. |
 | Progress you can see | Path map by level, BPM per lesson, streak and minutes. |
 | Expectations | Each lesson says what it is, why it matters, how to play it, and what passing means. |
 
@@ -58,6 +58,23 @@ writes the next lesson aimed at your weakest skill, with a one-line "why this, f
 failed take you can ask it for a lesson that fixes exactly that. Coach lessons are validated with
 zod, stored in SQLite and preferred by the daily planner. The built-in lessons are the offline
 fallback and the examples the coach is shown.
+
+## Accomplishment: stars, ranks and show-off songs
+
+Learning should feel like a journey with a win at every step, and the best win for a beginner is playing a real
+song for friends.
+
+- **Stars per lesson** (`starsFor` in `src/engine/lesson.ts`), from the take that completes it, best kept:
+  ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra and ≥70% perfect.
+  The coach sees stars: 1 star means shaky, so strengthening it beats a new topic.
+- **Celebration** after every finished lesson: stars, a drum fill, progress to the next rank, one Next button.
+- **Ranks**: each milestone has a title (`rank` in `MILESTONES`), earned when its checkpoints pass:
+  Stick Rookie, Limb Wrangler, Groove Keeper, Fill Maker, Dynamics Boss, Triplet Traveller, Swing Cat.
+  Ranks stay on the built-in checkpoints so they work offline.
+- **Show-off song**: each rank unlocks real songs the coach picks for the stage's skills (`/api/coach/showoff`).
+  You learn one in Songs; played scored at 85%+ it joins your show-off set, playable in Stage mode.
+- **The coach builds the path** inside the fixed stages: after every finished lesson it writes the next one in
+  the background, and Journey's Next up offers it first.
 
 ## Curriculum shape
 Levels 0–6, one milestone each. Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
