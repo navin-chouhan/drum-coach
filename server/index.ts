@@ -131,13 +131,13 @@ app.put('/api/settings/:key', async (req, reply) => {
 let cliCheck: { ok: boolean; version?: string } | undefined;
 app.get('/api/coach/status', async () => {
   const name = getProvider().name;
-  if (name !== 'claude-cli') return { provider: name, ready: true, message: `Using the Anthropic API (${process.env.CLAUDE_MODEL || 'claude-sonnet-5-5'}).` };
+  if (!name.startsWith('claude-cli')) return { provider: name, ready: true, message: `Using the Anthropic API (${process.env.CLAUDE_MODEL || 'claude-sonnet-5-5'}).` };
   if (!cliCheck?.ok) {
     const r = spawnSync(process.env.CLAUDE_BIN || 'claude', ['--version'], { timeout: 10_000, encoding: 'utf8' });
     cliCheck = r.status === 0 ? { ok: true, version: r.stdout.trim() } : { ok: false };
   }
   return cliCheck.ok
-    ? { provider: name, ready: true, message: `Using your Claude subscription via ${cliCheck.version}.` }
+    ? { provider: name, ready: true, message: `Using your Claude subscription via ${cliCheck.version}, model ${process.env.CLAUDE_CLI_MODEL || 'your Claude Code default'}${process.env.CLAUDE_CLI_EFFORT ? `, ${process.env.CLAUDE_CLI_EFFORT} effort` : ''}.` }
     : { provider: name, ready: false, message: 'The claude CLI was not found. Install Claude Code and run `claude` once to log in. Everything else works without it.' };
 });
 

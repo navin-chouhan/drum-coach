@@ -24,11 +24,13 @@ const TIMEOUT_MS = 180_000;
  */
 export function claudeCliProvider(bin = process.env.CLAUDE_BIN || 'claude'): AiProvider {
   return {
-    name: 'claude-cli',
+    // the model and effort are part of the name, so cached answers from another model aren't reused
+    name: `claude-cli:${process.env.CLAUDE_CLI_MODEL || 'default'}:${process.env.CLAUDE_CLI_EFFORT || 'default'}`,
     complete: (system, prompt) => new Promise((resolve, reject) => {
       const cwd = mkdtempSync(join(tmpdir(), 'drum-coach-'));
       const args = ['-p', '--output-format', 'json', '--tools', '', '--safe-mode', '--no-session-persistence', '--max-turns', '1', '--system-prompt', system];
       if (process.env.CLAUDE_CLI_MODEL) args.push('--model', process.env.CLAUDE_CLI_MODEL);
+      if (process.env.CLAUDE_CLI_EFFORT) args.push('--effort', process.env.CLAUDE_CLI_EFFORT); // low = less thinking, faster answers
       // Never hand the CLI an API key: it would bill the key instead of the subscription.
       const env = { ...process.env };
       delete env.ANTHROPIC_API_KEY;
