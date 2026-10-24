@@ -5,6 +5,7 @@ import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
 import { NUMBERS, sayAt } from '../voice/voice';
+import { applyTip, loadTips } from '../coach/aiTips';
 import { audio, audioToPerf, click, playBuffer, playDrum } from './audio';
 
 export type PlayOptions = RunOptions & {
@@ -67,8 +68,9 @@ function liveCheck(pos: number) {
   const from = (bar - 2) * bpb, to = bar * bpb;
   const notes = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [{ drum: n.drum, accent: n.accent, ghost: n.ghost, ...player.results[i] }]));
   const extras = live.extras.filter(h => { const b = (h.time - player.zero) / player.beatMs; return b >= from && b < to; }).length;
-  const cue = live.coach({ bar, notes, extras });
-  if (!cue) return;
+  const raw = live.coach({ bar, notes, extras });
+  if (!raw) return;
+  const cue = applyTip(player.chart, raw); // the coach's own words for this exercise, when it has written them
   player.cue = { cue, at: performance.now() };
   live.cues.push(cue);
   cueListeners.forEach(l => l(cue));
@@ -104,6 +106,7 @@ function waitGroups() {
 
 export function start(chart: Chart, options: PlayOptions) {
   stop();
+  if (!options.demo && !options.wait) loadTips(chart, options.lesson?.goal);
   const run = buildRun(chart, options);
   const { scored, auto } = splitRun(run, options.demo ? [] : options.activeLanes);
   const isAuto = run.notes.map(() => false);

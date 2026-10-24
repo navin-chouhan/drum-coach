@@ -16,6 +16,12 @@ export function speakOnce(key: string, f: Feedback) {
   void say(f.spoken ?? f.feedback.split(/(?<=[.!?])\s/)[0]);
 }
 
+/** Asks the coach about a finished take in the background and speaks the answer (lessons use this; results show it too). */
+export function debrief(f: Finished) {
+  const key = `feedback:${f.startedAt}`;
+  askCoach<Feedback>(key, 'feedback', { summary: summarizeRun(f) }, d => speakOnce(key, d));
+}
+
 export function CoachFeedback({ f }: { f: Finished }) {
   const settings = useSyncExternalStore(subscribeSettings, getSettings);
   const summary = useMemo(() => summarizeRun(f), [f]);

@@ -6,5 +6,5 @@ If "run.lesson" is present, the student is on a guided lesson step: judge the ta
 ("lesson.goal"), and only suggest a drill that helps with it. Lanes the app played for them are not in the run.
 
 Answer shape:
-{ "feedback": "2–4 sentences", "spoken": "one short sentence to say out loud (the main point)", "drill": { "title": string, "instructions": "1–3 sentences", "bpm"?: number,
+{ "feedback": "2–4 sentences", "spoken": "2–3 short, warm, conversational sentences you say out loud right after the take: the main point and what to try on the next take (no numbers longer than 3 digits, no lists)", "drill": { "title": string, "instructions": "1–3 sentences", "bpm"?: number,
   "chartId"?: "id of a library exercise", "chart"?: { a new chart, only if no library exercise fits } } }

@@ -4,7 +4,7 @@ import { CHART_DRUMS, ChartSchema } from '../engine/chart.ts';
 // Shapes the coach must answer with. Validated on the server before anything reaches the app.
 export const FeedbackSchema = z.object({
   feedback: z.string().min(1).max(2000),
-  spoken: z.string().max(240).optional(), // one short sentence the coach says out loud
+  spoken: z.string().max(500).optional(), // 2–3 conversational sentences the coach says out loud
   drill: z.object({
     title: z.string().max(120),
     instructions: z.string().max(1000),
@@ -24,7 +24,19 @@ export const PlanSchema = z.object({
     })).max(10),
   })).min(1).max(7),
 });
-export const ChatReplySchema = z.object({ reply: z.string().min(1).max(4000), chart: ChartSchema.optional() });
+export const ChatReplySchema = z.object({ reply: z.string().min(1).max(4000), spoken: z.string().max(500).optional(), chart: ChartSchema.optional() });
+
+/** Live-tip wording written by the coach for one exercise (ids = engine/liveCoach.ts cue ids). "{ms}" = the measured ms. */
+export const TipsSchema = z.object({
+  tips: z.record(z.string().max(40), z.object({ text: z.string().min(1).max(70), spoken: z.string().min(1).max(45) })),
+});
+export const TipsRequestSchema = z.object({
+  title: z.string().min(1).max(160), kind: z.string().max(20).optional(), level: z.number().int().min(0).max(10).optional(),
+  goal: z.string().max(400).optional(), cueIds: z.array(z.string().max(40)).min(1).max(30),
+});
+/** A short spoken briefing before a take. */
+export const BriefingSchema = z.object({ text: z.string().min(1).max(400), spoken: z.string().min(1).max(300) });
+export const BriefingRequestSchema = z.object({ chartId: z.string().min(1).max(120), title: z.string().min(1).max(160), goal: z.string().max(400).optional() });
 
 /** A lesson the coach writes for this student (see server/prompts/lesson.md). */
 export const AiLessonSchema = z.object({
@@ -67,6 +79,7 @@ export const RunRecordSchema = z.object({
 export type RunRecord = z.infer<typeof RunRecordSchema> & { id: number };
 export const ChatRequestSchema = z.object({
   messages: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(4000) })).min(1).max(30),
+  context: z.record(z.string(), z.unknown()).optional(), // what the student is doing right now (screen, last take)
 });
 export const PlanRequestSchema = z.object({
   goals: z.string().min(1).max(500), minutesPerDay: z.number().int().min(5).max(180), daysPerWeek: z.number().int().min(1).max(7),

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { AiLessonSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema } from '../src/coach/schemas.ts';
+import { AiLessonSchema, BriefingRequestSchema, BriefingSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import { suggestNext, type RunRow } from '../src/engine/progress.ts';
@@ -182,7 +182,27 @@ app.put('/api/plan/:id/checks', async (req, reply) => {
 app.post('/api/coach/chat', async (req, reply) => {
   const b = ChatRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
-  try { return await ask('chat', ChatReplySchema, { messages: b.data.messages, library: catalog() }); } catch (e) { return aiFail(reply, e); }
+  try { return await ask('chat', ChatReplySchema, { messages: b.data.messages, context: b.data.context, library: catalog() }); } catch (e) { return aiFail(reply, e); }
+});
+
+// ---------- coach: live-tip wording and pre-take briefings ----------
+app.post('/api/coach/tips', async (req, reply) => {
+  const b = TipsRequestSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  try {
+    const r = await ask('tips', TipsSchema, b.data);
+    return { data: { tips: Object.fromEntries(Object.entries(r.data.tips).filter(([id]) => b.data.cueIds.includes(id))) }, cached: r.cached };
+  } catch (e) { return aiFail(reply, e); }
+});
+app.post('/api/coach/briefing', async (req, reply) => {
+  const b = BriefingRequestSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  const recentTakes = (db.prepare('SELECT started_at, bpm, accuracy, mean_offset, spread, summary_json FROM runs WHERE chart_id = ? ORDER BY started_at DESC LIMIT 5').all(b.data.chartId) as
+    { started_at: string; bpm: number; accuracy: number; mean_offset: number; spread: number; summary_json: string }[]).reverse().map(r => {
+    const s = JSON.parse(r.summary_json);
+    return { at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracyPct: r.accuracy, meanOffsetMs: r.mean_offset, spreadMs: r.spread, perDrum: s.perDrum, weakSpots: s.weakSpots, liveTips: s.liveTips };
+  });
+  try { return await ask('briefing', BriefingSchema, { title: b.data.title, goal: b.data.goal, recentTakes }); } catch (e) { return aiFail(reply, e); }
 });
 
 // ---------- coach voice (Piper, offline) ----------

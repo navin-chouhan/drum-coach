@@ -39,8 +39,10 @@ export function CoachView() {
         <p className="small">Voice: {engine === 'piper' ? 'Piper (offline, natural)' : engine === 'browser' ? "the browser's voice (install Piper for a better one, see README)" : '…'}
           {' '}<button className="link" onClick={() => void say('Ready when you are. One, two, three, four.', true)}>test the voice</button></p>
         <label className="check"><input type="checkbox" checked={settings.countIn} onChange={e => setSettings({ countIn: e.target.checked })} /> Count me in out loud ("one, two, three, four")</label>
+        <label className="check"><input type="checkbox" checked={settings.aiTips} onChange={e => setSettings({ aiTips: e.target.checked })} /> The coach writes the tips for each exercise (one Claude call per exercise, then cached)</label>
+        <label className="check"><input type="checkbox" checked={settings.aiBriefing} onChange={e => setSettings({ aiBriefing: e.target.checked })} /> Brief me before a take (one Claude call when you open an exercise)</label>
         <label className="check"><input type="checkbox" checked={settings.autoCoach} onChange={e => setSettings({ autoCoach: e.target.checked })} />
-          Ask for feedback automatically after every run (uses more of your Claude usage)</label>
+          AI debrief after every take, spoken when "Speak" is on (one Claude call per take)</label>
       </div>
       <div className="grid2">
         <div className="stack"><NextCard /><PlanCard /></div>

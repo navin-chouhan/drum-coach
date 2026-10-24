@@ -13,9 +13,10 @@ export type Settings = {
   liveTips: 'off' | 'screen' | 'voice'; chattiness: Chattiness;
   voice: boolean; countIn: boolean; // speak verdicts and coach feedback; spoken count-in
   playView: 'sheet' | 'highway';     // how notes are shown while playing
+  aiTips: boolean; aiBriefing: boolean; // the coach writes the live tips / briefs you before a take (Claude calls)
 };
 const DEFAULTS: Settings = {
-  latencyMs: 0, browserSounds: false, autoCoach: false, liveTips: 'screen', chattiness: 'normal', voice: false, countIn: true, playView: 'sheet',
+  latencyMs: 0, browserSounds: false, autoCoach: false, liveTips: 'screen', chattiness: 'normal', voice: false, countIn: true, playView: 'sheet', aiTips: true, aiBriefing: true,
   profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
 };
 

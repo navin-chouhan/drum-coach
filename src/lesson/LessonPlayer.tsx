@@ -9,6 +9,7 @@ import { player, playerVersion, start, stop, subscribePlayer, type Finished, typ
 import { Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
+import { debrief } from '../coach/CoachFeedback';
 import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -70,6 +71,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
     }
     outcomes.set(f, o);
     if (getSettings().voice) void say(o.text);
+    if (getSettings().autoCoach && !f.options.wait) debrief(f); // spoken AI debrief after the verdict
     if (o.itemDone) onItemDone?.();
     saveRun(f, { passed: check.ok });
     setSecs(s => s + f.durationS);
@@ -145,7 +147,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
           {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Progress.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
         </div>
       </div>
-      <section className="highwayWrap"><NotesView idle={{ chart: step.chart, bpm }} /></section>
+      <section className="highwayWrap"><NotesView idle={{ chart: step.chart, bpm, goal: step.text }} /></section>
     </div>
   );
 }

@@ -304,3 +304,5 @@
   .sheetTip{position:absolute;top:8px;left:50%;transform:translateX(-50%);opacity:0;z-index:2;background:var(--pop);color:var(--line);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);font:800 16px var(--display);padding:8px 18px;white-space:nowrap;pointer-events:none}
   .sheetTip.praise{background:var(--cyan)}
   @media (prefers-reduced-motion: reduce){ .sheetBar{transition:none} }
+  .briefing{display:flex;gap:10px;align-items:baseline;margin:0 0 12px;padding:10px 14px;background:var(--panel);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);font-size:15px}
+  .briefingWho{font:800 12px var(--display);text-transform:uppercase;background:var(--pop);border:2px solid var(--line);padding:1px 8px;flex:none}
