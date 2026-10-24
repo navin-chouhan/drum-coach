@@ -3,6 +3,7 @@ import type { DrumId } from '../engine/kit';
 import { CoachFeedback } from '../coach/CoachFeedback';
 import { coachTake } from '../coach/session';
 import { summarizeRun } from '../coach/summary';
+import { latencySuspect } from '../engine/scoring';
 import { DRUM_BY_ID } from '../ui/drums';
 import { HIGHWAY_LANES } from './Highway';
 import type { Finished } from './player';
@@ -27,6 +28,13 @@ export function saveRun(f: Finished, extra?: Record<string, unknown>) {
   }) }).then(r => (r.ok ? saveOk() : saveFail()), saveFail);
 }
 
+/** Every stroke off by the same amount: point at the latency test before the student blames their hands. */
+export function LatencyHint({ f }: { f: Finished }) {
+  const ms = f.options.wait ? null : latencySuspect(f.results);
+  return ms === null ? null : <p className="warn">Almost every stroke landed about {Math.abs(ms)} ms {ms > 0 ? 'late' : 'early'}.
+    If it felt on time to you, it's probably the setup, not your hands: run the latency test under ⚙ Setup → Pads.</p>;
+}
+
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
   const s = f.stats, wait = f.options.wait;
   useEffect(() => { saveRun(f); coachTake(f); }, [f]);
@@ -36,7 +44,7 @@ export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => vo
       <div className="resultsHead">
         <div>
           <h2>{f.chart.title}</h2>
-          <p className="small">{Math.round(f.chart.bpm * f.options.speed)} BPM ({Math.round(f.options.speed * 100)}%) · bars {f.options.fromBar}–{f.options.toBar} × {f.options.repeats}{wait ? ' · wait mode' : ''}</p>
+          <p className="small">{Math.round(f.chart.bpm * f.options.speed)} BPM ({Math.round(f.options.speed * 100)}%) · bars {f.options.fromBar}–{f.options.toBar} × {f.options.repeats}{wait ? ' · wait mode' : ''}{f.options.guide ? ' · play-along' : ''}</p>
         </div>
         <div className="actions">
           <button className="primary" onClick={onAgain}>Play again</button>
@@ -55,6 +63,7 @@ export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => vo
             <h3>Timing</h3>
             <div className="big">{timingText(s.meanOffset)}</div>
             <p className="small">Consistency: ±{s.spread} ms (lower is steadier)</p>
+            <LatencyHint f={f} />
           </div>
         )}
         <div className="card">

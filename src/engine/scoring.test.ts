@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { computeStats, createMatcher, estimateLatency, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { computeStats, createMatcher, estimateLatency, latencySuspect, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -90,5 +90,18 @@ describe('estimateLatency', () => {
   });
   it('ignores stray taps and needs at least 6', () => {
     expect(estimateLatency(clicks, [1250, 1750, 1030])).toBeNull();
+  });
+});
+
+describe('latencySuspect', () => {
+  const hits = (offs: number[]) => offs.map(o => (Math.abs(o) <= 100 ? { judgement: 'good' as const, offset: o } : { judgement: 'miss' as const, off: o }));
+  it('flags every stroke late by the same amount, counting off-time strokes too', () => {
+    expect(latencySuspect(hits([140, 150, 120, 160, 130, 145, 155, 135]))).toBe(142);
+    expect(latencySuspect(hits([-60, -50, -70, -55, -65, -45, -60, -58]))).toBe(-58);
+  });
+  it('stays quiet for normal, mixed timing or too few strokes', () => {
+    expect(latencySuspect(hits([20, -30, 50, -10, 60, -40, 15, 5]))).toBeNull();
+    expect(latencySuspect(hits([90, 80, 70]))).toBeNull();
+    expect(latencySuspect(hits([90, 80, 70, 60, 50, -40, -30, 60]))).toBeNull(); // 75% late: could be the hands
   });
 });

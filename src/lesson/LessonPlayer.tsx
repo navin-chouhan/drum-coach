@@ -10,7 +10,7 @@ import { getSettings, subscribeSettings } from '../input/settings';
 import { NotesView } from '../play/NotesView';
 import { KitView } from '../ui/KitView';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
-import { Results, saveRun } from '../play/Results';
+import { LatencyHint, Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
 import { coachTake, dropCoachAction, onCoachAction } from '../coach/session';
@@ -164,6 +164,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
         {outcome && (
           <div className={`card verdict ${outcome.passed ? 'pass' : 'fail'}`} aria-live="polite">
             <p>{outcome.text}</p>
+            <LatencyHint f={f} />
             {timeUp && !outcome.itemDone && <p className="small">That's your {minutes} minutes for this one. Move on, or keep going if you're in the zone.</p>}
             <button className="link" onClick={() => setDetails(true)}>Details and coach</button>
             {helpKey && (help?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson for this" />

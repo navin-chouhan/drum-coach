@@ -19,6 +19,7 @@ export type PlayOptions = RunOptions & {
   external?: { position: (now: number) => number; begin: () => void; end: () => void };
   activeLanes?: ChartDrum[]; // lanes the student plays; the app plays the rest (layered practice)
   demo?: boolean;            // the app plays every note and nothing is scored
+  guide?: boolean;           // practice-along: the app plays every note softly under you, you're still scored, no live tips
   gapBars?: number;          // the click is silent on every n-th bar
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
   lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach
@@ -56,7 +57,7 @@ export const onCue = (fn: (c: Cue) => void) => { cueListeners.add(fn); return ()
 
 function startLive(options: PlayOptions, extras: PlayedHit[]) {
   const s = getSettings();
-  live = s.liveTips === 'off' || options.wait || options.demo ? null : { coach: createLiveCoach(s.chattiness), bar: 0, extras, cues: [] };
+  live = s.liveTips === 'off' || options.wait || options.demo || options.guide ? null : { coach: createLiveCoach(s.chattiness), bar: 0, extras, cues: [] };
 }
 /** Once per bar: look at the last two bars and maybe give one tip. */
 function liveCheck(pos: number) {
@@ -179,6 +180,7 @@ export function start(chart: Chart, options: PlayOptions) {
   const countVoice = getSettings().countIn && !options.demo;
   // Lookahead scheduler for clicks, app-played notes, live tips and the end of the run.
   const sub = options.subdivision, bpb = beatsPerBar(chart);
+  const sounding = options.guide ? run.notes : auto;
   const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
   let a = 0;
   let k = -countIn * sub;
@@ -193,9 +195,9 @@ export function start(chart: Chart, options: PlayOptions) {
       const gap = options.gapBars && k >= 0 && (Math.floor(k / sub / bpb + 1e-6) + 1) % options.gapBars === 0;
       if (!gap) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1);
     }
-    for (; a < auto.length && autoAt(auto[a]) < c.currentTime + 0.12; a++) {
-      const n = auto[a];
-      playDrum(DRUM_PAD[n.drum][0], n.accent ? 110 : n.ghost ? 40 : 80, autoAt(n));
+    for (; a < sounding.length && autoAt(sounding[a]) < c.currentTime + 0.12; a++) {
+      const n = sounding[a];
+      playDrum(DRUM_PAD[n.drum][0], (n.accent ? 110 : n.ghost ? 40 : 80) * (options.guide ? 0.5 : 1), autoAt(n));
     }
     liveCheck(position());
     if (performance.now() > player.zero + run.beats * beatMs + 400) finish(scored, hits, extras, startedAt);

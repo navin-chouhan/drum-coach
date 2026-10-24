@@ -62,6 +62,18 @@ export function scoreRun(expected: Expected[], hits: PlayedHit[]) {
   return { results, extras };
 }
 
+/**
+ * Almost every stroke (hits and off-time strokes) on the same side, by a lot: that's usually the latency setting,
+ * not the hands. Returns the mean ms (+ late, − early), or null.
+ */
+export function latencySuspect(results: NoteResult[]): number | null {
+  const offs = results.flatMap(r => (r.offset ?? r.off) === undefined ? [] : [(r.offset ?? r.off)!]);
+  if (offs.length < 8) return null;
+  const m = offs.reduce((s, x) => s + x, 0) / offs.length;
+  const sameSide = offs.filter(x => Math.sign(x) === Math.sign(m)).length / offs.length;
+  return Math.abs(m) >= 40 && sameSide >= 0.85 ? Math.round(m) : null;
+}
+
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
 const std = (xs: number[]) => { const m = mean(xs); return xs.length > 1 ? Math.sqrt(mean(xs.map(x => (x - m) ** 2))) : 0; };
 const r1 = (x: number) => Math.round(x * 10) / 10;

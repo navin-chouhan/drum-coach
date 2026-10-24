@@ -13,6 +13,8 @@ const OPTS_KEY = 'drumcoach.playOptions';
 type Saved = Omit<PlayOptions, 'fromBar' | 'toBar' | 'backing'> & { chartId: string };
 const DEFAULTS: Saved = { chartId: 'rock-8ths', speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false, repeats: 2 };
 
+const ALONG: Partial<PlayOptions> = { guide: true, repeats: 8, wait: false };
+
 export function PlayView({ pending }: { pending?: { chartId: string; bpm?: number } }) {
   const charts = useCharts();
   useSyncExternalStore(subscribePlayer, playerVersion);
@@ -42,14 +44,14 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
   const from = Math.min(section?.from ?? 1, chart.bars), to = Math.min(section?.to ?? chart.bars, chart.bars);
 
-  async function go(speed = o.speed) {
+  async function go(speed = o.speed, along?: Partial<PlayOptions>) {
     setError('');
     let backing: PlayOptions['backing'];
     if (chart.hasAudio) {
       try { backing = { buffer: await loadBacking(chart.id, audio()), syncOffsetMs: chart.syncOffsetMs ?? 0 }; }
       catch { setError('Could not load the backing audio; playing without it.'); }
     }
-    start(chart, { ...o, speed, fromBar: from, toBar: to, backing });
+    start(chart, { ...o, speed, fromBar: from, toBar: to, backing, ...along });
   }
   // The coach's suggested next step: again / slower / faster replays this exercise, next picks the next one.
   useEffect(() => onCoachAction(a => {
@@ -72,7 +74,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   }
 
   if (player.phase === 'done' && player.finished) {
-    return <Results f={player.finished} onAgain={() => void go()} onBack={stop} />;
+    const along = player.finished.options.guide ? ALONG : undefined;
+    return <Results f={player.finished} onAgain={() => void go(o.speed, along)} onBack={stop} />;
   }
 
   const playing = player.phase === 'playing';
@@ -133,6 +136,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
           </div>
         )}
         <button className="primary big inFocus" onClick={playing ? stop : () => void go()}>{playing ? 'Stop (Esc)' : 'Start'}</button>
+        {!playing && <button className="big" title="The app plays the groove softly under you, 8 times round, and scores you. No tips while you play."
+          onClick={() => void go(o.speed, ALONG)}>Play along (8×)</button>}
         {error && <p className="warn">{error}</p>}
       </div>
       <section className="highwayWrap practiceSplit"><NotesView idle={{ chart, fromBar: from, toBar: to, bpm: chart.bpm * o.speed }} /><KitView /></section>
