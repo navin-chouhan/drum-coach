@@ -114,8 +114,8 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
             const p = s.lessons[l.id];
             const state = p?.completedAt ? 'done' : p ? 'started' : '';
             return <button key={l.id} className={`lessonChip ${state} ${cls}`} onClick={() => setOpen({ lessonId: l.id })}
-              title={p?.completedAt ? `Done · best ${p.bestBpm} BPM` : p ? `Step ${p.step + 1} · ${p.bpm} BPM` : 'Not started'}>
-              {p?.completedAt ? '✓ ' : ''}{l.title}</button>;
+              title={p?.completedAt ? `Done · ${p.stars ?? 1} of 3 stars · best ${p.bestBpm} BPM` : p ? `Step ${p.step + 1} · ${p.bpm} BPM` : 'Not started'}>
+              {l.title}{p?.completedAt && <span className="stars" aria-label={`${p.stars ?? 1} of 3 stars`}>{'★'.repeat(p.stars ?? 1)}{'☆'.repeat(3 - (p.stars ?? 1))}</span>}</button>;
           };
           return (
             <div key={m.level} className={`milestone ${passed ? 'passed' : m === milestone ? 'current' : 'later'}`}>

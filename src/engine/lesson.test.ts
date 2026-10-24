@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, dueReviews, ladderStep, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, dueReviews, ladderStep, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -71,4 +71,15 @@ describe('spaced review', () => {
     }, D)).toEqual(['b', 'a']);
   });
   it('addDays crosses months', () => expect(addDays('2026-10-30', 3)).toBe('2026-11-02'));
+});
+
+describe('starsFor', () => {
+  it('gives one to three stars at the boundaries', () => {
+    expect(starsFor(stats({ accuracy: 94 }))).toBe(1);
+    expect(starsFor(stats({ accuracy: 95, extra: 1 }))).toBe(2);
+    expect(starsFor(stats({ accuracy: 95, extra: 2 }))).toBe(1); // 10% extra
+    expect(starsFor(stats({ accuracy: 98, perfect: 14 }))).toBe(3); // 70% perfect
+    expect(starsFor(stats({ accuracy: 98, perfect: 13 }))).toBe(2);
+    expect(starsFor(stats({ accuracy: 100, perfect: 20, extra: 1 }))).toBe(2); // 5% extra is too many for three
+  });
 });

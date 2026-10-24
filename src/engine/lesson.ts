@@ -33,6 +33,7 @@ export type Profile = { goals: Genre[]; minutesPerDay: number; onboarded: boolea
 export type LessonProgress = {
   step: number; bpm: number; clean: number; fails: number; bestBpm: number;
   completedAt?: string; reviewStage: number; reviewDue?: string; // dates are local YYYY-MM-DD
+  stars?: number; // best 1–3 earned when the lesson completes (older saves: none)
 };
 
 export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 3, BPM_STEP = 5;
@@ -63,6 +64,17 @@ function worstDrum(s: RunStats) {
   const name = worst[0] === 'hhOpen' ? 'open hi-hat' : worst[0] === 'hhPedal' ? 'hi-hat foot' : worst[0] === 'hihat' ? 'hi-hat' : worst[0];
   const t = worst[1].meanOffset;
   return `The ${name} was weakest${Math.abs(t) >= 15 ? ` (${t < 0 ? 'early' : 'late'} by ${Math.abs(t)} ms)` : ''}.`;
+}
+
+/**
+ * Stars for the take that completed a lesson (always at the target tempo):
+ * ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra and ≥70% of notes perfect.
+ */
+export function starsFor(s: RunStats): 1 | 2 | 3 {
+  const extraPct = s.total ? (s.extra / s.total) * 100 : 0, perfectPct = s.total ? (s.perfect / s.total) * 100 : 0;
+  if (s.accuracy >= 98 && extraPct <= 2 && perfectPct >= 70) return 3;
+  if (s.accuracy >= 95 && extraPct <= 5) return 2;
+  return 1;
 }
 
 export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'stepDone' | 'lessonDone';

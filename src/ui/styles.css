@@ -328,3 +328,4 @@
   .app.focus .playSide>:not(.inFocus){display:none}
   .app.focus .playSide{justify-content:flex-end}
   .app.focus canvas.highway{height:calc(100vh - 34px)}
+  .stars{margin-left:6px;color:#C77700;letter-spacing:1px;-webkit-text-stroke:.5px var(--line)}

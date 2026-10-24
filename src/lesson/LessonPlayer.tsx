@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
-import { afterReview, checkPass, CLEAN_TAKES, ladderStep, type LadderEvent } from '../engine/lesson';
+import { afterReview, checkPass, CLEAN_TAKES, ladderStep, starsFor, type LadderEvent } from '../engine/lesson';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { NotesView } from '../play/NotesView';
@@ -14,7 +14,7 @@ import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
-type Outcome = { passed: boolean; text: string; reason?: string; event?: LadderEvent; itemDone: boolean };
+type Outcome = { passed: boolean; text: string; reason?: string; event?: LadderEvent; itemDone: boolean; stars?: number };
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 
 /**
@@ -59,7 +59,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
       o = { passed: check.ok, itemDone: true, text: check.ok ? `${f.stats.accuracy}% · still solid.` : `${check.reason} It comes back tomorrow.` };
     } else {
       const { next, event } = ladderStep(p, lesson, check.ok, today());
-      saveProgress(lesson.id, next);
+      const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
+      saveProgress(lesson.id, stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next);
       const msg: Record<LadderEvent, string> = {
         hold: check.ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : `${check.reason}`,
         up: `Two clean takes. Up to ${next.bpm} BPM!`,
@@ -67,7 +68,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
         lessonDone: `Lesson complete at ${next.bestBpm} BPM. It will come back for review in a few days.`,
       };
-      o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone' };
+      o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone', stars };
     }
     outcomes.set(f, o);
     if (getSettings().voice) void say(o.text);
