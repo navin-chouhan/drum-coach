@@ -131,10 +131,18 @@ Resets never delete your run history (Progress tab).
    dynamics per drum, plus the coach.
 6. **4 · Play (scored).** Your transcription as a note highway over the drumless version, scored and
    saved to Progress.
+7. **5 · Sheet music.** Your transcription as drum notation (x = cymbals, o = open hi-hat,
+   (note) = ghost, > = accent, feet stems down). *Print / save as PDF*. Learn by ear can show the
+   current bars as notation too, and every lesson step has a *Notation* section.
 
-No drumless version? **Reduce drums (experimental)** opens a small "song player" window. Chrome asks
-which tab to share: pick *Drum Coach – song player* with "Also share tab audio" on. Drums get
-quieter, not removed. Nothing is recorded or stored.
+**Song audio (experimental).** *Connect song audio* opens a small "song player" window; Chrome asks
+which tab to share: pick *Drum Coach – song player* with "Also share tab audio" on. Then you can:
+- **turn the drums down** (quieter, not removed), for songs without a drumless version;
+- get **suggested notes** in Learn by ear: while a section loops, the app listens for kick, snare and
+  hi-hat hits and marks them as dashed squares; a note is suggested once it's heard in 2 passes.
+  *Use suggestions* adds them to your part. Toms, cymbals and busy mixes aren't detected well, so check
+  every note by ear.
+Nothing is recorded or stored: the audio is analysed live and discarded.
 
 **YouTube setup** (one time, free):
 1. Go to https://console.cloud.google.com/ and create a project.

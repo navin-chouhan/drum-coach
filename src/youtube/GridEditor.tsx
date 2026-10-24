@@ -8,9 +8,9 @@ export const ROWS: ChartDrum[] = ['crash', 'ride', 'hihat', 'hhOpen', 'hhPedal',
 const NAMES: Record<ChartDrum, string> = { crash: 'Crash', ride: 'Ride', hihat: 'Hi-hat', hhOpen: 'HH open', hhPedal: 'HH foot', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor', snare: 'Snare', kick: 'Kick' };
 const colorOf = (d: ChartDrum) => DRUM_BY_ID[d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d].color;
 
-/** Lanes × steps editor for bars A–B. Filled = your part, rings = last take, line = playhead. Click toggles a note. */
-export function GridEditor({ notes, take, fromBeat, toBeat, stepsPerBeat, beatsPerBar, yt, grid, onToggle }: {
-  notes: ChartNote[]; take: ChartNote[]; fromBeat: number; toBeat: number; stepsPerBeat: number; beatsPerBar: number;
+/** Lanes × steps editor for bars A–B. Filled = your part, rings = last take, dashed squares = suggested by the song audio, line = playhead. Click toggles a note. */
+export function GridEditor({ notes, take, suggestions = [], fromBeat, toBeat, stepsPerBeat, beatsPerBar, yt, grid, onToggle }: {
+  notes: ChartNote[]; take: ChartNote[]; suggestions?: ChartNote[]; fromBeat: number; toBeat: number; stepsPerBeat: number; beatsPerBar: number;
   yt: YtPlayer; grid: BeatGrid; onToggle: (t: number, drum: ChartDrum) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -43,6 +43,13 @@ export function GridEditor({ notes, take, fromBeat, toBeat, stepsPerBeat, beatsP
         c.strokeStyle = colorOf(n.drum); c.lineWidth = 2;
         c.beginPath(); c.arc(x(n.t), ROWS.indexOf(n.drum) * ROW_H + ROW_H / 2, 7, 0, Math.PI * 2); c.stroke();
       }
+      c.setLineDash([3, 3]);
+      for (const n of suggestions) { // suggested by listening to the song: dashed squares
+        if (n.t < fromBeat || n.t >= toBeat) continue;
+        c.strokeStyle = colorOf(n.drum); c.lineWidth = 1.5;
+        c.strokeRect(x(n.t) - 8, ROWS.indexOf(n.drum) * ROW_H + ROW_H / 2 - 8, 16, 16);
+      }
+      c.setLineDash([]);
       for (const n of notes) {
         if (n.t < fromBeat || n.t >= toBeat) continue;
         c.fillStyle = colorOf(n.drum); c.globalAlpha = n.ghost ? 0.5 : 1;
@@ -57,7 +64,7 @@ export function GridEditor({ notes, take, fromBeat, toBeat, stepsPerBeat, beatsP
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [notes, take, fromBeat, toBeat, stepsPerBeat, beatsPerBar, cols, yt, grid]);
+  }, [notes, take, suggestions, fromBeat, toBeat, stepsPerBeat, beatsPerBar, cols, yt, grid]);
 
   return (
     <div className="gridEditor">

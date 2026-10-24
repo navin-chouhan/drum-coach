@@ -56,6 +56,8 @@ metronome with timing scoring). Reuse its ideas and code; don't throw away what 
   only used server-side). Never download, rip, record or store YouTube audio/video.
 - "No drums" = a drumless upload on YouTube, or the experimental live reduction: Chrome tab capture of the
   popup player tab (`getDisplayMedia` + `suppressLocalAudioPlayback`), processed in real time and discarded.
+- Note suggestions use the same live capture (`src/youtube/tabAudio.ts` → `public/band-levels.js` →
+  `src/engine/onsets.ts`); only detected note positions are kept, never audio.
 - Song timing runs on the YouTube clock (`src/youtube/yt.ts`) and the per-video beat grid (`src/engine/tempo.ts`).
 
 ## Working rules

@@ -3,7 +3,7 @@ import { findVersions, patchSong } from './api';
 import { JamMode } from './JamMode';
 import { LearnMode } from './LearnMode';
 import { PlayMode } from './PlayMode';
-import { startReducer, type Reducer } from './reducer';
+import { TabAudio } from './tabAudio';
 import type { YtResult, YtSong } from './schemas';
 import { TempoMode } from './TempoMode';
 import { printSheet, SheetMusic } from '../notation';
@@ -15,7 +15,7 @@ type Version = 'originalId' | 'drumlessId' | 'coverId';
 const VERSION_NAMES: Record<Version, string> = { originalId: 'Original', drumlessId: 'Drumless', coverId: 'Drum cover' };
 const MODES = { tempo: '1 · Set tempo', learn: '2 · Learn by ear', jam: '3 · Jam', play: '4 · Play (scored)', sheet: '5 · Sheet music' } as const;
 type Mode = keyof typeof MODES;
-export type ModeProps = { song: YtSong; videoId: string; yt: YtPlayer; rate: number };
+export type ModeProps = { song: YtSong; videoId: string; yt: YtPlayer; rate: number; tab?: TabAudio | null };
 
 /** Re-render when the player changes state (play/pause/error). */
 export function useYt(yt: YtPlayer | null) {
@@ -29,20 +29,20 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
   const [mode, setMode] = useState<Mode>(song.grids[song.originalId] ? 'learn' : 'tempo');
   const [rate, setRate] = useState(1);
   const [yt, setYt] = useState<YtPlayer | null>(null);
-  const [reduce, setReduce] = useState<{ on: boolean; strength: number; delayMs: number; error: string }>({ on: false, strength: 0.7, delayMs: 80, error: '' });
+  const [link, setLink] = useState<{ on: boolean; waiting: boolean; reduce: boolean; strength: number; delayMs: number; error: string }>({ on: false, waiting: false, reduce: true, strength: 0.7, delayMs: 80, error: '' });
+  const [tab, setTab] = useState<TabAudio | null>(null);
   const host = useRef<HTMLDivElement>(null);
-  const reducer = useRef<Reducer | null>(null);
   const popup = useRef<Window | null>(null);
   useYt(yt);
-  useEffect(() => { if (import.meta.env.DEV) Object.assign(window, { drumCoachYt: yt }); }, [yt]);
+  useEffect(() => { if (import.meta.env.DEV) Object.assign(window, { drumCoachYt: yt, drumCoachTab: tab }); }, [yt, tab]);
 
   const [inlineKey, setInlineKey] = useState(0);
   const latest = useRef({ videoId, rate, title: song.title, id: song.id });
   useEffect(() => { latest.current = { videoId, rate, title: song.title, id: song.id }; });
 
-  // Inline player; re-created when drum reduction ends (the popup player replaces it meanwhile).
+  // Inline player; re-created when the song-audio link ends (the popup player replaces it meanwhile).
   useEffect(() => {
-    if (reduce.on) return;
+    if (link.on) return;
     const el = document.createElement('div');
     host.current!.replaceChildren(el);
     const p = new YtPlayer(el, latest.current.videoId);
@@ -52,7 +52,7 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
       if (title.startsWith('YouTube video ') && p.title) void patchSong(id, { title: p.title });
     });
     return () => { stopPlayer(); p.destroy(); };
-  }, [reduce.on, inlineKey]);
+  }, [link.on, inlineKey]);
 
   // Switching version: same player, new video, keep the chosen speed.
   useEffect(() => {
@@ -60,36 +60,41 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
     void yt.ready.then(() => { yt.load(videoId); setRate(yt.setRate(latest.current.rate)); });
   }, [videoId, yt]);
 
-  async function toggleReduce() {
-    if (reduce.on) { endReduce(); return; }
+  const tabRef = useRef<TabAudio | null>(null);
+  // Opens the popup player and captures its tab audio: needed for drum reduction and note suggestions.
+  async function connectAudio() {
     const at = yt?.songTime() ?? 0;
     const w = window.open('/yt-player.html', 'dc-yt-player', 'width=560,height=360');
-    if (!w) { setReduce(r => ({ ...r, error: 'Allow pop-ups for localhost, then try again.' })); return; }
+    if (!w) { setLink(l => ({ ...l, error: 'Allow pop-ups for localhost, then try again.' })); return; }
     popup.current = w;
     if (w.document.readyState !== 'complete') await new Promise(r => w.addEventListener('load', r, { once: true }));
     yt?.destroy();
-    host.current!.replaceChildren(Object.assign(document.createElement('p'), { className: 'small', textContent: 'The song plays in the "song player" window (drums reduced). Keep it open.' }));
+    host.current!.replaceChildren(Object.assign(document.createElement('p'), { className: 'small', textContent: 'The song plays in the "song player" window. Keep it open.' }));
     const p = new YtPlayer(w.document.getElementById('player')!, videoId, w);
-    p.heardDelaySec = reduce.delayMs / 1000;
+    p.heardDelaySec = link.delayMs / 1000;
     await p.ready;
     p.seek(at);
     setYt(p);
+    setLink(l => ({ ...l, waiting: true, error: '' }));
     try {
-      reducer.current = await startReducer(reduce.strength, endReduce);
-      setReduce(r => ({ ...r, on: true, error: '' }));
+      const t = await TabAudio.connect(disconnectAudio);
+      t.setReduce(link.reduce, link.strength);
+      tabRef.current = t; setTab(t);
+      setLink(l => ({ ...l, on: true, waiting: false, error: '' }));
     } catch (e) {
-      p.destroy(); w.close();
-      setReduce(r => ({ ...r, on: false, error: (e as Error).message || 'Tab sharing was cancelled.' }));
+      p.destroy(); w.close(); popup.current = null;
+      setLink(l => ({ ...l, on: false, waiting: false, error: (e as Error).message || 'Tab sharing was cancelled.' }));
       setInlineKey(k => k + 1);
     }
   }
-  function endReduce() {
-    reducer.current?.stop(); reducer.current = null;
+  function disconnectAudio() {
+    tabRef.current?.stop(); tabRef.current = null; setTab(null);
     popup.current?.close(); popup.current = null;
-    setReduce(r => ({ ...r, on: false }));
+    setLink(l => ({ ...l, on: false }));
   }
-  useEffect(() => () => { reducer.current?.stop(); popup.current?.close(); }, []);
-  useEffect(() => { if (yt && reduce.on) yt.heardDelaySec = reduce.delayMs / 1000; }, [yt, reduce.on, reduce.delayMs]);
+  useEffect(() => () => { tabRef.current?.stop(); popup.current?.close(); }, []);
+  useEffect(() => { if (yt && link.on) yt.heardDelaySec = link.delayMs / 1000; }, [yt, link.on, link.delayMs]);
+  useEffect(() => { tab?.setReduce(link.reduce, link.strength); }, [tab, link.reduce, link.strength]);
 
   const grid = song.grids[videoId];
   return (
@@ -114,24 +119,29 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
             </div>
           </div>
           <Versions song={song} version={version} onVersion={v => { stopPlayer(); setVersion(v); }} />
-          {version !== 'drumlessId' && (
-            <div className="card">
-              <h3>Reduce drums (experimental)</h3>
-              <p className="small">Turns the drums down live when there's no drumless version. Opens a small "song player" window; Chrome then asks
-                which tab to share: pick <b>Drum Coach – song player</b> and keep "Also share tab audio" on. Drums get quieter, not gone.</p>
-              <div className="actions"><button onClick={toggleReduce}>{reduce.on ? 'Stop reducing' : 'Reduce drums'}</button></div>
-              {reduce.on && (
-                <div className="form">
-                  <label>Strength {Math.round(reduce.strength * 100)}%
-                    <input type="range" min={0} max={1} step={0.05} value={reduce.strength}
-                      onChange={e => { const s = +e.target.value; reducer.current?.setStrength(s); setReduce(r => ({ ...r, strength: s })); }} /></label>
-                  <label>Sound delay {reduce.delayMs} ms (raise it if your hits score late)
-                    <input type="range" min={0} max={300} step={10} value={reduce.delayMs} onChange={e => setReduce(r => ({ ...r, delayMs: +e.target.value }))} /></label>
-                </div>
-              )}
-              {reduce.error && <p className="warn">{reduce.error}</p>}
-            </div>
-          )}
+          <div className="card">
+            <h3>Song audio (experimental)</h3>
+            {!link.on ? (
+              <>
+                <p className="small">Connect the song's audio to <b>turn the drums down</b> and get <b>suggested notes</b> in Learn by ear.
+                  A small "song player" window opens; Chrome then asks which tab to share: pick <b>Drum Coach – song player</b> and keep
+                  "Also share tab audio" on. Nothing is recorded or saved.</p>
+                {link.waiting
+                  ? <p className="thinking" role="status"><span className="spinner" aria-hidden /> Waiting for you to pick <b>Drum Coach – song player</b> in Chrome's share prompt…</p>
+                  : <div className="actions"><button onClick={connectAudio}>Connect song audio</button></div>}
+              </>
+            ) : (
+              <div className="form">
+                <label className="check"><input type="checkbox" checked={link.reduce} onChange={e => setLink(l => ({ ...l, reduce: e.target.checked }))} /> Turn the drums down (quieter, not gone)</label>
+                {link.reduce && <label>Strength {Math.round(link.strength * 100)}%
+                  <input type="range" min={0} max={1} step={0.05} value={link.strength} onChange={e => setLink(l => ({ ...l, strength: +e.target.value }))} /></label>}
+                <label>Sound delay {link.delayMs} ms (raise it if your hits score late)
+                  <input type="range" min={0} max={300} step={10} value={link.delayMs} onChange={e => setLink(l => ({ ...l, delayMs: +e.target.value }))} /></label>
+                <div className="actions"><button onClick={disconnectAudio}>Disconnect</button></div>
+              </div>
+            )}
+            {link.error && <p className="warn">{link.error}</p>}
+          </div>
         </div>
         <div className="stack">
           <nav className="tabs modeTabs">
@@ -141,7 +151,7 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
             ))}
           </nav>
           {yt && (mode === 'tempo' || !grid) && <TempoMode song={song} videoId={videoId} yt={yt} rate={rate} />}
-          {yt && grid && mode === 'learn' && <LearnMode song={song} videoId={videoId} yt={yt} rate={rate} />}
+          {yt && grid && mode === 'learn' && <LearnMode song={song} videoId={videoId} yt={yt} rate={rate} tab={tab} />}
           {yt && grid && mode === 'jam' && <JamMode song={song} videoId={videoId} yt={yt} rate={rate} />}
           {yt && grid && mode === 'play' && <PlayMode song={song} videoId={videoId} yt={yt} rate={rate} />}
           {grid && mode === 'sheet' && <SongSheet song={song} bpm={grid.bpm} />}
