@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { parseMidiMessage } from '../engine/midi';
-import { emitNote } from './hits';
+import { receiveMidi } from './hits';
 import { setKit } from './store';
 
 export type MidiStatus = 'starting' | 'unsupported' | 'blocked' | 'ready';
@@ -27,8 +26,7 @@ export function useMidi() {
     let access: MIDIAccess | undefined, cancelled = false;
     const onMessage = (e: MIDIMessageEvent) => {
       if ((e.currentTarget as MIDIInput).name !== selectedRef.current || !e.data) return;
-      const n = parseMidiMessage(e.data);
-      if (n) emitNote(n.note, n.velocity, e.timeStamp);
+      receiveMidi(e.data, e.timeStamp);
     };
     const refresh = () => {
       const list: { id: string; name: string }[] = [];

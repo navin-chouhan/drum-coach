@@ -1,4 +1,5 @@
 import { padForNote, type PadId } from '../engine/kit';
+import { parseMidiMessage } from '../engine/midi';
 import { getNoteMap } from './store';
 
 /** time is performance.now() milliseconds (same clock as MIDIMessageEvent.timeStamp). */
@@ -24,4 +25,10 @@ export function emitNote(note: number, velocity: number, time = performance.now(
 }
 
 /** Simulates the kit: sends whatever note the pad is mapped to, so it goes through the same path. */
+/** Raw MIDI bytes from the kit (or the emulated kit) at `time`: only Note On becomes a hit. */
+export function receiveMidi(data: ArrayLike<number>, time: number) {
+  const n = parseMidiMessage(data);
+  if (n) emitNote(n.note, n.velocity, time);
+}
+
 export const emitPad = (pad: PadId, velocity: number, time?: number) => emitNote(getNoteMap()[pad], velocity, time);
