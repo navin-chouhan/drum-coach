@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CHART_DRUMS } from '../engine/chart';
-import { midiToChart, type ImportResult } from '../engine/midiImport';
+import type { ImportResult } from '../engine/midiImport';
 import { requestPlay } from '../ui/nav';
 import { refreshCharts, saveChart, useCharts } from './charts';
 
@@ -17,6 +17,7 @@ export function SongsView() {
     setError(''); setParsed(undefined);
     if (!f) return;
     try {
+      const { midiToChart } = await import('../engine/midiImport'); // @tonejs/midi stays out of the main bundle
       const r = midiToChart(new Uint8Array(await f.arrayBuffer()), f.name.replace(/\.midi?$/i, ''));
       setParsed({ ...r, file: f.name }); setTitle(r.chart.title);
     } catch (e) { setError(`Couldn't read ${f.name}: ${(e as Error).message}`); }

@@ -22,7 +22,7 @@ export function Highway() {
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     const ro = new ResizeObserver(resize); ro.observe(cv);
-    let raf = 0;
+    let raf = 0, first = 0; // first note still on screen: past notes aren't walked every frame
     const draw = () => {
       raf = requestAnimationFrame(draw);
       const W = cv.clientWidth, H = cv.clientHeight, now = performance.now();
@@ -66,7 +66,10 @@ export function Highway() {
         c.globalAlpha = 1;
       }
       // notes
-      for (let i = 0; i < run.notes.length; i++) {
+      first = Math.min(first, run.notes.length);
+      while (first > 0 && yOf(run.notes[first - 1].t) <= H + 20) first--; // a new run or a seek back
+      while (first < run.notes.length && yOf(run.notes[first].t) > H + 20) first++;
+      for (let i = first; i < run.notes.length; i++) {
         const n = run.notes[i], y = yOf(n.t);
         if (y > H + 20) continue;
         if (y < -20) break;
