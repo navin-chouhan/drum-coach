@@ -23,6 +23,7 @@ plan that adapts over time.
 - Internal chart format (JSON): `{ title, bpm, timeSignature, bars, notes: [{ t (beats), drum, accent?, ghost? }] }`.
 - Import: Standard MIDI files (channel 10, or the drum track) → chart; optional audio file (MP3/OGG)
   with a manual sync offset.
+- Import uses `@tonejs/midi`; AI-generated charts are validated with a zod schema.
 - Built-in library: rudiments (single/double strokes, paradiddle, flam), basic rock/pop/funk grooves,
   simple fills; levels 1–10.
 - Exercise builder: AI can generate charts in the JSON format (validated with a schema before use).
@@ -39,7 +40,11 @@ plan that adapts over time.
   velocity consistency, accents and ghost notes, a per-beat-position error heat map.
 - Results screen with charts and a timeline replay (expected vs played).
 
-### 5. AI coach (Claude via local backend)
+### 5. AI coach (Claude via local backend, using the owner's Claude subscription)
+- Backend `AiProvider` interface: `ClaudeCodeCliProvider` (default; headless `claude -p`, no tools,
+  empty temp cwd) and `AnthropicApiProvider` (optional, only if `ANTHROPIC_API_KEY` is set).
+- Slow and rate-limited: "coach is thinking" state, never blocks playing, answers cached; a missing or
+  logged-out CLI shows a clear message and nothing else breaks.
 - After each run, send a compact JSON summary (not raw MIDI) → short, specific feedback plus one drill.
 - "Next exercise" recommendation from history (adaptive difficulty: speed up when accuracy is above 90% at a tempo).
 - Weekly plan generator (goals, minutes per day) → checklist.
@@ -55,7 +60,7 @@ plan that adapts over time.
 - **M1 — Input**: MIDI service, keyboard fallback, kit view with animations, calibration and note map.
 - **M2 — Play-along**: chart format, 5 built-in grooves, highway, metronome, count-in, tempo/loop.
 - **M3 — Scoring**: matcher plus stats (unit-tested), results screen, latency calibration.
-- **M4 — AI coach**: backend endpoints, post-run feedback, next-exercise, chart generation with validation.
+- **M4 — AI coach**: `AiProvider` (CLI provider default, API fallback), backend endpoints, post-run feedback, next-exercise, chart generation with validation.
 - **M5 — Songs**: MIDI and audio import, sync tool, song library.
 - **M6 — Progress**: SQLite persistence, dashboard, weekly plan.
 

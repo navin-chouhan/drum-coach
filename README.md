@@ -29,5 +29,16 @@ A personal AI drum instructor for the Millenium MPS-150 e-kit, running locally i
 
 5. After each milestone, test with your kit and ask for the next one ("now do M2").
 
-For the AI coach (M4) you'll need an Anthropic API key from https://platform.claude.com
-in a `.env` file. Claude Code will set this up and tell you when.
+The AI coach (M4) uses your logged-in `claude` CLI (your Claude subscription). An Anthropic API key
+in `.env` is only an optional fallback.
+
+## Run the app
+
+```bash
+npm install        # first time only
+npm run dev        # web app on http://localhost:5173, API on 127.0.0.1:8787
+```
+Open **http://localhost:5173** in Google Chrome and allow MIDI access when asked.
+Close `amidi -d` or any other app holding the kit's MIDI port first.
+
+Other scripts: `npm test` (Vitest), `npm run lint`, `npm run build`.

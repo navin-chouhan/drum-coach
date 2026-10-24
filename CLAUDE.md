@@ -29,12 +29,26 @@ metronome with timing scoring). Reuse its ideas and code; don't throw away what 
   lookahead against `AudioContext.currentTime`; convert to `performance.now()` time with
   `getOutputTimestamp()` when comparing with MIDI event timestamps (`MIDIMessageEvent.timeStamp`).
 - MIDI files: `@tonejs/midi` for parsing.
-- Backend (only for AI calls + persistence): small Node/TypeScript server (Fastify or Express) with the
-  Anthropic SDK and SQLite (`better-sqlite3`). The API key lives in `.env` as `ANTHROPIC_API_KEY`,
-  never in the browser. Model id configurable via `.env` (`CLAUDE_MODEL`, default `claude-sonnet-5-5`).
+- Backend (only for AI calls + persistence): small Node/TypeScript Fastify server bound to `127.0.0.1`,
+  with SQLite (`better-sqlite3`). See "AI coach rules" below for how it talks to Claude.
 - Must work fully offline except the AI coach features.
 - Target browser: Google Chrome on Linux (not snap Chromium — it can be sandboxed from MIDI).
   Serve on `http://localhost` (secure context required for Web MIDI).
+
+## AI coach rules (use the owner's Claude subscription, not an API key)
+- The browser never talks to Claude. The backend goes through an `AiProvider` interface:
+  - `ClaudeCodeCliProvider` (default): runs the logged-in Claude Code CLI headless, e.g.
+    `claude -p --output-format json --tools "" --no-session-persistence` with the prompt + run summary
+    on stdin and an **empty temp dir as cwd**, so it can only answer — never edit files or run commands.
+    Re-check `claude --help` for flag names when implementing (verified with 2.1.310; `--max-turns`
+    isn't listed in `--help` there).
+  - `AnthropicApiProvider` (optional fallback): only if `ANTHROPIC_API_KEY` is set in `.env`;
+    model from `CLAUDE_MODEL` (default `claude-sonnet-5-5`).
+- Calls are slow and count toward usage limits: show a "coach is thinking" state, never block playing,
+  send compact JSON summaries (not raw MIDI), cache answers.
+- If the CLI is missing or logged out, show a clear message; everything else keeps working.
+- Prompts live in `server/prompts/`; JSON outputs the app uses are validated with zod.
+- Personal use only; the app is not distributed.
 
 ## Working rules
 - Keep the input → scoring path dependency-light and testable: pure functions in `src/engine/`
