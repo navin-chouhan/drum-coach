@@ -41,6 +41,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
     const nextIdx = session.items.findIndex((_, i) => i !== open.item && !session.done.includes(i));
     return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role} minutes={item?.minutes}
       onBack={() => setOpen(undefined)}
+      onItemDone={open.item === undefined ? undefined : () => markDone(open.item!)}
       onNext={open.item === undefined ? undefined : () => { markDone(open.item!); setOpen(nextIdx >= 0 ? { lessonId: session.items[nextIdx].lessonId, item: nextIdx } : undefined); }} />;
   }
 

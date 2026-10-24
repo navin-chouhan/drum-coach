@@ -46,3 +46,10 @@ describe('buildRun', () => {
     expect(buildRun(chart, { fromBar: 3, toBar: 1, repeats: 0 }).beats).toBe(4);
   });
 });
+
+describe('chart level', () => {
+  it('accepts level 0 (the first curriculum level, also used by coach-written lessons)', () => {
+    const c = { title: 'x', bpm: 60, timeSignature: [4, 4], bars: 1, level: 0, notes: [{ t: 0, drum: 'snare' }] };
+    expect(ChartSchema.safeParse(c).success).toBe(true);
+  });
+});

@@ -8,6 +8,7 @@ export type Session = { date: string; items: SessionItem[]; done: number[] }; //
 export type Settings = {
   latencyMs: number; browserSounds: boolean; autoCoach: boolean;
   profile: Profile; lessons: Record<string, LessonProgress>; session?: Session;
+  updatedAt?: number; // ms; the newer copy wins when browser and server disagree
 };
 const DEFAULTS: Settings = {
   latencyMs: 0, browserSounds: false, autoCoach: false,
@@ -19,9 +20,13 @@ try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}')
 const listeners = new Set<() => void>();
 
 export const getSettings = () => settings;
+
+/** Start-up merge: the server copy only replaces the browser copy if it's at least as new (progress made offline survives). */
+export const serverIsNewer = (local: Partial<Settings>, server?: Partial<Settings>) =>
+  !!server && (server.updatedAt ?? 0) >= (local.updatedAt ?? 0);
 export function subscribeSettings(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
 export function setSettings(patch: Partial<Settings>, sync = true) {
-  settings = { ...settings, ...patch };
+  settings = { ...settings, ...patch, ...(sync && { updatedAt: Date.now() }) };
   try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ }
   if (sync) void fetch('/api/settings/app', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(settings) }).catch(() => {});
   listeners.forEach(l => l());

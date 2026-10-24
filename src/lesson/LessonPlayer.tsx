@@ -23,8 +23,8 @@ export function LessonPlayer(props: Parameters<typeof Lesson>[0]) {
     : <div className="today"><div className="card"><p>This lesson no longer exists.</p><button onClick={props.onBack}>Back to Today</button></div></div>;
 }
 
-function Lesson({ lessonId, role, minutes, onNext, onBack }: {
-  lessonId: string; role?: SessionRole; minutes?: number; onNext?: () => void; onBack: () => void;
+function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
+  lessonId: string; role?: SessionRole; minutes?: number; onNext?: () => void; onBack: () => void; onItemDone?: () => void;
 }) {
   const lesson = lessonById(lessonId)!;
   useSyncExternalStore(subscribePlayer, playerVersion);
@@ -67,10 +67,11 @@ function Lesson({ lessonId, role, minutes, onNext, onBack }: {
       o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone' };
     }
     outcomes.set(f, o);
+    if (o.itemDone) onItemDone?.();
     saveRun(f, { passed: check.ok });
     setSecs(s => s + f.durationS);
     setVersion(v => v + 1);
-  }), [lesson, step, oneTake, role]);
+  }), [lesson, step, oneTake, role, onItemDone]);
   useEffect(() => () => stop(), []);
 
   const options = (demo: boolean): PlayOptions => ({

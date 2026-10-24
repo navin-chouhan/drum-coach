@@ -74,7 +74,8 @@ if that goal was picked during onboarding; picking none means "not sure yet" and
 | 6 | Jazz ride, feathered kick, comping, a swing tune |
 
 Songs are written "in the style of" and played by the built-in synth. No copyrighted audio ships.
-Real songs come in through the Songs tab (MIDI import with an optional backing track).
+Real songs come in through the Songs tab: search YouTube, set the tempo, learn the part by ear (with suggested notes
+and sheet music), jam along or play it scored with the drumless version. MIDI + audio import is still there too.
 
 ## Rules of thumb in the code
 - Pass criteria default to 90% accuracy with at most 15% extra hits. A step can add a timing limit
