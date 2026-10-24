@@ -130,6 +130,7 @@ export function start(chart: Chart, options: PlayOptions) {
   const hits: PlayedHit[] = [];
   const extras: PlayedHit[] = [];
   const latency = getSettings().latencyMs;
+  let drift = 0; // ms the audio clock has slipped against performance.now() since zero was taken
   const laneOf = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d);
 
   if (options.wait) {
@@ -157,7 +158,7 @@ export function start(chart: Chart, options: PlayOptions) {
 
   const match = createMatcher(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(scored.notes) * beatMs));
   if (!options.demo) cleanup.push(onHit(h => {
-    const hit = { time: h.time - latency, pad: h.pad, velocity: h.velocity };
+    const hit = { time: h.time - latency - drift, pad: h.pad, velocity: h.velocity };
     if (hit.time < player.zero - 1000) return; // count-in noodling isn't scored
     hits.push(hit);
     const m = match(hit);
@@ -187,7 +188,9 @@ export function start(chart: Chart, options: PlayOptions) {
   const lastK = options.metronome ? run.beats * sub : 0; // metronome off → count-in only
   const timeOf = (k: number) => t0 + ((k / sub + countIn) * beatMs) / 1000;
   const timer = setInterval(() => {
-    for (; k < lastK && timeOf(k) < c.currentTime + 0.12; k++) {
+    const late = c.currentTime - 0.03; // after a stall, drop what's due instead of playing it all at once
+    for (; k < lastK && timeOf(k) < c.currentTime + 0.2; k++) {
+      if (timeOf(k) < late) continue;
       const onBeat = k % sub === 0;
       if (!onBeat && !options.metronome) continue;
       const barStart = onBeat && (((k / sub) % bpb) + bpb) % bpb < 1e-6;
@@ -195,10 +198,13 @@ export function start(chart: Chart, options: PlayOptions) {
       const gap = options.gapBars && k >= 0 && (Math.floor(k / sub / bpb + 1e-6) + 1) % options.gapBars === 0;
       if (!gap) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1);
     }
-    for (; a < sounding.length && autoAt(sounding[a]) < c.currentTime + 0.12; a++) {
+    for (; a < sounding.length && autoAt(sounding[a]) < c.currentTime + 0.2; a++) {
       const n = sounding[a];
+      if (autoAt(n) < late) continue;
       playDrum(DRUM_PAD[n.drum][0], (n.accent ? 110 : n.ghost ? 40 : 80) * (options.guide ? 0.5 : 1), autoAt(n));
     }
+    const d = audioToPerf(zeroAudio) - player.zero;
+    if (Math.abs(d) < 50) drift += (d - drift) * 0.1; // smoothed; a bigger jump is a stale timestamp, not drift
     liveCheck(position());
     if (performance.now() > player.zero + run.beats * beatMs + 400) finish(scored, hits, extras, startedAt);
   }, 25);
