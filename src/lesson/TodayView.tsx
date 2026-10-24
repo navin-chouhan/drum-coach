@@ -8,6 +8,7 @@ import { dashboard, type RunRow } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { lessonById, requestCoachLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
+import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
@@ -72,6 +73,8 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
         </div>
       </div>
+
+      {passed.length > 0 && <ShowoffCard stage={passed[passed.length - 1]} profile={s.profile} />}
 
       <div className="card">
         <h3>Today's session</h3>

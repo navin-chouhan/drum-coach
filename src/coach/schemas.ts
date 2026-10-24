@@ -24,6 +24,10 @@ export const PlanSchema = z.object({
     })).max(10),
   })).min(1).max(7),
 });
+/** Show-off songs: real songs a student at this stage can play for friends. Video ids are looked up by the server. */
+export const ShowoffRequestSchema = z.object({ stage: z.string().max(120), canDo: z.array(z.string().max(200)).max(8), goals: z.array(z.string().max(20)).max(5) });
+export const ShowoffSchema = z.object({ songs: z.array(z.object({ title: z.string().max(120), artist: z.string().max(120), why: z.string().max(300) })).min(1).max(3) });
+export type ShowoffSongs = { songs: (z.infer<typeof ShowoffSchema>['songs'][number] & { video?: { id: string; title: string; thumbnail: string } })[] };
 export const ChatReplySchema = z.object({ reply: z.string().min(1).max(4000), spoken: z.string().max(500).optional(), chart: ChartSchema.optional() });
 
 /** Live-tip wording written by the coach for one exercise (ids = engine/liveCoach.ts cue ids). "{ms}" = the measured ms. */

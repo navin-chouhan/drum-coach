@@ -29,7 +29,7 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
   try { return await fn(); } finally { running--; waiters.shift()?.(); }
 }
 
-export async function ask<T>(kind: 'feedback' | 'next' | 'plan' | 'chat' | 'groove' | 'lesson' | 'tips', schema: z.ZodType<T>, input: unknown): Promise<{ data: T; cached: boolean }> {
+export async function ask<T>(kind: 'feedback' | 'next' | 'plan' | 'chat' | 'groove' | 'lesson' | 'tips' | 'showoff', schema: z.ZodType<T>, input: unknown): Promise<{ data: T; cached: boolean }> {
   const system = `${prompt('system')}\n\n${prompt(kind)}`;
   const user = JSON.stringify(input);
   const key = createHash('sha256').update(`${provider.name}\0${system}\0${user}`).digest('hex');

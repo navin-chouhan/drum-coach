@@ -7,13 +7,13 @@ import { SongView } from './SongView';
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function SongsPage() {
+export function SongsPage({ openId: initial }: { openId?: string }) {
   const [songs, loadError] = useYtSongs();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<YtResult[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initial ?? null);
   const open = songs.find(s => s.id === openId);
 
   async function search(e: React.FormEvent) {

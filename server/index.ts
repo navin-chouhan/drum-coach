@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { SessionEventSchema, AiLessonSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
+import { SessionEventSchema, AiLessonSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, ShowoffRequestSchema, ShowoffSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import { suggestNext, type RunRow } from '../src/engine/progress.ts';
@@ -304,6 +304,17 @@ app.post('/api/coach/groove', async (req, reply) => {
   const b = GrooveRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
   try { return await ask('groove', ChatReplySchema, b.data); } catch (e) { return aiFail(reply, e); }
+});
+
+app.post('/api/coach/showoff', async (req, reply) => {
+  const b = ShowoffRequestSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  try {
+    const r = await ask('showoff', ShowoffSchema, b.data);
+    // The coach can't know video ids, so look each song up (no API key: the student searches by name).
+    const songs = await Promise.all(r.data.songs.map(async s => ({ ...s, video: (await searchYouTube(`${s.artist} ${s.title}`).catch(() => []))[0] })));
+    return { data: { songs }, cached: r.cached };
+  } catch (e) { return aiFail(reply, e); }
 });
 
 // ---------- coach-written lessons ----------

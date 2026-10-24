@@ -1,21 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { MILESTONES } from '../content/curriculum';
+import { checkpointsOf } from '../engine/planner';
+import { getSettings, subscribeSettings } from '../input/settings';
+import { useLessons } from '../lesson/aiLessons';
+import { useYtSongs } from '../youtube/api';
 import { dashboard, type Dashboard, type RunRow } from '../engine/progress';
-import { requestPlay } from './nav';
+import { requestPlay, requestSong } from './nav';
 
 const ACCENT = '#2F6FE4';
 
 export function ProgressView() {
   const [d, setD] = useState<Dashboard | null>(null);
+  const [runs, setRuns] = useState<RunRow[]>([]);
   const [error, setError] = useState('');
   useEffect(() => {
-    fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => setD(dashboard(runs)))
+    fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => { setRuns(runs); setD(dashboard(runs)); })
       .catch(() => setError('Cannot reach the local server, so progress is unavailable. Is `npm run dev` running?'));
   }, []);
-  if (error) return <div className="progress"><p className="warn">{error}</p></div>;
-  if (!d) return <div className="progress"><p className="small">Loading…</p></div>;
+  // The shelf comes from local progress, so it shows even without the server.
+  if (error) return <div className="progress"><TrophyShelf runs={runs} /><p className="warn">{error}</p></div>;
+  if (!d) return <div className="progress"><TrophyShelf runs={runs} /><p className="small">Loading…</p></div>;
 
   return (
     <div className="progress">
+      <TrophyShelf runs={runs} />
       <div className="tiles">
         <Tile label="Day streak" value={d.streak} />
         <Tile label="Minutes today" value={d.minutesToday} />
@@ -96,5 +104,33 @@ function Spark({ values, min, max, unit, label }: { values: number[]; min?: numb
       {values.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r={7} fill="transparent"><title>{`Run ${i + 1}: ${v}${unit}`}</title></circle>)}
       <circle cx={x(values.length - 1)} cy={y(last)} r={4} fill={ACCENT} stroke="var(--panel)" strokeWidth={2} pointerEvents="none" />
     </svg>
+  );
+}
+
+/** Ranks earned, stars, and the songs you can show off. */
+function TrophyShelf({ runs }: { runs: RunRow[] }) {
+  const s = useSyncExternalStore(subscribeSettings, getSettings);
+  const lessons = useLessons();
+  const [songs] = useYtSongs();
+  const passed = (m: (typeof MILESTONES)[number]) => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => s.lessons[l.id]?.completedAt); };
+  const stars = Object.values(s.lessons).reduce((a, p) => a + (p.completedAt ? p.stars ?? 1 : 0), 0);
+  // shortcut: any scored run at 85%+ counts, even of part of the song; store the bar range with runs to require the whole song
+  const showoff = songs.filter(song => runs.some(r => r.chartId === song.id && r.accuracy >= 85));
+  return (
+    <div className="card trophies">
+      <h3>Trophy shelf</h3>
+      <div className="stickers">
+        {MILESTONES.map(m => passed(m)
+          ? <div key={m.level} className="rankSticker small" title={`Stage ${m.level + 1}: ${m.title}`}>{m.rank}</div>
+          : <div key={m.level} className="rankSticker small locked" title={`Pass stage ${m.level + 1}, ${m.title}, to earn this`}>?</div>)}
+      </div>
+      <p><span className="stars">★</span> <b>{stars}</b> stars from your lessons</p>
+      <h4>Show-off set</h4>
+      {showoff.length ? (
+        <ul className="songList">
+          {showoff.map(song => <li key={song.id}><span>{song.title}</span><button className="primary" onClick={() => requestSong(song.id)}>Play it (Stage mode is under Play)</button></li>)}
+        </ul>
+      ) : <p className="small">Pass a stage to unlock a show-off song, then play it scored on Songs at 85% or better. It lands here, ready to play for your friends.</p>}
+    </div>
   );
 }

@@ -355,3 +355,10 @@
   .nextUp{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:420px;text-align:right}
   .nextUp .primary.big{font-size:18px;padding:14px 22px}
   @media (max-width:700px){ .nextUp{align-items:stretch;text-align:left} }
+  .unlock{background:var(--pop);border:2px solid var(--line);padding:6px 10px;display:inline-block}
+  .showoff{border-color:var(--line);background:#FFF6CC}
+  /* Stage mode: the video is the show */
+  .songGrid:has(.stageOn){grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr)}
+  .encore{text-align:center;padding:28px 18px}
+  .stickers{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+  .rankSticker.locked{background:#EDEDED;color:#9A9A9A;transform:none;min-width:44px;text-align:center}
