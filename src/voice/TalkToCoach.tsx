@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { runAction, say, useCoach } from '../coach/session';
+import { canRunAction, runAction, say, useCoach } from '../coach/session';
 import { recordWhileHeld, transcribe, type Recording } from './listen';
 
 /**
@@ -54,7 +54,7 @@ export function TalkToCoach() {
           <span className="briefingWho">Coach</span>
           {coach.heard && coach.status !== 'idle' && <p className="small"><b>You:</b> {coach.heard}</p>}
           {r && <p>{r.show ?? r.say}</p>}
-          {a && !a.now && <button className="primary talkAction" onClick={() => void runAction(a)}>{a.label}</button>}
+          {a && !a.now && canRunAction(a) && <button className="primary talkAction" onClick={() => void runAction(a)}>{a.label}</button>}
           {status && <p className={`small ${coach.status === 'listening' || mic === 'recording' ? 'listening' : ''}`}><span className="spinner" aria-hidden /> {status}</p>}
           {(err || coach.error) && <p className="warn">{err || coach.error}</p>}
         </div>

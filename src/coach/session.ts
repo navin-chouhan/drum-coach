@@ -36,6 +36,9 @@ export function dropCoachAction() {
   if (state.reply?.action && state.reply.action.kind !== 'drill') set({ reply: { ...state.reply, action: undefined } });
 }
 
+/** Something on screen can carry this out (a drill opens its own exercise from anywhere). */
+export const canRunAction = (a: NonNullable<CoachReply['action']>) => a.kind === 'drill' || handlers.length > 0;
+
 export async function runAction(a: NonNullable<CoachReply['action']>) {
   if (a.kind === 'drill' && a.chartId?.startsWith('lesson/')) { requestLesson(a.chartId.split('/')[1]); return; } // lesson steps live on Journey
   if (a.kind === 'drill' && (a.chart || a.chartId)) {
