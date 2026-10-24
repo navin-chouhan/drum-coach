@@ -114,7 +114,13 @@ Resets never delete your run history (Progress tab).
 - **Calibrate.** Hit-each-pad wizard, editable note map (with conflict warnings) and latency
   calibration.
 
-### The coach while you play
+### Sheet music while you play
+Free play, lessons and YouTube *Play (scored)* show the music as **drum notation** by default (switch *Sheet / Highway*
+at the top right of the play area). A cursor glides through the current bar, played notes get a comic sticker
+(green on time, yellow a bit off, red "MISS!"), extra hits get a ✕, notes the app plays for you (layered lessons)
+are grey, and the page turns after each page of bars. Before you press Start it shows the music you're about to play.
+
+## The coach while you play
 - **Tips while you play** (Coach tab): short banners on the highway such as "Dragging by 30 ms. Push a little",
   "Bring the kick back in", "Hi-hat foot down" (the MPS-150 sends *open* unless the pedal is held). At most one
   tip every couple of bars. **How chatty**: quiet (only big problems), normal, talkative (adds dynamics tips

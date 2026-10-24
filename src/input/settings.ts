@@ -12,9 +12,10 @@ export type Settings = {
   updatedAt?: number; // ms; the newer copy wins when browser and server disagree
   liveTips: 'off' | 'screen' | 'voice'; chattiness: Chattiness;
   voice: boolean; countIn: boolean; // speak verdicts and coach feedback; spoken count-in
+  playView: 'sheet' | 'highway';     // how notes are shown while playing
 };
 const DEFAULTS: Settings = {
-  latencyMs: 0, browserSounds: false, autoCoach: false, liveTips: 'screen', chattiness: 'normal', voice: false, countIn: true,
+  latencyMs: 0, browserSounds: false, autoCoach: false, liveTips: 'screen', chattiness: 'normal', voice: false, countIn: true, playView: 'sheet',
   profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
 };
 

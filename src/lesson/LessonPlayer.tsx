@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { afterReview, checkPass, CLEAN_TAKES, ladderStep, type LadderEvent } from '../engine/lesson';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
-import { Highway } from '../play/Highway';
+import { NotesView } from '../play/NotesView';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
@@ -145,7 +145,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
           {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Progress.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
         </div>
       </div>
-      <section className="highwayWrap"><Highway /></section>
+      <section className="highwayWrap"><NotesView idle={{ chart: step.chart, bpm }} /></section>
     </div>
   );
 }

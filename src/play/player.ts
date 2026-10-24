@@ -32,12 +32,13 @@ type State = {
   results: NoteResult[]; feedback: Feedback[];
   auto: boolean[];                // per run note: played by the app, not the student
   cue?: { cue: Cue; at: number }; // latest live tip (performance.now() time)
+  extraBeats: number[];           // where extra hits landed (run beats), for the sheet's ✕ marks
   waitPos: number; waitGroup: number; waitLast: number;
   finished?: Finished;
 };
 
 /** Mutable player state; the highway reads it every frame, React re-renders on phase changes only. */
-export const player: State = { phase: 'idle', zero: 0, beatMs: 500, results: [], feedback: [], auto: [], waitPos: 0, waitGroup: 0, waitLast: 0 };
+export const player: State = { phase: 'idle', zero: 0, beatMs: 500, results: [], feedback: [], auto: [], extraBeats: [], waitPos: 0, waitGroup: 0, waitLast: 0 };
 const listeners = new Set<() => void>();
 let version = 0;
 const notify = () => { version++; listeners.forEach(l => l()); };
@@ -116,7 +117,7 @@ export function start(chart: Chart, options: PlayOptions) {
   const startedAt = new Date().toISOString();
   Object.assign(player, {
     phase: 'playing', chart, run, options, beatMs, zero: audioToPerf(zeroAudio),
-    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: isAuto, cue: undefined,
+    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: isAuto, cue: undefined, extraBeats: [],
     waitPos: -0.5, waitGroup: 0, waitLast: performance.now(), finished: undefined,
   } satisfies Partial<State>);
 
@@ -162,6 +163,7 @@ export function start(chart: Chart, options: PlayOptions) {
       // playing along on a lane the app is playing: neither scored nor an extra
     } else {
       extras.push(hit);
+      player.extraBeats.push((hit.time - player.zero) / beatMs);
       const pad = h.pad ?? 'snare';
       player.feedback.push({ lane: pad.startsWith('hh') ? 'hihat' : pad, judgement: 'extra', time: h.time });
     }
@@ -217,7 +219,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   const ext = options.external!, latency = getSettings().latencyMs, startedAt = new Date().toISOString();
   Object.assign(player, {
     phase: 'playing', chart, run, options, beatMs, zero: 0,
-    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: run.notes.map(() => false), cue: undefined, finished: undefined,
+    results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: run.notes.map(() => false), cue: undefined, extraBeats: [], finished: undefined,
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
@@ -232,6 +234,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
       player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });
     } else {
       extras.push(hit);
+      player.extraBeats.push(hit.time / beatMs);
       player.feedback.push({ lane: laneOf(h.pad ?? 'snare'), judgement: 'extra', time: h.time });
     }
     if (player.feedback.length > 64) player.feedback.splice(0, 32);

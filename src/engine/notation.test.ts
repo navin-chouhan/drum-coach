@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
-import { durationOf, layoutMeasures, type NotationEvent } from './notation';
+import { durationOf, layoutMeasures, xAtBeat, type NotationEvent } from './notation';
 
 const brief = (evs: NotationEvent[]) => evs.map(e => `${e.heads.map(h => h.drum).sort().join('+') || 'rest'}:${e.slots}${e.triplet ? 't' : ''}`);
 
@@ -31,11 +31,26 @@ describe('layoutMeasures', () => {
   });
 });
 
+describe('sheet player helpers', () => {
+  it('events know their start beat and which source note each head came from', () => {
+    const [m] = layoutMeasures([{ t: 4, drum: 'kick', i: 7 }, { t: 4.5, drum: 'snare', i: 8 }], 4, 2, 2);
+    expect(m.feet[0]).toMatchObject({ beat: 4, heads: [{ drum: 'kick', i: 7 }] });
+    expect(m.hands.map(e => e.beat)).toEqual([4, 4.5, 5, 6, 7]);
+  });
+  it('cursor x moves linearly between drawn beats and stops at the ends', () => {
+    const pts = [{ beat: 0, x: 100 }, { beat: 1, x: 140 }, { beat: 4, x: 400 }];
+    expect(xAtBeat(pts, 0.5)).toBe(120);
+    expect(xAtBeat(pts, 2.5)).toBe(270);
+    expect(xAtBeat(pts, -1)).toBe(100);
+    expect(xAtBeat(pts, 9)).toBe(400);
+  });
+});
+
 describe('durationOf', () => {
   it('maps grid lengths to note values', () => {
-    expect([1, 2, 3, 4].map(slots => durationOf({ heads: [], slots, triplet: false }))).toEqual([
+    expect([1, 2, 3, 4].map(slots => durationOf({ heads: [], slots, triplet: false, beat: 0 }))).toEqual([
       { duration: '16', dots: 0, inTuplet: false }, { duration: '8', dots: 0, inTuplet: false },
       { duration: '8', dots: 1, inTuplet: false }, { duration: 'q', dots: 0, inTuplet: false }]);
-    expect(durationOf({ heads: [], slots: 1, triplet: true })).toEqual({ duration: '8', dots: 0, inTuplet: true });
+    expect(durationOf({ heads: [], slots: 1, triplet: true, beat: 0 })).toEqual({ duration: '8', dots: 0, inTuplet: true });
   });
 });

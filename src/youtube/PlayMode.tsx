@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { beatsPerBar, type Chart } from '../engine/chart';
 import { beatAt, songSecAt } from '../engine/tempo';
-import { Highway } from '../play/Highway';
+import { NotesView } from '../play/NotesView';
 import { player, playerVersion, start, stop, subscribePlayer } from '../play/player';
 import { Results } from '../play/Results';
 import type { ModeProps } from './SongView';
@@ -49,7 +49,7 @@ export function PlayMode({ song, videoId, yt, rate }: ModeProps) {
         </>
       )}
       <button className="primary big" onClick={playing ? stop : go}>{playing ? 'Stop (Esc)' : 'Start'}</button>
-      {playing && <div className="highwayWrap ytHighway"><Highway /></div>}
+      {playing && <div className="highwayWrap ytHighway"><NotesView /></div>}
     </div>
   );
 }

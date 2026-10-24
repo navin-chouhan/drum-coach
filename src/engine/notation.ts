@@ -8,9 +8,9 @@ export const STAFF: Record<ChartDrum, { key: string; voice: 'hands' | 'feet' }> 
   floor: { key: 'a/4', voice: 'hands' }, kick: { key: 'f/4', voice: 'feet' }, hhPedal: { key: 'd/4/x2', voice: 'feet' },
 };
 
-export type NoteHead = { key: string; drum: ChartDrum; accent: boolean; ghost: boolean; open: boolean };
+export type NoteHead = { key: string; drum: ChartDrum; accent: boolean; ghost: boolean; open: boolean; i?: number }; // i = index of the source note, when given
 /** One note/chord or rest. `slots` = length in grid steps of its beat (16ths, or 8th-triplets when `triplet`). */
-export type NotationEvent = { heads: NoteHead[]; slots: number; triplet: boolean };
+export type NotationEvent = { heads: NoteHead[]; slots: number; triplet: boolean; beat: number }; // beat = where it starts (same clock as the notes' t)
 export type Measure = { index: number; hands: NotationEvent[]; feet: NotationEvent[] };
 
 const EPS = 1e-4;
@@ -21,7 +21,7 @@ const onGrid = (x: number, steps: number) => Math.abs(x * steps - Math.round(x *
  * shortcut: compound meters (6/8, 12/8) are laid out per quarter beat (beams are regrouped in threes by the renderer);
  * a dotted-quarter note shows as quarter + 8th rest. Fine for reading, not engraving-perfect.
  */
-export function layoutMeasures(notes: ChartNote[], beatsPerBar: number, fromBar = 1, toBar?: number): Measure[] {
+export function layoutMeasures(notes: (ChartNote & { i?: number })[], beatsPerBar: number, fromBar = 1, toBar?: number): Measure[] {
   const last = notes.length ? Math.floor(notes[notes.length - 1].t / beatsPerBar + EPS) + 1 : 1;
   const end = toBar ?? last;
   const out: Measure[] = [];
@@ -40,15 +40,18 @@ export function layoutMeasures(notes: ChartNote[], beatsPerBar: number, fromBar 
           const s = Math.min(slotsInBeat - 1, Math.round(rel[i] * steps));
           const heads = bySlot.get(s) ?? [];
           if (!heads.some(h => h.key === STAFF[n.drum].key)) {
-            heads.push({ key: STAFF[n.drum].key, drum: n.drum, accent: !!n.accent, ghost: !!n.ghost, open: n.drum === 'hhOpen' });
+            heads.push({ key: STAFF[n.drum].key, drum: n.drum, accent: !!n.accent, ghost: !!n.ghost, open: n.drum === 'hhOpen', ...(n.i !== undefined && { i: n.i }) });
+          } else if (n.i !== undefined) {
+            const h = heads.find(x => x.key === STAFF[n.drum].key)!; // e.g. hi-hat closed + open on one spot: keep both sources
+            h.i ??= n.i;
           }
           bySlot.set(s, heads);
         });
         const starts = [...bySlot.keys()].sort((a, c) => a - c);
         const events = measure[voice];
-        if (!starts.length) { events.push({ heads: [], slots: slotsInBeat, triplet: false }); continue; }
-        if (starts[0] > 0) events.push({ heads: [], slots: starts[0], triplet });
-        starts.forEach((s, i) => events.push({ heads: bySlot.get(s)!, slots: (starts[i + 1] ?? slotsInBeat) - s, triplet }));
+        if (!starts.length) { events.push({ heads: [], slots: slotsInBeat, triplet: false, beat: beatStart }); continue; }
+        if (starts[0] > 0) events.push({ heads: [], slots: starts[0], triplet, beat: beatStart });
+        starts.forEach((s, i) => events.push({ heads: bySlot.get(s)!, slots: (starts[i + 1] ?? slotsInBeat) - s, triplet, beat: beatStart + s / steps }));
       }
     }
     out.push(measure);
@@ -61,4 +64,15 @@ const STRAIGHT = ['', '16', '8', '8', 'q'];
 export function durationOf(e: NotationEvent): { duration: string; dots: number; inTuplet: boolean } {
   if (e.triplet) return { duration: e.slots === 1 ? '8' : 'q', dots: 0, inTuplet: e.slots < 3 };
   return { duration: STRAIGHT[e.slots] ?? 'q', dots: e.slots === 3 ? 1 : 0, inTuplet: false };
+}
+
+/** Cursor position: linear between the drawn positions of nearby beats (`points` sorted by beat). */
+export function xAtBeat(points: { beat: number; x: number }[], beat: number): number {
+  if (!points.length) return 0;
+  if (beat <= points[0].beat) return points[0].x;
+  for (let k = 1; k < points.length; k++) {
+    const a = points[k - 1], b = points[k];
+    if (beat <= b.beat) return b.beat === a.beat ? b.x : a.x + ((beat - a.beat) / (b.beat - a.beat)) * (b.x - a.x);
+  }
+  return points[points.length - 1].x;
 }
