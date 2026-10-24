@@ -22,7 +22,7 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle }: 
     student: { goals: profile.goals.length ? profile.goals : ['not sure yet'], minutesPerDay: profile.minutesPerDay },
     progress: all.filter(l => progress[l.id]).map(l => {
       const p = progress[l.id];
-      return { ...brief(l), level: l.level, byCoach: l.source === 'ai', step: p.step + 1, of: l.steps.length, bpm: p.bpm, passed: !!p.completedAt, bestBpm: p.bestBpm || undefined };
+      return { ...brief(l), level: l.level, byCoach: l.source === 'ai', step: p.step + 1, of: l.steps.length, bpm: p.bpm, passed: !!p.completedAt, bestBpm: p.bestBpm || undefined, stars: p.stars };
     }),
     recentRuns: recent.slice(-15),
     ...(struggle ? { struggle } : {}),

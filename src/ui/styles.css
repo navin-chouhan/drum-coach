@@ -351,3 +351,7 @@
   }
   @keyframes burstIn{from{transform:scale(.2) rotate(-14deg);opacity:0}}
   @keyframes starPop{from{transform:scale(0) rotate(-45deg)}}
+  .rankSticker.small{font-size:18px;padding:5px 12px;margin:4px 0 8px;box-shadow:3px 3px 0 var(--line)}
+  .nextUp{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:420px;text-align:right}
+  .nextUp .primary.big{font-size:18px;padding:14px 22px}
+  @media (max-width:700px){ .nextUp{align-items:stretch;text-align:left} }

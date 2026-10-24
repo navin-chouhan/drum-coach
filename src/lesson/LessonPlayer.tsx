@@ -78,6 +78,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
       o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
+    // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting).
+    if (o.event === 'lessonDone' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
+      requestCoachLesson(`after-${lesson.id}-${f.startedAt}`);
     if (getSettings().voice) void say(o.text);
     coachTake(f, { lesson: lesson.title, step: step.title, passed: check.ok, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target });
     if (o.itemDone) onItemDone?.();

@@ -20,6 +20,9 @@ How to choose:
 - Plain words for an adult beginner. "how" gives 2–4 concrete physical tips. "focus" is one sentence telling
   the student why this lesson, for them, citing their data (for example "your kick on the & of 3 is 40 ms late").
 - Charts follow the chart format; keep them 1–4 bars. For a step's chart, "bpm" = that step's target.
+- You are building this student's path: each lesson is the next small step toward passing this milestone's
+  checkpoints (the stage finale). "stars" on a passed lesson is 1–3; 1 star means it is shaky, so a lesson that
+  strengthens it beats a new topic. Keep it fun: one clear win per lesson.
 
 Answer shape:
 { "title": string (≤ 60 chars), "kind": "exercise" | "rudiment" | "groove" | "fill",

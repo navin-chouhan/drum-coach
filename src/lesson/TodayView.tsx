@@ -35,6 +35,10 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
 
   const session = currentSession();
   const firstUndone = session.items.findIndex((_, i) => !session.done.includes(i));
+  const done = (id: string) => !!s.lessons[id]?.completedAt;
+  const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
+  const rank = passed.length ? passed[passed.length - 1].rank : 'New drummer';
+  // Next up: the coach's lesson for you if one is waiting, otherwise today's session.
   const openItem = (i: number) => { startSession(); setOpen({ lessonId: session.items[i].lessonId, item: i }); };
 
   if (open) {
@@ -52,13 +56,21 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
     <div className="today">
       <div className="card todayHead">
         <div>
-          <h2>{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
-          <p className="small">{streak ? `${streak}-day streak · ` : ''}{total} minutes planned</p>
-          {milestone && <p>Milestone {milestone.level + 1} of {MILESTONES.length}: <b>{milestone.title}</b></p>}
+          <p className="small">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}{streak ? ` · ${streak}-day streak 🔥` : ''}</p>
+          <div className="rankSticker small">{rank}</div>
+          {milestone && <p>Stage {milestone.level + 1} of {MILESTONES.length}: <b>{milestone.title}</b>, on the way to <b>{milestone.rank}</b></p>}
         </div>
-        {firstUndone >= 0
-          ? <button className="primary big" autoFocus onClick={() => openItem(firstUndone)}>{session.done.length ? 'Continue' : 'Start today\'s session'}</button>
-          : <p className="doneMsg">Session done. Nice work! Play anything from your path, or try Practice.</p>}
+        <div className="nextUp">
+          {coachOpen.length > 0 ? <>
+            <p className="small">Next up, picked by your coach</p>
+            <button className="primary big" autoFocus onClick={() => setOpen({ lessonId: coachOpen[0].id })}>{coachOpen[0].title} →</button>
+            {coachOpen[0].focus && <p className="small">{coachOpen[0].focus}</p>}
+          </> : firstUndone >= 0 ? <>
+            <p className="small">Next up: {ROLE[session.items[firstUndone].role].toLowerCase()} · {total} min today</p>
+            <button className="primary big" autoFocus onClick={() => openItem(firstUndone)}>{lessonById(session.items[firstUndone].lessonId)?.title ?? 'Start'} →</button>
+          </> : <p className="doneMsg">Session done. Nice work! Play anything from your path, or try Practice.</p>}
+          {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
+        </div>
       </div>
 
       <div className="card">
