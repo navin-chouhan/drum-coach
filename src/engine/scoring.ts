@@ -3,6 +3,8 @@ import type { PadId } from './kit.ts';
 import type { Run } from './run.ts';
 
 export const WINDOWS = { perfect: 25, good: 60, near: 200 }; // near: an off-time stroke still belongs to its note (a miss, not an extra)
+/** Windows for a tempo: "near" grows with the beat (30% of it), so a slow-tempo slip isn't an extra; a hit on the & still is. */
+export const windowsFor = (beatMs: number) => ({ ...WINDOWS, near: Math.max(WINDOWS.near, beatMs * 0.3) });
 export type Judgement = 'perfect' | 'good' | 'miss';
 /** time = ms on the performance.now() clock (latency already removed for hits). */
 export type Expected = { time: number; drum: ChartDrum };

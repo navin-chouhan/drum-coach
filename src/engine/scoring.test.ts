@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { computeStats, createMatcher, estimateLatency, scoreRun, type Expected, type PlayedHit } from './scoring';
+import { computeStats, createMatcher, estimateLatency, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -25,6 +25,14 @@ describe('matcher', () => {
     const late = scoreRun(expected, perfectHits(61));
     expect(late.results.every(r => r.judgement === 'miss' && r.offset === undefined && r.off === 61)).toBe(true);
     expect(late.extras).toHaveLength(0);
+  });
+
+  it('at slow tempos a slip still belongs to its note, but a hit on the & is an extra', () => {
+    const beat = 1333; // 45 BPM
+    const q: Expected[] = [0, 1, 2].map(i => ({ time: 1000 + i * beat, drum: 'snare' }));
+    const m = createMatcher(q, windowsFor(beat));
+    expect(m({ time: 1000 + 290, pad: 'snare', velocity: 60 })).toMatchObject({ index: 0, judgement: 'miss' }); // 290 ms late
+    expect(m({ time: 1000 + beat * 1.5, pad: 'snare', velocity: 60 })).toBeNull(); // the "&"
   });
 
   it('a stroke is still an extra when no note of that drum is near, or that note was already played', () => {
