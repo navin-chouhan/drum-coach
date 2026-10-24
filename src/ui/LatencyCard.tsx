@@ -5,7 +5,7 @@ import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { audio, audioToPerf, click } from '../play/audio';
 
 const BPM = 90, COUNT_IN = 4, CLICKS = 16;
-const MAX_SPREAD = 50; // ms: taps more scattered than this don't measure latency, they measure the player
+const MAX_SPREAD = 50, MIN_TAPS = 10; // fewer or more scattered taps measure the player, not the latency
 
 /** Tap any pad along with 16 clicks; the median offset becomes the latency correction used in scoring. */
 export function LatencyCard() {
@@ -41,11 +41,11 @@ export function LatencyCard() {
       {state === 'running' && <p className="prompt">Tap along… {taps}/{CLICKS}</p>}
       {state === 'done' && (result
         ? <p>You hit on average <b>{Math.abs(result.latencyMs)} ms {result.latencyMs >= 0 ? 'after' : 'before'}</b> the click
-            ({result.n} taps, spread ±{result.spread} ms).{result.spread > MAX_SPREAD && ' The taps were too uneven to trust: try again, hitting right on each click.'}</p>
+            ({result.n} taps, spread ±{result.spread} ms).{(result.spread > MAX_SPREAD || result.n < MIN_TAPS) && ' Not steady enough to trust: try again, playing along with the clicks rather than reacting to them.'}</p>
         : <p className="warn">Not enough taps close to the clicks. Try again.</p>)}
       <div className="actions">
         <button onClick={run} disabled={state === 'running'}>Start</button>
-        {state === 'done' && result && result.spread <= MAX_SPREAD && <button className="primary" onClick={() => setSettings({ latencyMs: result.latencyMs })}>Save {result.latencyMs} ms</button>}
+        {state === 'done' && result && result.spread <= MAX_SPREAD && result.n >= MIN_TAPS && <button className="primary" onClick={() => setSettings({ latencyMs: result.latencyMs })}>Save {result.latencyMs} ms</button>}
         {settings.latencyMs !== 0 && <button onClick={() => setSettings({ latencyMs: 0 })}>Reset to 0</button>}
       </div>
     </section>
