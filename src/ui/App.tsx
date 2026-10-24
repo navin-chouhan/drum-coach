@@ -5,6 +5,7 @@ import { onHit } from '../input/hits';
 import { startKeyboard } from '../input/keyboard';
 import { getSettings } from '../input/settings';
 import { useMidi } from '../input/useMidi';
+import { TodayView } from '../lesson/TodayView';
 import { playDrum } from '../play/audio';
 import { PlayView } from '../play/PlayView';
 import { stop } from '../play/player';
@@ -15,14 +16,14 @@ import { onPlayRequest, type PlayRequest } from './nav';
 import { ProgressView } from './ProgressView';
 import { Timeline } from './Timeline';
 
-const TABS = { kit: 'Kit', play: 'Play', songs: 'Songs', coach: 'Coach', progress: 'Progress', calibrate: 'Calibrate' } as const;
+const TABS = { today: 'Today', play: 'Free play', songs: 'Songs', coach: 'Coach', progress: 'Progress', kit: 'Kit', calibrate: 'Calibrate' } as const;
 type Tab = keyof typeof TABS;
 
 export function App() {
   const midi = useMidi();
-  const [tab, setTabState] = useState<Tab>('kit');
+  const [tab, setTabState] = useState<Tab>('today');
   const [pending, setPending] = useState<PlayRequest>();
-  const setTab = (t: Tab) => { if (t !== 'play') stop(); setTabState(t); };
+  const setTab = (t: Tab) => { if (t !== tab) stop(); setTabState(t); };
   useEffect(startKeyboard, []);
   useEffect(() => onHit(h => { if (h.pad && getSettings().browserSounds) playDrum(h.pad, h.velocity); }), []);
   useEffect(() => onPlayRequest(r => { stop(); setPending(r); setTabState('play'); }), []);
@@ -52,6 +53,7 @@ export function App() {
           ))}
         </nav>
       </header>
+      {tab === 'today' && <TodayView onCalibrate={() => setTab('calibrate')} />}
       {tab === 'kit' && (
         <>
           <main>

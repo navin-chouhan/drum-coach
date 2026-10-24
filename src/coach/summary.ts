@@ -18,5 +18,6 @@ export function summarizeRun(f: Finished) {
     meanOffsetMs: s.meanOffset, spreadMs: s.spread,
     perDrum: Object.fromEntries(Object.entries(s.perDrum).map(([d, v]) => [d, { notes: v.total, accuracyPct: v.accuracy, meanOffsetMs: v.meanOffset }])),
     velocity: s.velocity, weakSpots,
+    ...(f.options.lesson && { lesson: f.options.lesson }),
   };
 }

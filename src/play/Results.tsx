@@ -13,19 +13,22 @@ const timingText = (ms: number) => (Math.abs(ms) < 5 ? 'Right on the grid' : ms 
 const saved = new WeakSet<Finished>();
 const [saveOk, saveFail] = [() => {}, () => console.warn('Run not saved: is the server running?')];
 
+/** Saves a run once (wait-mode and empty runs are skipped: they'd distort progress). */
+export function saveRun(f: Finished, extra?: Record<string, unknown>) {
+  const s = f.stats;
+  if (f.options.wait || saved.has(f) || s.total === 0) return;
+  saved.add(f);
+  const c = f.chart as typeof f.chart & { id?: string };
+  void fetch('/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+    chartId: c.id ?? c.title, chartTitle: c.title, level: c.level, startedAt: f.startedAt, durationS: f.durationS,
+    bpm: c.bpm * f.options.speed, speed: f.options.speed, accuracy: s.accuracy, meanOffset: s.meanOffset, spread: s.spread,
+    summary: { ...summarizeRun(f), ...extra },
+  }) }).then(r => (r.ok ? saveOk() : saveFail()), saveFail);
+}
+
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
   const s = f.stats, wait = f.options.wait;
-  useEffect(() => {
-    // Wait-mode runs have no timing, so they'd distort progress; they aren't saved.
-    if (wait || saved.has(f) || s.total === 0) return;
-    saved.add(f);
-    const c = f.chart as typeof f.chart & { id?: string };
-    void fetch('/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-      chartId: c.id ?? c.title, chartTitle: c.title, level: c.level, startedAt: f.startedAt, durationS: f.durationS,
-      bpm: c.bpm * f.options.speed, speed: f.options.speed, accuracy: s.accuracy, meanOffset: s.meanOffset, spread: s.spread,
-      summary: summarizeRun(f),
-    }) }).then(r => (r.ok ? saveOk() : saveFail()), saveFail);
-  }, [f, s, wait]);
+  useEffect(() => saveRun(f), [f]);
   const slotLabel = (i: number) => (i % 4 === 0 ? String(i / 4 + 1) : COUNT[i % 4]);
   return (
     <div className="results">

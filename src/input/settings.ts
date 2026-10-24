@@ -1,7 +1,18 @@
-// App settings that aren't per-kit. Synced to the server (SQLite) when it's up; localStorage keeps it working offline.
+import type { LessonProgress, Profile } from '../engine/lesson';
+import type { SessionItem } from '../engine/planner';
+
+// App settings that aren't per-kit, plus the student's lesson state.
+// Synced to the server (SQLite) when it's up; localStorage keeps it working offline.
 const KEY = 'drumcoach.settings';
-export type Settings = { latencyMs: number; browserSounds: boolean; autoCoach: boolean };
-const DEFAULTS: Settings = { latencyMs: 0, browserSounds: false, autoCoach: false };
+export type Session = { date: string; items: SessionItem[]; done: number[] }; // frozen when the day's session starts
+export type Settings = {
+  latencyMs: number; browserSounds: boolean; autoCoach: boolean;
+  profile: Profile; lessons: Record<string, LessonProgress>; session?: Session;
+};
+const DEFAULTS: Settings = {
+  latencyMs: 0, browserSounds: false, autoCoach: false,
+  profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
+};
 
 let settings: Settings = { ...DEFAULTS };
 try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { /* defaults */ }
