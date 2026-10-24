@@ -177,7 +177,7 @@ export function SheetPlayer() {
   const wrap = useRef<HTMLDivElement>(null), paper = useRef<HTMLDivElement>(null);
   const cursor = useRef<HTMLDivElement>(null), barHi = useRef<HTMLDivElement>(null);
   const count = useRef<HTMLDivElement>(null), tip = useRef<HTMLDivElement>(null), marks = useRef<HTMLDivElement>(null);
-  const bursts = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null);
+  const bursts = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null), pre = useRef<HTMLDivElement>(null);
   const { w, h } = useWidth(wrap);
   const run = player.phase === 'playing' ? player.run : undefined, chart = player.chart;
 
@@ -193,10 +193,21 @@ export function SheetPlayer() {
     const perPage = perRow * rows;
     const notes = run.notes.map(n => ({ ...n }));
     const dim = (i: number) => player.auto[i];
+    const render = (p: number, el: HTMLElement) => {
+      const fromBar = p * perPage + 1, toBar = Math.min(totalBars, fromBar + perPage - 1);
+      return renderSheet(el, { notes: notes.filter(n => n.t >= (fromBar - 1) * bpb && n.t < toBar * bpb), timeSignature: chart.timeSignature, fromBar, toBar, width: w - 16, dim, scale, barMin });
+    };
+    // The next page is engraved in idle time while this one plays: a full render at the turn would stall the downbeat.
+    let next: { p: number; layout?: ReturnType<typeof renderSheet> } | undefined;
+    const idle = window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 0));
     const draw = (p: number) => {
       page = p; done.clear(); shownX.clear(); marks.current!.replaceChildren(); bursts.current!.replaceChildren();
-      const fromBar = p * perPage + 1, toBar = Math.min(totalBars, fromBar + perPage - 1);
-      layout = renderSheet(paper.current!, { notes: notes.filter(n => n.t >= (fromBar - 1) * bpb && n.t < toBar * bpb), timeSignature: chart.timeSignature, fromBar, toBar, width: w - 16, dim, scale, barMin });
+      if (next?.p === p && next.layout) { paper.current!.replaceChildren(...pre.current!.childNodes); layout = next.layout; }
+      else layout = render(p, paper.current!);
+      if ((p + 1) * perPage < totalBars) {
+        const n = next = { p: p + 1 } as NonNullable<typeof next>;
+        idle(() => { if (!cancelled && next === n) n.layout = render(n.p, pre.current!); }, { timeout: 1000 });
+      }
       if (import.meta.env.DEV) Object.assign(window, { drumCoachSheet: layout }); // dev: inspect the layout from tests
       const sv = paper.current!.querySelector('svg')!.getBoundingClientRect(), st = stage.current!.getBoundingClientRect();
       origin = { x: sv.left - st.left - stage.current!.clientLeft, y: sv.top - st.top - stage.current!.clientTop };
@@ -269,6 +280,7 @@ export function SheetPlayer() {
         <div ref={barHi} className="sheetBar" aria-hidden />
         <div ref={cursor} className="sheetCursor" aria-hidden />
         <div ref={marks} aria-hidden />
+        <div ref={pre} className="sheetPaper" style={{ position: 'absolute', left: 0, top: 0, visibility: 'hidden' }} aria-hidden />
       </div>
       <div ref={count} className="sheetCount" aria-live="off" />
       <div ref={tip} className="sheetTip" role="status" />
