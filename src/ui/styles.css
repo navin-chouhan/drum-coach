@@ -1,22 +1,30 @@
 
-  :root{color-scheme:dark;
-    --bg:#0a0c11; --panel:#12161e; --panel2:#171c26; --line:#232a37;
-    --text:#e9edf4; --muted:#8a94a7; --accent:#ffb547;
-    --good:#34d399; --ok:#fbbf24; --bad:#f87171;
+  /* Dream-surreal theme: day sky outside, night sky on the play surfaces (Magritte, Empire of Light). */
+  :root{color-scheme:light;
+    --bg:#9EC9EC; --panel:#F6F0E3; --panel2:#ECE3CF; --line:#CDBFA3;
+    --text:#2A2A2A; --muted:#6B5A43; --accent:#1E3550; --ochre:#F2D57A;
+    --night:#1E3550; --nightText:#F6F0E3; --serif:Georgia,"Times New Roman",serif;
+    --good:#2F7D5B; --ok:#A8741A; --bad:#B5432F;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{
-    background:var(--bg);color:var(--text);
+    color:var(--text);background-color:var(--bg);background-attachment:fixed;
+    background-image:
+      radial-gradient(ellipse 220px 50px at 12% 18%, #fffe 60%, transparent 62%),
+      radial-gradient(ellipse 140px 40px at 20% 14%, #fffd 60%, transparent 62%),
+      radial-gradient(ellipse 260px 56px at 82% 72%, #fffd 60%, transparent 62%),
+      radial-gradient(ellipse 160px 42px at 74% 68%, #fffc 60%, transparent 62%),
+      linear-gradient(#8FBFE6, #BFDDF3);
     font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    
   }
+  h1,h2,h3,h4{font-family:var(--serif);font-weight:400}
   header{
     display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-    padding:12px 20px;border-bottom:1px solid var(--line);background:#0c0f15;
+    padding:12px 20px;border-bottom:1px solid #1E355033;background:transparent;color:var(--night);
   }
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:.01em}
-  .brand .logo{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+  .brand{display:flex;align-items:center;gap:10px;font:italic 20px var(--serif);letter-spacing:.01em}
+  .brand .logo{width:12px;height:12px;border-radius:50%;background:var(--ochre);border:2px solid var(--night)}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:999px;
     background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:12.5px;white-space:nowrap}
   .chip .dot{width:8px;height:8px;border-radius:50%;background:#6b7280;flex:none}
@@ -26,11 +34,11 @@
   .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   select,input[type=number],button{
     font:inherit;font-size:13px;color:var(--text);background:var(--panel);
-    border:1px solid var(--line);border-radius:8px;padding:6px 10px;
+    border:1px solid var(--line);border-radius:999px;padding:6px 12px;
   }
   button{cursor:pointer;transition:border-color .15s,color .15s,background .15s}
-  button:hover{border-color:#3a4456}
-  button.on{border-color:var(--accent);color:var(--accent);background:#1d1910}
+  button:hover{border-color:var(--muted)}
+  button.on{border-color:var(--night);color:var(--night);background:var(--ochre)}
   input[type=number]{width:64px}
   .group{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px}
 
@@ -38,7 +46,8 @@
   .stage{
     position:relative;display:flex;align-items:center;justify-content:center;
     padding:10px 16px;overflow:hidden;
-    background:radial-gradient(ellipse 70% 60% at 50% 38%, #1c2332 0%, #10141c 55%, var(--bg) 100%);
+    margin:12px;border-radius:6px;box-shadow:0 14px 30px #1E355040;
+    background:radial-gradient(ellipse 70% 60% at 50% 38%, #2C4A6E 0%, var(--night) 70%);
   }
   .thump{position:absolute;inset:0;pointer-events:none;opacity:0;
     background:radial-gradient(ellipse 60% 55% at 50% 70%, rgba(255,107,107,.35), transparent 70%)}
@@ -47,13 +56,13 @@
   .pad .body,.pad .ripple,.pad .spark,.hhTop{transform-box:fill-box;transform-origin:center}
   .pad text{pointer-events:none;user-select:none}
   .hint{position:absolute;left:16px;top:12px;color:var(--muted);font-size:12px;
-    background:rgba(10,12,17,.7);border:1px solid var(--line);padding:6px 10px;border-radius:8px}
+    background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:8px}
   .hint kbd{font:11px ui-monospace,Menlo,monospace;background:var(--panel2);border:1px solid var(--line);
     border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--text)}
 
-  aside{border-left:1px solid var(--line);background:#0d1016;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
-  .card h3{margin:0 0 10px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  aside{border-left:1px solid #1E355033;background:#F6F0E399;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px;box-shadow:0 10px 22px #1E35502b}
+  .card h3{margin:0 0 10px;font-size:11px;letter-spacing:.09em;color:var(--muted);font:italic 400 14px var(--serif)}
   .lastName{font-size:26px;font-weight:700;line-height:1.1;transition:color .1s}
   .lastMeta{color:var(--muted);font-size:12.5px;margin-top:4px;font-variant-numeric:tabular-nums}
   .velbar{height:6px;border-radius:3px;background:var(--panel2);margin-top:10px;overflow:hidden}
@@ -62,7 +71,7 @@
   #timingSub{color:var(--muted);font-size:12.5px;margin-top:2px}
   .meter{position:relative;height:34px;margin-top:12px;border-radius:8px;background:var(--panel2);overflow:hidden}
   .meter .zone{position:absolute;top:0;bottom:0;left:40%;width:20%;background:rgba(52,211,153,.12)}
-  .meter .center{position:absolute;top:0;bottom:0;left:50%;width:1px;background:#3b4456}
+  .meter .center{position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--muted)}
   .meter .tick{position:absolute;top:7px;width:3px;height:20px;border-radius:2px;margin-left:-1.5px;transition:opacity .3s}
   .meter .lbl{position:absolute;bottom:2px;font-size:9.5px;color:var(--muted)}
   .counts{display:flex;flex-direction:column;gap:7px}
@@ -73,9 +82,9 @@
   .small{color:var(--muted);font-size:12px}
   #resetBtn{margin-top:10px;width:100%}
 
-  footer{border-top:1px solid var(--line);background:#0c0f15;padding:8px 20px 12px}
+  footer{border-top:1px solid #1E355033;background:transparent;padding:8px 20px 12px}
   footer .lanesHead{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
-  canvas.lanes{width:100%;height:176px;display:block;border-radius:10px;background:#0e1219;border:1px solid var(--line)}
+  canvas.lanes{width:100%;height:176px;display:block;border-radius:10px;background:var(--night);border:1px solid var(--line)}
 
   @media (max-width:900px){
     main{grid-template-columns:1fr}
@@ -86,11 +95,13 @@
   .app{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;overflow-x:hidden}
   .chip{font:inherit;font-size:12.5px;padding:5px 11px}
   .tabs{display:flex;gap:6px}
+  .tabs button{background:transparent;border-color:transparent;font:15px var(--serif);color:var(--night);border-radius:0;padding:6px 8px}
+  .tabs button.on{background:transparent;border-color:transparent;border-bottom:2px solid var(--night)}
   kbd{font:11px ui-monospace,Menlo,monospace;background:var(--panel2);border:1px solid var(--line);
     border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--text)}
   .small kbd{line-height:2}
-  button.link{background:none;border:none;padding:0;color:var(--accent);text-decoration:underline;font-size:inherit}
-  button.primary{background:var(--accent);border-color:var(--accent);color:#1a1205;font-weight:600}
+  button.link{background:none;border:none;padding:0;color:var(--accent);text-decoration:underline;font-size:inherit;border-radius:0}
+  button.primary{background:var(--night);border-color:var(--night);color:var(--panel);font-weight:600}
   button:disabled{opacity:.4;cursor:default}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .calibrate{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:16px;align-content:start;grid-row:2/4}
@@ -98,7 +109,7 @@
   .wizard .prompt{font-size:34px;margin:6px 0 4px}
   .wizard .prompt b{color:var(--accent)}
   .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .warn{color:var(--ok);background:#1d1910;border:1px solid #4a3a12;border-radius:8px;padding:8px 10px}
+  .warn{color:#6B4A0E;background:#F7E7B4;border:1px solid #C9A44A;border-radius:8px;padding:8px 10px}
   .captured{columns:2;color:var(--muted);font-size:12.5px;margin:16px 0 0;padding-left:20px}
   .captured .current{color:var(--accent)}
   .notemap{border-collapse:collapse;width:100%;margin-bottom:12px}
@@ -111,7 +122,7 @@
   .play,.results,.coachView,.songs,.progress{grid-row:2/4;padding:16px;min-height:0}
   .play{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px}
   .playSide{display:flex;flex-direction:column;gap:12px;overflow:auto;max-height:calc(100vh - 90px)}
-  .highwayWrap{min-height:0;background:#0e1219;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .highwayWrap{min-height:0;background:var(--night);border:1px solid var(--line);border-radius:6px;box-shadow:0 14px 30px #1E355040;overflow:hidden}
   canvas.highway{display:block;width:100%;height:calc(100vh - 92px)}
   .form{display:flex;flex-direction:column;gap:10px}
   .form label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
@@ -133,9 +144,9 @@
   .perfect{color:var(--good)} .good{color:var(--ok)} .miss{color:var(--bad)}
   .card .row{margin-bottom:7px}
   .heat{display:grid;gap:2px}
-  .heat .cell{height:38px;border-radius:4px;display:flex;align-items:flex-end;justify-content:center;font-size:10.5px;color:#e9edf4;padding-bottom:3px}
+  .heat .cell{height:38px;border-radius:4px;display:flex;align-items:flex-end;justify-content:center;font-size:10.5px;color:#fff;padding-bottom:3px}
   .replay{overflow-x:auto}
-  .replay canvas{display:block}
+  .replay canvas{display:block;background:var(--night);border-radius:4px}
   .coach p{margin:6px 0}
   .drill{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
   .drill p{margin:4px 0 8px}
@@ -144,7 +155,7 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   @media (prefers-reduced-motion: reduce){.spinner{animation:none}}
   .coachView{display:flex;flex-direction:column;gap:14px;overflow:auto}
-  .warnCard{border-color:#4a3a12}
+  .warnCard{border-color:#C9A44A}
   .plan h4{margin:14px 0 6px}
   .plan ul{list-style:none;padding:0;margin:4px 0 10px}
   .plan li{margin:4px 0}
@@ -152,7 +163,7 @@
   .chat{display:flex;flex-direction:column;min-height:420px}
   .chat .msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;max-height:60vh;margin-bottom:10px}
   .msg{padding:8px 12px;border-radius:10px;white-space:pre-wrap;max-width:90%}
-  .msg.user{align-self:flex-end;background:#1d1910;border:1px solid #4a3a12}
+  .msg.user{align-self:flex-end;background:#F7E7B4;border:1px solid #C9A44A}
   .msg.assistant{align-self:flex-start;background:var(--panel2);border:1px solid var(--line)}
   .msg button{margin-top:8px}
   .chatInput{display:flex;gap:8px}
@@ -186,7 +197,7 @@
   .songHead{display:flex;align-items:center;gap:12px}
   .songHead h2{margin:0;font-size:18px}
   .songGrid{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr);gap:16px;align-items:start}
-  .videoBox{aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  .videoBox{aspect-ratio:16/9;background:#000;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
   .videoBox>div,.videoBox iframe{width:100%;height:100%;display:block}
   .videoBox p{padding:16px}
   label.inline{display:inline-flex;flex-direction:row;align-items:center;gap:6px;color:var(--muted);font-size:12.5px}
@@ -194,11 +205,11 @@
   .tempoBig{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
   .meter{position:relative;height:34px;margin-top:8px;border-radius:8px;background:var(--panel2);overflow:hidden}
   .meter .zone{position:absolute;top:0;bottom:0;left:40%;width:20%;background:rgba(52,211,153,.12)}
-  .meter .center{position:absolute;top:0;bottom:0;left:50%;width:1px;background:#3b4456}
+  .meter .center{position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--muted)}
   .meter .tick{position:absolute;top:7px;width:3px;height:20px;border-radius:2px;margin-left:-1.5px}
   .jamResults{display:flex;flex-direction:column;gap:12px;margin-top:8px}
   .gridEditor{overflow-x:auto}
-  .gridEditor canvas{display:block;width:100%;min-width:560px;cursor:pointer;background:#0e1219;border:1px solid var(--line);border-radius:8px}
+  .gridEditor canvas{display:block;width:100%;min-width:560px;cursor:pointer;background:var(--night);border:1px solid var(--line);border-radius:6px}
   .ytHighway canvas.highway{height:60vh}
   .songView .results{padding:0}
   @media (max-width:1000px){ .songGrid{grid-template-columns:1fr} }
@@ -223,7 +234,7 @@
   .focus{border-left:3px solid var(--accent);padding-left:10px;font-size:13.5px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .lessonChip{font-size:12.5px;padding:4px 10px;border-radius:999px}
-  .lessonChip.done{color:var(--good);border-color:#1f5a45}
+  .lessonChip.done{color:var(--good);border-color:var(--good)}
   .lessonChip.started{border-color:var(--ok)}
   .lessonChip.next{border-color:var(--accent);color:var(--accent)}
   button.link.danger{color:var(--bad)}
@@ -238,7 +249,7 @@
   .dots{display:inline-flex;gap:4px}
   .dots i{width:10px;height:10px;border-radius:50%;background:var(--panel2);border:1px solid var(--line)}
   .dots i.on{background:var(--good);border-color:var(--good)}
-  .verdict.pass{border-color:#1f5a45} .verdict.fail{border-color:#6b3434}
+  .verdict.pass{border-color:var(--good)} .verdict.fail{border-color:var(--bad)}
   .verdict p{margin:0 0 6px}
   @media (max-width:700px){ .milestone{grid-template-columns:1fr} ol.session li{grid-template-columns:1fr auto} ol.session .role{grid-column:1/-1} }
 
@@ -246,7 +257,7 @@
   .sheet{margin-top:10px}
   .sheetPaper{background:#fbfaf7;border-radius:8px;padding:6px 4px;overflow:hidden;min-height:60px}
   .sheetPaper svg{display:block}
-  .sheetWrap{overflow:auto;background:#0e1219;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .sheetWrap{overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
   details>summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:8px}
   @media print {
     body.printingSheet *{visibility:hidden}

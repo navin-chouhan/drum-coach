@@ -36,10 +36,10 @@ export function Timeline() {
         const y = i * laneH;
         if (i % 2 === 0) { c.fillStyle = 'rgba(255,255,255,.018)'; c.fillRect(0, y, W, laneH); }
         c.fillStyle = DRUM_BY_ID[id].color; c.fillRect(10, y + laneH / 2 - 4, 8, 8);
-        c.fillStyle = '#8a94a7'; c.font = '11px system-ui, sans-serif'; c.textBaseline = 'middle';
+        c.fillStyle = '#C9D8E8'; c.font = '11px system-ui, sans-serif'; c.textBaseline = 'middle';
         c.fillText(DRUM_BY_ID[id].name, 24, y + laneH / 2);
       });
-      c.strokeStyle = 'rgba(255,181,71,.8)'; c.lineWidth = 2;
+      c.strokeStyle = 'rgba(242,213,122,.8)'; c.lineWidth = 2;
       c.beginPath(); c.moveTo(W - 14, 0); c.lineTo(W - 14, H); c.stroke();
       for (let i = hits.length - 1; i >= 0; i--) {
         const h = hits[i], age = now - h.t;

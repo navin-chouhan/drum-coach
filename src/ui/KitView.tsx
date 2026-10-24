@@ -27,7 +27,7 @@ function Label({ d }: { d: DrumGfx }) {
   const dy = dark ? 40 : isCym ? d.r * 0.5 : 2;
   return (
     <text x={d.x} y={d.y + dy} textAnchor="middle" fontSize={d.r > 90 ? 20 : 16} fontWeight={700}
-      fill={dark ? '#e9edf4' : isCym ? '#4a3510' : '#2a2f3a'} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+      fill={dark ? '#1E3550' : isCym ? '#4a3510' : '#2A2A2A'} style={{ pointerEvents: 'none', userSelect: 'none' }}>
       {d.name}
     </text>
   );
@@ -46,7 +46,7 @@ export function KitView() {
     const top = els.current.hihat.hhTop!;
     hhOpen.current = open;
     hhState.current!.textContent = open ? 'open' : 'closed';
-    hhState.current!.setAttribute('fill', open ? '#2ee6a6' : '#8a94a7');
+    hhState.current!.setAttribute('fill', open ? DRUM_BY_ID.hihat.color : '#C9D8E8');
     top.style.transition = 'translate .12s ease-out';
     top.style.translate = open ? '-7px -10px' : '0px 0px';
   }
@@ -129,8 +129,8 @@ export function KitView() {
           <radialGradient id="gHead" cx="45%" cy="40%" r="65%">
             <stop offset="0" stopColor="#f4f1ea" /><stop offset=".7" stopColor="#d9d4c9" /><stop offset="1" stopColor="#b9b3a6" />
           </radialGradient>
-          <radialGradient id="gKick" cx="45%" cy="40%" r="70%">
-            <stop offset="0" stopColor="#2b3140" /><stop offset="1" stopColor="#151922" />
+          <radialGradient id="gKick" cx="45%" cy="30%" r="80%">
+            <stop offset="0" stopColor="#CFE6F7" /><stop offset="1" stopColor="#8FBFE6" />
           </radialGradient>
           <radialGradient id="gCym" cx="38%" cy="32%" r="75%">
             <stop offset="0" stopColor="#ffe7a3" /><stop offset=".35" stopColor="#e2b24f" />
@@ -141,12 +141,13 @@ export function KitView() {
             <feDropShadow dx="0" dy="10" stdDeviation="10" floodColor="#000" floodOpacity=".55" />
           </filter>
         </defs>
+        <ellipse cx={480} cy={622} rx={400} ry={16} fill="#0B1626" opacity={0.45} />
         <g opacity={0.9}>
-          <rect x={470} y={588} width={60} height={40} rx={8} fill="#222833" stroke="#394254" />
-          <rect ref={kickPedal} x={480} y={594} width={40} height={28} rx={5} fill="#3a4252" style={pedalStyle} />
-          <rect x={120} y={438} width={60} height={40} rx={8} fill="#222833" stroke="#394254" />
-          <rect ref={hhPedal} x={130} y={444} width={40} height={28} rx={5} fill="#3a4252" style={pedalStyle} />
-          <text x={150} y={496} textAnchor="middle" fill="#6f7a8e" fontSize={12}>HH pedal</text>
+          <rect x={470} y={588} width={60} height={40} rx={8} fill="#3A2E22" stroke="#6B5A43" />
+          <rect ref={kickPedal} x={480} y={594} width={40} height={28} rx={5} fill="#5A4630" style={pedalStyle} />
+          <rect x={120} y={438} width={60} height={40} rx={8} fill="#3A2E22" stroke="#6B5A43" />
+          <rect ref={hhPedal} x={130} y={444} width={40} height={28} rx={5} fill="#5A4630" style={pedalStyle} />
+          <text x={150} y={496} textAnchor="middle" fill="#C9D8E8" fontSize={12} fontFamily="Georgia, serif" fontStyle="italic">hi-hat pedal</text>
         </g>
         {DRUMS.map(d => {
           const isKick = d.type === 'kick';
@@ -157,14 +158,16 @@ export function KitView() {
               <g ref={reg(d.id, 'body')} className="body" filter="url(#shadow)">
                 {d.type === 'drum' || isKick ? (
                   <>
-                    <circle cx={d.x} cy={d.y} r={d.r} fill={isKick ? '#1a1f2a' : '#2a2f3a'} stroke="#4a5263" strokeWidth={3} />
+                    <circle cx={d.x} cy={d.y} r={d.r} fill={d.color} stroke="#2A2118" strokeWidth={3} />
                     {Array.from({ length: lugs }, (_, i) => {
                       const a = (i / lugs) * Math.PI * 2;
-                      return <circle key={i} cx={d.x + Math.cos(a) * (d.r - 4)} cy={d.y + Math.sin(a) * (d.r - 4)} r={3.2} fill="#8a93a5" />;
+                      return <circle key={i} cx={d.x + Math.cos(a) * (d.r - 4)} cy={d.y + Math.sin(a) * (d.r - 4)} r={3.2} fill="#E2C27A" stroke="#5A4630" strokeWidth={0.8} />;
                     })}
                     <circle cx={d.x} cy={d.y} r={d.r * 0.88} fill={isKick ? 'url(#gKick)' : 'url(#gHead)'} />
-                    <circle cx={d.x} cy={d.y} r={d.r * 0.93} fill="none" stroke={d.color} strokeWidth={3} opacity={0.85} />
-                    {isKick && <circle cx={d.x} cy={d.y - 18} r={d.r * 0.32} fill="none" stroke="#3a4252" strokeWidth={2} />}
+                    <circle cx={d.x} cy={d.y} r={d.r * 0.88} fill="none" stroke="#2A2118" strokeWidth={1.5} opacity={0.5} />
+                    {isKick && <g fill="#fff" opacity={0.9}>{/* a Magritte sky painted on the kick head */}
+                      <ellipse cx={d.x - 20} cy={d.y - 22} rx={42} ry={12} /><ellipse cx={d.x + 6} cy={d.y - 30} rx={26} ry={11} />
+                    </g>}
                     <circle ref={reg(d.id, 'flash')} cx={d.x} cy={d.y} r={d.r * 0.88} fill={d.color} opacity={0} />
                     <Label d={d} />
                   </>
@@ -185,7 +188,7 @@ export function KitView() {
                   </>
                 )}
               </g>
-              {d.type === 'hihat' && <text ref={hhState} x={d.x} y={d.y + d.r + 22} textAnchor="middle" fontSize={12} fill="#8a94a7">closed</text>}
+              {d.type === 'hihat' && <text ref={hhState} x={d.x} y={d.y + d.r + 22} textAnchor="middle" fontSize={12} fill="#C9D8E8" fontFamily="Georgia, serif" fontStyle="italic">closed</text>}
               <g ref={reg(d.id, 'ripples')} />
             </g>
           );

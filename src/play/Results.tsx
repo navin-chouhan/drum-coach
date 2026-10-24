@@ -122,14 +122,14 @@ function Replay({ f }: { f: Finished }) {
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     HIGHWAY_LANES.forEach((id, i) => {
       c.fillStyle = i % 2 ? 'transparent' : 'rgba(255,255,255,.03)'; c.fillRect(0, i * laneH, W, laneH);
-      c.fillStyle = '#8a94a7'; c.font = '11px system-ui'; c.textBaseline = 'middle'; c.fillText(DRUM_BY_ID[id].name, 6, i * laneH + laneH / 2);
+      c.fillStyle = '#C9D8E8'; c.font = '11px system-ui'; c.textBaseline = 'middle'; c.fillText(DRUM_BY_ID[id].name, 6, i * laneH + laneH / 2);
     });
     for (let b = 0; b <= f.run.beats; b++) {
-      c.strokeStyle = b % f.run.beatsPerBar === 0 ? 'rgba(255,181,71,.4)' : 'rgba(255,255,255,.07)';
+      c.strokeStyle = b % f.run.beatsPerBar === 0 ? 'rgba(242,213,122,.4)' : 'rgba(255,255,255,.07)';
       c.beginPath(); c.moveTo(left + b * pxPerBeat, 0); c.lineTo(left + b * pxPerBeat, H); c.stroke();
     }
     const beatMs = 60000 / (f.chart.bpm * f.options.speed);
-    const colors = { perfect: '#34d399', good: '#fbbf24', miss: '#f87171' };
+    const colors = { perfect: '#8FD1A8', good: '#F2D57A', miss: '#E8836B' };
     f.run.notes.forEach((n, i) => {
       const y = HIGHWAY_LANES.indexOf(laneOf(n.drum)) * laneH + laneH / 2, x = left + n.t * pxPerBeat;
       const r = f.results[i];
@@ -141,7 +141,7 @@ function Replay({ f }: { f: Finished }) {
       }
     });
     if (!f.options.wait) {
-      c.strokeStyle = '#f87171'; c.lineWidth = 2;
+      c.strokeStyle = '#E8836B'; c.lineWidth = 2;
       for (const h of f.extras) {
         const lane = h.pad ? HIGHWAY_LANES.indexOf(laneOf(h.pad.startsWith('hh') ? 'hihat' : h.pad)) : -1;
         if (lane < 0) continue;
