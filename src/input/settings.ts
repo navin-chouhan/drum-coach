@@ -36,6 +36,11 @@ export const getSettings = () => settings;
 /** Start-up merge: the server copy only replaces the browser copy if it's at least as new (progress made offline survives). */
 export const serverIsNewer = (local: Partial<Settings>, server?: Partial<Settings>) =>
   !!server && (server.updatedAt ?? 0) >= (local.updatedAt ?? 0);
+// Another tab saved: take its copy, or this tab's next save would write its stale copy over it (progress lost).
+if (typeof window !== 'undefined') window.addEventListener('storage', e => {
+  if (e.key !== KEY || !e.newValue) return;
+  try { settings = migrate({ ...DEFAULTS, ...JSON.parse(e.newValue) }); listeners.forEach(l => l()); } catch { /* ignore */ }
+});
 export function subscribeSettings(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
 export function setSettings(patch: Partial<Settings>, sync = true) {
   settings = { ...settings, ...patch, ...(sync && { updatedAt: Date.now() }) };
