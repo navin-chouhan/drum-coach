@@ -165,9 +165,11 @@ export function KitView() {
         <g opacity={0.9}>
           <rect x={470} y={588} width={60} height={40} rx={8} fill={INK} stroke="#FFE14D" strokeWidth={3} />
           <rect ref={kickPedal} x={480} y={594} width={40} height={28} rx={5} fill="#2F6FE4" style={pedalStyle} />
-          <rect x={120} y={438} width={60} height={40} rx={8} fill={INK} stroke="#FFE14D" strokeWidth={3} />
-          <rect ref={hhPedal} x={130} y={444} width={40} height={28} rx={5} fill="#2F6FE4" style={pedalStyle} />
-          <text x={150} y={496} textAnchor="middle" fill="#fff" fontSize={12} fontFamily={FONT}>HH pedal</text>
+          <g className="pad" onPointerDown={e => { e.preventDefault(); emitPad('hhPedal', 100); }}>
+            <rect x={120} y={438} width={60} height={40} rx={8} fill={INK} stroke="#FFE14D" strokeWidth={3} />
+            <rect ref={hhPedal} x={130} y={444} width={40} height={28} rx={5} fill="#2F6FE4" style={pedalStyle} />
+            <text x={150} y={496} textAnchor="middle" fill="#fff" fontSize={12} fontFamily={FONT}>HH pedal</text>
+          </g>
         </g>
         {DRUMS.map(d => {
           const isKick = d.type === 'kick';

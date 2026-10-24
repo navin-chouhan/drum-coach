@@ -50,7 +50,7 @@ export function buildSession(milestones: Milestone[], lessons: Lesson[], progres
   const review = short ? undefined : dueReviews(progress, today).find(id => !taken.has(id) && lessons.some(l => l.id === id));
 
   const fixed = (warmup ? 3 : 0) + (review ? 4 : 0);
-  const each = Math.max(5, Math.round((profile.minutesPerDay - fixed) / Math.max(1, learning.length)));
+  const each = Math.max(5, Math.floor((profile.minutesPerDay - fixed) / Math.max(1, learning.length)));
   return [
     ...(warmup ? [{ role: 'warmup' as const, lessonId: warmup.id, minutes: 3 }] : []),
     ...(review ? [{ role: 'review' as const, lessonId: review, minutes: 4 }] : []),

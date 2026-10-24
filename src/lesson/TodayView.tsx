@@ -6,7 +6,7 @@ import type { Genre, Lesson } from '../engine/lesson';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
 import { dashboard, type RunRow } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
-import { lessonById, requestCoachLesson, useLessons } from './aiLessons';
+import { aiLessonsLoaded, lessonById, requestCoachLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
 import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
@@ -29,8 +29,8 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
   const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
   // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone.
   useEffect(() => {
-    if (s.liveCoach && s.profile.onboarded && milestone && !coachOpen.length) requestCoachLesson(coachKey);
-  }, [s.liveCoach, s.profile.onboarded, milestone, coachOpen.length, coachKey]);
+    if (s.liveCoach && s.profile.onboarded && milestone && aiLessonsLoaded() && !coachOpen.length) requestCoachLesson(coachKey);
+  }, [s.liveCoach, s.profile.onboarded, milestone, coachOpen.length, coachKey, lessons]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 
@@ -54,6 +54,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
   }
 
   const visible = visibleLessons(lessons, s.profile);
+  const path = MILESTONES.filter(m => checkpointsOf(m, lessons, s.profile).length); // stages for these goals (e.g. no Swing for rock only)
   const total = session.items.reduce((a, it, i) => a + (playable(i) ? it.minutes : 0), 0);
   return (
     <div className="today">
@@ -61,7 +62,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
         <div>
           <p className="small">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}{streak ? ` · ${streak}-day streak 🔥` : ''}</p>
           <div className="rankSticker small">{rank}</div>
-          {milestone && <p>Stage {milestone.level + 1} of {MILESTONES.length}: <b>{milestone.title}</b>, on the way to <b>{milestone.rank}</b></p>}
+          {milestone && <p>Stage {path.indexOf(milestone) + 1} of {path.length}: <b>{milestone.title}</b>, on the way to <b>{milestone.rank}</b></p>}
         </div>
         <div className="nextUp">
           {coachOpen.length > 0 ? <>

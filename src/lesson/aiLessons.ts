@@ -6,13 +6,15 @@ import type { Lesson } from '../engine/lesson';
 // Lessons the coach wrote for this student (stored in SQLite). Built-in lessons are the fallback.
 let ai: Lesson[] = [];
 let all: Lesson[] = CURRICULUM;
+let loaded = false; // until the server's list arrives, "no coach lesson" isn't known yet
 const listeners = new Set<() => void>();
 const set = (list: Lesson[]) => { ai = list; all = [...CURRICULUM, ...ai]; listeners.forEach(l => l()); };
 
 export async function refreshAiLessons() {
-  try { const r = await fetch('/api/lessons'); if (r.ok) set(await r.json()); } catch { /* server down: built-ins still work */ }
+  try { const r = await fetch('/api/lessons'); if (r.ok) { const list = await r.json(); loaded = true; set(list); } } catch { /* server down: built-ins still work */ }
 }
 export const allLessons = () => all;
+export const aiLessonsLoaded = () => loaded;
 export const lessonById = (id: string): Lesson | undefined => LESSON_BY_ID[id] ?? ai.find(l => l.id === id);
 export const useLessons = () => useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, allLessons);
 

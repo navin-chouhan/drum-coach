@@ -23,7 +23,7 @@ const ids = (s: { lessonId: string }[]) => s.map(i => i.lessonId);
 describe('milestones and planner', () => {
   it('fresh student: only lessons of the first milestone, never a groove from level 2', () => {
     expect(buildSession(milestones, lessons, {}, profile, D)).toEqual([
-      { role: 'skill', lessonId: 'count', minutes: 13 }, { role: 'skill', lessonId: 'rests', minutes: 13 },
+      { role: 'skill', lessonId: 'count', minutes: 12 }, { role: 'skill', lessonId: 'rests', minutes: 12 }, // never over the daily goal
     ]);
   });
   it('a milestone is done when its checkpoints pass, even if practice lessons were skipped', () => {
