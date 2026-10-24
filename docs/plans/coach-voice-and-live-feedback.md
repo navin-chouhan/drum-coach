@@ -1,6 +1,6 @@
 # Plan: a coach with a voice, and feedback while you play
 
-Status: proposal (2026-10-24), not built yet.
+Status: approved (2026-10-24), not built yet. Decisions are at the bottom.
 
 ## Why
 Today all feedback arrives *after* a take: a verdict line, the results screen, and (on request) Claude's
@@ -89,7 +89,8 @@ default to the spoken count-in.
 - `server/tts` test with a fake `piper` binary (like the fake `claude` in `server/ai/coach.test.ts`).
 - Manual with the kit: count-in lands on the beat, cues are understandable over the music and not annoying.
 
-## Decisions for the owner
-1. Voice engine: install Piper (natural, offline) or start with the browser voice?
-2. Default chattiness: quiet, normal or talkative?
-3. Spoken count-in instead of (or with) the click?
+## Decisions (owner, 2026-10-24)
+1. **Voice engine: Piper** (offline, natural), browser voice only as the fallback when Piper is missing.
+   Install with `uv tool install piper-tts` (uv is already on the laptop) plus one voice file in `data/voices/`.
+2. **Chattiness is a setting**: quiet / normal / talkative, default normal; changeable any time, and per lesson.
+3. **Count-in: voice + click**: "one, two, three, four" spoken on the count-in clicks; the click continues alone.
