@@ -11,9 +11,9 @@ const lessons = [
   L('money', 2, 'groove'), L('doubles', 2, 'rudiment'), L('rock-only', 2, 'groove', { tags: ['rock'] }), L('jazz-only', 2, 'groove', { tags: ['jazz'] }),
 ];
 const milestones: Milestone[] = [
-  { level: 0, title: 'Ready', canDo: [], checkpoints: ['rests'] },
-  { level: 1, title: 'Limbs', canDo: [], checkpoints: ['hands-feet'] },
-  { level: 2, title: 'Money', canDo: [], checkpoints: ['money', 'jazz-only'] },
+  { level: 0, title: 'Ready', rank: 'R', canDo: [], checkpoints: ['rests'] },
+  { level: 1, title: 'Limbs', rank: 'R', canDo: [], checkpoints: ['hands-feet'] },
+  { level: 2, title: 'Money', rank: 'R', canDo: [], checkpoints: ['money', 'jazz-only'] },
 ];
 const done = (...ids: string[]) => Object.fromEntries(ids.map(id => [id, { ...startProgress(lessons[0]), completedAt: '2026-10-01', reviewDue: '2026-12-01' }])) as Record<string, LessonProgress>;
 const D = '2026-10-24';

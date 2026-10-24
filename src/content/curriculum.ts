@@ -298,18 +298,18 @@ export const CURRICULUM: Lesson[] = [
 export const LESSON_BY_ID = Object.fromEntries(CURRICULUM.map(l => [l.id, l])) as Record<string, Lesson>;
 
 export const MILESTONES: Milestone[] = [
-  { level: 0, title: 'Ready to play', checkpoints: ['count-8ths', 'rests'],
+  { level: 0, title: 'Ready to play', rank: 'Stick Rookie', checkpoints: ['count-8ths', 'rests'],
     canDo: ['Sit and hold the sticks so they bounce', 'Count quarters and 8ths out loud while playing', 'Count through rests without rushing'] },
-  { level: 1, title: 'Every limb on its own', checkpoints: ['singles', 'hh-8ths', 'hands-feet'],
+  { level: 1, title: 'Every limb on its own', rank: 'Limb Wrangler', checkpoints: ['singles', 'hh-8ths', 'hands-feet'],
     canDo: ['Even single strokes at 100 BPM 8ths', 'Hi-hat 8ths with the pedal down, also with a gap click', 'Hand and foot landing together'] },
-  { level: 2, title: 'The money beat', checkpoints: ['money-8ths', 'song-steady'],
+  { level: 2, title: 'The money beat', rank: 'Groove Keeper', checkpoints: ['money-8ths', 'song-steady'],
     canDo: ['Play the money beat at 100 BPM, holding time without the click', 'Play a 16-bar song with crashes without stopping'] },
-  { level: 3, title: 'Variations and first fills', checkpoints: ['kick-and3', 'fill-8ths', 'song-garage'],
+  { level: 3, title: 'Variations and first fills', rank: 'Fill Maker', checkpoints: ['kick-and3', 'fill-8ths', 'song-garage'],
     canDo: ['Move the kick around under a steady groove', 'Play a fill and land on 1 with a crash', 'Play a 24-bar rock song'] },
-  { level: 4, title: '16ths and dynamics', checkpoints: ['paradiddle', 'hh-16ths', 'ghost-notes', 'ride-groove'],
+  { level: 4, title: '16ths and dynamics', rank: 'Dynamics Boss', checkpoints: ['paradiddle', 'hh-16ths', 'ghost-notes', 'ride-groove'],
     canDo: ['Paradiddles with clear accents', '16th-note grooves', 'Ghost notes that are really quiet', 'Grooves on the ride with the hi-hat foot'] },
-  { level: 5, title: 'Triplet feels', checkpoints: ['triplets', 'shuffle', 'half-time', 'song-shuffle'],
+  { level: 5, title: 'Triplet feels', rank: 'Triplet Traveller', checkpoints: ['triplets', 'shuffle', 'half-time', 'song-shuffle'],
     canDo: ['Even triplets', 'A shuffle that swings', 'Half-time feel', 'A 12-bar blues'] },
-  { level: 6, title: 'Swing', checkpoints: ['jazz-ride', 'comping', 'song-swing'],
+  { level: 6, title: 'Swing', rank: 'Swing Cat', checkpoints: ['jazz-ride', 'comping', 'song-swing'],
     canDo: ['The jazz ride pattern with the foot on 2 and 4', 'Comping on the snare', 'A 16-bar swing tune'] },
 ];

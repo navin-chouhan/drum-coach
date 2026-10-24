@@ -329,3 +329,25 @@
   .app.focus .playSide{justify-content:flex-end}
   .app.focus canvas.highway{height:calc(100vh - 34px)}
   .stars{margin-left:6px;color:#C77700;letter-spacing:1px;-webkit-text-stroke:.5px var(--line)}
+
+  /* --- celebration: lesson complete / rank up --- */
+  .celebrate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;overflow:auto;
+    background:rgba(20,20,20,.6) radial-gradient(#FF5FA255 2px, transparent 2.2px) 0 0/14px 14px}
+  .celebrateCard{max-width:540px;width:100%;text-align:center;padding:26px 22px}
+  .celebrateCard .canDo{text-align:left;display:inline-block}
+  .bigBurst{display:inline-block;padding:6px 18px;background:var(--bg);border:3px solid var(--line);box-shadow:6px 6px 0 var(--line);
+    font:900 clamp(26px,6vw,42px)/1.1 var(--display);color:var(--pop);-webkit-text-stroke:1.5px var(--line);transform:rotate(-3deg);margin-bottom:12px}
+  .bigStars{margin:14px 0 6px}
+  .bigStars span{display:inline-block;margin:0 6px;font-size:58px;line-height:1;color:#E6E6E6;-webkit-text-stroke:2.5px var(--line)}
+  .bigStars span.on{color:var(--pop)}
+  .rankSticker{display:inline-block;margin:6px 0 12px;padding:10px 20px;background:var(--cyan);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);
+    font:900 28px var(--display);transform:rotate(2deg)}
+  .rankProgress{margin:8px auto 4px;max-width:380px}
+  .celebrateCard .actions{justify-content:center}
+  @media (prefers-reduced-motion: no-preference){
+    .bigBurst{animation:burstIn .45s cubic-bezier(.2,1.6,.4,1) both}
+    .bigStars span.on{animation:starPop .5s cubic-bezier(.2,1.6,.4,1) both}
+    .rankSticker{animation:burstIn .6s .3s cubic-bezier(.2,1.6,.4,1) both}
+  }
+  @keyframes burstIn{from{transform:scale(.2) rotate(-14deg);opacity:0}}
+  @keyframes starPop{from{transform:scale(0) rotate(-45deg)}}

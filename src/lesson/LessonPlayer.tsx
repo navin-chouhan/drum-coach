@@ -2,6 +2,9 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
 import { afterReview, checkPass, CLEAN_TAKES, ladderStep, starsFor, type LadderEvent } from '../engine/lesson';
+import { checkpointsOf } from '../engine/planner';
+import { MILESTONES } from '../content/curriculum';
+import { Celebration } from './Celebration';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { NotesView } from '../play/NotesView';
@@ -10,11 +13,11 @@ import { Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
 import { coachTake, onCoachAction } from '../coach/session';
-import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
+import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
-type Outcome = { passed: boolean; text: string; reason?: string; event?: LadderEvent; itemDone: boolean; stars?: number };
+type Outcome = { passed: boolean; text: string; reason?: string; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 
 /**
@@ -33,6 +36,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
   useSyncExternalStore(subscribePlayer, playerVersion);
   useSyncExternalStore(subscribeSettings, getSettings);
   const [details, setDetails] = useState(false);
+  const [celebrated, setCelebrated] = useState<Finished>(); // the take whose celebration was closed
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
 
@@ -61,14 +65,17 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
       const { next, event } = ladderStep(p, lesson, check.ok, today());
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
       saveProgress(lesson.id, stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next);
+      // Rank up: this was the last open checkpoint of its stage.
+      const stage = MILESTONES.find(m => m.checkpoints.includes(lesson.id)), s = getSettings();
+      const rankUp = event === 'lessonDone' && !p.completedAt && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
       const msg: Record<LadderEvent, string> = {
         hold: check.ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : `${check.reason}`,
         up: `Two clean takes. Up to ${next.bpm} BPM!`,
         slowDown: `${check.reason} Let's slow down to ${next.bpm} BPM and lock it in.`,
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
-        lessonDone: `Lesson complete at ${next.bestBpm} BPM. It will come back for review in a few days.`,
+        lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
       };
-      o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone', stars };
+      o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
     if (getSettings().voice) void say(o.text);
@@ -105,8 +112,19 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
 
   if (f && details) return <Results f={f} onAgain={() => play(false)} onBack={() => setDetails(false)} />;
 
+  const stage = MILESTONES.find(m => m.checkpoints.includes(lesson.id)) ?? MILESTONES.find(m => m.level === lesson.level);
+  const stageChecks = stage ? checkpointsOf(stage, allLessons(), getSettings().profile) : [];
+  const celebration = f && outcome?.event === 'lessonDone' && celebrated !== f && (
+    <Celebration lesson={lesson} stars={outcome.stars ?? 1} milestone={stage} rankUp={!!outcome.rankUp}
+      next={stage && MILESTONES.find(m => m.level === stage.level + 1)}
+      done={stageChecks.filter(l => getSettings().lessons[l.id]?.completedAt).length} total={stageChecks.length}
+      nextLabel={onNext ? "Next in today's session →" : 'Back to Journey'} onNext={onNext ?? onBack}
+      onAgain={() => { setCelebrated(f); play(false); }} onClose={() => setCelebrated(f)} />
+  );
+
   return (
     <div className="play">
+      {celebration}
       <div className="playSide">
         <div className="card">
           <p className="small">{role ? `${ROLE[role]} · ` : ''}Level {lesson.level}{minutes ? ` · ${minutes} min` : ''}</p>
