@@ -24,7 +24,7 @@ export function useMidi() {
 
   useEffect(() => {
     if (!('requestMIDIAccess' in navigator)) return;
-    let access: MIDIAccess | undefined;
+    let access: MIDIAccess | undefined, cancelled = false;
     const onMessage = (e: MIDIMessageEvent) => {
       if ((e.currentTarget as MIDIInput).name !== selectedRef.current || !e.data) return;
       const n = parseMidiMessage(e.data);
@@ -39,12 +39,14 @@ export function useMidi() {
       setInputs(list);
     };
     navigator.requestMIDIAccess({ sysex: false }).then(a => {
+      if (cancelled) return; // finished after cleanup (StrictMode re-run): a second live access would double every hit
       access = a;
       setStatus('ready');
       refresh();
       a.onstatechange = refresh;
     }, () => setStatus('blocked'));
     return () => {
+      cancelled = true;
       if (!access) return;
       access.onstatechange = null;
       access.inputs.forEach(inp => { inp.onmidimessage = null; });
