@@ -19,11 +19,11 @@ describe('matcher', () => {
     expect(extras).toHaveLength(0);
   });
 
-  it('windows: ±25 perfect, ±60 good; an off-time stroke is a miss but not also an extra', () => {
-    expect(scoreRun(expected, perfectHits(25)).results[0].judgement).toBe('perfect');
-    expect(scoreRun(expected, perfectHits(-40)).results[0].judgement).toBe('good');
-    const late = scoreRun(expected, perfectHits(61));
-    expect(late.results.every(r => r.judgement === 'miss' && r.offset === undefined && r.off === 61)).toBe(true);
+  it('windows: ±40 perfect, ±100 good; an off-time stroke is a miss but not also an extra', () => {
+    expect(scoreRun(expected, perfectHits(40)).results[0].judgement).toBe('perfect');
+    expect(scoreRun(expected, perfectHits(-90)).results[0].judgement).toBe('good');
+    const late = scoreRun(expected, perfectHits(101));
+    expect(late.results.every(r => r.judgement === 'miss' && r.offset === undefined && r.off === 101)).toBe(true);
     expect(late.extras).toHaveLength(0);
   });
 

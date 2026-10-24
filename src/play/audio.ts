@@ -81,8 +81,8 @@ export function playDrum(pad: PadId, vel: number, at?: number) {
 /** Metronome click at audio time t. level 0 = bar, 1 = beat, 2 = subdivision. */
 export function click(t: number, level: 0 | 1 | 2, volume = 1) {
   const c = audio(), o = c.createOscillator();
-  o.type = 'sine'; o.frequency.value = [1600, 1050, 800][level];
-  const g = c.createGain(); env(g, t, [0.5, 0.32, 0.14][level] * volume, 0.04);
+  o.type = 'triangle'; o.frequency.value = [1600, 1050, 800][level]; // triangle's overtones cut through laptop speakers
+  const g = c.createGain(); env(g, t, [1, 0.75, 0.35][level] * volume, 0.05);
   o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.06);
 }
 

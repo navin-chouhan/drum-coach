@@ -19,7 +19,7 @@ export function NotesView({ idle }: { idle?: { chart: Chart & { id?: string }; f
   // browsing the list shouldn't cost two Claude calls per item.
   useEffect(() => {
     if (!idleChart) return;
-    const t = setTimeout(() => { loadTips(idleChart, goal); coachOpen(idleChart, idleBpm, goal); }, 1500);
+    const t = setTimeout(() => { loadTips(idleChart, goal); coachOpen(idleChart, idleBpm); }, 1500);
     return () => clearTimeout(t);
   }, [idleChart, goal, idleBpm]);
   useSyncExternalStore(subscribePlayer, playerVersion);

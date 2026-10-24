@@ -4,6 +4,7 @@ import { MAX_SPEED } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { audio } from './audio';
 import { NotesView } from './NotesView';
+import { KitView } from '../ui/KitView';
 import { onCoachAction } from '../coach/session';
 import { player, playerVersion, start, stop, subscribePlayer, type PlayOptions } from './player';
 import { Results } from './Results';
@@ -134,7 +135,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
         <button className="primary big inFocus" onClick={playing ? stop : () => void go()}>{playing ? 'Stop (Esc)' : 'Start'}</button>
         {error && <p className="warn">{error}</p>}
       </div>
-      <section className="highwayWrap"><NotesView idle={{ chart, fromBar: from, toBar: to, bpm: chart.bpm * o.speed }} /></section>
+      <section className="highwayWrap practiceSplit"><NotesView idle={{ chart, fromBar: from, toBar: to, bpm: chart.bpm * o.speed }} /><KitView /></section>
     </div>
   );
 }

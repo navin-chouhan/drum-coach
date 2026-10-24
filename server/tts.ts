@@ -49,7 +49,7 @@ export async function speech(text: string): Promise<string> {
   const p = findPiper();
   if (!p) throw new Error('Piper is not set up (uv tool install piper-tts, and a voice in data/voices).');
   mkdirSync(CACHE, { recursive: true });
-  const file = join(CACHE, `${createHash('sha1').update(`${basename(p.model)}\0${text}`).digest('hex')}.wav`);
+  const file = join(CACHE, `${createHash('sha1').update(`${basename(p.model)}\0slow1.3\0${text}`).digest('hex')}.wav`);
   if (existsSync(file)) return file;
   helper ??= startHelper(p);
   const h = helper;

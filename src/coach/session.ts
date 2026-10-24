@@ -117,10 +117,8 @@ export function coachTake(f: Finished, lesson?: Record<string, unknown>) {
   toldTakes.add(f);
   void coachEvent({ type: 'take', ...summarizeRun(f), ...(lesson && { lessonResult: lesson }) });
 }
-/** Opened an exercise or lesson step. Re-opening the same one within 3 minutes isn't news; switching back to it is. */
-export function coachOpen(chart: Chart & { id?: string }, bpm: number, goal?: string) {
-  const id = chart.id ?? chart.title;
-  if (id === lastOpen.id && Date.now() - lastOpen.at < 180_000) return;
-  lastOpen = { id, at: Date.now(), title: chart.title, bpm: Math.round(bpm) };
-  void coachEvent({ type: 'open', chartId: id, title: chart.title, kind: chart.kind, level: chart.level, bpm: Math.round(bpm), goal: goal ?? chart.description });
+/** Opened an exercise or lesson step: remembered so a spoken "this" means it. */
+// No coach event here: opening an exercise isn't worth a speech; the coach hears about it with the first finished step.
+export function coachOpen(chart: Chart & { id?: string }, bpm: number) {
+  lastOpen = { id: chart.id ?? chart.title, at: Date.now(), title: chart.title, bpm: Math.round(bpm) };
 }

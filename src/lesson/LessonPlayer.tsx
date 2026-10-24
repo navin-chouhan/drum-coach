@@ -8,6 +8,7 @@ import { Celebration } from './Celebration';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { NotesView } from '../play/NotesView';
+import { KitView } from '../ui/KitView';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { Results, saveRun } from '../play/Results';
 import { SheetMusic } from '../notation';
@@ -85,8 +86,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting).
     if (o.event === 'lessonDone' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
       requestCoachLesson(`after-${lesson.id}-${f.startedAt}`);
-    if (getSettings().voice) void say(o.text);
-    coachTake(f, { lesson: lesson.title, step: step.title, passed: check.ok, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target });
+    // Between takes of a step the verdict stays on screen; the coach speaks once the step or lesson is done.
+    if (o.itemDone && getSettings().voice) void say(o.text);
+    if (o.itemDone) coachTake(f, { lesson: lesson.title, step: step.title, passed: check.ok, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target });
     if (o.itemDone) onItemDone?.();
     saveRun(f, { passed: check.ok });
     setSecs(s => s + f.durationS);
@@ -184,7 +186,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
           {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Trophies.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
         </div>
       </div>
-      <section className="highwayWrap"><NotesView idle={{ chart: step.chart, bpm, goal: step.text }} /></section>
+      <section className="highwayWrap practiceSplit"><NotesView idle={{ chart: step.chart, bpm, goal: step.text }} /><KitView /></section>
     </div>
   );
 }

@@ -18,7 +18,7 @@ export type Settings = {
   v?: number; // settings version, for one-time migrations
 };
 const DEFAULTS: Settings = {
-  latencyMs: 0, browserSounds: false, liveTips: 'voice', chattiness: 'normal', voice: true, countIn: true, playView: 'sheet', aiTips: true, liveCoach: true, handsFree: true, v: 2,
+  latencyMs: 0, browserSounds: false, liveTips: 'screen', chattiness: 'normal', voice: true, countIn: true, playView: 'sheet', aiTips: true, liveCoach: true, handsFree: false, v: 3,
   profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
 };
 
@@ -26,8 +26,10 @@ let settings: Settings = { ...DEFAULTS };
 try { settings = migrate({ ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }); } catch { /* defaults */ }
 
 /** v2: the coach talks by default, so settings saved before that get the voice switched on once. */
+/** v3: the coach stays quiet while you practise: tips on screen only, no listening after every reply. */
 export function migrate(s: Settings): Settings {
-  return (s.v ?? 1) < 2 ? { ...s, voice: true, liveTips: s.liveTips === 'off' ? 'off' : 'voice', v: 2 } : s;
+  if ((s.v ?? 1) < 2) s = { ...s, voice: true, liveTips: s.liveTips === 'off' ? 'off' : 'voice', v: 2 };
+  return s.v! < 3 ? { ...s, liveTips: s.liveTips === 'voice' ? 'screen' : s.liveTips, handsFree: false, v: 3 } : s;
 }
 const listeners = new Set<() => void>();
 
