@@ -68,7 +68,7 @@ export async function coachEvent(event: SessionEvent) {
       while ((i = buf.indexOf('\n\n')) >= 0) {
         const block = buf.slice(0, i); buf = buf.slice(i + 2);
         const name = block.match(/^event: (\w+)/m)?.[1], data = JSON.parse(block.match(/^data: (.*)$/m)?.[1] ?? 'null');
-        if (name === 'say' && getSettings().voice) void sayNext(data);
+        if (name === 'say' && getSettings().voice && player.phase !== 'playing') void sayNext(data); // never over a take
         if (name === 'reply') reply = data;
         if (name === 'error') throw new Error(data.error);
       }

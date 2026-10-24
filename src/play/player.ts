@@ -4,7 +4,7 @@ import { computeStats, createMatcher, toResult, windowsFor, type Judgement, type
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
-import { NUMBERS, sayAt } from '../voice/voice';
+import { hush, NUMBERS, sayAt } from '../voice/voice';
 import { applyTip, loadTips } from '../coach/aiTips';
 import { audio, audioToPerf, click, playBuffer, playDrum } from './audio';
 
@@ -106,6 +106,7 @@ function waitGroups() {
 
 export function start(chart: Chart, options: PlayOptions) {
   stop();
+  hush();
   if (!options.demo && !options.wait) loadTips(chart, options.lesson?.goal);
   const run = buildRun(chart, options);
   const { scored, auto } = splitRun(run, options.demo ? [] : options.activeLanes);

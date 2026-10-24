@@ -85,10 +85,18 @@ export function playBuffer(buf: AudioBuffer, when: number, offset: number, durat
 }
 
 /** The coach's voice at audio time `when`; clicks and synth drums dip while it talks. */
+const voices = new Set<AudioBufferSourceNode>();
 export function playVoice(buf: AudioBuffer, when = audio().currentTime) {
   const c = audio(), src = c.createBufferSource();
   src.buffer = buf; src.connect(voiceOut); src.start(when);
+  voices.add(src); src.onended = () => voices.delete(src);
   master.gain.setTargetAtTime(0.35, when, 0.03);
   master.gain.setTargetAtTime(0.8, when + buf.duration, 0.1);
   return when + buf.duration;
+}
+/** Stops every voice clip playing or scheduled (and brings the music back up). */
+export function stopVoices() {
+  voices.forEach(v => { try { v.stop(); } catch { /* not started */ } });
+  voices.clear();
+  master.gain.setTargetAtTime(0.8, audio().currentTime, 0.05);
 }

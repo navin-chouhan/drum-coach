@@ -1,4 +1,4 @@
-import { audio, playVoice } from '../play/audio';
+import { audio, playVoice, stopVoices } from '../play/audio';
 
 // The coach's voice: Piper on the local server (offline, natural) when it's set up, else the browser's voice.
 // Fixed phrases (count-in, tips) are decoded ahead of time so they can play exactly on a beat.
@@ -41,13 +41,16 @@ export function sayAt(text: string, when: number) {
   return true;
 }
 
+// Everything spoken plays back to back: the coach's streamed sentences queue after a verdict that's still playing.
+let queueEnd = 0;
+
 /** Says something now. `urgent` cuts in; otherwise it's skipped while the coach is still talking. */
 export async function say(text: string, urgent = false) {
   const now = performance.now();
   if (!urgent && now < busyUntil) return;
   if (await voiceEngine() === 'piper') {
     const buf = await clip(text);
-    if (buf) { busyUntil = performance.now() + buf.duration * 1000; log(`say:${text}`); playVoice(buf); return; }
+    if (buf) { busyUntil = performance.now() + buf.duration * 1000; log(`say:${text}`); queueEnd = Math.max(queueEnd, playVoice(buf)); return; }
   }
   log(`browser:${text}`);
   if (!('speechSynthesis' in window)) return;
@@ -58,8 +61,6 @@ export async function say(text: string, urgent = false) {
   speechSynthesis.speak(u);
 }
 
-// Sentences of one reply play back to back (the live coach streams them as they're written).
-let queueEnd = 0;
 /** Says `text` after whatever the coach is already saying. Resolves when it has been scheduled. */
 export async function sayNext(text: string) {
   if (await voiceEngine() === 'piper') {
@@ -76,6 +77,11 @@ export async function sayNext(text: string) {
   log(`browser:${text}`);
   speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { rate: 1.05 }));
   busyUntil = Math.max(busyUntil, performance.now()) + 300 + text.length * 70;
+}
+/** A take is starting: whatever the coach was saying stops, so it can't talk over the count-in. */
+export function hush() {
+  stopVoices(); queueEnd = 0; busyUntil = 0;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
 /** Resolves when the coach has finished talking (for hands-free listening). */
 export function untilQuiet(): Promise<void> {
