@@ -50,7 +50,8 @@ groove-essentials-style play-along libraries.
 ## Milestones are fixed, lessons are curated for you
 The path is a fixed list of **milestones** (`MILESTONES` in `src/content/curriculum.ts`). Each says
 what you can do when you reach it, and names **checkpoint** lessons that prove it. Pass every
-checkpoint and you move on.
+checkpoint and you move on. A coach lesson may stand in for one checkpoint: it names it (`checkpoint`, checked
+against the stage), its last step reaches the checkpoint's tempo, and finishing it passes that checkpoint.
 
 The lessons *between* checkpoints are chosen per student. The AI coach (`POST /api/coach/lesson`,
 prompt in `server/prompts/lesson.md`) reads your recent takes, your progress and the milestone, and
@@ -70,7 +71,7 @@ song for friends.
 - **Celebration** after every finished lesson: stars, a drum fill, progress to the next rank, one Next button.
 - **Ranks**: each milestone has a title (`rank` in `MILESTONES`), earned when its checkpoints pass:
   Stick Rookie, Limb Wrangler, Groove Keeper, Fill Maker, Dynamics Boss, Triplet Traveller, Swing Cat.
-  Ranks stay on the built-in checkpoints so they work offline.
+  Ranks stay on the built-in checkpoints so they work offline (a coach stand-in marks the built-in checkpoint passed).
 - **Show-off song**: each rank unlocks real songs the coach picks for the stage's skills (`/api/coach/showoff`).
   You learn one in Songs; played scored at 85%+ it joins your show-off set, playable in Stage mode.
 - **The coach builds the path** inside the fixed stages: after every finished lesson it writes the next one in

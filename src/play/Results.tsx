@@ -136,9 +136,10 @@ function Replay({ f }: { f: Finished }) {
       const r = f.results[i];
       c.strokeStyle = colors[r.judgement]; c.lineWidth = 1.5;
       c.beginPath(); c.arc(x, y, 6, 0, Math.PI * 2); c.stroke();
-      if (r.offset !== undefined && !f.options.wait) {
+      const played = r.offset ?? r.off; // an off-time stroke shows where it landed (red), it isn't an extra
+      if (played !== undefined && !f.options.wait) {
         c.fillStyle = colors[r.judgement];
-        c.beginPath(); c.arc(x + (r.offset / beatMs) * pxPerBeat, y, 3.5, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(x + (played / beatMs) * pxPerBeat, y, 3.5, 0, Math.PI * 2); c.fill();
       }
     });
     if (!f.options.wait) {

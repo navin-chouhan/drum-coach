@@ -5,7 +5,7 @@ import type { PadId } from './kit.ts';
 // See docs/plans/coach-voice-and-live-feedback.md.
 
 export type Chattiness = 'quiet' | 'normal' | 'talkative';
-export type WindowNote = { drum: ChartDrum; accent?: boolean; ghost?: boolean; judgement: 'perfect' | 'good' | 'miss'; offset?: number; velocity?: number; pad?: PadId };
+export type WindowNote = { drum: ChartDrum; accent?: boolean; ghost?: boolean; judgement: 'perfect' | 'good' | 'miss'; offset?: number; off?: number; velocity?: number; pad?: PadId }; // off: an off-time stroke's ms (a miss, but played)
 /** What happened in the last two bars (notes already past the hit line, oldest first). */
 export type LiveWindow = { bar: number; notes: WindowNote[]; extras: number };
 export type Cue = { id: string; text: string; spoken: string; priority: number };
@@ -28,7 +28,7 @@ export function candidateCues(w: LiveWindow, c: Chattiness): Cue[] {
   if (w.notes.length < 6) return out;
   for (const drum of new Set(w.notes.map(n => n.drum))) {
     const last3 = w.notes.filter(n => n.drum === drum).slice(-3);
-    if (last3.length === 3 && last3.every(n => n.judgement === 'miss')) {
+    if (last3.length === 3 && last3.every(n => n.judgement === 'miss' && n.off === undefined)) { // not played at all (off time is a timing tip)
       out.push({ id: `missing-${drum}`, priority: 100, text: `Bring the ${name(drum)} back in`, spoken: `${name(drum)}!` });
     }
   }
@@ -36,12 +36,12 @@ export function candidateCues(w: LiveWindow, c: Chattiness): Cue[] {
   if (w.notes.filter(n => n.drum === 'hihat' && n.pad === 'hhOpen').length >= 2) {
     out.push({ id: 'hh-open', priority: 90, text: 'Hi-hat foot down (it sounds open)', spoken: 'Hi-hat foot down' });
   }
-  const hit = w.notes.filter(n => n.offset !== undefined);
-  if (hit.length >= 6) {
-    const m = mean(hit.map(n => n.offset!));
+  const played = w.notes.flatMap(n => (n.offset ?? n.off) === undefined ? [] : [(n.offset ?? n.off)!]); // on time or off time
+  if (played.length >= 6) {
+    const m = mean(played);
     if (m < -L.timingMs) out.push({ id: 'rushing', priority: 70, text: `Rushing by ${Math.round(-m)} ms. Sit back on the click`, spoken: 'Rushing. Sit back' });
     else if (m > L.timingMs) out.push({ id: 'dragging', priority: 70, text: `Dragging by ${Math.round(m)} ms. Push a little`, spoken: 'Dragging. Push' });
-    else if (std(hit.map(n => n.offset!)) > 35) out.push({ id: 'unsteady', priority: 50, text: 'Steady. Listen to the click', spoken: 'Steady' });
+    else if (std(played) > 35) out.push({ id: 'unsteady', priority: 50, text: 'Steady. Listen to the click', spoken: 'Steady' });
   }
   if (w.extras >= 3) out.push({ id: 'extras', priority: 40, text: 'Only the notes shown', spoken: 'Only the notes shown' });
   if (L.dynamics) {

@@ -15,6 +15,10 @@ describe('candidate cues', () => {
     const notes = groove(30).map(n => (n.drum === 'kick' ? { ...n, judgement: 'miss' as const, offset: undefined } : n));
     expect(candidateCues({ bar: 4, notes, extras: 0 }, 'normal').map(c => c.id)).toEqual(['missing-kick', 'dragging']);
   });
+  it('strokes played off time are a timing tip, not "missing"', () => {
+    const notes = groove(0, { judgement: 'miss', offset: undefined, off: -120 });
+    expect(candidateCues({ bar: 4, notes, extras: 0 }, 'normal').map(c => c.id)).toEqual(['rushing']);
+  });
   it('hi-hat pad sending open where the chart wants closed', () => {
     expect(candidateCues({ bar: 4, notes: groove(0, { pad: 'hhOpen' }), extras: 0 }, 'quiet')[0].id).toBe('hh-open');
   });
