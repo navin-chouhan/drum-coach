@@ -40,3 +40,11 @@ export async function searchYouTube(q: string, key = process.env.YOUTUBE_API_KEY
   db.prepare('INSERT OR REPLACE INTO yt_search (q, json, at) VALUES (?, ?, ?)').run(norm, JSON.stringify(out), Date.now());
   return out;
 }
+
+/** Search results that name the same song: every word of the song's name (after "Artist - ") is in the title. */
+export function sameSong<T extends { title: string }>(songTitle: string, results: T[]): T[] {
+  const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const name = words(songTitle.includes(' - ') ? songTitle.slice(songTitle.indexOf(' - ') + 3) : songTitle);
+  const kept = results.filter(r => { const w = new Set(words(r.title)); return name.every(x => w.has(x)); });
+  return kept.length ? kept : results; // odd title formats: better unfiltered than empty
+}

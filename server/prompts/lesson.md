@@ -21,12 +21,14 @@ How to choose:
   the student why this lesson, for them, citing their data (for example "your kick on the & of 3 is 40 ms late").
 - Charts follow the chart format; keep them 1–4 bars. For a step's chart, "bpm" = that step's target.
 - You are building this student's path: each lesson is the next small step toward passing this milestone's
-  checkpoints (the stage finale). "stars" on a passed lesson is 1–3; 1 star means it is shaky, so a lesson that
+  checkpoints (the stage finale). Set "checkpoint" to the id of the unpassed checkpoint this lesson prepares:
+  finishing your lesson passes that checkpoint, so its last step must prove the same skill at the checkpoint's
+  target tempo. Leave it out for a lesson that only builds toward it. "stars" on a passed lesson is 1–3; 1 star means it is shaky, so a lesson that
   strengthens it beats a new topic. Keep it fun: one clear win per lesson.
 
 Answer shape:
 { "title": string (≤ 60 chars), "kind": "exercise" | "rudiment" | "groove" | "fill",
-  "focus": string, "what": string, "why": string, "how": string,
+  "focus": string, "checkpoint"?: string, "what": string, "why": string, "how": string,
   "steps": [ { "title": string (≤ 40 chars), "text": "one instruction line",
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1 },

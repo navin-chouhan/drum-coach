@@ -48,6 +48,7 @@ export const AiLessonSchema = z.object({
   title: z.string().min(1).max(80),
   kind: z.enum(['groove', 'rudiment', 'fill', 'song', 'exercise']),
   focus: z.string().max(400),
+  checkpoint: z.string().max(40).optional(),
   what: z.string().max(400), why: z.string().max(600), how: z.string().max(1200),
   steps: z.array(z.object({
     title: z.string().min(1).max(60), text: z.string().max(400),

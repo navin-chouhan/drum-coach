@@ -26,6 +26,7 @@ export type Lesson = {
   what: string; why: string; how: string;
   steps: Step[]; tags?: Genre[];
   source?: 'ai'; focus?: string; // AI-curated for this student; `focus` says why
+  checkpoint?: string; // a coach lesson that stands in for this checkpoint: finishing it passes the checkpoint
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
 export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[] }; // rank: your title once it's passed

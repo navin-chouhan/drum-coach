@@ -1,9 +1,9 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
-import { afterReview, checkPass, CLEAN_TAKES, ladderStep, starsFor, type LadderEvent } from '../engine/lesson';
+import { afterReview, checkPass, CLEAN_TAKES, ladderStep, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
-import { MILESTONES } from '../content/curriculum';
+import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration } from './Celebration';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
@@ -65,15 +65,19 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
       const { next, event } = ladderStep(p, lesson, check.ok, today());
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
       saveProgress(lesson.id, stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next);
+      // A coach lesson standing in for a checkpoint passes it; the checkpoint itself comes back for review.
+      const cp = lesson.checkpoint && LESSON_BY_ID[lesson.checkpoint];
+      if (event === 'lessonDone' && cp && !getSettings().lessons[cp.id]?.completedAt)
+        saveProgress(cp.id, { ...startProgress(cp), bestBpm: next.bestBpm, completedAt: next.completedAt, reviewDue: next.reviewDue, stars });
       // Rank up: this was the last open checkpoint of its stage.
-      const stage = MILESTONES.find(m => m.checkpoints.includes(lesson.id)), s = getSettings();
+      const stage = MILESTONES.find(m => m.checkpoints.includes(cp ? cp.id : lesson.id)), s = getSettings();
       const rankUp = event === 'lessonDone' && !p.completedAt && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
       const msg: Record<LadderEvent, string> = {
         hold: check.ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : `${check.reason}`,
         up: `Two clean takes. Up to ${next.bpm} BPM!`,
         slowDown: `${check.reason} Let's slow down to ${next.bpm} BPM and lock it in.`,
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
-        lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
+        lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
       };
       o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
@@ -115,7 +119,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
 
   if (f && details) return <Results f={f} onAgain={() => play(false)} onBack={() => setDetails(false)} />;
 
-  const stage = MILESTONES.find(m => m.checkpoints.includes(lesson.id)) ?? MILESTONES.find(m => m.level === lesson.level);
+  const stage = MILESTONES.find(m => m.checkpoints.includes(lesson.checkpoint ?? lesson.id)) ?? MILESTONES.find(m => m.level === lesson.level);
   const stageChecks = stage ? checkpointsOf(stage, allLessons(), getSettings().profile) : [];
   const celebration = f && outcome?.event === 'lessonDone' && celebrated !== f && (
     <Celebration lesson={lesson} stars={outcome.stars ?? 1} milestone={stage} rankUp={!!outcome.rankUp}

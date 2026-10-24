@@ -13,7 +13,7 @@ import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
 import { AUDIO_DIR, db } from './db.ts';
-import { searchYouTube, YtError } from './youtube.ts';
+import { sameSong, searchYouTube, YtError } from './youtube.ts';
 import { speech, ttsStatus } from './tts.ts';
 import { sttStatus, transcribe } from './stt.ts';
 import { GridSchema, GrooveRequestSchema, YtSongCreateSchema, YtSongPatchSchema, type YtSong } from '../src/youtube/schemas.ts';
@@ -165,7 +165,8 @@ app.post('/api/coach/plan', async (req, reply) => {
   if (!b.success) return bad(reply, b.error);
   const recent = runRows(30).map(r => ({ chart: r.chartTitle, bpm: Math.round(r.bpm), accuracy: r.accuracy, at: r.startedAt.slice(0, 10) }));
   try {
-    const r = await ask('plan', PlanSchema, { ...b.data, recent, library: catalog() });
+    const songs = (db.prepare('SELECT id, title FROM yt_songs').all() as { id: string; title: string }[]); // so play-along items can link to them
+    const r = await ask('plan', PlanSchema, { ...b.data, recent, library: catalog(), songs });
     const { lastInsertRowid } = db.prepare('INSERT INTO plans (json) VALUES (?)').run(JSON.stringify(r.data));
     return { id: Number(lastInsertRowid), plan: r.data, checks: {} };
   } catch (e) { return aiFail(reply, e); }
@@ -254,7 +255,7 @@ app.get('/api/youtube/versions', async (req, reply) => {
   try {
     const [drumless, covers] = await Promise.all([searchYouTube(`${title} drumless`), searchYouTube(`${title} drum cover`)]);
     const first = (xs: typeof drumless, re: RegExp) => [...xs.filter(x => re.test(x.title)), ...xs.filter(x => !re.test(x.title))];
-    return { drumless: first(drumless, DRUMLESS), covers: first(covers, COVER) };
+    return { drumless: first(sameSong(title, drumless), DRUMLESS), covers: first(sameSong(title, covers), COVER) };
   } catch (e) { return ytFail(reply, e); }
 });
 
@@ -341,7 +342,9 @@ app.post('/api/coach/lesson', async (req, reply) => {
     const r = await ask('lesson', AiLessonSchema, input);
     const same = existing.find(l => l.title === r.data.title && l.level === input.milestone.level);
     if (same) return { data: same, cached: true };
-    const lesson = toLesson(r.data, input.milestone.level);
+    // Only a checkpoint of this stage can be stood in for.
+    const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) ? r.data.checkpoint : undefined;
+    const lesson = toLesson({ ...r.data, checkpoint: cp }, input.milestone.level);
     db.prepare('INSERT INTO ai_lessons (id, json) VALUES (?, ?)').run(lesson.id, JSON.stringify(lesson));
     return { data: lesson, cached: r.cached };
   } catch (e) { return aiFail(reply, e); }

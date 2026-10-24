@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useCharts } from '../content/charts';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
-import { requestPlay } from '../ui/nav';
+import { requestPlay, requestSong } from '../ui/nav';
 import { askCoach, Thinking, useCoachEntry } from './api';
 import { say, voiceEngine } from '../voice/voice';
 import type { Plan } from './schemas';
@@ -90,7 +90,8 @@ export function PlanCard() {
                       <label className="check"><input type="checkbox" checked={!!shown.checks[k]} onChange={() => toggle(k)} />
                         <span className={shown.checks[k] ? 'done' : ''}>{it.title} · {it.minutes} min{it.bpm ? ` · ${it.bpm} BPM` : ''}</span></label>
                       {it.notes && <div className="small">{it.notes}</div>}
-                      {it.chartId && charts.some(c => c.id === it.chartId) && <button className="link" onClick={() => requestPlay({ chartId: it.chartId!, bpm: it.bpm })}>play</button>}
+                      {it.chartId?.startsWith('yt-') ? <button className="link" onClick={() => requestSong(it.chartId!)}>play</button>
+                        : it.chartId && charts.some(c => c.id === it.chartId) && <button className="link" onClick={() => requestPlay({ chartId: it.chartId!, bpm: it.bpm })}>play</button>}
                     </li>
                   );
                 })}
