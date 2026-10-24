@@ -10,6 +10,7 @@ import { getSettings } from '../input/settings';
 import { playDrum } from '../play/audio';
 import { patchSong } from './api';
 import { GridEditor } from './GridEditor';
+import { SheetMusic } from '../notation/SheetMusic';
 import type { ModeProps } from './SongView';
 
 /** Loop a few bars, play what you hear, keep the best take, fix it by clicking, hear it back over the song. */
@@ -24,6 +25,7 @@ export function LearnMode({ song, videoId, yt, rate }: ModeProps) {
   const [take, setTake] = useState<ChartNote[]>([]);
   const [looping, setLooping] = useState(false);
   const [hear, setHear] = useState(false);
+  const [sheet, setSheet] = useState(false);
   const [msg, setMsg] = useState('');
   const pass = useRef<{ beat: number; pad: PadId; velocity: number }[]>([]);
   const live = useRef({ draft, hear });
@@ -101,10 +103,12 @@ export function LearnMode({ song, videoId, yt, rate }: ModeProps) {
       <div className="actions">
         <button className="primary" onClick={() => setLooping(l => !l)}>{looping ? 'Stop loop' : `Loop bars ${range.from}–${range.to}`}</button>
         <label className="check"><input type="checkbox" checked={hear} onChange={e => setHear(e.target.checked)} /> Hear my part</label>
+        <label className="check"><input type="checkbox" checked={sheet} onChange={e => setSheet(e.target.checked)} /> Show as sheet music</label>
         <span className="small">{Math.round(grid.bpm * rate)} BPM</span>
       </div>
       <GridEditor notes={draft} take={take} fromBeat={fromBeat} toBeat={toBeat} stepsPerBeat={steps} beatsPerBar={bpb} yt={yt} grid={grid}
         onToggle={(t, d) => setDraft(n => toggleNote(n, t, d))} />
+      {sheet && <SheetMusic notes={draft} timeSignature={song.timeSignature} fromBar={range.from} toBar={range.to} />}
       <div className="actions">
         <button onClick={() => setDraft(take)} disabled={!take.length}>Use take ({take.length} notes)</button>
         <button onClick={() => setDraft([])}>Clear</button>

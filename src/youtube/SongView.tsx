@@ -6,13 +6,14 @@ import { PlayMode } from './PlayMode';
 import { startReducer, type Reducer } from './reducer';
 import type { YtResult, YtSong } from './schemas';
 import { TempoMode } from './TempoMode';
+import { printSheet, SheetMusic } from '../notation/SheetMusic';
 import { YtPlayer } from './yt';
 import { parseYouTubeId } from '../engine/youtube';
 import { stop as stopPlayer } from '../play/player';
 
 type Version = 'originalId' | 'drumlessId' | 'coverId';
 const VERSION_NAMES: Record<Version, string> = { originalId: 'Original', drumlessId: 'Drumless', coverId: 'Drum cover' };
-const MODES = { tempo: '1 · Set tempo', learn: '2 · Learn by ear', jam: '3 · Jam', play: '4 · Play (scored)' } as const;
+const MODES = { tempo: '1 · Set tempo', learn: '2 · Learn by ear', jam: '3 · Jam', play: '4 · Play (scored)', sheet: '5 · Sheet music' } as const;
 type Mode = keyof typeof MODES;
 export type ModeProps = { song: YtSong; videoId: string; yt: YtPlayer; rate: number };
 
@@ -143,6 +144,7 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
           {yt && grid && mode === 'learn' && <LearnMode song={song} videoId={videoId} yt={yt} rate={rate} />}
           {yt && grid && mode === 'jam' && <JamMode song={song} videoId={videoId} yt={yt} rate={rate} />}
           {yt && grid && mode === 'play' && <PlayMode song={song} videoId={videoId} yt={yt} rate={rate} />}
+          {grid && mode === 'sheet' && <SongSheet song={song} bpm={grid.bpm} />}
         </div>
       </div>
     </div>
@@ -191,6 +193,17 @@ function Versions({ song, version, onVersion }: { song: YtSong; version: Version
           </ul>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SongSheet({ song, bpm }: { song: YtSong; bpm: number }) {
+  if (!song.notes.length) return <div className="card"><h3>Sheet music</h3><p className="small">Transcribe some bars in "Learn by ear" and they appear here as drum notation.</p></div>;
+  return (
+    <div className="card">
+      <h3>Sheet music <button className="link right" onClick={printSheet}>Print / save as PDF</button></h3>
+      <div className="printTarget"><SheetMusic notes={song.notes} timeSignature={song.timeSignature} title={song.title} bpm={bpm} /></div>
+      <p className="small">Your transcription so far. x = cymbals/hi-hat, o = open hi-hat, (note) = ghost note, &gt; = accent; feet stems point down.</p>
     </div>
   );
 }

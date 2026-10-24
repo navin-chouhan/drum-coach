@@ -7,6 +7,7 @@ import { getSettings, subscribeSettings } from '../input/settings';
 import { Highway } from '../play/Highway';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { Results, saveRun } from '../play/Results';
+import { SheetMusic } from '../notation/SheetMusic';
 import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -116,6 +117,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone }: {
           </p>
           {step.activeLanes && step.chart.notes.some(n => !step.activeLanes!.includes(n.drum)) && <p className="small">You play: {step.activeLanes.map(laneName).join(', ')}. The app plays the rest (dimmed).</p>}
           {step.gapBars && <p className="small">The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
+          <details><summary>Notation</summary><SheetMusic notes={step.chart.notes} timeSignature={step.chart.timeSignature} /></details>
         </div>
         {outcome && (
           <div className={`card verdict ${outcome.passed ? 'pass' : 'fail'}`} aria-live="polite">

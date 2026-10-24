@@ -241,3 +241,16 @@
   .verdict.pass{border-color:#1f5a45} .verdict.fail{border-color:#6b3434}
   .verdict p{margin:0 0 6px}
   @media (max-width:700px){ .milestone{grid-template-columns:1fr} ol.session li{grid-template-columns:1fr auto} ol.session .role{grid-column:1/-1} }
+
+  /* --- sheet music --- */
+  .sheet{margin-top:10px}
+  .sheetPaper{background:#fbfaf7;border-radius:8px;padding:6px 4px;overflow:hidden;min-height:60px}
+  .sheetPaper svg{display:block}
+  .sheetWrap{overflow:auto;background:#0e1219;border:1px solid var(--line);border-radius:12px;padding:12px}
+  details>summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:8px}
+  @media print {
+    body.printingSheet *{visibility:hidden}
+    body.printingSheet .printTarget, body.printingSheet .printTarget *{visibility:visible}
+    body.printingSheet .printTarget{position:absolute;left:0;top:0;width:100%}
+    body.printingSheet .sheetPaper{background:#fff}
+  }

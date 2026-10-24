@@ -4,6 +4,7 @@ import { MAX_SPEED } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { audio } from './audio';
 import { Highway } from './Highway';
+import { SheetMusic } from '../notation/SheetMusic';
 import { player, playerVersion, start, stop, subscribePlayer, type PlayOptions } from './player';
 import { Results } from './Results';
 
@@ -20,6 +21,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   });
   const [section, setSection] = useState<{ from: number; to: number } | null>(null);
   const [error, setError] = useState('');
+  const [showSheet, setShowSheet] = useState(false);
   const set = (patch: Partial<Saved>) => setO(prev => {
     const next = { ...prev, ...patch };
     try { localStorage.setItem(OPTS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
@@ -122,10 +124,13 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
             </div>
           </div>
         )}
+        <label className="check"><input type="checkbox" checked={showSheet} onChange={e => setShowSheet(e.target.checked)} /> Show sheet music (before you play)</label>
         <button className="primary big" onClick={playing ? stop : go}>{playing ? 'Stop (Esc)' : 'Start'}</button>
         {error && <p className="warn">{error}</p>}
       </div>
-      <section className="highwayWrap"><Highway /></section>
+      {showSheet && !playing
+        ? <section className="sheetWrap"><SheetMusic notes={chart.notes} timeSignature={chart.timeSignature} fromBar={from} toBar={to} title={chart.title} bpm={chart.bpm * o.speed} /></section>
+        : <section className="highwayWrap"><Highway /></section>}
     </div>
   );
 }
