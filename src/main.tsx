@@ -3,10 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { App } from './ui/App';
 import { syncFromServer } from './input/store';
 import { setSettings, type Settings } from './input/settings';
+import { refreshAiLessons } from './lesson/aiLessons';
 import './ui/styles.css';
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
 
+void refreshAiLessons();
 void syncFromServer().then(all => { if (all.app) setSettings(all.app as Partial<Settings>, false); });
 
 // Dev only: drive the app from the console, e.g. drumCoach.emitNote(38, 100)

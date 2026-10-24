@@ -25,5 +25,6 @@ db.exec(`
     ts_num INTEGER NOT NULL DEFAULT 4, ts_den INTEGER NOT NULL DEFAULT 4, notes_json TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL DEFAULT (datetime('now')));
   CREATE TABLE IF NOT EXISTS yt_grids (video_id TEXT PRIMARY KEY, bpm REAL NOT NULL, offset_sec REAL NOT NULL);
+  CREATE TABLE IF NOT EXISTS ai_lessons (id TEXT PRIMARY KEY, json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')));
   CREATE TABLE IF NOT EXISTS ai_cache (key TEXT PRIMARY KEY, kind TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')));
 `);

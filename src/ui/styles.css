@@ -212,7 +212,15 @@
   ol.session li.on{border-color:var(--accent)}
   ol.session li.done .title{text-decoration:line-through;color:var(--muted)}
   ol.session .role{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-  .pathLevel{display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:start;margin-bottom:10px}
+  .milestone{display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+  .milestone.later{opacity:.6}
+  .milestone.current b{color:var(--accent)}
+  .milestone.passed b{color:var(--good)}
+  .canDo{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted)}
+  .lessonChip.checkpoint{font-weight:600}
+  .lessonChip.ai{border-style:dashed}
+  .badge{margin-left:8px;font-size:10.5px;padding:1px 6px;border-radius:999px;border:1px dashed var(--accent);color:var(--accent);vertical-align:middle}
+  .focus{border-left:3px solid var(--accent);padding-left:10px;font-size:13.5px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .lessonChip{font-size:12.5px;padding:4px 10px;border-radius:999px}
   .lessonChip.done{color:var(--good);border-color:#1f5a45}
@@ -232,4 +240,4 @@
   .dots i.on{background:var(--good);border-color:var(--good)}
   .verdict.pass{border-color:#1f5a45} .verdict.fail{border-color:#6b3434}
   .verdict p{margin:0 0 6px}
-  @media (max-width:700px){ .pathLevel{grid-template-columns:1fr} ol.session li{grid-template-columns:1fr auto} ol.session .role{grid-column:1/-1} }
+  @media (max-width:700px){ .milestone{grid-template-columns:1fr} ol.session li{grid-template-columns:1fr auto} ol.session .role{grid-column:1/-1} }

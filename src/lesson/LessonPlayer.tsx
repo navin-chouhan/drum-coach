@@ -1,25 +1,32 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { LESSON_BY_ID } from '../content/curriculum';
+import { Thinking, useCoachEntry } from '../coach/api';
+import { summarizeRun } from '../coach/summary';
 import { afterReview, checkPass, CLEAN_TAKES, ladderStep, type LadderEvent } from '../engine/lesson';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { Highway } from '../play/Highway';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { Results, saveRun } from '../play/Results';
+import { deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
-type Outcome = { passed: boolean; text: string; event?: LadderEvent; itemDone: boolean };
+type Outcome = { passed: boolean; text: string; reason?: string; event?: LadderEvent; itemDone: boolean };
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 
 /**
  * One lesson: what/why/how, then each step with Hear it → Play → one-line verdict → tempo ladder.
  * Warm-up and review items are a single take at the lesson's best tempo.
  */
-export function LessonPlayer({ lessonId, role, minutes, onNext, onBack }: {
+export function LessonPlayer(props: Parameters<typeof Lesson>[0]) {
+  return lessonById(props.lessonId) ? <Lesson {...props} />
+    : <div className="today"><div className="card"><p>This lesson no longer exists.</p><button onClick={props.onBack}>Back to Today</button></div></div>;
+}
+
+function Lesson({ lessonId, role, minutes, onNext, onBack }: {
   lessonId: string; role?: SessionRole; minutes?: number; onNext?: () => void; onBack: () => void;
 }) {
-  const lesson = LESSON_BY_ID[lessonId];
+  const lesson = lessonById(lessonId)!;
   useSyncExternalStore(subscribePlayer, playerVersion);
   useSyncExternalStore(subscribeSettings, getSettings);
   const [details, setDetails] = useState(false);
@@ -57,7 +64,7 @@ export function LessonPlayer({ lessonId, role, minutes, onNext, onBack }: {
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
         lessonDone: `Lesson complete at ${next.bestBpm} BPM. It will come back for review in a few days.`,
       };
-      o = { passed: check.ok, event, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone' };
+      o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone' };
     }
     outcomes.set(f, o);
     saveRun(f, { passed: check.ok });
@@ -75,6 +82,9 @@ export function LessonPlayer({ lessonId, role, minutes, onNext, onBack }: {
   const play = (demo: boolean) => { setDetails(false); start(step.chart, options(demo)); };
   const timeUp = minutes !== undefined && secs >= minutes * 60;
   const itemDone = outcome?.itemDone || timeUp;
+  const helpKey = f && outcome && !outcome.passed ? `help-${lesson.id}-${f.startedAt}` : null;
+  const help = useCoachEntry<{ title: string }>(helpKey);
+  const askHelp = () => f && helpKey && requestCoachLesson(helpKey, { lessonId: lesson.id, step: stepIdx + 1, reason: outcome?.reason ?? '', run: summarizeRun(f) });
 
   if (f && details) return <Results f={f} onAgain={() => play(false)} onBack={() => setDetails(false)} />;
 
@@ -83,7 +93,8 @@ export function LessonPlayer({ lessonId, role, minutes, onNext, onBack }: {
       <div className="playSide">
         <div className="card">
           <p className="small">{role ? `${ROLE[role]} · ` : ''}Level {lesson.level}{minutes ? ` · ${minutes} min` : ''}</p>
-          <h2 className="lessonTitle">{lesson.title}</h2>
+          <h2 className="lessonTitle">{lesson.title}{lesson.source === 'ai' && <span className="badge">by your coach</span>}</h2>
+          {lesson.focus && <p className="focus">{lesson.focus}</p>}
           <details open={fresh}>
             <summary>About this lesson</summary>
             <p><b>What.</b> {lesson.what}</p>
@@ -102,7 +113,7 @@ export function LessonPlayer({ lessonId, role, minutes, onNext, onBack }: {
           <p className="tempo"><b>{bpm} BPM</b>{!oneTake && <> · target {step.bpm.target}</>}
             {!oneTake && <span className="dots" aria-label={`${p.clean} of ${CLEAN_TAKES} clean takes`}>{Array.from({ length: CLEAN_TAKES }, (_, i) => <i key={i} className={i < p.clean ? 'on' : ''} />)}</span>}
           </p>
-          {step.activeLanes && <p className="small">You play: {step.activeLanes.map(laneName).join(', ')}. The app plays the rest (dimmed).</p>}
+          {step.activeLanes && step.chart.notes.some(n => !step.activeLanes!.includes(n.drum)) && <p className="small">You play: {step.activeLanes.map(laneName).join(', ')}. The app plays the rest (dimmed).</p>}
           {step.gapBars && <p className="small">The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
         </div>
         {outcome && (
@@ -110,6 +121,10 @@ export function LessonPlayer({ lessonId, role, minutes, onNext, onBack }: {
             <p>{outcome.text}</p>
             {timeUp && !outcome.itemDone && <p className="small">That's your {minutes} minutes for this one. Move on, or keep going if you're in the zone.</p>}
             <button className="link" onClick={() => setDetails(true)}>Details and coach</button>
+            {helpKey && (help?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson for this" />
+              : help?.status === 'done' ? <p className="small">Your coach wrote "{help.data?.title}". It's on the Today tab.</p>
+              : <>{help?.status === 'error' && <p className="warn">{help.error}</p>}
+                <button className="link" onClick={askHelp}>Ask the coach for a lesson that fixes this</button></>)}
           </div>
         )}
         <div className="actions">
@@ -121,6 +136,7 @@ export function LessonPlayer({ lessonId, role, minutes, onNext, onBack }: {
         <div className="actions">
           {itemDone && onNext && <button className="primary" onClick={onNext}>Next in today's session →</button>}
           <button onClick={onBack}>Back to Today</button>
+ {lesson.source === 'ai' && <button className="link danger" onClick={() => { if (confirm(`Delete the coach's lesson "${lesson.title}"?`)) { stop(); void deleteCoachLesson(lesson.id).then(onBack); } }}>Delete this lesson</button>}
           {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Progress.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
         </div>
       </div>

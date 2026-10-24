@@ -22,7 +22,7 @@ export function extractJson(text: string): unknown {
 // One call at a time: calls are slow and count toward the subscription's usage limits.
 let queue: Promise<unknown> = Promise.resolve();
 
-export async function ask<T>(kind: 'feedback' | 'next' | 'plan' | 'chat' | 'groove', schema: z.ZodType<T>, input: unknown): Promise<{ data: T; cached: boolean }> {
+export async function ask<T>(kind: 'feedback' | 'next' | 'plan' | 'chat' | 'groove' | 'lesson', schema: z.ZodType<T>, input: unknown): Promise<{ data: T; cached: boolean }> {
   const system = `${prompt('system')}\n\n${prompt(kind)}`;
   const user = JSON.stringify(input);
   const key = createHash('sha256').update(`${provider.name}\0${system}\0${user}`).digest('hex');

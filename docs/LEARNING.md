@@ -47,8 +47,20 @@ Distilled from common beginner methods: levelled courses (technique, timing, ind
 musicality), scored play-along apps, the Stick Control and Syncopation drill books, and
 groove-essentials-style play-along libraries.
 
+## Milestones are fixed, lessons are curated for you
+The path is a fixed list of **milestones** (`MILESTONES` in `src/content/curriculum.ts`). Each says
+what you can do when you reach it, and names **checkpoint** lessons that prove it. Pass every
+checkpoint and you move on.
+
+The lessons *between* checkpoints are chosen per student. The AI coach (`POST /api/coach/lesson`,
+prompt in `server/prompts/lesson.md`) reads your recent takes, your progress and the milestone, and
+writes the next lesson aimed at your weakest skill, with a one-line "why this, for you". After a
+failed take you can ask it for a lesson that fixes exactly that. Coach lessons are validated with
+zod, stored in SQLite and preferred by the daily planner. The built-in lessons are the offline
+fallback and the examples the coach is shown.
+
 ## Curriculum shape
-Levels 0–6. Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
+Levels 0–6, one milestone each. Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
 if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.
 
 | Level | Theme |

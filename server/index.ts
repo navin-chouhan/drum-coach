@@ -3,11 +3,13 @@ import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { ChatReplySchema, ChatRequestSchema, FeedbackSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema } from '../src/coach/schemas.ts';
+import { AiLessonSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema } from '../src/coach/schemas.ts';
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import { suggestNext, type RunRow } from '../src/engine/progress.ts';
 import { ask, getProvider } from './ai/coach.ts';
+import { lessonInput, toLesson } from './ai/lessons.ts';
+import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { AUDIO_DIR, db } from './db.ts';
 import { searchYouTube, YtError } from './youtube.ts';
@@ -252,6 +254,36 @@ app.post('/api/coach/groove', async (req, reply) => {
   const b = GrooveRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
   try { return await ask('groove', ChatReplySchema, b.data); } catch (e) { return aiFail(reply, e); }
+});
+
+// ---------- coach-written lessons ----------
+const aiLessons = () => (db.prepare('SELECT json FROM ai_lessons ORDER BY created_at').all() as { json: string }[]).map(r => JSON.parse(r.json) as Lesson);
+app.get('/api/lessons', async () => aiLessons());
+app.delete('/api/lessons/:id', async (req, reply) => {
+  const p = IdParam.safeParse(req.params);
+  if (!p.success) return bad(reply, p.error);
+  return db.prepare('DELETE FROM ai_lessons WHERE id = ?').run(p.data.id).changes ? { ok: true } : reply.code(404).send({ error: 'Not found' });
+});
+
+app.post('/api/coach/lesson', async (req, reply) => {
+  const b = LessonRequestSchema.safeParse(req.body ?? {});
+  if (!b.success) return bad(reply, b.error);
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined;
+  const app = row ? JSON.parse(row.value) : {};
+  const recent = (db.prepare('SELECT chart_title, started_at, bpm, accuracy, summary_json FROM runs ORDER BY started_at DESC LIMIT 15').all() as
+    { chart_title: string; started_at: string; bpm: number; accuracy: number; summary_json: string }[]).reverse()
+    .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
+  const existing = aiLessons();
+  const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle });
+  if (!input) return bad(reply, 'You have finished every milestone. Ask the coach in chat for new challenges.');
+  try {
+    const r = await ask('lesson', AiLessonSchema, input);
+    const same = existing.find(l => l.title === r.data.title && l.level === input.milestone.level);
+    if (same) return { data: same, cached: true };
+    const lesson = toLesson(r.data, input.milestone.level);
+    db.prepare('INSERT INTO ai_lessons (id, json) VALUES (?, ?)').run(lesson.id, JSON.stringify(lesson));
+    return { data: lesson, cached: r.cached };
+  } catch (e) { return aiFail(reply, e); }
 });
 
 await app.listen({ port: PORT, host: '127.0.0.1' });

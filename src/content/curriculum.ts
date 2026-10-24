@@ -1,7 +1,9 @@
 import { beatsPerBar, pattern, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
-import type { Genre, Lesson, LessonKind, Pass, Step } from '../engine/lesson.ts';
+import type { Genre, Lesson, LessonKind, Milestone, Pass, Step } from '../engine/lesson.ts';
 
-// The guided path. Order is the path; levels group it. Pedagogy: docs/LEARNING.md.
+// The guided path. Milestones are fixed; each is proven by passing its checkpoint lessons.
+// The other lessons here are the built-in fallback: the AI coach writes personal lessons per milestone
+// (server/prompts/lesson.md) and the planner prefers those. Pedagogy: docs/LEARNING.md.
 // Patterns: one char per step (x hit, X accent, g ghost, . rest); `spb` = steps per beat.
 
 type Lines = Partial<Record<ChartDrum, string>>;
@@ -294,3 +296,20 @@ export const CURRICULUM: Lesson[] = [
 ];
 
 export const LESSON_BY_ID = Object.fromEntries(CURRICULUM.map(l => [l.id, l])) as Record<string, Lesson>;
+
+export const MILESTONES: Milestone[] = [
+  { level: 0, title: 'Ready to play', checkpoints: ['count-8ths', 'rests'],
+    canDo: ['Sit and hold the sticks so they bounce', 'Count quarters and 8ths out loud while playing', 'Count through rests without rushing'] },
+  { level: 1, title: 'Every limb on its own', checkpoints: ['singles', 'hh-8ths', 'hands-feet'],
+    canDo: ['Even single strokes at 100 BPM 8ths', 'Hi-hat 8ths with the pedal down, also with a gap click', 'Hand and foot landing together'] },
+  { level: 2, title: 'The money beat', checkpoints: ['money-8ths', 'song-steady'],
+    canDo: ['Play the money beat at 100 BPM, holding time without the click', 'Play a 16-bar song with crashes without stopping'] },
+  { level: 3, title: 'Variations and first fills', checkpoints: ['kick-and3', 'fill-8ths', 'song-garage'],
+    canDo: ['Move the kick around under a steady groove', 'Play a fill and land on 1 with a crash', 'Play a 24-bar rock song'] },
+  { level: 4, title: '16ths and dynamics', checkpoints: ['paradiddle', 'hh-16ths', 'ghost-notes', 'ride-groove'],
+    canDo: ['Paradiddles with clear accents', '16th-note grooves', 'Ghost notes that are really quiet', 'Grooves on the ride with the hi-hat foot'] },
+  { level: 5, title: 'Triplet feels', checkpoints: ['triplets', 'shuffle', 'half-time', 'song-shuffle'],
+    canDo: ['Even triplets', 'A shuffle that swings', 'Half-time feel', 'A 12-bar blues'] },
+  { level: 6, title: 'Swing', checkpoints: ['jazz-ride', 'comping', 'song-swing'],
+    canDo: ['The jazz ride pattern with the foot on 2 and 4', 'Comping on the snare', 'A 16-bar swing tune'] },
+];

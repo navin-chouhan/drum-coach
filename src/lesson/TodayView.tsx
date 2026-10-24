@@ -1,22 +1,34 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { CURRICULUM, LESSON_BY_ID } from '../content/curriculum';
-import type { Genre } from '../engine/lesson';
-import { nextLesson, visibleLessons, type SessionRole } from '../engine/planner';
+import { Thinking, useCoachEntry } from '../coach/api';
+import { MILESTONES } from '../content/curriculum';
+import type { Genre, Lesson } from '../engine/lesson';
+import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
 import { dashboard, type RunRow } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
+import { lessonById, requestCoachLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
-const LEVELS = ['Setup & counting', 'One limb at a time', 'The money beat', 'Variations & fills', '16ths & dynamics', 'Triplets & feels', 'Jazz'];
 type Open = { lessonId: string; item?: number };
 
 export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
+  const lessons = useLessons();
   const [open, setOpen] = useState<Open>();
   const [editing, setEditing] = useState(false);
   const [streak, setStreak] = useState<number>();
+  const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => setStreak(dashboard(runs).streak)).catch(() => {}); }, [open]);
+
+  const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
+  const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
+  const coach = useCoachEntry<Lesson>(coachKey);
+  const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
+  // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone.
+  useEffect(() => {
+    if (s.autoCoach && s.profile.onboarded && milestone && !coachOpen.length) requestCoachLesson(coachKey);
+  }, [s.autoCoach, s.profile.onboarded, milestone, coachOpen.length, coachKey]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 
@@ -32,14 +44,15 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
       onNext={open.item === undefined ? undefined : () => { markDone(open.item!); setOpen(nextIdx >= 0 ? { lessonId: session.items[nextIdx].lessonId, item: nextIdx } : undefined); }} />;
   }
 
-  const visible = visibleLessons(CURRICULUM, s.profile), next = nextLesson(CURRICULUM, s.lessons, s.profile);
+  const visible = visibleLessons(lessons, s.profile);
   const total = session.items.reduce((a, i) => a + i.minutes, 0);
   return (
     <div className="today">
       <div className="card todayHead">
         <div>
           <h2>{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
-          <p className="small">{streak ? `${streak}-day streak · ` : ''}{total} minutes planned{next ? ` · up next on your path: ${next.title}` : ''}</p>
+          <p className="small">{streak ? `${streak}-day streak · ` : ''}{total} minutes planned</p>
+          {milestone && <p>Milestone {milestone.level + 1} of {MILESTONES.length}: <b>{milestone.title}</b></p>}
         </div>
         {firstUndone >= 0
           ? <button className="primary big" autoFocus onClick={() => openItem(firstUndone)}>{session.done.length ? 'Continue' : 'Start today\'s session'}</button>
@@ -51,11 +64,12 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
         {session.items.length === 0 && <p className="small">You've finished the whole path. Reviews will keep coming back; the Coach tab can make new exercises.</p>}
         <ol className="session">
           {session.items.map((it, i) => {
-            const l = LESSON_BY_ID[it.lessonId], done = session.done.includes(i);
+            const l = lessonById(it.lessonId), done = session.done.includes(i);
+            if (!l) return null;
             return (
               <li key={i} className={done ? 'done' : i === firstUndone ? 'on' : ''}>
                 <span className="role">{ROLE[it.role]}</span>
-                <span className="title">{l.title} <span className="small">· level {l.level}</span></span>
+                <span className="title">{l.title}{l.source === 'ai' && <span className="badge">by your coach</span>}</span>
                 <span className="small">{it.minutes} min</span>
                 <button onClick={() => openItem(i)}>{done ? 'Again' : 'Open'}</button>
               </li>
@@ -68,26 +82,48 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
         </div>
       </div>
 
+      {milestone && (
+        <div className="card">
+          <h3>Your coach</h3>
+          {coach?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson from your recent playing" />
+            : <>
+              {coach?.status === 'error' && <p className="warn">{coach.error}</p>}
+              {coachOpen.length > 0
+                ? <p>Lessons written for you: {coachOpen.map(l => <button key={l.id} className="lessonChip next" onClick={() => setOpen({ lessonId: l.id })}>{l.title}</button>)}</p>
+                : <p className="small">The coach looks at your recent takes and writes the next lesson for this milestone. Without it, the built-in lessons below are used.</p>}
+              <button onClick={() => { requestCoachLesson(coachKey.replace(/-\d+$/, `-${asks + 1}`)); setAsks(asks + 1); }}>Ask the coach for a new lesson</button>
+            </>}
+        </div>
+      )}
+
       <div className="card">
         <h3>Your path</h3>
-        {LEVELS.map((name, level) => {
-          const ls = visible.filter(l => l.level === level);
-          return ls.length ? (
-            <div key={level} className="pathLevel">
-              <span className="small">L{level} · {name}</span>
+        {MILESTONES.map(m => {
+          const checks = checkpointsOf(m, lessons, s.profile);
+          if (!checks.length) return null;
+          const passed = checks.every(l => s.lessons[l.id]?.completedAt);
+          const extra = visible.filter(l => l.level === m.level && !m.checkpoints.includes(l.id));
+          const chip = (l: Lesson, cls = '') => {
+            const p = s.lessons[l.id];
+            const state = p?.completedAt ? 'done' : p ? 'started' : '';
+            return <button key={l.id} className={`lessonChip ${state} ${cls}`} onClick={() => setOpen({ lessonId: l.id })}
+              title={p?.completedAt ? `Done · best ${p.bestBpm} BPM` : p ? `Step ${p.step + 1} · ${p.bpm} BPM` : 'Not started'}>
+              {p?.completedAt ? '✓ ' : ''}{l.title}</button>;
+          };
+          return (
+            <div key={m.level} className={`milestone ${passed ? 'passed' : m === milestone ? 'current' : 'later'}`}>
+              <div>
+                <b>{passed ? '✓ ' : ''}{m.level + 1}. {m.title}</b>
+                {m === milestone && <ul className="canDo">{m.canDo.map(c => <li key={c}>{c}</li>)}</ul>}
+              </div>
               <div className="chips">
-                {ls.map(l => {
-                  const p = s.lessons[l.id];
-                  const state = p?.completedAt ? 'done' : l === next ? 'next' : p ? 'started' : '';
-                  return <button key={l.id} className={`lessonChip ${state}`} onClick={() => setOpen({ lessonId: l.id })}
-                    title={p?.completedAt ? `Done · best ${p.bestBpm} BPM` : p ? `Step ${p.step + 1} · ${p.bpm} BPM` : 'Not started'}>
-                    {p?.completedAt ? '✓ ' : ''}{l.title}</button>;
-                })}
+                <span className="small">Checkpoints:</span>{checks.map(l => chip(l, 'checkpoint'))}
+                {extra.length > 0 && <><span className="small">Lessons:</span>{extra.map(l => chip(l, l.source === 'ai' ? 'ai' : ''))}</>}
               </div>
             </div>
-          ) : null;
+          );
         })}
-        <p className="small">Lessons are ordered; skipping ahead is fine, the session planner still picks the first unfinished one.</p>
+        <p className="small">Pass a milestone's checkpoints to move on. You can open any lesson; the session planner sticks to your current milestone.</p>
       </div>
 
       <div className="actions">
