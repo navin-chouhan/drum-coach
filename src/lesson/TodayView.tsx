@@ -14,10 +14,10 @@ import { currentSession, markDone, rebuildToday, resetAllLessons, startSession }
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
 type Open = { lessonId: string; item?: number };
 
-export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
+export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => void; openLessonId?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
   const lessons = useLessons();
-  const [open, setOpen] = useState<Open>();
+  const [open, setOpen] = useState<Open | undefined>(openLessonId ? { lessonId: openLessonId } : undefined);
   const [editing, setEditing] = useState(false);
   const [streak, setStreak] = useState<number>();
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request

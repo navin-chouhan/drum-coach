@@ -16,7 +16,7 @@ import { SPOKEN_CUES } from '../engine/liveCoach';
 import { Calibrate } from './Calibrate';
 import { KitView } from './KitView';
 import { LastHit } from './LastHit';
-import { onPlayRequest, onSongRequest, type PlayRequest } from './nav';
+import { onLessonRequest, onPlayRequest, onSongRequest, type PlayRequest } from './nav';
 import { ProgressView } from './ProgressView';
 import { Timeline } from './Timeline';
 
@@ -31,6 +31,7 @@ export function App() {
   const [setup, setSetup] = useState<keyof typeof SETUP>('pads');
   const [pending, setPending] = useState<PlayRequest>();
   const [song, setSong] = useState<{ id: string; n: number }>();
+  const [lesson, setLesson] = useState<{ id: string; n: number }>();
   const setTab = (t: Tab) => { if (t !== tab) { stop(); dropCoachAction(); } setTabState(t); };
   const openPads = () => { setSetup('pads'); setTab('setup'); };
   useSyncExternalStore(subscribePlayer, playerVersion);
@@ -44,6 +45,7 @@ export function App() {
   useEffect(() => onHit(h => { if (h.pad && getSettings().browserSounds) playDrum(h.pad, h.velocity); }), []);
   useEffect(() => onPlayRequest(r => { stop(); setPending(r); setTabState('play'); }), []);
   useEffect(() => onSongRequest(id => { stop(); setSong(o => ({ id, n: (o?.n ?? 0) + 1 })); setTabState('songs'); }), []);
+  useEffect(() => onLessonRequest(id => { stop(); setLesson(o => ({ id, n: (o?.n ?? 0) + 1 })); setTabState('today'); }), []);
   // The coach's voice: prepare the count-in and tips, speak tips when asked to.
   useEffect(() => { void prepare([...NUMBERS.slice(0, 8), ...SPOKEN_CUES]); }, []);
   useEffect(() => onCue(c => { if (getSettings().liveTips === 'voice') void say(c.spoken, true); }), []);
@@ -82,7 +84,7 @@ export function App() {
           </nav>
         )}
       </header>
-      {tab === 'today' && <TodayView onCalibrate={openPads} />}
+      {tab === 'today' && <TodayView key={lesson?.n} openLessonId={lesson?.id} onCalibrate={openPads} />}
       {tab === 'setup' && setup === 'kit' && (
         <>
           <main>

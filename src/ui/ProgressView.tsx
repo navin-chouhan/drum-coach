@@ -5,7 +5,7 @@ import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
 import { useYtSongs } from '../youtube/api';
 import { dashboard, type Dashboard, type RunRow } from '../engine/progress';
-import { requestPlay, requestSong } from './nav';
+import { requestLesson, requestPlay, requestSong } from './nav';
 
 const ACCENT = '#2F6FE4';
 
@@ -36,7 +36,7 @@ export function ProgressView() {
       </div>
       <div className="card">
         <h3>By exercise</h3>
-        {d.charts.length === 0 ? <p className="small">Finish a run on the Play tab and it shows up here.</p> : (
+        {d.charts.length === 0 ? <p className="small">Finish a run on Practice, a lesson or a song and it shows up here.</p> : (
           <table className="exTable">
             <thead><tr><th>Exercise</th><th>Runs</th><th>Last accuracy</th><th>Accuracy trend (0–100%)</th><th>BPM trend</th><th>Best BPM at 90%+</th><th /></tr></thead>
             <tbody>
@@ -48,7 +48,7 @@ export function ProgressView() {
                   <td><Spark values={c.points.map(p => p.accuracy)} min={0} max={100} unit="%" label={`${c.title} accuracy`} /></td>
                   <td><Spark values={c.points.map(p => p.bpm)} unit=" BPM" label={`${c.title} BPM`} /></td>
                   <td>{c.best90Bpm ?? '—'}</td>
-                  <td><button className="link" onClick={() => requestPlay({ chartId: c.chartId, bpm: c.best90Bpm ? c.best90Bpm + 5 : undefined })}>practice</button></td>
+                  <td><button className="link" onClick={() => practice(c.chartId, c.best90Bpm)}>practice</button></td>
                 </tr>
               ))}
             </tbody>
@@ -105,6 +105,13 @@ function Spark({ values, min, max, unit, label }: { values: number[]; min?: numb
       <circle cx={x(values.length - 1)} cy={y(last)} r={4} fill={ACCENT} stroke="var(--panel)" strokeWidth={2} pointerEvents="none" />
     </svg>
   );
+}
+
+// Each row goes back to where it was played: a song, a lesson, or an exercise on Practice.
+function practice(chartId: string, best90Bpm?: number | null) {
+  if (chartId.startsWith('yt-') || chartId.startsWith('jam-yt-')) requestSong(chartId.replace(/^jam-/, ''));
+  else if (chartId.startsWith('lesson/')) requestLesson(chartId.split('/')[1]);
+  else requestPlay({ chartId, bpm: best90Bpm ? best90Bpm + 5 : undefined });
 }
 
 /** Ranks earned, stars, and the songs you can show off. */
