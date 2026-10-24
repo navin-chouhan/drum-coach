@@ -2,30 +2,45 @@ import { padMatches, type ChartDrum } from './chart.ts';
 import type { PadId } from './kit.ts';
 import type { Run } from './run.ts';
 
-export const WINDOWS = { perfect: 25, good: 60 };
+export const WINDOWS = { perfect: 25, good: 60, near: 200 }; // near: an off-time stroke still belongs to its note (a miss, not an extra)
 export type Judgement = 'perfect' | 'good' | 'miss';
 /** time = ms on the performance.now() clock (latency already removed for hits). */
 export type Expected = { time: number; drum: ChartDrum };
 export type PlayedHit = { time: number; pad?: PadId; velocity: number };
-export type Match = { index: number; offset: number; judgement: Exclude<Judgement, 'miss'> };
-export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId };
+export type Match = { index: number; offset: number; judgement: Judgement }; // 'miss' = claimed by an off-time stroke
+export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId; off?: number }; // off: ms of an off-time stroke (not a hit)
+
+/** What a match means for its note: a hit with its offset, or a miss that remembers how far off the stroke was. */
+export const toResult = (m: Match, velocity: number, pad?: PadId): NoteResult =>
+  m.judgement === 'miss' ? { judgement: 'miss', off: m.offset } : { judgement: m.judgement, offset: m.offset, velocity, pad };
 
 /**
  * Online matcher: each hit takes the nearest not-yet-matched expected note of a compatible drum
- * within the Good window; otherwise it's an extra (returns null). `expected` must be sorted by time.
+ * within the Good window. Failing that, a stroke within the Near window of its closest note of that drum
+ * (if still open) is off time: the note stays a miss, but the stroke isn't an extra. Otherwise it's an
+ * extra (returns null). `expected` must be sorted by time.
  */
 export function createMatcher(expected: Expected[], w = WINDOWS) {
   const taken = new Uint8Array(expected.length);
   return (hit: PlayedHit): Match | null => {
     if (!hit.pad) return null;
-    let lo = 0, hi = expected.length;
-    while (lo < hi) { const m = (lo + hi) >> 1; if (expected[m].time < hit.time - w.good) lo = m + 1; else hi = m; }
+    const from = (ms: number) => { let lo = 0, hi = expected.length; while (lo < hi) { const m = (lo + hi) >> 1; if (expected[m].time < hit.time - ms) lo = m + 1; else hi = m; } return lo; };
+    const lo = from(w.good);
     let best = -1, bestAbs = Infinity;
     for (let k = lo; k < expected.length && expected[k].time <= hit.time + w.good; k++) {
       const a = Math.abs(hit.time - expected[k].time);
       if (!taken[k] && a < bestAbs && padMatches(expected[k].drum, hit.pad)) { best = k; bestAbs = a; }
     }
-    if (best < 0) return null;
+    if (best < 0) {
+      let near = -1, nearAbs = Infinity;
+      for (let k = from(w.near); k < expected.length && expected[k].time <= hit.time + w.near; k++) {
+        const a = Math.abs(hit.time - expected[k].time);
+        if (a <= w.near && a < nearAbs && padMatches(expected[k].drum, hit.pad)) { near = k; nearAbs = a; }
+      }
+      if (near < 0 || taken[near]) return null; // nothing close, or that note was already played: a real extra
+      taken[near] = 1;
+      return { index: near, offset: hit.time - expected[near].time, judgement: 'miss' };
+    }
     taken[best] = 1;
     const offset = hit.time - expected[best].time;
     return { index: best, offset, judgement: Math.abs(offset) <= w.perfect ? 'perfect' : 'good' };
@@ -39,7 +54,7 @@ export function scoreRun(expected: Expected[], hits: PlayedHit[]) {
   const extras: PlayedHit[] = [];
   for (const h of hits) {
     const m = match(h);
-    if (m) results[m.index] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity };
+    if (m) results[m.index] = toResult(m, h.velocity);
     else extras.push(h);
   }
   return { results, extras };

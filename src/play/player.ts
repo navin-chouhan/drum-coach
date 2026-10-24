@@ -1,6 +1,6 @@
 import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '../engine/chart';
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
-import { computeStats, createMatcher, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
+import { computeStats, createMatcher, toResult, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
@@ -160,7 +160,7 @@ export function start(chart: Chart, options: PlayOptions) {
     const m = match(hit);
     if (m) {
       const i = scored.notes[m.index].i;
-      player.results[i] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity, pad: h.pad };
+      player.results[i] = toResult(m, h.velocity, h.pad);
       player.feedback.push({ lane: laneOf(run.notes[i].drum), judgement: m.judgement, time: h.time });
     } else if (h.pad && auto.some(n => padMatches(n.drum, h.pad!))) {
       // playing along on a lane the app is playing: neither scored nor an extra
@@ -233,7 +233,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
     hits.push(hit);
     const m = match(hit);
     if (m) {
-      player.results[m.index] = { judgement: m.judgement, offset: m.offset, velocity: h.velocity, pad: h.pad };
+      player.results[m.index] = toResult(m, h.velocity, h.pad);
       player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });
     } else {
       extras.push(hit);

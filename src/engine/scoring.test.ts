@@ -19,12 +19,20 @@ describe('matcher', () => {
     expect(extras).toHaveLength(0);
   });
 
-  it('windows: ±25 perfect, ±60 good, beyond that miss + extra', () => {
+  it('windows: ±25 perfect, ±60 good; an off-time stroke is a miss but not also an extra', () => {
     expect(scoreRun(expected, perfectHits(25)).results[0].judgement).toBe('perfect');
     expect(scoreRun(expected, perfectHits(-40)).results[0].judgement).toBe('good');
     const late = scoreRun(expected, perfectHits(61));
-    expect(late.results.every(r => r.judgement === 'miss')).toBe(true);
-    expect(late.extras).toHaveLength(expected.length);
+    expect(late.results.every(r => r.judgement === 'miss' && r.offset === undefined && r.off === 61)).toBe(true);
+    expect(late.extras).toHaveLength(0);
+  });
+
+  it('a stroke is still an extra when no note of that drum is near, or that note was already played', () => {
+    const one: Expected[] = [{ time: 1000, drum: 'snare' }];
+    expect(scoreRun(one, [{ time: 1300, pad: 'snare', velocity: 80 }]).extras).toHaveLength(1); // 300 ms off
+    const twice = scoreRun(one, [{ time: 1000, pad: 'snare', velocity: 80 }, { time: 1150, pad: 'snare', velocity: 80 }]);
+    expect(twice.results[0].judgement).toBe('perfect');
+    expect(twice.extras).toHaveLength(1);
   });
 
   it('wrong drum is an extra, not a hit', () => {
