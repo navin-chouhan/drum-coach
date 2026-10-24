@@ -56,6 +56,8 @@ plan that adapts over time.
 - Dashboard: practice streak, minutes, accuracy trend per exercise, BPM progress.
 
 ## Milestones
+Status (2026-10-24): M0–M6 built; see README for how to run.
+
 - **M0 — Scaffold**: Vite+React+TS app, Node server, Vitest, lint, `npm run dev` starts both.
 - **M1 — Input**: MIDI service, keyboard fallback, kit view with animations, calibration and note map.
 - **M2 — Play-along**: chart format, 5 built-in grooves, highway, metronome, count-in, tempo/loop.

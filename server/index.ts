@@ -1,12 +1,183 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyReply } from 'fastify';
+import { spawnSync } from 'node:child_process';
+import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { z } from 'zod';
+import { ChatReplySchema, ChatRequestSchema, FeedbackSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema } from '../src/coach/schemas.ts';
+import { LIBRARY } from '../src/content/library.ts';
+import { ChartSchema } from '../src/engine/chart.ts';
+import { suggestNext, type RunRow } from '../src/engine/progress.ts';
+import { ask, getProvider } from './ai/coach.ts';
+import { AiError } from './ai/providers.ts';
+import { AUDIO_DIR, db } from './db.ts';
 
-const app = Fastify({ logger: true });
+const PORT = Number(process.env.PORT ?? 8787);
+const app = Fastify({ logger: { level: 'info' }, bodyLimit: 1_000_000 });
 
-app.get('/api/health', async () => ({
-  ok: true,
-  model: process.env.CLAUDE_MODEL ?? 'claude-sonnet-5-5',
-  aiConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
-}));
+// Only the local app may call this API: blocks DNS rebinding (Host) and other websites (Origin).
+app.addHook('onRequest', async (req, reply) => {
+  const host = (req.headers.host ?? '').replace(/:\d+$/, '');
+  const origin = req.headers.origin;
+  if (!['localhost', '127.0.0.1'].includes(host) || (origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+    return reply.code(403).send({ error: 'Forbidden' });
+  }
+});
 
-// Localhost only: the server will hold the API key.
-await app.listen({ port: Number(process.env.PORT ?? 8787), host: '127.0.0.1' });
+const bad = (reply: FastifyReply, error: z.ZodError | string) =>
+  reply.code(400).send({ error: typeof error === 'string' ? error : `${error.issues[0]?.path.join('.')}: ${error.issues[0]?.message}` });
+const aiFail = (reply: FastifyReply, e: unknown) => {
+  if (e instanceof AiError) return reply.code(503).send({ error: e.message, code: e.code });
+  throw e;
+};
+
+// ---------- charts (imported songs, AI exercises) ----------
+type ChartRow = { id: string; json: string; source: string; audio_file: string | null; sync_offset_ms: number };
+const chartOut = (r: ChartRow) => ({ ...JSON.parse(r.json), id: r.id, source: r.source, hasAudio: !!r.audio_file, syncOffsetMs: r.sync_offset_ms });
+const IdParam = z.object({ id: z.string().regex(/^[\w-]{1,80}$/) });
+
+function catalog() {
+  const saved = (db.prepare("SELECT id, json FROM charts WHERE source = 'ai'").all() as ChartRow[]).map(r => ({ ...JSON.parse(r.json), id: r.id }));
+  return [...LIBRARY, ...saved].map(c => ({ id: c.id, title: c.title, kind: c.kind, level: c.level, bpm: c.bpm, timeSignature: c.timeSignature, description: c.description }));
+}
+
+app.get('/api/health', async () => ({ ok: true, provider: getProvider().name }));
+
+app.get('/api/charts', async () => (db.prepare('SELECT * FROM charts ORDER BY created_at').all() as ChartRow[]).map(chartOut));
+
+app.post('/api/charts', async (req, reply) => {
+  const body = z.object({ chart: ChartSchema, source: z.enum(['import', 'ai']) }).safeParse(req.body);
+  if (!body.success) return bad(reply, body.error);
+  const { chart, source } = body.data;
+  const slug = chart.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'chart';
+  const id = `${slug}-${Math.random().toString(36).slice(2, 7)}`;
+  const kind = chart.kind ?? (source === 'import' ? 'song' : 'exercise');
+  db.prepare('INSERT INTO charts (id, json, source) VALUES (?, ?, ?)').run(id, JSON.stringify({ ...chart, id: undefined, kind }), source);
+  return chartOut(db.prepare('SELECT * FROM charts WHERE id = ?').get(id) as ChartRow);
+});
+
+app.patch('/api/charts/:id', async (req, reply) => {
+  const p = IdParam.safeParse(req.params), b = z.object({ syncOffsetMs: z.number().min(-60_000).max(60_000) }).safeParse(req.body);
+  if (!p.success || !b.success) return bad(reply, 'Invalid request');
+  const r = db.prepare('UPDATE charts SET sync_offset_ms = ? WHERE id = ?').run(b.data.syncOffsetMs, p.data.id);
+  return r.changes ? { ok: true } : reply.code(404).send({ error: 'Not found' });
+});
+
+app.delete('/api/charts/:id', async (req, reply) => {
+  const p = IdParam.safeParse(req.params);
+  if (!p.success) return bad(reply, p.error);
+  const row = db.prepare('SELECT audio_file FROM charts WHERE id = ?').get(p.data.id) as ChartRow | undefined;
+  if (!row) return reply.code(404).send({ error: 'Not found' });
+  if (row.audio_file) rmSync(join(AUDIO_DIR, row.audio_file), { force: true });
+  db.prepare('DELETE FROM charts WHERE id = ?').run(p.data.id);
+  return { ok: true };
+});
+
+const AUDIO_TYPES: Record<string, string> = { 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/flac': 'flac', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/webm': 'webm' };
+const MIME = Object.fromEntries(Object.entries(AUDIO_TYPES).map(([m, e]) => [e, m]));
+app.addContentTypeParser(/^audio\//, { parseAs: 'buffer', bodyLimit: 80_000_000 }, (_req, body, done) => done(null, body));
+
+app.put('/api/charts/:id/audio', async (req, reply) => {
+  const p = IdParam.safeParse(req.params);
+  const ext = AUDIO_TYPES[(req.headers['content-type'] ?? '').split(';')[0]];
+  if (!p.success || !ext || !Buffer.isBuffer(req.body)) return bad(reply, 'Send an MP3, OGG, WAV, FLAC or M4A file');
+  if (!db.prepare('SELECT 1 FROM charts WHERE id = ?').get(p.data.id)) return reply.code(404).send({ error: 'Not found' });
+  const file = `${p.data.id}.${ext}`; // id is validated, so the path stays inside AUDIO_DIR
+  writeFileSync(join(AUDIO_DIR, file), req.body);
+  db.prepare('UPDATE charts SET audio_file = ? WHERE id = ?').run(file, p.data.id);
+  return { ok: true };
+});
+
+app.get('/api/charts/:id/audio', async (req, reply) => {
+  const p = IdParam.safeParse(req.params);
+  if (!p.success) return bad(reply, p.error);
+  const row = db.prepare('SELECT audio_file FROM charts WHERE id = ?').get(p.data.id) as ChartRow | undefined;
+  if (!row?.audio_file || !existsSync(join(AUDIO_DIR, row.audio_file))) return reply.code(404).send({ error: 'No audio' });
+  return reply.type(MIME[row.audio_file.split('.').pop()!] ?? 'application/octet-stream').send(createReadStream(join(AUDIO_DIR, row.audio_file)));
+});
+
+// ---------- runs & settings ----------
+const runRows = (limit = 5000): RunRow[] => (db.prepare(`
+  SELECT * FROM (SELECT chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
+    bpm, speed, accuracy, mean_offset AS meanOffset, spread FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
+  .map(r => ({ ...r, level: r.level ?? undefined }));
+
+app.post('/api/runs', async (req, reply) => {
+  const b = RunRecordSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  const r = b.data;
+  const { lastInsertRowid } = db.prepare(`INSERT INTO runs (chart_id, chart_title, level, started_at, duration_s, bpm, speed, accuracy, mean_offset, spread, summary_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(r.chartId, r.chartTitle, r.level ?? null, r.startedAt, r.durationS, r.bpm, r.speed, r.accuracy, r.meanOffset, r.spread, JSON.stringify(r.summary));
+  return { id: Number(lastInsertRowid) };
+});
+app.get('/api/runs', async () => runRows());
+
+app.get('/api/settings', async () => Object.fromEntries((db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]).map(r => [r.key, JSON.parse(r.value)])));
+app.put('/api/settings/:key', async (req, reply) => {
+  const p = z.object({ key: z.string().regex(/^[\w. -]{1,100}$/) }).safeParse(req.params);
+  if (!p.success || req.body === undefined) return bad(reply, 'Invalid setting');
+  const value = JSON.stringify(req.body);
+  if (value.length > 64_000) return bad(reply, 'Setting too large');
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(p.data.key, value);
+  return { ok: true };
+});
+
+// ---------- AI coach ----------
+let cliCheck: { ok: boolean; version?: string } | undefined;
+app.get('/api/coach/status', async () => {
+  const name = getProvider().name;
+  if (name !== 'claude-cli') return { provider: name, ready: true, message: `Using the Anthropic API (${process.env.CLAUDE_MODEL || 'claude-sonnet-5-5'}).` };
+  if (!cliCheck?.ok) {
+    const r = spawnSync(process.env.CLAUDE_BIN ?? 'claude', ['--version'], { timeout: 10_000, encoding: 'utf8' });
+    cliCheck = r.status === 0 ? { ok: true, version: r.stdout.trim() } : { ok: false };
+  }
+  return cliCheck.ok
+    ? { provider: name, ready: true, message: `Using your Claude subscription via ${cliCheck.version}.` }
+    : { provider: name, ready: false, message: 'The claude CLI was not found. Install Claude Code and run `claude` once to log in. Everything else works without it.' };
+});
+
+app.post('/api/coach/feedback', async (req, reply) => {
+  const b = z.object({ summary: z.record(z.string(), z.unknown()) }).safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  try { return await ask('feedback', FeedbackSchema, { run: b.data.summary, library: catalog() }); } catch (e) { return aiFail(reply, e); }
+});
+
+app.post('/api/coach/next', async () => {
+  const history = runRows(30), cat = catalog();
+  const rule = suggestNext(history, cat);
+  try {
+    const r = await ask('next', NextSchema, { history, ruleSuggestion: rule, library: cat });
+    return cat.some(c => c.id === r.data.chartId) ? r : { data: rule, cached: false, note: 'The coach picked an unknown exercise; using the built-in rule.' };
+  } catch (e) {
+    if (e instanceof AiError) return { data: rule, cached: false, note: `${e.message} Using the built-in rule instead.` };
+    throw e;
+  }
+});
+
+app.post('/api/coach/plan', async (req, reply) => {
+  const b = PlanRequestSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  const recent = runRows(30).map(r => ({ chart: r.chartTitle, bpm: Math.round(r.bpm), accuracy: r.accuracy, at: r.startedAt.slice(0, 10) }));
+  try {
+    const r = await ask('plan', PlanSchema, { ...b.data, recent, library: catalog() });
+    const { lastInsertRowid } = db.prepare('INSERT INTO plans (json) VALUES (?)').run(JSON.stringify(r.data));
+    return { id: Number(lastInsertRowid), plan: r.data, checks: {} };
+  } catch (e) { return aiFail(reply, e); }
+});
+app.get('/api/plan', async () => {
+  const row = db.prepare('SELECT * FROM plans ORDER BY id DESC LIMIT 1').get() as { id: number; json: string; checks_json: string } | undefined;
+  return row ? { id: row.id, plan: JSON.parse(row.json), checks: JSON.parse(row.checks_json) } : null;
+});
+app.put('/api/plan/:id/checks', async (req, reply) => {
+  const p = z.object({ id: z.coerce.number().int() }).safeParse(req.params), b = z.record(z.string().max(20), z.boolean()).safeParse(req.body);
+  if (!p.success || !b.success) return bad(reply, 'Invalid request');
+  db.prepare('UPDATE plans SET checks_json = ? WHERE id = ?').run(JSON.stringify(b.data), p.data.id);
+  return { ok: true };
+});
+
+app.post('/api/coach/chat', async (req, reply) => {
+  const b = ChatRequestSchema.safeParse(req.body);
+  if (!b.success) return bad(reply, b.error);
+  try { return await ask('chat', ChatReplySchema, { messages: b.data.messages, library: catalog() }); } catch (e) { return aiFail(reply, e); }
+});
+
+await app.listen({ port: PORT, host: '127.0.0.1' });

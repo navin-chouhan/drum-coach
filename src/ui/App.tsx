@@ -1,15 +1,31 @@
 import { useEffect, useState } from 'react';
+import { CoachView } from '../coach/CoachView';
+import { SongsView } from '../content/SongsView';
+import { onHit } from '../input/hits';
 import { startKeyboard } from '../input/keyboard';
+import { getSettings } from '../input/settings';
 import { useMidi } from '../input/useMidi';
+import { playDrum } from '../play/audio';
+import { PlayView } from '../play/PlayView';
+import { stop } from '../play/player';
 import { Calibrate } from './Calibrate';
 import { KitView } from './KitView';
 import { LastHit } from './LastHit';
+import { onPlayRequest, type PlayRequest } from './nav';
+import { ProgressView } from './ProgressView';
 import { Timeline } from './Timeline';
+
+const TABS = { kit: 'Kit', play: 'Play', songs: 'Songs', coach: 'Coach', progress: 'Progress', calibrate: 'Calibrate' } as const;
+type Tab = keyof typeof TABS;
 
 export function App() {
   const midi = useMidi();
-  const [tab, setTab] = useState<'kit' | 'calibrate'>('kit');
+  const [tab, setTabState] = useState<Tab>('kit');
+  const [pending, setPending] = useState<PlayRequest>();
+  const setTab = (t: Tab) => { if (t !== 'play') stop(); setTabState(t); };
   useEffect(startKeyboard, []);
+  useEffect(() => onHit(h => { if (h.pad && getSettings().browserSounds) playDrum(h.pad, h.velocity); }), []);
+  useEffect(() => onPlayRequest(r => { stop(); setPending(r); setTabState('play'); }), []);
 
   const status =
     midi.status === 'unsupported' ? { text: 'MIDI not supported — open in Google Chrome', cls: 'bad' }
@@ -31,11 +47,12 @@ export function App() {
         )}
         <div className="spacer" />
         <nav className="tabs">
-          <button className={tab === 'kit' ? 'on' : ''} onClick={() => setTab('kit')}>Kit</button>
-          <button className={tab === 'calibrate' ? 'on' : ''} onClick={() => setTab('calibrate')}>Calibrate</button>
+          {(Object.keys(TABS) as Tab[]).map(t => (
+            <button key={t} className={tab === t ? 'on' : ''} aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>{TABS[t]}</button>
+          ))}
         </nav>
       </header>
-      {tab === 'kit' ? (
+      {tab === 'kit' && (
         <>
           <main>
             <KitView />
@@ -50,9 +67,12 @@ export function App() {
           </main>
           <Timeline />
         </>
-      ) : (
-        <Calibrate device={midi.device ?? 'keyboard'} />
       )}
+      {tab === 'play' && <PlayView pending={pending} />}
+      {tab === 'songs' && <SongsView />}
+      {tab === 'coach' && <CoachView />}
+      {tab === 'progress' && <ProgressView />}
+      {tab === 'calibrate' && <Calibrate device={midi.device ?? 'keyboard'} />}
     </div>
   );
 }

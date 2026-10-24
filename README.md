@@ -42,3 +42,15 @@ Open **http://localhost:5173** in Google Chrome and allow MIDI access when asked
 Close `amidi -d` or any other app holding the kit's MIDI port first.
 
 Other scripts: `npm test` (Vitest), `npm run lint`, `npm run build`.
+
+### Tabs
+- **Kit**: live animated kit + hit timeline.
+- **Play**: pick an exercise or song, set speed (50–125%), bars A–B, repeats, metronome, count-in, wait mode. `Esc` stops.
+  After a run you get the results screen (accuracy, rushing/dragging, per-drum, where-in-the-bar heat map, replay) and can ask the coach.
+- **Songs**: import a drum MIDI file (+ optional MP3/OGG/WAV backing track). Fine-tune the audio offset on the Play tab.
+- **Coach**: what-next pick, weekly plan checklist, chat (can create exercises). Uses your logged-in `claude` CLI.
+- **Progress**: streak, minutes, accuracy and BPM trends per exercise.
+- **Calibrate**: hit-each-pad wizard, note map, latency calibration.
+
+Data (runs, songs, plans, settings, coach answer cache) is in `data/` (SQLite). Back it up if you care about your history.
+In dev, the console has `drumCoach.emitNote(note, velocity)` for testing without the kit.

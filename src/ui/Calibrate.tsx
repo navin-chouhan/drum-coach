@@ -3,6 +3,7 @@ import { CALIBRATION_ORDER, back, calibrate, initialCal, skip, type CalState } f
 import { DEFAULT_NOTE_MAP, PADS, PAD_INFO, findConflicts, type PadId } from '../engine/kit';
 import { onHit } from '../input/hits';
 import { getNoteMap, setNoteMap, subscribeNoteMap } from '../input/store';
+import { LatencyCard } from './LatencyCard';
 
 const MODULE_HELP = 'On the module: press MODE until VOICE lights, hit the pad, press PAGE until the display shows Nxx, then set the note with [–]/[+].';
 
@@ -96,6 +97,7 @@ export function Calibrate({ device }: { device: string }) {
         )}
         <button onClick={() => setNoteMap({ ...DEFAULT_NOTE_MAP })}>Reset to MPS-150 defaults</button>
       </section>
+      <LatencyCard />
     </div>
   );
 }

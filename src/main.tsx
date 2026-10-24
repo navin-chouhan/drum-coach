@@ -1,6 +1,15 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './ui/App';
+import { syncFromServer } from './input/store';
+import { setSettings, type Settings } from './input/settings';
 import './ui/styles.css';
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+
+void syncFromServer().then(all => { if (all.app) setSettings(all.app as Partial<Settings>, false); });
+
+// Dev only: drive the app from the console, e.g. drumCoach.emitNote(38, 100)
+if (import.meta.env.DEV) void Promise.all([import('./input/hits'), import('./play/player')]).then(([hits, play]) => {
+  Object.assign(window, { drumCoach: { emitNote: hits.emitNote, player: play.player } });
+});
