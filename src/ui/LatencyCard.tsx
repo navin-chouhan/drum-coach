@@ -3,8 +3,9 @@ import { estimateLatency } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { audio, audioToPerf, click, whenRunning } from '../play/audio';
+import { NUMBERS, prepare, sayAt } from '../voice/voice';
 
-const BPM = 90, COUNT_IN = 4, CLICKS = 16;
+const BPM = 60, COUNT_IN = 4, CLICKS = 16; // one per second: easy to count along
 const MAX_SPREAD = 50, MIN_TAPS = 10; // fewer or more scattered taps measure the player, not the latency
 
 /** Tap any pad along with 16 clicks; the median offset becomes the latency correction used in scoring. */
@@ -15,12 +16,14 @@ export function LatencyCard() {
   const [taps, setTaps] = useState(0);
   const cancel = useRef<() => void>(() => {});
   useEffect(() => () => cancel.current(), []);
+  useEffect(() => { void prepare(NUMBERS); }, []); // the spoken count is ready before Start
 
   function run() {
     const c = audio(), beat = 60 / BPM, t0 = c.currentTime + 0.3;
     const clicks: number[] = [], hits: number[] = [];
     for (let i = 0; i < COUNT_IN + CLICKS; i++) {
-      click(t0 + i * beat, i % 4 === 0 ? 0 : 1);
+      click(t0 + i * beat, i % 4 === 0 ? 0 : 1); // the click stays the exact reference
+      sayAt(NUMBERS[i < COUNT_IN ? i : i - COUNT_IN], t0 + i * beat); // and the coach counts: 1-4, then 1-16
       if (i >= COUNT_IN) clicks.push(audioToPerf(t0 + i * beat));
     }
     setState('running'); setTaps(0); setResult(null);
@@ -36,8 +39,8 @@ export function LatencyCard() {
   return (
     <section className="card">
       <h3>Latency</h3>
-      <p className="small">Current correction: <b>{settings.latencyMs} ms</b>. Press Start, listen to 4 count-in clicks, then hit any pad
-        exactly with the next {CLICKS} clicks. Use the same headphones/speakers you practise with.</p>
+      <p className="small">Current correction: <b>{settings.latencyMs} ms</b>. Press Start: the coach counts you in "1, 2, 3, 4",
+        then counts 1 to {CLICKS}. Hit any pad on each number, together with the click. Use the same headphones/speakers you practise with.</p>
       {state === 'running' && <p className="prompt">Tap along… {taps}/{CLICKS}</p>}
       {state === 'done' && (result
         ? <p>You hit on average <b>{Math.abs(result.latencyMs)} ms {result.latencyMs >= 0 ? 'after' : 'before'}</b> the click

@@ -9,7 +9,21 @@ let busyUntil = 0;
 // dev only: what the voice said, for headless tests (drumCoachVoiceLog in the console)
 const log = (what: string) => { if (import.meta.env.DEV) ((window as unknown as { drumCoachVoiceLog?: string[] }).drumCoachVoiceLog ??= []).push(what); };
 
-export const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+export const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen'];
+
+/** Seconds of near-silence before a clip's sound starts, so a word can be placed with its start on the beat. */
+const onsets = new WeakMap<AudioBuffer, number>();
+export function onsetOf(buf: AudioBuffer) {
+  let at = onsets.get(buf);
+  if (at === undefined) {
+    const x = buf.getChannelData(0);
+    let peak = 0; for (const v of x) peak = Math.max(peak, Math.abs(v));
+    const i = x.findIndex(v => Math.abs(v) > peak * 0.1);
+    at = i > 0 ? i / buf.sampleRate : 0;
+    onsets.set(buf, at);
+  }
+  return at;
+}
 
 export function voiceEngine() {
   engine ??= fetch('/api/tts/status').then(r => r.json()).then(s => (s.engine === 'piper' ? 'piper' : 'browser') as 'piper' | 'browser').catch(() => 'browser' as const);
@@ -37,7 +51,7 @@ export function sayAt(text: string, when: number) {
   const buf = ready.get(text);
   if (!buf) return false;
   log(`at:${text}`);
-  playVoice(buf, when);
+  playVoice(buf, Math.max(audio().currentTime, when - onsetOf(buf))); // the word starts on the beat, not its silent lead-in
   return true;
 }
 
