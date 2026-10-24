@@ -3,3 +3,5 @@ dist
 .env
 *.tsbuildinfo
 data
+# stray DB from an empty DATA_DIR= (fixed); never commit app data
+/drum-coach.db*

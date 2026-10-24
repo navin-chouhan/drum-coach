@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const DATA_DIR = process.env.DATA_DIR ?? join(import.meta.dirname, '..', 'data');
+export const DATA_DIR = process.env.DATA_DIR || join(import.meta.dirname, '..', 'data');
 export const AUDIO_DIR = join(DATA_DIR, 'audio');
 mkdirSync(AUDIO_DIR, { recursive: true });
 

@@ -22,7 +22,7 @@ const TIMEOUT_MS = 180_000;
  * Default: the logged-in Claude Code CLI (your subscription). No tools, safe mode (no CLAUDE.md, hooks,
  * plugins or MCP), no saved session, and an empty temp dir as cwd — it can only answer.
  */
-export function claudeCliProvider(bin = process.env.CLAUDE_BIN ?? 'claude'): AiProvider {
+export function claudeCliProvider(bin = process.env.CLAUDE_BIN || 'claude'): AiProvider {
   return {
     name: 'claude-cli',
     complete: (system, prompt) => new Promise((resolve, reject) => {

@@ -15,7 +15,7 @@ import { AUDIO_DIR, db } from './db.ts';
 import { searchYouTube, YtError } from './youtube.ts';
 import { GridSchema, GrooveRequestSchema, YtSongCreateSchema, YtSongPatchSchema, type YtSong } from '../src/youtube/schemas.ts';
 
-const PORT = Number(process.env.PORT ?? 8787);
+const PORT = Number(process.env.PORT || 8787);
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 1_000_000 });
 
 // Only the local app may call this API: blocks DNS rebinding (Host) and other websites (Origin).
@@ -131,7 +131,7 @@ app.get('/api/coach/status', async () => {
   const name = getProvider().name;
   if (name !== 'claude-cli') return { provider: name, ready: true, message: `Using the Anthropic API (${process.env.CLAUDE_MODEL || 'claude-sonnet-5-5'}).` };
   if (!cliCheck?.ok) {
-    const r = spawnSync(process.env.CLAUDE_BIN ?? 'claude', ['--version'], { timeout: 10_000, encoding: 'utf8' });
+    const r = spawnSync(process.env.CLAUDE_BIN || 'claude', ['--version'], { timeout: 10_000, encoding: 'utf8' });
     cliCheck = r.status === 0 ? { ok: true, version: r.stdout.trim() } : { ok: false };
   }
   return cliCheck.ok
