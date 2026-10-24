@@ -22,7 +22,7 @@ export function LatencyCard() {
     const c = audio(), beat = 60 / BPM, t0 = c.currentTime + 0.3;
     const clicks: number[] = [], hits: number[] = [];
     for (let i = 0; i < COUNT_IN + CLICKS; i++) {
-      click(t0 + i * beat, i % 4 === 0 ? 0 : 1); // the click stays the exact reference
+      click(t0 + i * beat, i % 4 === 0 ? 0 : 1, 2); // the exact reference, loud enough to follow on laptop speakers
       if (i < COUNT_IN) sayAt(NUMBERS[i], t0 + i * beat); // spoken count-in only: we hear a word's beat less exactly than a click
       if (i >= COUNT_IN) clicks.push(audioToPerf(t0 + i * beat));
     }
