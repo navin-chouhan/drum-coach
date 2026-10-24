@@ -32,7 +32,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const target = pending && pending !== applied ? charts.find(x => x.id === pending.chartId) : undefined;
   if (pending && target) {
     setApplied(pending);
-    set({ chartId: target.id, ...(pending.bpm && { speed: Math.min(MAX_SPEED, Math.max(0.5, Math.round((pending.bpm / target.bpm) * 20) / 20)) }) });
+    set({ chartId: target.id, ...(pending.bpm && { speed: Math.min(MAX_SPEED, Math.max(0.5, pending.bpm / target.bpm)) /* the tempo asked for, exactly */ }) });
     setSection(null);
   }
 
