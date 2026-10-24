@@ -35,7 +35,9 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 
   const session = currentSession();
-  const firstUndone = session.items.findIndex((_, i) => !session.done.includes(i));
+  // A coach lesson can be deleted after today's session froze; skip it (kept in storage: AI lessons may still be loading).
+  const playable = (i: number) => !!lessonById(session.items[i].lessonId);
+  const firstUndone = session.items.findIndex((_, i) => playable(i) && !session.done.includes(i));
   const done = (id: string) => !!s.lessons[id]?.completedAt;
   const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
   const rank = passed.length ? passed[passed.length - 1].rank : 'New drummer';
@@ -44,7 +46,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
 
   if (open) {
     const item = open.item !== undefined ? session.items[open.item] : undefined;
-    const nextIdx = session.items.findIndex((_, i) => i !== open.item && !session.done.includes(i));
+    const nextIdx = session.items.findIndex((_, i) => i !== open.item && playable(i) && !session.done.includes(i));
     return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role} minutes={item?.minutes}
       onBack={() => setOpen(undefined)}
       onItemDone={open.item === undefined ? undefined : () => markDone(open.item!)}
@@ -52,7 +54,7 @@ export function TodayView({ onCalibrate }: { onCalibrate: () => void }) {
   }
 
   const visible = visibleLessons(lessons, s.profile);
-  const total = session.items.reduce((a, i) => a + i.minutes, 0);
+  const total = session.items.reduce((a, it, i) => a + (playable(i) ? it.minutes : 0), 0);
   return (
     <div className="today">
       <div className="card todayHead">
