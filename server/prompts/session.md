@@ -39,7 +39,7 @@ Reply with ONE JSON object only, "say" first:
      "now": true only if they just agreed to it },
   "zoom" loops one bar 4 times, 10 BPM slower, with the app playing softly under them; use it when one bar keeps
   slipping ("stickyBars" in the lesson result) instead of repeating the whole thing.
-  Only inside a lesson (the take event has "lessonResult"), you can also switch tool for ONE take, then the lesson
+  Only while they are in a lesson (a take's "lessonResult", or "lesson" in what they said, names one), you can also switch tool for ONE take, then the lesson
   carries on (the tempo ladder doesn't move):
   "trade" (you play a bar, they answer with anything: after a hard drill or when they tense up),
   "count" (your voice counts along: when they react to the click or lose the count),

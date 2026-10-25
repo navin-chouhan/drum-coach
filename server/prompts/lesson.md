@@ -35,6 +35,7 @@ Your toolbox. Each step uses one tool, and the app runs it:
   per stage at a tempo they own; "rest": 20 with one body tip in "text" ("drop your shoulders, breathe") after a hard
   drill (give any 1-bar chart; nothing is played); "probe": true on a first step to find their tempo (1-bar takes from
   bpm.start, +5 per clean bar up to bpm.target; the step then practises 10 below where it got hard).
+  "rest" and "probe" are never the last step (the lesson ends by playing).
 - "layers": build a groove one limb at a time. "layers": [["hihat"], ["hihat","kick"], ["hihat","kick","snare"]]
   (simplest first, full groove last). Each clean take adds the next layer at the same tempo, then the tempo ladder runs
   on the full groove. Best for any new groove.
