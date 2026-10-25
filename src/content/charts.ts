@@ -15,6 +15,9 @@ export async function refreshCharts() {
   } catch { /* server down: built-ins still work */ }
 }
 
+/** A built-in or saved chart with this id exists (the coach may name one that doesn't). */
+export const chartExists = (id: string) => LIBRARY.some(c => c.id === id) || saved.some(c => c.id === id);
+
 export function useCharts(): StoredChart[] {
   const [, force] = useState(0);
   useEffect(() => {

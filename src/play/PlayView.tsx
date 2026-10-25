@@ -9,7 +9,7 @@ import { takeChart } from '../engine/transcribe';
 import { audio } from './audio';
 import { NotesView } from './NotesView';
 import { KitView } from '../ui/KitView';
-import { canRunAction, coachTake, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
+import { canRunAction, coachTake, onCoachAction, replyFor, runAction, screenAction, thinkingAbout, useCoach } from '../coach/session';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from './player';
 import { LatencyHint, Results, saveRun } from './Results';
 import { CoachLine, LiveHint, Move } from './AtKit';
@@ -106,7 +106,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const next = sug?.chartId === chart.id ? sug.bpm : bpm;
   // Before the first take: start where you left off, a bit slower if last time was rough.
   const startAt = last ? Math.max(40, Math.round(last.bpm) - (last.accuracy < 60 ? 10 : 0)) : bpm;
-  const main = reply?.action && canRunAction(reply.action) ? { label: reply.action.label, run: () => void runAction(reply.action!) }
+  const act = screenAction(reply?.action, '⏭ Next one');
+  const main = act && canRunAction(act) ? { label: act.label, run: () => void runAction(act) }
     : !f ? (startAt !== bpm ? { label: `▶ Play at ${startAt}`, run: () => playAt(startAt) } : { label: '▶ Play', run: () => void go() })
     : next > bpm ? { label: `🐇 Try ${next}`, run: () => playAt(next) }
     : next < bpm ? { label: `🐢 Try ${next}`, run: () => playAt(next) }

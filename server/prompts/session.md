@@ -38,7 +38,8 @@ Reply with ONE JSON object only, "say" first:
 { "say": "what you say out loud, 2–4 plain sentences (what happened, why, what to do next); short words, no numbers lists",
   "show": "optional: what to remember, for the screen, 1–2 plain sentences (no lists of numbers; at most one number)",
   "action": optional, the one next step you suggest: { "kind": "again" | "slower" | "faster" | "next" | "drill" | "zoom" | "trade" | "count" | "layers" | "listen",
-     "label": "button text, ≤ 30 chars", "bpm": optional target tempo, "chartId": optional library id for a drill,
+     "label": "button text, ≤ 30 chars" (for "next" the app shows its own label: never name the next step),
+     "bpm": optional target tempo, "chartId": optional library id for a drill (only ids you were given; otherwise send a "chart"),
      "chart": optional new chart for a drill (chart format below), "bar": optional bar for "zoom",
      "now": true only if they just agreed to it },
   "zoom" loops one bar 4 times, 10 BPM slower, with the app playing softly under them; use it when one bar keeps

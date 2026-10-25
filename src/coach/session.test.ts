@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coachLine, replyFor, thinkingAbout, type CoachState } from './session';
+import { coachLine, replyFor, screenAction, thinkingAbout, type CoachState } from './session';
 import type { Finished } from '../play/player';
 
 const take = (startedAt: string) => ({ startedAt }) as Finished;
@@ -33,5 +33,22 @@ describe('the big coach line', () => {
   it('keeps a big moment (record, rank up, lesson done) and puts the coach under it', () => {
     expect(coachLine('🏆 NEW RECORD: 95 BPM!', { say: 'What a take.' }, true)).toEqual({ line: '🏆 NEW RECORD: 95 BPM!', under: 'What a take.' });
     expect(coachLine('🏆 NEW RECORD: 95 BPM!', undefined, true)).toEqual({ line: '🏆 NEW RECORD: 95 BPM!' });
+  });
+});
+
+describe('the coach\'s button', () => {
+  const exists = (id: string) => id === 'rock-basic' || id === 'lesson/money-beat';
+  it('"next" gets the screen\'s own label: the coach can\'t name steps that don\'t exist', () => {
+    expect(screenAction({ kind: 'next', label: 'Next posture step' }, 'Next ▶', exists)).toEqual({ kind: 'next', label: 'Next ▶' });
+  });
+  it('a drill with an unknown target is dropped; a known one or a new chart stays', () => {
+    expect(screenAction({ kind: 'drill', label: 'Try this', chartId: 'made-up' }, 'Next ▶', exists)).toBeUndefined();
+    expect(screenAction({ kind: 'drill', label: 'Try this', chartId: 'lesson/nope' }, 'Next ▶', exists)).toBeUndefined();
+    expect(screenAction({ kind: 'drill', label: 'Try this' }, 'Next ▶', exists)).toBeUndefined();
+    expect(screenAction({ kind: 'drill', label: 'Money beat', chartId: 'lesson/money-beat' }, 'Next ▶', exists)?.label).toBe('Money beat');
+    const chart = { title: 'x', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: "snare" as const }] };
+    expect(screenAction({ kind: 'drill', label: 'One bar', chart }, 'Next ▶', exists)?.chart).toBe(chart);
+    expect(screenAction({ kind: 'slower', label: 'Slower' }, 'Next ▶', exists)).toEqual({ kind: 'slower', label: 'Slower' });
+    expect(screenAction(undefined, 'Next ▶', exists)).toBeUndefined();
   });
 });

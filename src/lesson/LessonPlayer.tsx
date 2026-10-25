@@ -20,7 +20,7 @@ import { requestSong } from '../ui/nav';
 import { SheetMusic } from '../notation';
 import { hush, say, voiceEngine } from '../voice/voice';
 import { onHit } from '../input/hits';
-import { canRunAction, coachLine, coachTake, dropCoachAction, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
+import { canRunAction, coachLine, coachTake, screenAction, dropCoachAction, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
 import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
@@ -297,6 +297,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const coach = useCoach(), opened = useRef(Date.now()).current;
   const fresh2 = replyFor(coach, f, opened); // the coach's answer to this take
   const goNext = onNext ?? onBack;
+  const coachAct = screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
   const resting = !!step.rest && !oneTake;
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
@@ -307,7 +308,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : canProbe ? { label: '🔍 Find my tempo', run: () => { probing.current = { tempo: step.bpm.start, accs: [] }; probeBar(); } }
     : resting ? { label: '✓ Done, next step', run: finishRest }
     : flow ? { label: '🌊 Flow ▶', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, fadeClick: 8 }); } }
-    : fresh2?.action && canRunAction(fresh2.action) ? { label: fresh2.action.label, run: () => void runAction(fresh2.action!) }
+    : coachAct && canRunAction(coachAct) ? { label: coachAct.label, run: () => void runAction(coachAct) }
     : outcome?.fixBar && !outcome.zoomed ? { label: `🔍 Fix bar ${outcome.fixBar}`, run: () => zoomIn(outcome.fixBar!) }
     : itemDone && (oneTake || outcome?.event === 'lessonDone') ? { label: onNext ? 'Next ▶' : '← Journey', run: goNext }
     : { label: outcome ? '▶ Again' : '▶ Play', run: () => play(false) };
