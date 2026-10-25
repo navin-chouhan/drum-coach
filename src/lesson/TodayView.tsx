@@ -190,9 +190,9 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   );
 }
 
-const TOOL_LABEL: Record<Tool, string> = { jam: 'Play along', copy: 'I play, you copy', challenge: 'Mini challenge', drill: 'Practice' };
+const TOOL_LABEL: Record<Tool, string> = { jam: 'Play along', copy: 'I play, you copy', challenge: 'Mini challenge', layers: 'One limb at a time', drill: 'Practice' };
 const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
-const TOOL_ICON: Record<Tool, string> = { jam: '🎸', copy: '🔁', challenge: '🔥', drill: '' };
+const TOOL_ICON: Record<Tool, string> = { jam: '🎸', copy: '🔁', challenge: '🔥', layers: '🧱', drill: '' };
 const iconOf = (l: Lesson) => TOOL_ICON[toolOf(l.steps[0])] || KIND_ICON[l.kind] || '🎯';
 
 /**

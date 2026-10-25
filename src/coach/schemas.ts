@@ -63,8 +63,9 @@ export const AiLessonSchema = z.object({
     }).partial().optional(),
     gapBars: z.number().int().min(2).max(8).optional(),
     jam: z.boolean().optional(), copy: z.boolean().optional(),
+    layers: z.array(z.array(z.enum(CHART_DRUMS)).min(1)).min(2).max(5).optional(),
   }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })
-    .refine(s => (s.activeLanes ?? []).every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' }))
+    .refine(s => [...(s.activeLanes ?? []), ...(s.layers ?? []).flat()].every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' }))
     .min(1).max(4),
 });
 export const LessonRequestSchema = z.object({

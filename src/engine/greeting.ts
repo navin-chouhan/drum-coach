@@ -20,6 +20,7 @@ export function greeting(g: GreetingInput): string {
     : tool === 'jam' ? `Today we start with a jam, "${title}". Just play along and enjoy.`
     : tool === 'copy' ? `Today: "${title}". I play a little rhythm, you copy it.`
     : tool === 'challenge' ? `Today: a mini challenge, "${title}".`
+    : tool === 'layers' ? `Today: "${title}", built one limb at a time while I play the rest.`
     : `Today: "${title}", about ${minutes} minutes.`;
   return `${hello} ${praise} ${what} Ready?`;
 }

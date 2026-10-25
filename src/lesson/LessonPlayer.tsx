@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
 import { worstBars } from '../engine/scoring';
-import { afterReview, checkPass, CLEAN_TAKES, copyChart, goodMsFor, ladderStep, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, checkPass, CLEAN_TAKES, copyChart, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration } from './Celebration';
@@ -61,7 +61,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     if (player.phase !== 'done' || !f || f.options.lesson?.id !== lesson.id || outcomes.has(f)) return;
     // Wait mode is for learning the pattern: no verdict, no ladder, not saved.
     if (f.options.wait) { outcomes.set(f, { passed: false, itemDone: false, text: 'Nice and slow. When it feels easy, press Play to go with the click.' }); setVersion(v => v + 1); return; }
-    const check = checkPass(f.stats, step.pass, lesson.level);
+    const p0 = progressOf(lesson);
+    // A step's extra limits (flams, timing) are for the full groove, not its first layers.
+    const check = checkPass(f.stats, step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level);
     // A zoom loop is practice for the next real take: no ladder, not saved.
     if (f.options.zoom) {
       outcomes.set(f, { passed: check.ok, itemDone: false, text: `Bar ${f.options.zoom}, four times: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. Now the whole thing again at ${progressOf(lesson).bpm} BPM.` });
@@ -69,7 +71,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     }
     const sticky = worstBars(f.run, f.results, f.options.toBar - f.options.fromBar + 1, f.options.fromBar);
     stickyBar.current = sticky[0];
-    const p = progressOf(lesson);
+    const p = p0;
     const st = f.stats, prev = lastAccuracy.current;
     lastAccuracy.current = st.accuracy;
     // What went right first: notes landed, best run, comebacks, better than last take.
@@ -94,6 +96,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
         hold: check.ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
         up: `Up to ${next.bpm} BPM!`,
         slowDown: `Let's take it to ${next.bpm} BPM. Slower is how it sticks.`,
+        layerUp: `Now add the ${(lanesNow(step, next) ?? []).filter(d => !(lanesNow(step, p) ?? []).includes(d)).map(laneName).join(' and ')}.`,
         atFloor: 'This one is tricky. Try "Learn it slowly": the music waits for each note.',
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
         lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
@@ -116,12 +119,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   useEffect(() => () => { stop(); dropCoachAction(); }, []);
 
   const chart = step.copy ? copyChart(step.chart) : step.chart;
+  const lanes = oneTake ? step.layers?.at(-1) ?? step.activeLanes : lanesNow(step, p);
   const options = (demo: boolean, wait = false): PlayOptions => ({
     // Short takes so a rough one is over quickly: 4 bars; 8 for the proving take (last step at its target tempo),
     // a jam (long enough to enjoy) and copy-me (4 calls and 4 echoes).
     fromBar: 1, toBar: chart.bars, repeats: Math.max(1, Math.ceil((step.copy || step.jam || (stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target) ? 8 : 4) / chart.bars)),
     speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
-    activeLanes: step.activeLanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level),
+    activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level),
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
   });
   const play = (demo: boolean, atBpm = bpm, wait = false) => { setDetails(false); start(chart, { ...options(demo, wait), speed: atBpm / chart.bpm }); };
@@ -186,7 +190,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
           {step.jam && <p className="small">Jam: just play along and enjoy. Every take counts.</p>}
           {step.copy && <p className="small">Copy me: the app plays a bar, you play it back. Then the next one.</p>}
           {step.pass?.streak && <p className="small">Challenge: {step.pass.streak} notes in a row. Missed one? Keep going, the count starts again.</p>}
-          {step.activeLanes && step.chart.notes.some(n => !step.activeLanes!.includes(n.drum)) && <p className="small">You play: {step.activeLanes.map(laneName).join(', ')}. The app plays the rest (dimmed).</p>}
+          {lanes && step.chart.notes.some(n => !lanes.includes(n.drum)) && <p className="small">You play: {lanes.map(laneName).join(', ')}. The app plays the rest (dimmed).</p>}
+          {step.layers && step.layers.length > 1 && <p className="small">Layer {Math.min(p.layer ?? 0, step.layers.length - 1) + 1} of {step.layers.length}: a clean take adds the next limb.</p>}
           {step.gapBars && <p className="small">The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
           <details><summary>Notation</summary><SheetMusic notes={step.chart.notes} timeSignature={step.chart.timeSignature} /></details>
         </div>

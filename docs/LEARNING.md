@@ -38,6 +38,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Sweet spot, not an exam | The pass bar grows with the stage (`passFor`): 75% at levels 0–1, 80% at 2–3, 85% at 4–5, 90% at 6; stray strokes barely count early on, and the Good window is 150 ms at levels 0–1. Takes are 4 bars (8 for the proving take). Feedback leads with what went right: notes landed, best run in a row, comebacks after a miss, better than last take. |
 | Coach toolbox | A step is a drill (default), a `jam` (any take counts), a `copy` (call and response: notes marked `auto` are played by the app) or a challenge (`pass.streak`, N in a row). The coach mixes them and switches tool when you struggle. |
 | Zoom in | After a missed take, "Fix bar N" loops the stickiest bar (`worstBars`) 4 times, 10 BPM slower, with the app playing softly underneath. Practice only: no ladder. The live coach can offer it (`action.kind: 'zoom'`). |
+| Layers | A step's `layers` lists lanes from one limb to the full groove; each clean take adds the next layer at the same tempo (`layerUp`), then the tempo ladder runs on the full groove. A fail never removes a layer. |
 | Specific feedback, one fix | After each take, one friendly line and at most one tip. The AI coach is one click away. |
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |

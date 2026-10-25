@@ -26,12 +26,12 @@ const crashOn = (notes: ChartNote[], beats: number[]) => [
   ...beats.map(t => ({ t, drum: 'crash' as const })),
 ].sort((a, b) => a.t - b.t);
 
-type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean };
+type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean; layers?: ChartDrum[][] };
 function step(title: string, text: string, notes: ChartNote[], bpm: [number, number], o: StepOpts = {}): Step {
   const ts = o.ts ?? [4, 4], bpb = beatsPerBar({ timeSignature: ts });
   const bars = Math.floor(Math.max(...notes.map(n => n.t)) / bpb + 1e-6) + 1;
   const chart: Chart = { title, bpm: bpm[1], timeSignature: ts, bars, notes };
-  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy };
+  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy, layers: o.layers };
 }
 const lesson = (level: number, id: string, kind: LessonKind, title: string, what: string, why: string, how: string, steps: Step[], tags?: Genre[]): Lesson =>
   ({ id, level, kind, title, what, why, how, tags, steps: steps.map((s, i) => ({ ...s, chart: { ...s.chart, id: `lesson/${id}/${i + 1}`, title: `${title} · ${s.title}` } })) });
@@ -124,10 +124,8 @@ export const CURRICULUM: Lesson[] = [
   lesson(2, 'money-quarters', 'groove', 'Your first beat',
     'Hi-hat on every beat, kick on 1 and 3, snare on 2 and 4.',
     'This is the skeleton of thousands of songs. You build it one limb at a time while the app plays the rest.',
-    'Step 1: you play only the hi-hat while the app plays kick and snare. Step 2: add the kick. Step 3: everything. Count out loud the whole time. Snare is the left hand.',
-    [step('Hi-hat only', 'Hi-hat quarters. The app plays the kick and snare; listen to how they fit.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 70], { lanes: ['hihat'] }),
-      step('+ kick', 'Add the kick on 1 and 3. The app still plays the snare.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 70], { lanes: ['hihat', 'kick'] }),
-      step('Everything', 'Hi-hat on every beat, kick 1 and 3, snare 2 and 4.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 90], { lanes: HH_K_S, pass: { maxAbsOffsetMs: 30, maxFlamMs: 25 } })]),
+    'You start with only the hi-hat while the app plays kick and snare. Each clean take adds a limb: the kick, then the snare. Count out loud the whole time. Snare is the left hand.',
+    [step('Build it up', 'Hi-hat first while the app plays the rest; each clean take adds a limb: kick on 1 and 3, then snare on 2 and 4.', P(1, { hihat: 'xxxx', kick: 'x.x.', snare: '.x.x' }), [60, 90], { layers: [['hihat'], ['hihat', 'kick'], HH_K_S], pass: { maxAbsOffsetMs: 30, maxFlamMs: 25 } })]),
   lesson(2, 'money-8ths', 'groove', 'The money beat',
     'Hi-hat 8ths, kick on 1 and 3, snare on 2 and 4.',
     'The single most useful groove in pop and rock. Get this solid and you can play along to a huge number of songs.',
