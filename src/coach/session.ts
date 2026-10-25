@@ -13,11 +13,17 @@ import type { CoachReply, SessionEvent } from './schemas';
 // The live coach (server/ai/session.ts): every open / take / spoken answer goes into one remembering conversation.
 // Replies stream sentence by sentence (spoken as they arrive); the suggested next step is one tap or one "yes".
 
-export type CoachState = { status: 'idle' | 'thinking' | 'listening' | 'hearing'; reply?: CoachReply; heard?: string; error?: string; at: number };
+export type CoachState = { status: 'idle' | 'thinking' | 'listening' | 'hearing'; reply?: CoachReply; heard?: string; error?: string; at: number;
+  take?: Finished; thinking?: Finished }; // the take the reply is about / the take being thought about; none for a spoken question
 let state: CoachState = { status: 'idle', at: 0 };
 const listeners = new Set<() => void>();
 const set = (s: Partial<CoachState>) => { state = { ...state, ...s }; listeners.forEach(l => l()); };
 export const useCoach = () => useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, () => state);
+/** The coach's answer to the take on screen `f` (a slow answer about an earlier take, e.g. the last lesson's, isn't). */
+export const replyFor = (s: CoachState, f: Finished | undefined, openedAt: number) =>
+  s.reply && (s.take ? s.take === f : s.at > Math.max(openedAt, f ? Date.parse(f.startedAt) : 0)) ? s.reply : undefined;
+/** The coach is thinking about the take on screen. */
+export const thinkingAbout = (s: CoachState, f: Finished | undefined) => s.status === 'thinking' && !!f && (!s.thinking || s.thinking === f);
 
 // Play screens register how to carry out the coach's actions (again, slower, faster, next), plus two moves from the kit:
 // "main" (yes with no suggestion on the table: the screen's own next move) and "listen" (hear it / hear your take).
@@ -59,10 +65,10 @@ export function padAction(cmd: 'yes' | 'slower' | 'faster' | 'next' | 'listen') 
 
 let seq = 0;
 /** Tells the coach what just happened; speaks and shows its answer. */
-export async function coachEvent(event: SessionEvent) {
+export async function coachEvent(event: SessionEvent, take?: Finished) {
   if (!getSettings().liveCoach) return;
   const my = ++seq;
-  set({ status: 'thinking', error: undefined, at: Date.now() });
+  set({ status: 'thinking', error: undefined, at: Date.now(), thinking: take }); // the reply on screen keeps its own take until the new one arrives
   try {
     const res = await fetch('/api/coach/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event) });
     if (!res.ok || !res.body) throw new Error((await res.json().catch(() => null))?.error ?? `Coach unavailable (${res.status})`);
@@ -84,7 +90,7 @@ export async function coachEvent(event: SessionEvent) {
     if (my !== seq) return; // a newer event took over
     // Only the student's own "yes" starts something; the model sometimes sets `now` after a plain take (then it's a button).
     if (reply?.action?.now && event.type !== 'said') reply = { ...reply, action: { ...reply.action, now: false } };
-    set({ status: 'idle', reply, at: Date.now() });
+    set({ status: 'idle', reply, at: Date.now(), take });
     if (reply?.action?.now) void runAction(reply.action);
     else if (reply?.ask && getSettings().handsFree && player.phase !== 'playing') void handsFree();
   } catch (e) {
@@ -124,7 +130,7 @@ let lastOpen = { id: '', at: 0, title: '', bpm: 0 }; // the exercise on screen (
 export function coachTake(f: Finished, lesson?: Record<string, unknown>) {
   if (toldTakes.has(f) || f.options.wait || !f.stats.total) return;
   toldTakes.add(f);
-  void coachEvent({ type: 'take', ...summarizeRun(f), ...(lesson && { lessonResult: lesson }) });
+  void coachEvent({ type: 'take', ...summarizeRun(f), ...(lesson && { lessonResult: lesson }) }, f);
 }
 /** Opened an exercise or lesson step: remembered so a spoken "this" means it. */
 // No coach event here: opening an exercise isn't worth a speech; the coach hears about it with the first finished step.

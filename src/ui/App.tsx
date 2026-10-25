@@ -6,7 +6,7 @@ import { startKeyboard } from '../input/keyboard';
 import { getSettings } from '../input/settings';
 import { useMidi } from '../input/useMidi';
 import { TodayView } from '../lesson/TodayView';
-import { playDrum } from '../play/audio';
+import { audio, playDrum } from '../play/audio';
 import { PlayView } from '../play/PlayView';
 import { onCue, player, playerVersion, stop, subscribePlayer } from '../play/player';
 import { NUMBERS, prepare, say } from '../voice/voice';
@@ -43,6 +43,13 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   useEffect(startKeyboard, []);
+  // Chrome keeps the sound off until a click or key press on the page; a pad hit doesn't count, so takes from the kit would wait silently.
+  const [soundLocked, setSoundLocked] = useState(() => navigator.userActivation ? !navigator.userActivation.hasBeenActive : false);
+  useEffect(() => {
+    if (!soundLocked) return;
+    const t = setInterval(() => { if (navigator.userActivation.hasBeenActive) { setSoundLocked(false); audio(); } }, 300); // any gesture counts
+    return () => clearInterval(t);
+  }, [soundLocked]);
   useEffect(() => onHit(h => { if (h.pad && getSettings().browserSounds) playDrum(h.pad, h.velocity); }), []);
   useEffect(() => {
     const detect = padCommands();
@@ -72,6 +79,7 @@ export function App() {
         <div className="brand"><span className="logo" />Drum Coach</div>
         <button className={`chip ${status.cls}`} onClick={midi.status === 'blocked' ? midi.retry : undefined}
           aria-live="polite"><span className="dot" />{status.text}</button>
+        {soundLocked && <button className="chip bad" aria-live="polite">🔈 Click or press any key to turn on the sound (a pad hit can't)</button>}
         {midi.inputs.length > 1 && (
           <select value={midi.device} onChange={e => midi.select(e.target.value)} aria-label="MIDI input">
             {midi.inputs.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}

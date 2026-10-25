@@ -34,12 +34,12 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Layered groove building | A lesson step lists its `activeLanes`. The app plays the other lanes, so you learn hi-hat alone, then add kick, then snare. |
 | Demo first | Every step has **Hear it**: the app plays the whole pattern at your tempo. |
 | Count out loud | A one-bar count-in, and big beat numbers on the highway for the counting lessons. |
-| Tempo ladder | Two clean takes → +5 BPM until the step's target. A rough take (< 60% landed) → −10 BPM at once; two close misses → −5. The floor is 40 BPM, below the step's start if needed; after easing off, one clean take climbs +10. At the floor: "Learn it slowly" (wait mode). |
+| Tempo ladder | Two clean takes → +5 BPM until the step's target (one ★★★-quality take counts as both, and a streak challenge is done on its first pass). A rough take (< 60% landed) → −10 BPM at once; two close misses → −5. The floor is 40 BPM, below the step's start if needed; after easing off, one clean take climbs +10. At the floor: "Learn it slowly" (wait mode). |
 | Sweet spot, not an exam | The pass bar grows with the stage (`passFor`): 75% at levels 0–1, 80% at 2–3, 85% at 4–5, 90% at 6; stray strokes barely count early on, and the Good window is 150 ms at levels 0–1. Takes are 4 bars (8 for the proving take). Feedback leads with what went right: notes landed, best run in a row, comebacks after a miss, better than last take. |
 | Coach toolbox | A step is a drill (default), a `jam` (any take counts), a `copy` (call and response: notes marked `auto` are played by the app) or a challenge (`pass.streak`, N in a row). The coach mixes them and switches tool when you struggle. |
 | Zoom in | After a missed take, "Fix bar N" loops the stickiest bar (`worstBars`) 4 times, 10 BPM slower, with the app playing softly underneath. Practice only: no ladder. The live coach can offer it (`action.kind: 'zoom'`). |
 | Layers | A step's `layers` lists lanes from one limb to the full groove; each clean take adds the next layer at the same tempo (`layerUp`), then the tempo ladder runs on the full groove. A fail never removes a layer. |
-| Free bars and trade bars | `freeBars` makes some bars yours (no notes, any fill); `trade` is call and response where every answer bar is free. Free bars are scored on the 8th-note grid (`freeBarStats`, "on the beat %"), their strokes aren't extras, and any take counts unless the step sets `pass`. |
+| Free bars and trade bars | `freeBars` makes some bars yours (no notes, any fill); `trade` is call and response where every answer bar is free. Free bars are scored on the 8th-note grid (`freeBarStats`, "on the beat %"), their strokes aren't extras, and any take counts unless the step sets `pass`, as long as you played something in them. |
 | Listen back | "Hear your take" plays your own hits at their real times (`takeChart`, extras included) with the click, then "Hear it right" plays the chart. Hearing the difference, not only seeing it. |
 | Count with me | `countAloud` makes the coach's voice count during the take ("1 2 3 4" or "1 & 2 &"), fading to only "one" after 4 bars (`countPlan`) so the student takes over. Needs the Piper voice (the words are pre-rendered). |
 | Song bite | A step's `bite` names 1–8 bars of a saved song (`yt_songs` with notes); the server cuts the chart from the song's notes (`applyBites`), so it practises offline on the app's drums. "Play it with the song" opens Songs → Play on those bars. |
@@ -83,6 +83,14 @@ writes the next lesson aimed at your weakest skill, with a one-line "why this, f
 with a different tool. A new coach lesson replaces its unstarted ones for that stage, so they don't pile up. Coach lessons are validated with
 zod, stored in SQLite and preferred by the daily planner. The built-in lessons are the offline
 fallback and the examples the coach is shown.
+
+**The coach teaches the student the evidence shows.** `studentRead` (`src/engine/planner.ts`) sums up the last 4
+finished lessons' stars and the last 12 takes as a pace: *new*, *struggling* (takes under 75% or mostly 1 star),
+*steady*, or *flying* (★★★ lessons, takes 95%+ with spread ≤ 20 ms), plus the tempo they own (`comfortableBpm`). Both
+the lesson writer and the live coach get it; "adult beginner" is only the assumption while there's no data. A flying
+student gets no lessons in between: the stage's checkpoints come first in the plan and the coach isn't asked for filler.
+A coach lesson stands in for a checkpoint only if its last step plays it (`standsInFor`): the checkpoint's target
+tempo and at least its notes per bar on each of its drums.
 
 ## Accomplishment: stars, ranks and show-off songs
 

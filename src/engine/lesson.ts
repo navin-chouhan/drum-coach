@@ -115,6 +115,9 @@ export function probeTempo(perBarAccuracy: number[], start: number, pass: number
   return broke < 0 ? start + 5 * Math.max(0, perBarAccuracy.length - 1) : Math.max(MIN_BPM, start + 5 * broke - 10);
 }
 
+/** A flying student (engine/planner.ts studentRead) finds their tempo on a drill step instead of climbing from its start. */
+export const autoProbe = (s: Step, pace: string) => pace === 'flying' && toolOf(s) === 'drill' && !s.rest && s.bpm.target > s.bpm.start;
+
 export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 2, BPM_STEP = 5, MIN_BPM = 40, ROUGH_ACCURACY = 60;
 export const REVIEW_DAYS = [2, 5, 12, 30];
 
@@ -184,9 +187,9 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
  * next step; below the step's start tempo (you eased off) one clean take climbs +10. Fail: a rough take (under
  * ROUGH_ACCURACY % landed) → −10 at once; FAILS_BEFORE_SLOWDOWN close ones → −5. Never below MIN_BPM ('atFloor').
  * A `jam` step counts any take as clean. A `layers` step adds a layer per clean take (tempo stays) before the ladder;
- * a fail never takes a layer away.
+ * a fail never takes a layer away. A `strong` take (★★★ quality) and a streak challenge's pass count as both clean takes.
  */
-export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number): { next: LessonProgress; event: LadderEvent } {
+export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
   if (step.jam || step.rest || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
@@ -203,7 +206,7 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   if (step.jam || step.rest) { // any take (or the end of a rest) finishes the step
     if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   } else {
-    if (clean < CLEAN_TAKES && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
+    if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
     if (p.bpm < step.bpm.target) return { next: { ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + (eased ? 2 : 1) * BPM_STEP) }, event: 'up' };
     if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   }

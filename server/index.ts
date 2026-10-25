@@ -8,7 +8,9 @@ import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import type { RunRow } from '../src/engine/progress.ts';
 import { ask, getProvider } from './ai/coach.ts';
-import { applyBites, canStandIn, lessonInput, toLesson } from './ai/lessons.ts';
+import { applyBites, canStandIn, lessonInput, standsInFor, toLesson } from './ai/lessons.ts';
+import { LESSON_BY_ID } from '../src/content/curriculum.ts';
+import { studentRead } from '../src/engine/planner.ts';
 import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
@@ -181,6 +183,10 @@ app.post('/api/coach/session', async (req, reply) => {
       { started_at: string; bpm: number; accuracy: number; mean_offset: number; spread: number }[]).reverse()
       .map(r => ({ at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracyPct: r.accuracy, meanOffsetMs: r.mean_offset, spreadMs: r.spread }));
   }
+  if (event.type === 'open' || event.type === 'take') { // how they're doing overall, so the coach teaches this student, not a stereotype
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined;
+    event.student = studentRead(row ? JSON.parse(row.value).lessons ?? {} : {}, runRows(12));
+  }
   reply.hijack();
   const res = reply.raw;
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
@@ -328,7 +334,8 @@ app.post('/api/coach/lesson', async (req, reply) => {
     const same = now.find(l => l.title === r.data.title && l.level === input.milestone.level);
     if (same) return { data: same, cached: true };
     // Only a checkpoint of this stage can be stood in for, and only by a lesson that ends in a drill.
-    const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) && canStandIn(r.data.steps[r.data.steps.length - 1]) ? r.data.checkpoint : undefined;
+    const end = r.data.steps[r.data.steps.length - 1], cpLesson = r.data.checkpoint ? LESSON_BY_ID[r.data.checkpoint] : undefined;
+    const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) && canStandIn(end) && cpLesson && standsInFor(end, cpLesson) ? r.data.checkpoint : undefined;
     const lesson = toLesson(applyBites({ ...r.data, checkpoint: cp }, id => { const row = ytById(id); return row && ytSong(row); }), input.milestone.level);
     // The new lesson replaces the coach's unstarted ones for this stage, so they don't pile up.
     const progress = app.lessons ?? {};

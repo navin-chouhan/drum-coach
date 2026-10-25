@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -92,6 +92,20 @@ describe('tempo ladder', () => {
     expect(ladderStep(startProgress(free), free, false, D, 30).event).toBe('hold'); // first clean take of two
     const strict: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], trade: true, pass: { accuracy: 80 } }, lesson.steps[1]] };
     expect(ladderStep(startProgress(strict), strict, false, D, 30).event).toBe('slowDown');
+  });
+  it('a ★★★ take counts as both clean takes; a streak challenge needs one', () => {
+    expect(ladderStep(p0, lesson, true, D, 100, true)).toMatchObject({ event: 'up', next: { bpm: 65 } });
+    expect(ladderStep({ ...p0, bpm: 65 }, lesson, true, D, 100, true)).toMatchObject({ event: 'stepDone', next: { step: 1 } });
+    const ch: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], bpm: { start: 60, target: 60 }, pass: { streak: 8 } }, lesson.steps[1]] };
+    expect(ladderStep(startProgress(ch), ch, true, D)).toMatchObject({ event: 'stepDone', next: { step: 1 } });
+  });
+  it('a flying student finds their tempo on drill steps with a ladder; everyone else climbs from the start', () => {
+    const drill = lesson.steps[0]; // 60 → 65
+    expect(autoProbe(drill, 'flying')).toBe(true);
+    expect(autoProbe(drill, 'steady')).toBe(false);
+    expect(autoProbe({ ...drill, bpm: { start: 60, target: 60 } }, 'flying')).toBe(false); // nothing to climb
+    expect(autoProbe({ ...drill, copy: true }, 'flying')).toBe(false); // other tools keep their own flow
+    expect(autoProbe({ ...drill, layers: [['snare']] }, 'flying')).toBe(false);
   });
   it('a jam step counts any take and moves on', () => {
     const jam: Lesson = { ...lesson, steps: lesson.steps.map(s => ({ ...s, jam: true })) };

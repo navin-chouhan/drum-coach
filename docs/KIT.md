@@ -38,3 +38,8 @@ amidi -p hw:1,0,0 -d          # raw dump; close before opening the browser
 App sounds (clicks, browser drum sounds) reach the speakers `baseLatency + outputLatency` late; the Latency card shows it.
 On PipeWire, start Chrome with `PIPEWIRE_LATENCY=128/48000 google-chrome` for a smaller output buffer. The kit module's
 own sound has no such delay: for playing, headphones on the module with browser drum sounds off is the fastest path.
+
+## Retriggers and crosstalk (filtered in `src/input/hits.ts`)
+Pads retrigger 29–56 ms after a stroke at about half its velocity (snare 8–12 of 24–27 strokes): dropped as bounces.
+A soft snare stroke (a ghost) can also fire the hi-hat ~10 ms later, no louder than the snare: dropped as crosstalk,
+otherwise it steals a hi-hat note as a miss in ghost-note grooves.

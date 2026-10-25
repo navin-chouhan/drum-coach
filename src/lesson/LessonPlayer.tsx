@@ -4,8 +4,8 @@ import { summarizeRun } from '../coach/summary';
 import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
-import { afterReview, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
-import { checkpointsOf } from '../engine/planner';
+import { afterReview, autoProbe, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { checkpointsOf, studentRead } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
 import type { SessionRole } from '../engine/planner';
@@ -20,7 +20,7 @@ import { requestSong } from '../ui/nav';
 import { SheetMusic } from '../notation';
 import { hush, say, voiceEngine } from '../voice/voice';
 import { onHit } from '../input/hits';
-import { canRunAction, coachTake, dropCoachAction, onCoachAction, runAction, useCoach } from '../coach/session';
+import { canRunAction, coachTake, dropCoachAction, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
 import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
@@ -55,7 +55,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
   const lastTake = useRef<Finished>(undefined);
-  const probing = useRef<{ tempo: number; accs: number[] }>(undefined), probed = useRef(false), probeTimer = useRef<ReturnType<typeof setTimeout>>(undefined); // find your tempo
+  const probing = useRef<{ tempo: number; accs: number[] }>(undefined), probed = useRef<number>(undefined), probeTimer = useRef<ReturnType<typeof setTimeout>>(undefined); // find your tempo
   const [kept, setKept] = useState(new Set<string>()); // fills kept from a take: `${startedAt}/${bar}`
   const [engine, setEngine] = useState<'piper' | 'browser'>();
   useEffect(() => { void voiceEngine().then(setEngine); }, []);
@@ -117,7 +117,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         probeTimer.current = setTimeout(probeBar, 0);
       } else {
         const working = probeTempo(pr.accs, step.bpm.start, pass);
-        probing.current = undefined; probed.current = true;
+        probing.current = undefined; probed.current = stepIdx;
         saveProgress(lesson.id, { ...progressOf(lesson), bpm: working, clean: 0, fails: 0 });
         const say = `Your tempo today: ${working} BPM. That's where we practise.`;
         outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: say, say });
@@ -166,19 +166,23 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         o = { passed: check.ok, itemDone: true, nums, say, text: `${say} ${landed}` };
       } else { const say = check.ok ? 'Still solid.' : "We'll come back to this one tomorrow."; o = { passed: check.ok, itemDone: true, nums, say, text: `${landed} ${say}` }; }
     } else {
-      const { next, event } = ladderStep(p, lesson, check.ok, today(), st.accuracy);
+      // Your own bars count however you fill them, but they have to be filled: a silent answer isn't a take.
+      const emptyBars = !!fs && !fs.stats.hits;
+      const { next, event } = emptyBars ? { next: p, event: 'hold' as const } : ladderStep(p, lesson, check.ok, today(), st.accuracy, check.ok && starsFor(st) === 3);
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
+      // The checkpoint this lesson proves (itself, or the one a coach lesson stands in for) was it already passed?
+      const provedBefore = !!getSettings().lessons[lesson.checkpoint ?? lesson.id]?.completedAt;
       saveProgress(lesson.id, stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next);
       // A coach lesson standing in for a checkpoint passes it; the checkpoint itself comes back for review.
       const cp = lesson.checkpoint && LESSON_BY_ID[lesson.checkpoint];
       if (event === 'lessonDone' && cp && !getSettings().lessons[cp.id]?.completedAt)
         saveProgress(cp.id, { ...startProgress(cp), bestBpm: next.bestBpm, completedAt: next.completedAt, reviewDue: next.reviewDue, stars });
-      // Rank up: this was the last open checkpoint of its stage.
+      // Rank up: this was the last open checkpoint of its stage (a coach lesson for an already passed checkpoint isn't).
       const stage = MILESTONES.find(m => m.checkpoints.includes(cp ? cp.id : lesson.id)), s = getSettings();
-      const rankUp = event === 'lessonDone' && !p.completedAt && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
-      const ok = check.ok || !!step.jam || (free.length > 0 && !step.pass);
+      const rankUp = event === 'lessonDone' && !provedBefore && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
+      const ok = !emptyBars && (check.ok || !!step.jam || (free.length > 0 && !step.pass));
       const msg: Record<LadderEvent, string> = {
-        hold: ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
+        hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
         up: `Up to ${next.bpm} BPM!`,
         slowDown: `Let's take it to ${next.bpm} BPM. Slower is how it sticks.`,
         layerUp: `Now add the ${(lanesNow(step, next) ?? []).filter(d => !(lanesNow(step, p) ?? []).includes(d)).map(laneName).join(' and ')}.`,
@@ -192,8 +196,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       o = { passed: ok, event, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
-    // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting).
-    if (o.event === 'lessonDone' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
+    // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting,
+    // or you're flying through the stage: then its checkpoints are next, no lessons in between).
+    if (o.event === 'lessonDone' && studentRead(getSettings().lessons).pace !== 'flying' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
       requestCoachLesson(`after-${lesson.id}-${f.startedAt}`);
     // Between takes of a step the verdict stays on screen; the coach speaks once the step or lesson is done.
     if (o.itemDone && getSettings().voice) void say(o.text);
@@ -246,7 +251,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   // One bar of find-your-tempo at the current probe tempo (count-in only before the first).
   // Four clicks, then one bar, every time: chained bars without a count-in didn't line up.
   const probeBar = () => start(chart, { ...options(false), toBar: 1, repeats: 1, speed: (probing.current?.tempo ?? bpm) / chart.bpm, countInBars: 1, probe: true });
-  const canProbe = !!step.probe && !oneTake && !probed.current && p.bpm === step.bpm.start && !p.clean && !p.fails; // only an untouched step
+  // Only an untouched step; a flying student probes every drill step with a ladder (autoProbe), not only probe steps.
+  const canProbe = (!!step.probe || autoProbe(step, studentRead(getSettings().lessons).pace)) && !oneTake && probed.current !== stepIdx && p.bpm === step.bpm.start && !p.clean && !p.fails;
   // Zoom in: loop one bar 4 times, 10 BPM slower, with the app playing softly underneath.
   const zoomIn = (bar: number) => { setDetails(false); start(chart, { ...options(false), fromBar: bar, toBar: bar, repeats: 4, speed: Math.max(MIN_BPM, bpm - 10) / chart.bpm, guide: true, zoom: bar }); };
   // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.
@@ -280,7 +286,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
 
   // The moves, each with its kit gesture (engine/padCommands.ts). The main one is also "yes" (hi-hat pedal × 3, crash × 2).
   const coach = useCoach(), opened = useRef(Date.now()).current;
-  const fresh2 = coach.reply && coach.at > Math.max(opened, f ? Date.parse(f.startedAt) : 0) ? coach.reply : undefined; // the coach's answer to this take
+  const fresh2 = replyFor(coach, f, opened); // the coach's answer to this take
   const goNext = onNext ?? onBack;
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
   const resting = !!step.rest && !oneTake;
@@ -344,7 +350,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const dots = step.layers && !oneTake ? step.layers.map((_, i) => (i < layer! ? 'done' : i === layer ? 'on' : ''))
     : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
   const toTarget = Math.max(0, Math.min(1, (bpm - step.bpm.start) / Math.max(1, step.bpm.target - step.bpm.start)));
-  const line = fresh2?.say ?? (coach.status === 'thinking' && f ? '…' : outcome?.say ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
+  const line = fresh2?.say ?? (thinkingAbout(coach, f) ? '…' : outcome?.say ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
     : canProbe ? "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard."
     : flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text));
   const howHint = lesson.how.split(/(?<=\.)\s/)[0];
@@ -392,7 +398,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
               {outcome.nums.total > 0 && <div><b>{outcome.nums.recoveries}</b><span>comebacks</span></div>}
             </div>
             {outcome.reason && <p className="tip">💡 {outcome.reason}</p>}
-            <p className="small">{outcome.nums.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && (layer === undefined || layer === step.layers!.length - 1) ? `${p.clean} of ${CLEAN_TAKES} clean takes at ${p.bpm} BPM` : ''}</p>
+            <p className="small">{outcome.nums.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && !outcome.itemDone && (layer === undefined || layer === step.layers!.length - 1) ? `${p.clean} of ${CLEAN_TAKES} clean takes at ${p.bpm} BPM` : ''}</p>
             {f && <LatencyHint f={f} />}
             {yourFills.length > 0 && <div className="actions">{yourFills.map((fl, k) => kept.has(`${f!.startedAt}/${fl.bar}`)
               ? <span key={fl.bar} className="small">✓ fill {k + 1} kept</span>
