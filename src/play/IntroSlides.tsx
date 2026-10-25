@@ -12,7 +12,7 @@ const TAP_GAP_MS = 250; // a stick bounce or a double hit counts once
  * While they're up, the other pad gestures do nothing (a quick double snare mustn't start a take).
  */
 export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, onDone, onClose }: {
-  title: string; sub?: string; bpm: number; what: string; notes: ChartNote[]; beatsPerBar: number; focus?: string;
+  title: string; sub?: string; bpm: number; what: string; notes: (ChartNote & { mine?: boolean })[]; beatsPerBar: number; focus?: string;
   onDone: () => void; onClose: () => void;
 }) {
   const [i, setI] = useState(0);

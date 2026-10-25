@@ -343,7 +343,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   return (
     <div className={`lessonScreen ${playing ? 'playing' : ''}`}>
       {celebration}
-      {intro && <IntroSlides title={lesson.title} sub={step.title} bpm={bpm} what={step.text} notes={chart.notes.filter(n => !n.auto && (!lanes || lanes.includes(n.drum)))}
+      {intro && <IntroSlides title={lesson.title} sub={step.title} bpm={bpm} what={step.text} notes={chart.notes.filter(n => !n.auto).map(n => ({ ...n, mine: !lanes || lanes.includes(n.drum) }))}
         beatsPerBar={beatsPerBar(chart)} focus={outcome?.reason ?? (hints ? howHint : undefined)} onDone={() => { const r = intro.run; setIntro(undefined); r(); }} onClose={() => setIntro(undefined)} />}
       <div className="lbar card">
         <button className="link back" onClick={() => { stop(); onBack(); }}>← Journey</button>

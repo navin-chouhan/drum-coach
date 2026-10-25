@@ -106,8 +106,8 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
     points.push({ beat: barStart + bpb, x: x + w - 4 });
     points.sort((a, b) => a.beat - b.beat || a.x - b.x);
     if (o.hints) { // the student's notes only: the app's (grey) ones aren't theirs to count
-      const mine = o.notes.filter(n => n.t >= barStart - 1e-6 && n.t < barStart + bpb - 1e-6 && !(n.i !== undefined && o.dim?.(n.i)));
-      for (const h of noteHints(mine.map(n => ({ ...n, t: n.t - barStart })), bpb)) {
+      const inBar = o.notes.filter(n => n.t >= barStart - 1e-6 && n.t < barStart + bpb - 1e-6);
+      for (const h of noteHints(inBar.map(n => ({ ...n, t: n.t - barStart, mine: !(n.i !== undefined && o.dim?.(n.i)) })), bpb)) {
         const hx = xAtBeat(points, barStart + h.t) + 2;
         ctx.setFont('Arial', 14, 'bold'); ctx.fillText(h.count, hx - ctx.measureText(h.count).width / 2, y + ROW_H + 4);
         ctx.setFont('Arial', 11, 'bold'); ctx.fillText(h.limbs, hx - ctx.measureText(h.limbs).width / 2, y + ROW_H + 20);
