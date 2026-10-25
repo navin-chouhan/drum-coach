@@ -5,8 +5,10 @@ import { MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
 import { toolOf, type Genre, type Lesson, type Tool } from '../engine/lesson';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
-import { BADGES, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
+import { songBarCount, useYtSongs } from '../youtube/api';
+import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
@@ -23,6 +25,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const [editing, setEditing] = useState(false);
   const [dash, setDash] = useState<Dashboard>();
   const [runs, setRuns] = useState<RunRow[]>([]);
+  const [songs] = useYtSongs();
   const [newBadges, setNewBadges] = useState<string[]>([]);
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
@@ -86,6 +89,9 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const line = greeting({ hour: new Date().getHours(), streak: dash?.streak ?? 0, runs: dash?.totalRuns ?? 0, landedWeek: dash?.landedWeek ?? null, landedLastWeek: dash?.landedLastWeek ?? null,
     next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus } });
   const trailDone = trail.filter(l => done(l.id)).length;
+  const project = s.profile.song?.stage === milestone?.level ? s.profile.song : undefined;
+  const projectSong = songs.find(x => x.id === project?.id);
+  const songBars = projectSong ? songBarCount(projectSong) : 0;
   // Beat your best: a finished lesson you haven't played for longest (improvising tools have no record to beat).
   const lastPlayed = (l: Lesson) => dash?.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])))
@@ -116,6 +122,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               <li>🔥 <b>{dash?.streak ?? 0}-day</b> streak</li>
               {dash?.landedWeek != null && <li>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</li>}
               <li>⏱ <b>{Math.round(dash?.minutesToday ?? 0)}</b> min today</li>
+              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : 'add its notes in Songs'}</li>}
             </ul>
           </div>
         </div>
@@ -143,11 +150,11 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
         </div>
       </div>}
 
-      {passed.length > 0 && <ShowoffCard stage={passed[passed.length - 1]} profile={s.profile} />}
+      {milestone && !project && <ShowoffCard stage={milestone} profile={s.profile} />}
 
       {milestone && <div className="card">
         <h3>Stage {path.indexOf(milestone) + 1} · {milestone.title}</h3>
-        <Trail lessons={trail} current={hero} done={done} isChallenge={l => milestone.checkpoints.includes(l.checkpoint ?? l.id)} onOpen={id => setOpen({ lessonId: id })} />
+        <Trail song={project?.title} lessons={trail} current={hero} done={done} isChallenge={l => milestone.checkpoints.includes(l.checkpoint ?? l.id)} onOpen={id => setOpen({ lessonId: id })} />
       </div>}
 
       <details className="planFold">
@@ -220,7 +227,7 @@ const iconOf = (l: Lesson) => TOOL_ICON[toolOf(l.steps[0])] || KIND_ICON[l.kind]
  * This stage as a winding trail of stops: done ones green, the next one big, the challenges as stars, a song at the end.
  * Kept to about ten stops: older finished lessons fold into one "done" stop, later ones into "+N more" (all are in Full path).
  */
-function Trail({ lessons, current, done, isChallenge, onOpen }: { lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
+function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: string; lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
   const c = Math.max(0, current ? lessons.indexOf(current) : lessons.findIndex(l => !done(l.id)));
   const before = lessons.slice(0, c), after = lessons.slice(c + 1);
   const folded = before.length > 2 ? before.slice(0, -1) : [];
@@ -234,7 +241,7 @@ function Trail({ lessons, current, done, isChallenge, onOpen }: { lessons: Lesso
     ...after.filter(l => !later.includes(l) && !isChallenge(l)).map(stop),
     ...(later.length ? [{ icon: `+${later.length}`, name: 'more', cls: 'more' }] : []),
     ...after.filter(isChallenge).map(stop),
-    { icon: '🎵', name: 'Unlock a real song', cls: 'song' },
+    { icon: '🎵', name: song ?? 'Unlock a real song', cls: 'song' },
   ];
   const pts = stops.map((_, i) => ({ x: 5 + (i * 90) / Math.max(1, stops.length - 1), y: 50 + 22 * Math.sin(i * 1.3) }));
   return (

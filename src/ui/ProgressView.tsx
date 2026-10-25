@@ -3,8 +3,8 @@ import { MILESTONES } from '../content/curriculum';
 import { checkpointsOf } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
-import { useYtSongs } from '../youtube/api';
-import { BADGES, dashboard, type Dashboard, type RunRow } from '../engine/progress';
+import { songBarCount, useYtSongs } from '../youtube/api';
+import { BADGES, barsReady, dashboard, type Dashboard, type RunRow } from '../engine/progress';
 import { requestLesson, requestPlay, requestSong } from './nav';
 
 const ACCENT = '#2F6FE4';
@@ -121,8 +121,8 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
   const [songs] = useYtSongs();
   const passed = (m: (typeof MILESTONES)[number]) => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => s.lessons[l.id]?.completedAt); };
   const stars = Object.values(s.lessons).reduce((a, p) => a + (p.completedAt ? p.stars ?? 1 : 0), 0);
-  // shortcut: any scored run at 85%+ counts, even of part of the song; store the bar range with runs to require the whole song
-  const showoff = songs.filter(song => runs.some(r => r.chartId === song.id && r.accuracy >= 85));
+  // A show-off song: every bar played at 85% or better (across takes).
+  const showoff = songs.filter(song => { const n = songBarCount(song); return n > 0 && barsReady(runs, song.id, n) >= n; });
   return (
     <div className="card trophies">
       <h3>Trophy shelf</h3>

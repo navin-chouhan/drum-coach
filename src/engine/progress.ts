@@ -2,6 +2,7 @@ export type RunRow = {
   chartId: string; chartTitle: string; level?: number; startedAt: string; durationS: number;
   bpm: number; speed: number; accuracy: number; meanOffset: number; spread: number;
   notes?: number; // notes in the take (older rows may lack it)
+  fromBar?: number; toBar?: number; // the bars the take covered
 };
 export type CatalogItem = { id: string; title: string; bpm: number; level?: number; kind?: string };
 export type Suggestion = { chartId: string; bpm: number; reason: string };
@@ -102,4 +103,12 @@ export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: n
     'stage-3star': stages.some(ids => ids.length > 0 && ids.every(id => lessons[id]?.stars === 3)),
   };
   return BADGES.filter(b => got[b.id]).map(b => b.id);
+}
+
+/** Song project: which of a song's bars you've played at 85% or better (in any take covering them). */
+export function barsReady(runs: RunRow[], songId: string, totalBars: number): number {
+  const ok = new Set<number>();
+  for (const r of runs) if (r.chartId === songId && r.accuracy >= 85 && r.fromBar && r.toBar)
+    for (let b = r.fromBar; b <= Math.min(r.toBar, totalBars); b++) ok.add(b);
+  return ok.size;
 }

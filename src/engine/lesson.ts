@@ -46,7 +46,7 @@ export type Lesson = {
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
 export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[] }; // rank: your title once it's passed
-export type Profile = { goals: Genre[]; minutesPerDay: number; onboarded: boolean };
+export type Profile = { goals: Genre[]; minutesPerDay: number; onboarded: boolean; song?: { id: string; title: string; stage: number } }; // song: this stage's song project
 export type LessonProgress = {
   step: number; bpm: number; clean: number; fails: number; bestBpm: number;
   completedAt?: string; reviewStage: number; reviewDue?: string; // dates are local YYYY-MM-DD

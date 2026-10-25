@@ -25,7 +25,8 @@ Your toolbox. Each step uses one tool, and the app runs it:
   Write the chart with the groove in the other bars. Any take counts unless you set "pass".
 - "bite": a few bars of a real song from "songs" (only those; never invent an id): "bite": {"songId", "fromBar",
   "toBar"} (1–4 bars). Write "chart" as your best guess of the part; the app replaces it with the song's saved notes.
-  Students love these: use one whenever a saved song has bars at their level.
+  Students love these: use one whenever a saved song has bars at their level. "projectSong" is the song they picked
+  for this stage: its bites come first, working through the song a few bars at a time across lessons.
 - "count": "countAloud": "quarters" or "8ths" on any step: my voice counts along for 4 bars, then only says "one"
   so they take over. Use it on counting lessons and whenever they react to the click instead of feeling the beat.
 - "layers": build a groove one limb at a time. "layers": [["hihat"], ["hihat","kick"], ["hihat","kick","snare"]]

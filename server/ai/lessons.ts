@@ -29,7 +29,8 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
       return { ...brief(l), level: l.level, byCoach: l.source === 'ai', step: p.step + 1, of: l.steps.length, bpm: p.bpm, passed: !!p.completedAt, bestBpm: p.bestBpm || undefined, stars: p.stars };
     }),
     recentRuns: recent.slice(-15),
-    // Songs they saved with notes: the only ones a song bite may name.
+    // This stage's song project (bites from it come first) and the songs saved with notes (the only ones a bite may name).
+    projectSong: profile.song?.stage === m.level ? profile.song : undefined,
     songs: songs.filter(s => s.notes.length).map(s => ({ id: s.id, title: s.title, bars: Math.floor(s.notes[s.notes.length - 1].t / beatsPerBar(s)) + 1 })),
     ...(struggle ? { struggle } : {}),
     examples: CURRICULUM.filter(l => l.level === m.level && l.kind !== 'song').slice(0, 4).map(l => ({ ...brief(l), what: l.what, how: l.how, steps: steps(l) })),
