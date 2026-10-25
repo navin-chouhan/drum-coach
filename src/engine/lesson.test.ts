@@ -160,6 +160,9 @@ describe('find your tempo', () => {
     expect(probeTempo([100, 95, 90, 60], 60, 75)).toBe(65); // broke at 75 BPM
     expect(probeTempo([100, 100, 100], 60, 75)).toBe(70);
     expect(probeTempo([50], 45, 75)).toBe(40); // never under 40
+    // With a target cap, the last bar plays the target itself (90 → 92, not 95).
+    expect(probeTempo([100, 100, 100, 100], 80, 75, 92)).toBe(92);
+    expect(probeTempo([100, 100, 100, 60], 80, 75, 92)).toBe(82); // broke at the target 92
   });
 });
 

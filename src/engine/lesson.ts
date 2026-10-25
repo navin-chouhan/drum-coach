@@ -107,12 +107,13 @@ export const clickOnBeat = (beatInBar: number, clickOn?: Step['clickOn']) => cli
 export const pickVariant = (n: number, take: number) => Math.floor(seededRandom(take * 7919 + 1)() * n);
 
 /**
- * Find your tempo: bar i was played at start + 5·i. The working tempo is 10 below the first bar that fell apart
+ * Find your tempo: bar i was played at start + 5·i (capped at `target`). The working tempo is 10 below the first bar that fell apart
  * (under the pass bar), or the last tempo when none did; never under MIN_BPM.
  */
-export function probeTempo(perBarAccuracy: number[], start: number, pass: number): number {
+export function probeTempo(perBarAccuracy: number[], start: number, pass: number, target = Infinity): number {
+  const at = (i: number) => Math.min(target, start + 5 * i); // the last bar plays the target itself when +5 overshoots it
   const broke = perBarAccuracy.findIndex(a => a < pass);
-  return broke < 0 ? start + 5 * Math.max(0, perBarAccuracy.length - 1) : Math.max(MIN_BPM, start + 5 * broke - 10);
+  return broke < 0 ? at(Math.max(0, perBarAccuracy.length - 1)) : Math.max(MIN_BPM, at(broke) - 10);
 }
 
 /** A flying student (engine/planner.ts studentRead) finds their tempo on a drill step instead of climbing from its start. */

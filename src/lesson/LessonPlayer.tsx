@@ -111,12 +111,12 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     if (f.options.probe && probing.current) {
       const pr = probing.current, pass = passFor(lesson.level).accuracy;
       pr.accs.push(f.stats.accuracy);
-      if (f.stats.accuracy >= pass && pr.tempo + 5 <= step.bpm.target) {
-        pr.tempo += 5;
+      if (f.stats.accuracy >= pass && pr.tempo < step.bpm.target) {
+        pr.tempo = Math.min(step.bpm.target, pr.tempo + 5);
         outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: `Clean. ${pr.tempo}…`, say: `Clean! Now ${pr.tempo}…` });
         probeTimer.current = setTimeout(probeBar, 0);
       } else {
-        const working = probeTempo(pr.accs, step.bpm.start, pass);
+        const working = probeTempo(pr.accs, step.bpm.start, pass, step.bpm.target);
         probing.current = undefined; probed.current = stepIdx;
         saveProgress(lesson.id, { ...progressOf(lesson), bpm: working, clean: 0, fails: 0 });
         const say = `Your tempo today: ${working} BPM. That's where we practise.`;
