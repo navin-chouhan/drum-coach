@@ -41,6 +41,12 @@ function startHelper(uv: string) {
   return { proc, ready, waiting };
 }
 
+// base.en hears the count "and of three" as "end of three" (the larger models fix it but cost 3x the time and
+// memory on this laptop); "the end of four bars" is left alone
+export const fixCounts = (text: string) =>
+  text.replace(/\b([Ee])nd of (one|two|three|four|[1-4])\b(?!\s+(?:bars?|measures?|beats?|counts?|times|minutes?|seconds?)\b)/g,
+    (_, e: string, n: string) => `${e === 'E' ? 'A' : 'a'}nd of ${n}`);
+
 /** Transcribes one recording: 16-bit PCM WAV (the browser sends 16 kHz mono). */
 export async function transcribe(audio: Buffer): Promise<string> {
   const uv = findUv();
@@ -56,7 +62,7 @@ export async function transcribe(audio: Buffer): Promise<string> {
       h.proc.stdin.write(`${JSON.stringify({ id, path: file })}\n`);
     });
     if (r.error !== undefined) throw new Error(r.error);
-    return r.text!;
+    return fixCounts(r.text!);
   } finally { rmSync(file, { force: true }); }
 }
 

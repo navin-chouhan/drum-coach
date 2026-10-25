@@ -16,7 +16,7 @@ rl.on('line', l => { const r = JSON.parse(l); const t = fs.readFileSync(r.path, 
 `);
 chmodSync(fake, 0o755);
 process.env.UV_BIN = fake;
-const { transcribe, sttStatus, stopStt } = await import('./stt');
+const { transcribe, sttStatus, stopStt, fixCounts } = await import('./stt');
 afterAll(stopStt);
 
 describe('speech to text', () => {
@@ -30,5 +30,12 @@ describe('speech to text', () => {
   it('reports a bad recording and keeps working', async () => {
     await expect(transcribe(Buffer.from('bad'))).rejects.toThrow('cannot decode');
     expect(await transcribe(Buffer.from('again'))).toBe('again');
+  });
+  it('turns a misheard "end of three" back into the count', async () => {
+    expect(await transcribe(Buffer.from('Am I rushing the hi-hat on the end of three?'))).toBe('Am I rushing the hi-hat on the and of three?');
+    expect(fixCounts('End of 2 is late')).toBe('And of 2 is late');
+    expect(fixCounts('the end of one and the end of four')).toBe('the and of one and the and of four');
+    expect(fixCounts('at the end of four bars, and the end of three times')).toBe('at the end of four bars, and the end of three times');
+    expect(fixCounts('the end of the song, the end of fourteen')).toBe('the end of the song, the end of fourteen');
   });
 });
