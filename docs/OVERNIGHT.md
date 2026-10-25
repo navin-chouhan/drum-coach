@@ -1,5 +1,63 @@
 # Overnight run, 2026-10-25 → 26
 
+## Morning summary (read this first)
+**Branch:** `claude/plan-phase1-2026-10-25`, worktree `.claude/worktrees/plan-phase1`. Nothing merged, nothing pushed,
+main untouched. Final check: **248/248 tests pass**, `tsc` clean, no new lint problems except the "refs during render" kind.
+Test servers (5180 / 8790) stopped, Chrome tab closed. Your real `data/` and localhost:5173 were never touched (the
+play test used a copy in the job's scratch folder).
+
+**Done**
+- Must go: M3 (6a8cfd2), M4 (32efe15), M8 (1e5a4e6), M9 (2d473a6), M10 (b8a1f70), M12 (e8fb560), M13 (980d425),
+  M20 (d4d6c79), M5 (91e7191, bd2af78), M6 (447b152), M7 (a3466b2), M15 (4e40d0a), M16 (5084409), M17 (95045f2),
+  M18 (cb526e9), M19 (3094bfa).
+- M1, the struggle-path play test as a beginner (round 6 in docs/PLAYTEST.md). Six fixes, one commit each:
+  - At 40 BPM, a take where every note landed but the timing failed now gets the timing fix instead of "try wait mode"
+    (543f74f).
+  - **"🐢 Learn it slowly" at 40 BPM wasn't wait mode.** It played a scored take at 35 BPM that could pass and climb.
+    Now it really is wait mode, and it's the big move after a rough take at the floor (fe83e7b).
+  - The "Fix bar" loop only says "sounds better" when it was better (5ea2b4e).
+  - A beginner whose hits wander more than ±40 ms now reads as *struggling*, not *steady* (9da0848).
+  - After "Lesson complete" the big move is "Next" again, not the coach's "Try a slower tempo" (dfcf635).
+  - The round log is in 6ddb795.
+- M2: the real-kit checklist for you, in docs/PLAYTEST.md under "M2: real-kit checklist" (a279a50).
+- M14, bug part only: the welcome screen saves your goals before opening Setup → Pads (a943a5a). The new setup step
+  waits for its mockup.
+- Engine-only revamp work. None of it changes a screen.
+  - R7: ranks proven on another day (0078ec3).
+  - R2: per-note timing windows (b39ccb1). These are live: 8th notes beside 16ths keep their ±100 ms window. Checked in
+    Chrome.
+  - R2: grace-note scoring for flams, drags and ruffs (3a62a7a).
+  - R4: `src/engine/feel.ts` (e38efe6).
+  - R1: `src/engine/band.ts` (abdc06d).
+
+**Reverted or blocked:** none reverted. Still open:
+- M11: waiting for its mockup.
+- M14's setup step: waiting for its mockup.
+- R2 isn't finished: buzz rolls, notation, highway dots, keyboard and emulated-kit graces, the lesson-prompt line, and
+  the new lessons.
+- R1 and R4 aren't wired into the player, the screens or the pass check.
+- M17's "Ask again" button wasn't clicked in Chrome. The test data has no song with a beat grid. Its logic is
+  unit-tested.
+
+**Mockups to review** (open them with `npm run dev`, then http://localhost:5173/docs/mockups/NAME.html):
+- `docs/mockups/m11-journey-after.html`
+- `docs/mockups/m14-onboarding-setup.html`
+- `docs/mockups/lesson-screen.html`
+- `docs/mockups/journey.html`
+- `docs/mockups/self-check.html`
+
+They load the app's real stylesheet. Chrome screenshots didn't work tonight, so I checked them by script only: they
+load, use your theme, and don't scroll sideways. Please look at them yourself.
+
+**What you need to do**
+1. Look at the 5 mockups and say "build it", or what to change.
+2. Run the M2 kit checklist at the MPS-150. Start with part A, latency: your own data looks like setup latency.
+3. Answer the 3 questions below.
+4. Have the reviewer session review the branch, then decide about merging.
+
+One thing to know: the M16 lesson model (Sonnet on medium) applies to lessons, plans, show-off picks and song grooves.
+Their cached answers are asked fresh once. The live chat and tips keep their cache.
+
 Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1`). Plan: `docs/PLAN.md` /
 `~/.claude/plans/plan-all-the-change-purrfect-flamingo.md`.
 
@@ -38,3 +96,11 @@ Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1
 | 01:35 | M19 | done | 3094bfa | 222 | – |
 | 02:00 | M1 play test, Beginner preset (round 6) | done | 543f74f, fe83e7b, 5ea2b4e, 9da0848, dfcf635, 6ddb795 | 223 | ✓ Chrome on 5180/8790 with a copy of your data: slow-downs, floor, wait mode, Fix bar, "something different", live tips, trade one-off, M3/M4/M6 lines, Practice (Solid) |
 | 02:40 | M2 real-kit checklist written | done | a279a50 | – | – (owner runs it) |
+| 03:10 | Mockups M11, M14, lesson screen, Journey, self-check | done | 1e02bac | – | ✓ all 5 load with the app's styles (scripted check; screenshots time out) |
+| 03:15 | M14 bug part: save before Setup → Pads | done | a943a5a | 223 | ✓ goals kept, onboarding done |
+| 03:25 | R7 engine | done | 0078ec3 | 226 | – (engine only) |
+| 03:35 | R2 per-note windows | done | b39ccb1 | 228 | ✓ a Solid take of "Hi-hat 8th notes" scored 32/32 after the change |
+| 03:50 | R2 grace-note scoring | done | 3a62a7a | 236 | – (engine only) |
+| 04:00 | R4 feel.ts | done | e38efe6 | 241 | – |
+| 04:10 | R1 band.ts | done | abdc06d | 248 | – |
+| 04:15 | final run | 248/248, tsc clean | – | – | servers stopped, tab closed |
