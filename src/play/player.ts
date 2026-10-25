@@ -2,7 +2,7 @@ import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '.
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
 import { inFreeBar } from '../engine/jam';
 import { clickOnBeat } from '../engine/lesson';
-import { computeStats, createMatcher, minGapBeats, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
+import { computeStats, createMatcher, noteWindows, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
@@ -178,7 +178,8 @@ export function start(chart: Chart, options: PlayOptions) {
     return;
   }
 
-  const match = createMatcher(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(scored.notes) * beatMs, options.goodMs));
+  // Each note's Good window comes from its own drum's spacing (noteWindows), not the tightest gap in the take.
+  const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   if (!options.demo) cleanup.push(onHit(h => {
     const hit = { time: h.time - latency - drift, pad: h.pad, velocity: h.velocity };
     const m = match(hit);
@@ -275,7 +276,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
-  const match = createMatcher(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(run.notes) * beatMs, options.goodMs));
+  const match = createMatcher(noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   cleanup.push(onHit(h => {
     const hit = { time: ext.position(h.time - latency) * beatMs, pad: h.pad, velocity: h.velocity };
     const m = match(hit);

@@ -11,20 +11,23 @@ export function windowsFor(beatMs: number, gapMs = Infinity, goodMs = WINDOWS.go
   const good = Math.min(goodMs, Math.round(gapMs * 0.4));
   return { good, perfect: Math.min(WINDOWS.perfect, Math.round(good / 2)), near: Math.max(WINDOWS.near, beatMs * 0.3) };
 }
-/** Closest gap, in beats, between two notes on the same drum (Infinity if none repeat). */
-export function minGapBeats(notes: { t: number; drum: ChartDrum }[]) {
-  const last = new Map<ChartDrum, number>();
-  let gap = Infinity;
-  for (const n of [...notes].sort((a, b) => a.t - b.t)) {
-    const prev = last.get(n.drum);
-    if (prev !== undefined && n.t - prev > 1e-6) gap = Math.min(gap, n.t - prev);
-    last.set(n.drum, n.t);
-  }
-  return gap;
-}
 export type Judgement = 'perfect' | 'good' | 'miss';
 /** time = ms on the performance.now() clock (latency already removed for hits). */
-export type Expected = { time: number; drum: ChartDrum };
+export type Expected = { time: number; drum: ChartDrum; good?: number }; // good: this note's own Good window (noteWindows)
+/**
+ * Per-note Good windows: 40% of the gap to the nearest note on the same drum, capped at `goodMs`. Fast 16ths on the
+ * snare are judged tighter without shrinking the 8ths on the hi-hat beside them (a take-wide window did).
+ * `expected` must be sorted by time.
+ */
+export function noteWindows(expected: Expected[], goodMs = WINDOWS.good): Expected[] {
+  const gap = expected.map(() => Infinity), last = new Map<ChartDrum, number>();
+  expected.forEach((e, i) => {
+    const p = last.get(e.drum);
+    if (p !== undefined && e.time - expected[p].time > 1e-6) { const g = e.time - expected[p].time; gap[i] = Math.min(gap[i], g); gap[p] = Math.min(gap[p], g); }
+    last.set(e.drum, i);
+  });
+  return expected.map((e, i) => ({ ...e, good: Math.min(goodMs, Math.round(gap[i] * 0.4)) }));
+}
 export type PlayedHit = { time: number; pad?: PadId; velocity: number };
 export type Match = { index: number; offset: number; judgement: Judgement }; // 'miss' = claimed by an off-time stroke
 export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId; off?: number }; // off: ms of an off-time stroke (not a hit)
@@ -48,7 +51,7 @@ export function createMatcher(expected: Expected[], w = WINDOWS) {
     let best = -1, bestAbs = Infinity;
     for (let k = lo; k < expected.length && expected[k].time <= hit.time + w.good; k++) {
       const a = Math.abs(hit.time - expected[k].time);
-      if (!taken[k] && a < bestAbs && padMatches(expected[k].drum, hit.pad)) { best = k; bestAbs = a; }
+      if (!taken[k] && a < bestAbs && a <= (expected[k].good ?? w.good) && padMatches(expected[k].drum, hit.pad)) { best = k; bestAbs = a; }
     }
     if (best < 0) {
       // Strokes arrive in time order, so an open note behind the stroke can only be this stroke's: a late stroke
@@ -68,7 +71,8 @@ export function createMatcher(expected: Expected[], w = WINDOWS) {
     }
     taken[best] = 1;
     const offset = hit.time - expected[best].time;
-    return { index: best, offset, judgement: Math.abs(offset) <= w.perfect ? 'perfect' : 'good' };
+    const perfect = Math.min(w.perfect, Math.round((expected[best].good ?? Infinity) / 2));
+    return { index: best, offset, judgement: Math.abs(offset) <= perfect ? 'perfect' : 'good' };
   };
 }
 

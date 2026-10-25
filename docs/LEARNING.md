@@ -133,8 +133,8 @@ and sheet music), jam along or play it scored with the drumless version. MIDI + 
   limit (CV %), a weak-second-double limit or a ghost-to-accent volume ratio. Every checkpoint's last step limits
   spread (40 ms at levels 0–2, 30 at 3–4, 25 at 5–6): averaging on time isn't enough, each hit has to be.
 - A take is 4 bars; the proving take (last step at its target tempo) and copy-me takes are 8.
-- Good is ±100 ms (±150 at levels 0–1; Perfect ±40), shrunk to 40% of the closest gap between notes on one drum, so fast 16ths are judged
-  tighter.
+- Good is ±100 ms (±150 at levels 0–1; Perfect ±40), shrunk per note to 40% of the gap to its nearest neighbour on the same drum, so fast 16ths are
+  judged tighter while the 8ths beside them on another drum keep their window.
 - Keyboard timing is 10–30 ms late, so expect *Good* rather than *Perfect*. Never calibrate latency
   from the keyboard. Ghost-note checks need the real kit.
 - Wait mode is for learning the pattern only; it never counts as a pass.

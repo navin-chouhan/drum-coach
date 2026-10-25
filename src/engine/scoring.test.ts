@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { cleanBars, computeStats, createMatcher, heatSlotName, recentAccuracy, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { cleanBars, computeStats, createMatcher, heatSlotName, recentAccuracy, worstBars, estimateLatency, latencySuspect, noteWindows, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -57,6 +57,25 @@ describe('matcher', () => {
 
   it('unmapped hits are extras', () => {
     expect(createMatcher(expected)({ time: 1000, velocity: 80 })).toBeNull();
+  });
+});
+
+describe('per-note timing windows (R2)', () => {
+  // 120 BPM: hi-hat 8ths (250 ms apart) beside snare 16ths (125 ms apart)
+  const c = { ...chart, notes: pattern({ hihat: 'x.x.x.x.x.x.x.x.', snare: 'xxxx............' }, 4) };
+  const r = buildRun(c, { fromBar: 1, toBar: 1, repeats: 1 });
+  const exp = noteWindows(r.notes.map(n => ({ time: 1000 + n.t * 500, drum: n.drum })), 100);
+  it('each note gets 40% of the gap to its nearest same-drum neighbour, capped at Good', () => {
+    expect(exp.filter(e => e.drum === 'hihat').every(e => e.good === 100)).toBe(true);
+    expect(exp.filter(e => e.drum === 'snare').every(e => e.good === 50)).toBe(true);
+  });
+  it('8ths keep ±100 ms beside 16ths on another drum; the 16ths are judged tighter', () => {
+    const hh = exp.findIndex(e => e.drum === 'hihat' && e.time === 2000), sn = exp.findIndex(e => e.drum === 'snare' && e.time === 1000);
+    const match = createMatcher(exp, windowsFor(500, Infinity, 100));
+    expect(match({ time: 2090, pad: 'hhClosed', velocity: 80 })).toMatchObject({ index: hh, judgement: 'good' });
+    expect(match({ time: 1060, pad: 'snare', velocity: 80 })).toMatchObject({ index: sn, judgement: 'miss' }); // 60 ms on a 16th: off time
+    // one window for the whole take (the old way) would have shrunk the hi-hat to ±50 too
+    expect(createMatcher(exp.map(({ time, drum }) => ({ time, drum })), windowsFor(500, 125, 100))({ time: 2090, pad: 'hhClosed', velocity: 80 })?.judgement).toBe('miss');
   });
 });
 
@@ -200,10 +219,11 @@ describe('reactingToClick', () => {
 describe('windows shrink for fast notes', () => {
   it('Good is 40% of the closest same-drum gap, capped at ±100', () => {
     expect(windowsFor(1000)).toMatchObject({ good: 100, perfect: 40 });
-    const gap = minGapBeats(pattern({ snare: 'xxxxxxxxxxxxxxxx', kick: 'x...x...x...x...' }, 4)); // snare 16ths
-    expect(gap).toBe(0.25);
-    expect(windowsFor(600, gap * 600)).toMatchObject({ good: 60, perfect: 30 }); // 16ths at 100 BPM: 150 ms apart
-    expect(minGapBeats([{ t: 0, drum: 'kick' }, { t: 0, drum: 'hihat' }])).toBe(Infinity); // different drums don't count
+    const w = noteWindows(pattern({ snare: 'xxxxxxxxxxxxxxxx', kick: 'x...x...x...x...' }, 4).sort((a, b) => a.t - b.t).map(n => ({ time: n.t * 600, drum: n.drum })));
+    expect(w.find(e => e.drum === 'snare')?.good).toBe(60); // 16ths at 100 BPM: 150 ms apart
+    expect(w.find(e => e.drum === 'kick')?.good).toBe(100);
+    expect(windowsFor(600, 150)).toMatchObject({ good: 60, perfect: 30 });
+    expect(noteWindows([{ time: 0, drum: 'kick' }, { time: 0, drum: 'hihat' }]).map(e => e.good)).toEqual([100, 100]); // different drums don't count
   });
 });
 
