@@ -84,3 +84,13 @@ describe('coach lesson titles', () => {
     expect(uniqueTitle('The money beat', 'x'.repeat(200), builtins).length).toBeLessThanOrEqual(80);
   });
 });
+
+describe('after the whole path', () => {
+  it('the coach still gets an input: the last stage, marked postPath (no more "finished every milestone")', () => {
+    const progress = Object.fromEntries(CURRICULUM.map(l => [l.id, done()]));
+    const input = lessonInput({ profile, progress, aiLessons: [], recent: [] })!;
+    expect(input).not.toBeNull();
+    expect(input.postPath).toBe(true);
+    expect(input.milestone.level).toBe(Math.max(...CURRICULUM.map(l => l.level)));
+  });
+});

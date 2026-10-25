@@ -10,10 +10,14 @@ import { checkpointsOf, currentMilestone, studentRead } from '../../src/engine/p
 export type RecentRun = { chart: string; at: string; bpm: number; accuracy: number; summary: Record<string, unknown> };
 type State = { profile: Profile; progress: Record<string, LessonProgress>; aiLessons: Lesson[]; recent: RecentRun[]; struggle?: unknown; songs?: YtSong[] };
 
-/** Compact model input for the current milestone; null when the path is finished. */
+/**
+ * Compact model input for the current milestone. After the whole path it's the last stage, marked `postPath`: the
+ * coach writes a review or stretch lesson there. Null only if no stage applies to the student's goals.
+ */
 export function lessonInput({ profile, progress, aiLessons, recent, struggle, songs = [] }: State) {
   const all = [...CURRICULUM, ...aiLessons];
-  const m = currentMilestone(MILESTONES, all, progress, profile);
+  const current = currentMilestone(MILESTONES, all, progress, profile);
+  const m = current ?? MILESTONES.filter(x => checkpointsOf(x, all, profile).length).at(-1);
   if (!m) return null;
   const brief = (l: Lesson) => ({ id: l.id, title: l.title, kind: l.kind });
   const steps = (l: Lesson) => l.steps.map(s => ({ title: s.title, text: s.text, activeLanes: s.activeLanes, bpm: s.bpm, notes: s.chart.notes.length > 64 ? undefined : s.chart.notes }));
@@ -34,6 +38,7 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
     projectSong: profile.song?.stage === m.level ? profile.song : undefined,
     songs: songs.filter(s => s.notes.length).map(s => ({ id: s.id, title: s.title, bars: Math.floor(s.notes[s.notes.length - 1].t / beatsPerBar(s)) + 1 })),
     ...(struggle ? { struggle } : {}),
+    ...(!current && { postPath: true }),
     examples: CURRICULUM.filter(l => l.level === m.level && l.kind !== 'song').slice(0, 4).map(l => ({ ...brief(l), what: l.what, how: l.how, steps: steps(l) })),
     yourEarlierLessons: aiLessons.filter(l => l.level === m.level).map(l => ({ title: l.title, tools: l.steps.map(toolOf), passed: !!progress[l.id]?.completedAt })),
   };

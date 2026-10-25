@@ -38,6 +38,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
   const coach = useCoachEntry<Lesson>(coachKey);
   const themeKey = `theme-${new Date().toDateString()}`, themeEntry = useCoachEntry<Lesson>(themeKey);
+  const challengeKey = `challenge-${new Date().toDateString()}-${asks}`, challenge = useCoachEntry<Lesson>(milestone ? null : challengeKey); // after the whole path
   const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
   // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone,
   // once you've played something (with no takes yet, the built-in first lessons are the right start).
@@ -101,13 +102,22 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
   // "Something else": another open lesson of this stage, a different kind of activity first.
   const others = trail.filter(l => !done(l.id) && l !== fromSet).sort((a, b) => Number(toolOf(a.steps[0]) === toolOf(fromSet?.steps[0] ?? a.steps[0])) - Number(toolOf(b.steps[0]) === toolOf(fromSet?.steps[0] ?? b.steps[0])));
-  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet;
-  const heroItem = hero === fromSet ? firstUndone : -1;
+  // After the whole path: the coach's review / stretch lessons at the last stage are what's next.
+  const pathDone = !milestone && path.length > 0, lastStage = path[path.length - 1];
+  const challenges = pathDone ? lessons.filter(l => l.source === 'ai' && l.level === lastStage.level && !done(l.id)) : [];
+  // Today's set done: the next lesson on the path leads (Jam is the second button), so a student on a roll keeps going.
+  const setDone = firstUndone < 0;
+  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0] ?? challenges[0];
+  const heroItem = hero && hero === fromSet ? firstUndone : -1;
   const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
-  const go = () => (heroItem >= 0 ? openItem(heroItem) : hero ? setOpen({ lessonId: hero.id }) : jam && setOpen({ lessonId: jam.id }));
-  const minutes = heroItem >= 0 ? session.items[heroItem].minutes : 5;
+  // Flow on the newest finished groove (the highest stage, the latest finished), not the first jam forever.
+  const flowLesson = visible.filter(l => done(l.id) && l.kind === 'groove').sort((a, b) => b.level - a.level || s.lessons[b.id].completedAt!.localeCompare(s.lessons[a.id].completedAt!))[0] ?? jam;
+  const askChallenge = () => requestCoachLesson(challengeKey);
+  const go = () => (heroItem >= 0 ? openItem(heroItem) : hero ? setOpen({ lessonId: hero.id }) : pathDone ? askChallenge() : jam && setOpen({ lessonId: jam.id }));
+  const minutes = heroItem >= 0 ? session.items[heroItem].minutes : Math.round(s.profile.minutesPerDay / 3);
   const line = greeting({ hour: new Date().getHours(), streak: dash?.streak ?? 0, runs: dash?.totalRuns ?? 0, landedWeek: dash?.landedWeek ?? null, landedLastWeek: dash?.landedLastWeek ?? null,
-    next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus } });
+    next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus }, setDone: !!hero && heroItem < 0 && setDone && !swap, pathDone: pathDone && !hero });
+  const heroLabel = hero ? (heroItem < 0 && setDone && !swap ? `Next lesson: ${hero.title} ▶` : "Yes, let's go ▶") : pathDone ? '🎯 Coach challenge ▶' : 'Jam ▶';
   const trailDone = trail.filter(l => done(l.id)).length;
   const theme = weekTheme(runs);
   const project = s.profile.song?.stage === milestone?.level ? s.profile.song : undefined;
@@ -116,11 +126,13 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   // Beat your best: a finished lesson you haven't played for longest (improvising tools have no record to beat).
   const lastPlayed = (l: Lesson) => dash?.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
   // Beat the clock: a finished groove, the one played longest ago.
-  const arcade = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill').sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  // The 2-minute challenge and Beat your best: the highest stage first, then the one played longest ago.
+  const arcade = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill').sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   // A streak record already as long as the whole take has nothing left to beat.
   const maxedOut = (l: Lesson) => { const t = recordTarget(l.steps[l.steps.length - 1], s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
-    .sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+    .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  const showoff = songs.filter(x => songReady(runs, x.id, songBarCount(x)));
   return (
     <div className="today home">
       <div className="homeHero">
@@ -131,10 +143,10 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
             {newBadges.length > 0 && <p className="newBadge">🏅 New badge: <b>{newBadges.map(id => BADGES.find(b => b.id === id)?.name).join(', ')}</b>!</p>}
             <p>{line}</p>
             <div className="actions">
-              <button className="primary big" autoFocus onClick={go}>{hero ? "Yes, let's go ▶" : 'Jam ▶'}</button>
+              <button className="primary big" autoFocus onClick={go} disabled={!hero && challenge?.status === 'thinking'}>{heroLabel}</button>
               {others.length > 0 && <button onClick={() => setSwap(swap + 1)}>Something else</button>}
               {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
-              {jam && <button onClick={() => setOpen({ lessonId: jam.id, flow: true })}>🌊 Flow</button>}
+              {flowLesson && <button onClick={() => setOpen({ lessonId: flowLesson.id, flow: true })}>🌊 Flow{flowLesson !== jam ? `: ${flowLesson.title}` : ''}</button>}
             </div>
           </div>
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
@@ -187,6 +199,21 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
       </div>}
 
       {milestone && !project && <ShowoffCard stage={milestone} profile={s.profile} />}
+
+      {pathDone && <div className="card">
+        <h3>All stages done</h3>
+        <div className="setTiles">
+          <button className="setTile cur" onClick={() => (challenges[0] ? setOpen({ lessonId: challenges[0].id }) : askChallenge())} disabled={challenge?.status === 'thinking'}>
+            <span className="ic" aria-hidden>🎯</span><b>Coach challenge</b>
+            <span className="small">{challenges[0] ? challenges[0].title : challenge?.status === 'thinking' ? 'your coach is writing it…' : challenge?.status === 'error' ? challenge.error : 'a review or stretch lesson aimed at your weakest spot'}</span>
+          </button>
+          {flowLesson && <button className="setTile" onClick={() => setOpen({ lessonId: flowLesson.id, flow: true })}><span className="ic" aria-hidden>🌊</span><b>Flow</b><span className="small">{flowLesson.title}</span></button>}
+          {arcade && <button className="setTile record" onClick={() => setOpen({ lessonId: arcade.id, arcade: true })}><span className="ic" aria-hidden>⏱</span><b>2-minute challenge</b>
+            <span className="small">{arcade.title}{s.arcade?.[arcade.id] ? ` · best ${s.arcade[arcade.id]} clean bars` : ''}</span></button>}
+          {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}><span className="ic" aria-hidden>🏆</span><b>Beat your best</b><span className="small">{record.title}</span></button>}
+          {showoff.map(x => <button key={x.id} className="setTile" onClick={() => requestSong(x.id)}><span className="ic" aria-hidden>🎤</span><b>Show-off: {x.title}</b><span className="small">Stage mode is under Play</span></button>)}
+        </div>
+      </div>}
 
       {milestone && <div className="card">
         <h3>Stage {path.indexOf(milestone) + 1} · {milestone.title}</h3>

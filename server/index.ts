@@ -328,7 +328,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
   const existing = aiLessons();
   const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle,
     songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong) });
-  if (!input) return bad(reply, 'You have finished every milestone. Hold V or the mic button and ask the coach for new challenges.');
+  if (!input) return bad(reply, 'No stage fits your goals yet. Change them under Journey → Goals.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
     r.data = { ...r.data, title: uniqueTitle(r.data.title, r.data.focus, Object.values(LESSON_BY_ID).map(l => l.title)) };
