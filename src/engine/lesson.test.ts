@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, copyChart, countPlan, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, copyChart, countPlan, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -102,6 +102,18 @@ describe('tempo ladder', () => {
     const r = play([true, true, true, true, true, true]);
     expect(r.events.at(-1)).toBe('lessonDone');
     expect(r.p).toMatchObject({ completedAt: D, reviewDue: '2026-10-26', reviewStage: 0, bestBpm: 70 });
+  });
+});
+
+describe('beat your best', () => {
+  const quarters = { ...chart, bars: 1, notes: [0, 1, 2, 3].map(t => ({ t, drum: 'snare' as const })) }; // 32 notes in 8 bars
+  const s = { title: 's', text: '', chart: quarters, bpm: { start: 60, target: 60 }, pass: { streak: 8 } };
+  const p = startProgress({ ...lesson, steps: [s] });
+  it('asks for 4 more in a row, capped at the notes in the take', () => {
+    expect(recordTarget(s, p)).toBe(12);
+    expect(recordTarget(s, { ...p, bestStreak: 30 })).toBe(32);
+    expect(recordTarget(s, { ...p, bestStreak: 32 })).toBe(32); // the whole take: Journey stops offering it
+    expect(recordTarget({ ...s, pass: undefined }, p)).toBeUndefined();
   });
 });
 

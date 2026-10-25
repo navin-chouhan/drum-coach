@@ -66,6 +66,16 @@ export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | 
   return Array.from({ length: bars }, (_, b) => (b < 4 ? full : full.map((w, i) => (i ? '' : w))));
 }
 
+/** Beat your best: a record take is 8 bars of the step (its full groove). */
+export const RECORD_BARS = 8;
+export const notesInRecordTake = (s: Step) => {
+  const lanes = s.layers?.at(-1) ?? s.activeLanes;
+  return s.chart.notes.filter(n => !n.auto && (!lanes || lanes.includes(n.drum))).length * Math.ceil(RECORD_BARS / s.chart.bars);
+};
+/** A streak challenge's record asks for 4 more in a row than your best, never more than the take holds. */
+export const recordTarget = (s: Step, p: LessonProgress) =>
+  s.pass?.streak ? Math.min(Math.max(s.pass.streak, p.bestStreak ?? 0) + 4, notesInRecordTake(s)) : undefined;
+
 /** Call and response: each bar is played by the app (call), then by you (echo). A 2-bar chart becomes 4 bars. */
 export function copyChart(c: Chart): Chart {
   const bpb = beatsPerBar(c);

@@ -3,7 +3,7 @@ import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
-import { toolOf, type Genre, type Lesson } from '../engine/lesson';
+import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
 import { BADGES, barsReady, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
@@ -95,7 +95,9 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const songBars = projectSong ? songBarCount(projectSong) : 0;
   // Beat your best: a finished lesson you haven't played for longest (improvising tools have no record to beat).
   const lastPlayed = (l: Lesson) => dash?.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
-  const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])))
+  // A streak record already as long as the whole take has nothing left to beat.
+  const maxedOut = (l: Lesson) => { const t = recordTarget(l.steps[l.steps.length - 1], s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
+  const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
     .sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   return (
     <div className="today home">
@@ -146,7 +148,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
           })}
           {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}>
             <span className="ic" aria-hidden>🏆</span><b>Beat your best</b>
-            <span className="small">{record.title} · {s.lessons[record.id]?.bestBpm ? `${s.lessons[record.id].bestBpm + 5} BPM` : 'one take'}</span>
+            <span className="small">{record.title} · {recordTarget(record.steps[record.steps.length - 1], s.lessons[record.id]) ? `${recordTarget(record.steps[record.steps.length - 1], s.lessons[record.id])} in a row` : s.lessons[record.id]?.bestBpm ? `${s.lessons[record.id].bestBpm + 5} BPM` : 'one take'}</span>
           </button>}
         </div>
       </div>}

@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats } from '../engine/jam';
-import { afterReview, checkPass, CLEAN_TAKES, copyChart, countPlan, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, checkPass, CLEAN_TAKES, copyChart, countPlan, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
@@ -59,7 +59,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const stepIdx = oneTake ? lesson.steps.length - 1 : Math.min(p.step, lesson.steps.length - 1);
   const step = lesson.steps[stepIdx];
   // Beat your best: a streak challenge asks for 4 more in a row than your best, anything else 5 BPM above it.
-  const recordStreak = role === 'record' && step.pass?.streak ? Math.max(step.pass.streak, p.bestStreak ?? 0) + 4 : undefined;
+  const recordStreak = role === 'record' ? recordTarget(step, p) : undefined;
   const bpm = role === 'record' && !recordStreak ? (p.bestBpm || step.bpm.target) + 5 : oneTake ? Math.max(step.bpm.start, p.bestBpm || step.bpm.target) : p.bpm;
   const fresh = !getSettings().lessons[lesson.id];
   const mine = player.options?.lesson?.id === lesson.id;
