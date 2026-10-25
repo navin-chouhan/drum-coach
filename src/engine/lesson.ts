@@ -15,7 +15,11 @@ export type Pass = {
   maxFlamMs?: number;         // limbs meant to land together: mean split between them
   maxPairDropPct?: number;    // doubles: how much softer the 2nd note of each pair may be
   streak?: number;            // a mini challenge: this many notes in a row replaces the accuracy and extra-hit bars
+  minGracePct?: number;       // grace notes (flams, drags): % that came out as grace + main (default 70 when the chart has any)
+  graceGapMs?: [number, number]; // grace → main stroke, ms (default 8–50)
+  maxGraceRatio?: number;     // grace volume / main volume (default 0.75)
 };
+export const GRACE_PASS = { minGracePct: 70, graceGapMs: [8, 50] as [number, number], maxGraceRatio: 0.75 };
 export const DEFAULT_PASS: Pass = { accuracy: 90, maxExtraPct: 15 };
 /** The bar grows with the stage: beginners pass at 75% and stray strokes barely count. */
 export const passFor = (level: number): Pass =>
@@ -153,6 +157,13 @@ export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number): { ok:
   } else {
     if (s.accuracy < c.accuracy) return { ok: false, reason: worstDrum(s) || 'A few notes slipped away from the click.' };
     if (s.total && (s.extra / s.total) * 100 > c.maxExtraPct) return { ok: false, reason: `${s.extra} extra hits. Play only the notes shown.` };
+  }
+  if (s.grace) { // a chart with grace notes: they have to come out as two (or more) strokes, soft and close
+    const g = { ...GRACE_PASS, ...p };
+    if (s.grace.pct < g.minGracePct) return { ok: false, reason: `${s.grace.notes - s.grace.played} of ${s.grace.notes} grace notes came out as one note. Let the low stick fall a hair before the main one.` };
+    if (s.grace.played && s.grace.ratio > g.maxGraceRatio) return { ok: false, reason: 'Grace too loud: keep that stick 3 cm off the pad.' };
+    if (s.grace.played && s.grace.gapMs > g.graceGapMs[1]) return { ok: false, reason: 'The two sticks land too far apart: drop them closer together.' };
+    if (s.grace.played && s.grace.gapMs < g.graceGapMs[0]) return { ok: false, reason: 'The sticks land together: start the low stick a hair earlier.' };
   }
   if (c.maxAbsOffsetMs !== undefined && Math.abs(s.meanOffset) > c.maxAbsOffsetMs)
     return { ok: false, reason: `${s.meanOffset < 0 ? 'Rushing' : 'Dragging'} by ${Math.abs(s.meanOffset)} ms. Lock onto the click.` };

@@ -79,6 +79,45 @@ describe('per-note timing windows (R2)', () => {
   });
 });
 
+describe('grace notes (R2): flam, drag, ruff', () => {
+  const sn = (time: number, velocity: number): PlayedHit => ({ time, pad: 'snare', velocity });
+  it('a flam: the soft grace stroke, then the main one takes the note over (offset from the main stroke)', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare', grace: 1 }], [sn(975, 35), sn(1000, 90)]);
+    expect(extras).toHaveLength(0);
+    expect(results[0]).toMatchObject({ judgement: 'perfect', offset: 0, velocity: 90, grace: { strokes: 1, gapMs: 25 } });
+    expect(results[0].grace!.ratio).toBeCloseTo(0.39, 2);
+  });
+  it('a drag: two grace strokes', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare', grace: 2 }], [sn(950, 35), sn(975, 35), sn(1000, 90)]);
+    expect(extras).toHaveLength(0);
+    expect(results[0]).toMatchObject({ offset: 0, grace: { strokes: 2, gapMs: 50 } });
+  });
+  it('a flam played as one note says so; a soft bounce after the main stroke never takes over', () => {
+    expect(scoreRun([{ time: 1000, drum: 'snare', grace: 1 }], [sn(1000, 90)]).results[0].grace).toMatchObject({ strokes: 0 });
+    const b = scoreRun([{ time: 1000, drum: 'snare', grace: 1 }], [sn(975, 35), sn(1000, 90), sn(1030, 45)]);
+    expect(b.results[0]).toMatchObject({ offset: 0, grace: { strokes: 1 } });
+    expect(b.extras).toHaveLength(1);
+  });
+  it('no grace in the chart: a second stroke 30 ms later is still an extra (regression)', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare' }], [sn(1000, 90), sn(1030, 90)]);
+    expect(results[0]).toMatchObject({ offset: 0 });
+    expect(results[0].grace).toBeUndefined();
+    expect(extras).toHaveLength(1);
+  });
+  it('the chain stops after 120 ms', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare', grace: 3 }], [sn(880, 40), sn(930, 40), sn(980, 40), sn(1030, 90)]);
+    expect(results[0].grace!.strokes).toBe(2); // the 4th stroke would make the chain 150 ms long
+    expect(extras).toHaveLength(1);
+  });
+  it('stats: how many graces came out as grace + main, their gap and volume ratio', () => {
+    const r = buildRun({ title: 'f', bpm: 60, timeSignature: [4, 4], bars: 1, notes: [0, 1, 2, 3].map(t => ({ t, drum: 'snare' as const, grace: 1 as const })) }, { fromBar: 1, toBar: 1, repeats: 1 });
+    const exp = r.notes.map(n => ({ time: 1000 + n.t * 1000, drum: n.drum, grace: n.grace }));
+    const hits = exp.flatMap((e, i) => (i === 3 ? [sn(e.time, 90)] : [sn(e.time - 20, 30), sn(e.time, 90)]));
+    const s = computeStats(r, scoreRun(exp, hits).results, 0);
+    expect(s.grace).toEqual({ notes: 4, played: 3, pct: 75, gapMs: 20, ratio: 0.33 });
+  });
+});
+
 describe('stats', () => {
   it('detects rushing and per-drum accuracy', () => {
     const hits = perfectHits(-20).filter(h => h.pad !== 'kick');

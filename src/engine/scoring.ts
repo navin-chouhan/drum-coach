@@ -13,7 +13,7 @@ export function windowsFor(beatMs: number, gapMs = Infinity, goodMs = WINDOWS.go
 }
 export type Judgement = 'perfect' | 'good' | 'miss';
 /** time = ms on the performance.now() clock (latency already removed for hits). */
-export type Expected = { time: number; drum: ChartDrum; good?: number }; // good: this note's own Good window (noteWindows)
+export type Expected = { time: number; drum: ChartDrum; good?: number; grace?: number }; // good: this note's own Good window (noteWindows); grace: chart grace strokes
 /**
  * Per-note Good windows: 40% of the gap to the nearest note on the same drum, capped at `goodMs`. Fast 16ths on the
  * snare are judged tighter without shrinking the 8ths on the hi-hat beside them (a take-wide window did).
@@ -29,12 +29,20 @@ export function noteWindows(expected: Expected[], goodMs = WINDOWS.good): Expect
   return expected.map((e, i) => ({ ...e, good: Math.min(goodMs, Math.round(gap[i] * 0.4)) }));
 }
 export type PlayedHit = { time: number; pad?: PadId; velocity: number };
-export type Match = { index: number; offset: number; judgement: Judgement }; // 'miss' = claimed by an off-time stroke
-export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId; off?: number }; // off: ms of an off-time stroke (not a hit)
+/** How a grace note came out: grace strokes before the main one, first stroke → main stroke ms, first / main velocity. */
+export type GraceResult = { strokes: number; gapMs: number; ratio: number };
+export type Match = { index: number; offset: number; judgement: Judgement; grace?: GraceResult }; // 'miss' = claimed by an off-time stroke
+export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId; off?: number; grace?: GraceResult }; // off: ms of an off-time stroke (not a hit)
 
 /** What a match means for its note: a hit with its offset, or a miss that remembers how far off the stroke was. */
-export const toResult = (m: Match, velocity: number, pad?: PadId): NoteResult =>
-  m.judgement === 'miss' ? { judgement: 'miss', off: m.offset } : { judgement: m.judgement, offset: m.offset, velocity, pad };
+export const toResult = (m: Match, velocity: number, pad?: PadId): NoteResult => ({
+  ...(m.judgement === 'miss' ? { judgement: 'miss', off: m.offset } : { judgement: m.judgement, offset: m.offset, velocity, pad }),
+  ...(m.grace && { grace: m.grace }),
+});
+
+// Grace chain: a later stroke on the same pad within GRACE_STEP_MS, at least GRACE_VEL × the stroke before it, takes a
+// grace note over (the grace stroke came first, the main stroke counts). A softer stroke is a bounce, not the main one.
+const GRACE_STEP_MS = 60, GRACE_SPAN_MS = 120, GRACE_MAX_MOVES = 3, GRACE_VEL = 0.9;
 
 /**
  * Online matcher: each hit takes the nearest not-yet-matched expected note of a compatible drum
@@ -44,9 +52,33 @@ export const toResult = (m: Match, velocity: number, pad?: PadId): NoteResult =>
  */
 export function createMatcher(expected: Expected[], w = WINDOWS) {
   const taken = new Uint8Array(expected.length);
+  // grace notes: the strokes that claimed each one so far
+  const chain = new Map<number, { first: number; firstVel: number; last: number; lastVel: number; moves: number }>();
+  const judge = (k: number, offset: number): Judgement => {
+    const good = expected[k].good ?? w.good;
+    return Math.abs(offset) > good ? 'miss' : Math.abs(offset) <= Math.min(w.perfect, Math.round(good / 2)) ? 'perfect' : 'good';
+  };
+  const claim = (k: number, hit: PlayedHit, m: Match): Match => {
+    if (expected[k].grace) chain.set(k, { first: hit.time, firstVel: hit.velocity, last: hit.time, lastVel: hit.velocity, moves: 0 });
+    return expected[k].grace ? { ...m, grace: { strokes: 0, gapMs: 0, ratio: 1 } } : m;
+  };
   return (hit: PlayedHit): Match | null => {
     if (!hit.pad) return null;
     const from = (ms: number) => { let lo = 0, hi = expected.length; while (lo < hi) { const m = (lo + hi) >> 1; if (expected[m].time < hit.time - ms) lo = m + 1; else hi = m; } return lo; };
+    // an open note on this pad nearer to the stroke than note k: the stroke is that note's, not k's main stroke
+    const nearerOpen = (k: number) => { const d = Math.abs(hit.time - expected[k].time);
+      for (let j = from(d); j < expected.length && expected[j].time < hit.time + d; j++) if (j !== k && !taken[j] && padMatches(expected[j].drum, hit.pad!)) return true;
+      return false; };
+    // The main stroke of a grace note already claimed by its grace stroke(s)?
+    for (const [k, c] of chain) {
+      if (hit.time - c.first > GRACE_SPAN_MS) { chain.delete(k); continue; }
+      if (c.moves < GRACE_MAX_MOVES && hit.time - c.last <= GRACE_STEP_MS && hit.velocity >= c.lastVel * GRACE_VEL && padMatches(expected[k].drum, hit.pad)
+        && !nearerOpen(k)) {
+        Object.assign(c, { last: hit.time, lastVel: hit.velocity, moves: c.moves + 1 });
+        const offset = hit.time - expected[k].time;
+        return { index: k, offset, judgement: judge(k, offset), grace: { strokes: c.moves, gapMs: Math.round(hit.time - c.first), ratio: Math.round((c.firstVel / hit.velocity) * 100) / 100 } };
+      }
+    }
     const lo = from(w.good);
     let best = -1, bestAbs = Infinity;
     for (let k = lo; k < expected.length && expected[k].time <= hit.time + w.good; k++) {
@@ -67,12 +99,11 @@ export function createMatcher(expected: Expected[], w = WINDOWS) {
       if (near < 0 || taken[near]) return null; // nothing close, or that note was already played: a real extra
       const idx = past >= 0 ? past : near;
       taken[idx] = 1;
-      return { index: idx, offset: hit.time - expected[idx].time, judgement: 'miss' };
+      return claim(idx, hit, { index: idx, offset: hit.time - expected[idx].time, judgement: 'miss' });
     }
     taken[best] = 1;
     const offset = hit.time - expected[best].time;
-    const perfect = Math.min(w.perfect, Math.round((expected[best].good ?? Infinity) / 2));
-    return { index: best, offset, judgement: Math.abs(offset) <= perfect ? 'perfect' : 'good' };
+    return claim(best, hit, { index: best, offset, judgement: judge(best, offset) });
   };
 }
 
@@ -134,6 +165,7 @@ export type RunStats = {
   velocity: { normalMean: number; normalCv: number; accentMean: number | null; ghostMean: number | null;
     pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
   flam: number | null; // ms, mean split between limbs on notes meant to land together (null: none played)
+  grace?: { notes: number; played: number; pct: number; gapMs: number; ratio: number } | null; // grace notes: how many came out as grace + main
   heat: HeatCell[];   // one cell per grid position in the bar: 16ths, or triplets for a triplet groove (heatSlotName)
   streak: number;     // most notes hit in a row
   recoveries: number; // times a hit came straight after a miss: you kept going
@@ -231,8 +263,13 @@ export function computeStats(run: Run, results: NoteResult[], extra: number): Ru
   run.notes.forEach((n, i) => { if (results[i].offset !== undefined) together.set(n.t, [...(together.get(n.t) ?? []), results[i].offset!]); });
   const splits = [...together.values()].filter(o => o.length > 1).map(o => Math.max(...o) - Math.min(...o));
 
+  const graceNotes = run.notes.flatMap((n, i) => (n.grace ? [results[i]] : []));
+  const played = graceNotes.filter(r => r.offset !== undefined && (r.grace?.strokes ?? 0) > 0);
+  const grace = graceNotes.length ? { notes: graceNotes.length, played: played.length, pct: pct(played.length, graceNotes.length),
+    gapMs: r1(mean(played.map(r => r.grace!.gapMs))), ratio: Math.round(mean(played.map(r => r.grace!.ratio)) * 100) / 100 } : null;
+
   return {
-    total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
+    grace, total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
     accuracy: pct(hitOffsets.length, results.length),
     meanOffset: r1(mean(timing)), spread: r1(std(timing)), perDrum,
     velocity: {

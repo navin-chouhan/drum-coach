@@ -254,3 +254,16 @@ describe('proven on another day (R7)', () => {
     expect(isProven(proveOnAnotherDay(startProgress(lesson), true, '2026-10-26'))).toBe(false); // never finished: nothing to prove
   });
 });
+
+describe('checkPass: grace notes (R2)', () => {
+  const g = (grace: RunStats['grace']) => stats({ grace });
+  it('needs most flams to come out as two notes (70% by default), the grace soft and close', () => {
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 25, ratio: 0.4 })).ok).toBe(true);
+    expect(checkPass(g({ notes: 10, played: 5, pct: 50, gapMs: 25, ratio: 0.4 })).reason).toMatch(/came out as one note/);
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 25, ratio: 0.9 })).reason).toMatch(/grace too loud/i);
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 70, ratio: 0.4 })).reason).toMatch(/too far apart/);
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 4, ratio: 0.4 })).reason).toMatch(/land together/);
+    expect(checkPass(g({ notes: 10, played: 5, pct: 50, gapMs: 25, ratio: 0.4 }), { minGracePct: 40 }).ok).toBe(true);
+    expect(checkPass(stats()).ok).toBe(true); // no graces: nothing to check
+  });
+});

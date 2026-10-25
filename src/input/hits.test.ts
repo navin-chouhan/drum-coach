@@ -15,6 +15,15 @@ describe('stick bounces', () => {
     expect(got).toEqual([42, 20, 90, 50, 30, 40, 30, 92, 80, 67, 35]);
   });
 
+  it('keeps every stroke of a drag and a ruff (graces about as soft as each other, then a loud main note)', () => {
+    const got: number[] = [];
+    const off = onHit(h => got.push(h.velocity));
+    emitNote(38, 30, 20000); emitNote(38, 28, 20025); emitNote(38, 95, 20050); // drag
+    emitNote(38, 30, 21000); emitNote(38, 30, 21025); emitNote(38, 29, 21050); emitNote(38, 95, 21075); // ruff
+    off();
+    expect(got).toEqual([30, 28, 95, 30, 30, 29, 95]);
+  });
+
   it('drops soft-snare crosstalk on the hi-hat, keeps real hi-hat strokes', () => {
     const got: string[] = [];
     const off = onHit(h => got.push(`${h.note}:${h.velocity}`));

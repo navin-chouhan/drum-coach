@@ -179,7 +179,7 @@ export function start(chart: Chart, options: PlayOptions) {
   }
 
   // Each note's Good window comes from its own drum's spacing (noteWindows), not the tightest gap in the take.
-  const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
+  const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum, grace: n.grace })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   if (!options.demo) cleanup.push(onHit(h => {
     const hit = { time: h.time - latency - drift, pad: h.pad, velocity: h.velocity };
     const m = match(hit);
@@ -276,7 +276,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
-  const match = createMatcher(noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
+  const match = createMatcher(noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum, grace: n.grace })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   cleanup.push(onHit(h => {
     const hit = { time: ext.position(h.time - latency) * beatMs, pad: h.pad, velocity: h.velocity };
     const m = match(hit);

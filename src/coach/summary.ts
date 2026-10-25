@@ -15,7 +15,7 @@ export function summarizeRun(f: Finished) {
     notes: s.total, accuracyPct: s.accuracy, perfect: s.perfect, good: s.good, missed: s.miss, extraHits: s.extra,
     meanOffsetMs: s.meanOffset, spreadMs: s.spread,
     perDrum: Object.fromEntries(Object.entries(s.perDrum).map(([d, v]) => [d, { notes: v.total, accuracyPct: v.accuracy, meanOffsetMs: v.meanOffset }])),
-    velocity: s.velocity, weakSpots,
+    velocity: s.velocity, weakSpots, ...(s.grace && { graceNotes: s.grace }),
     ...(f.options.lesson && { lesson: f.options.lesson }),
     ...(f.cues.length && { liveTips: f.cues.map(c => c.text), tipIds: f.cues.map(c => c.id) }),
   };

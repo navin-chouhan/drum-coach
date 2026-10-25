@@ -61,6 +61,7 @@ export const AiLessonSchema = z.object({
       maxVelocityCv: z.number().min(3).max(100), maxGhostToAccent: z.number().min(0.1).max(1),
       maxSpreadMs: z.number().min(5).max(100), maxFlamMs: z.number().min(5).max(100), maxPairDropPct: z.number().min(0).max(100),
       streak: z.number().int().min(4).max(64),
+      minGracePct: z.number().min(0).max(100), graceGapMs: z.tuple([z.number().min(0).max(100), z.number().min(0).max(150)]), maxGraceRatio: z.number().min(0.1).max(1),
     }).partial().optional(),
     gapBars: z.number().int().min(2).max(8).optional(),
     jam: z.boolean().optional(), copy: z.boolean().optional(),
