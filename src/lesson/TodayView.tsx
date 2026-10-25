@@ -2,7 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
-import type { Genre, Lesson } from '../engine/lesson';
+import { greeting } from '../engine/greeting';
+import { toolOf, type Genre, type Lesson, type Tool } from '../engine/lesson';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
 import { dashboard, type Dashboard, type RunRow } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
@@ -21,6 +22,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const [editing, setEditing] = useState(false);
   const [dash, setDash] = useState<Dashboard>();
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
+  const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
   useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => setDash(dashboard(runs))).catch(() => {}); }, [open]);
 
   const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
@@ -58,50 +60,75 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const visible = visibleLessons(lessons, s.profile);
   const path = MILESTONES.filter(m => checkpointsOf(m, lessons, s.profile).length); // stages for these goals (e.g. no Swing for rock only)
   const total = session.items.reduce((a, it, i) => a + (playable(i) ? it.minutes : 0), 0);
-  const streak = dash?.streak;
+  // The trail: this stage's lessons in path order (the coach's after the built-ins), checkpoints as the challenges.
+  const trail = milestone ? visible.filter(l => l.level === milestone.level && (l.source !== 'ai' || l.id in s.lessons || coachOpen.includes(l)))
+    .sort((a, b) => Number(milestone.checkpoints.includes(a.id)) - Number(milestone.checkpoints.includes(b.id)) || Number(a.source === 'ai') - Number(b.source === 'ai')) : [];
+  const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
+  // "Something else": another open lesson of this stage, a different kind of activity first.
+  const others = trail.filter(l => !done(l.id) && l !== fromSet).sort((a, b) => Number(toolOf(a.steps[0]) === toolOf(fromSet?.steps[0] ?? a.steps[0])) - Number(toolOf(b.steps[0]) === toolOf(fromSet?.steps[0] ?? b.steps[0])));
+  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet;
+  const heroItem = hero === fromSet ? firstUndone : -1;
+  const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
+  const go = () => (heroItem >= 0 ? openItem(heroItem) : hero ? setOpen({ lessonId: hero.id }) : jam && setOpen({ lessonId: jam.id }));
+  const minutes = heroItem >= 0 ? session.items[heroItem].minutes : 5;
+  const line = greeting({ hour: new Date().getHours(), streak: dash?.streak ?? 0, runs: dash?.totalRuns ?? 0, landedWeek: dash?.landedWeek ?? null, landedLastWeek: dash?.landedLastWeek ?? null,
+    next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus } });
+  const trailDone = trail.filter(l => done(l.id)).length;
   return (
-    <div className="today">
-      <div className="card todayHead">
+    <div className="today home">
+      <div className="homeHero">
+        <div className="avatar" aria-hidden>🥁</div>
         <div>
-          <p className="small">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}{streak ? ` · ${streak}-day streak 🔥` : ''}</p>
-          <div className="rankSticker small">{rank}</div>
-          {milestone && <p>Stage {path.indexOf(milestone) + 1} of {path.length}: <b>{milestone.title}</b>, on the way to <b>{milestone.rank}</b></p>}
-          {dash?.landedWeek != null && <p className="small">This week {dash.landedWeek}% of your notes landed{dash.landedLastWeek != null
-            ? (dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}% 📈` : ` (last week ${dash.landedLastWeek}%)`) : ''} · {Math.round(dash.minutesWeek)} min played</p>}
-        </div>
-        <div className="nextUp">
-          {firstUndone >= 0 ? <>
-            <p className="small">Next up · {ROLE[session.items[firstUndone].role].toLowerCase()}</p>
-            <button className="primary big" autoFocus onClick={() => openItem(firstUndone)}>{lessonById(session.items[firstUndone].lessonId)?.title ?? 'Start'} →</button>
-            {lessonById(session.items[firstUndone].lessonId)?.focus && <p className="small">{lessonById(session.items[firstUndone].lessonId)!.focus}</p>}
-          </> : <p className="doneMsg">Session done. Nice work! Jam on anything below, or try Songs.</p>}
+          <div className="bubble" aria-live="polite">
+            <p>{line}</p>
+            <div className="actions">
+              <button className="primary big" autoFocus onClick={go}>{hero ? "Yes, let's go ▶" : 'Jam ▶'}</button>
+              {others.length > 0 && <button onClick={() => setSwap(swap + 1)}>Something else</button>}
+              {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
+            </div>
+          </div>
+          <div className="statChips">
+            {!!dash?.streak && <span>🔥 <b>{dash.streak}-day</b> streak</span>}
+            {dash?.landedWeek != null && <span>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</span>}
+            {!!dash?.minutesToday && <span>⏱ <b>{Math.round(dash.minutesToday)}</b> min today</span>}
+          </div>
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
         </div>
+        {milestone && <div className="stageRing">
+          <div className="ring" style={{ '--p': `${trail.length ? (trailDone / trail.length) * 100 : 0}%` } as React.CSSProperties}>
+            <div>Stage {path.indexOf(milestone) + 1}<br />{trailDone}/{trail.length}</div>
+          </div>
+          <div className="rankSticker small">{rank}</div>
+        </div>}
       </div>
+
+      {session.items.length > 0 && <div className="card">
+        <h3>Today's set · {total} min</h3>
+        <div className="setTiles">
+          {session.items.map((it, i) => {
+            const l = lessonById(it.lessonId), isDone = session.done.includes(i);
+            if (!l) return null;
+            return (
+              <button key={i} className={`setTile ${isDone ? 'done' : i === firstUndone ? 'cur' : ''}`} onClick={() => openItem(i)}>
+                {i === firstUndone && <span className="tag">Up next</span>}
+                <span className="ic" aria-hidden>{iconOf(l)}</span>
+                <b>{isDone ? '✓ ' : ''}{l.title}</b>
+                <span className="small">{TOOL_LABEL[toolOf(l.steps[0])]} · {it.minutes} min</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>}
 
       {passed.length > 0 && <ShowoffCard stage={passed[passed.length - 1]} profile={s.profile} />}
 
-      <div className="card">
-        <h3>Today's mix · {total} min</h3>
-        {session.items.length === 0 && <p className="small">You've finished the whole path. Reviews will keep coming back; hold V or the mic button to ask the coach for new exercises.</p>}
-        <ol className="session">
-          {session.items.map((it, i) => {
-            const l = lessonById(it.lessonId), done = session.done.includes(i);
-            if (!l) return null;
-            return (
-              <li key={i} className={done ? 'done' : i === firstUndone ? 'on' : ''}>
-                <span className="role">{done ? '✓ ' : ''}{ROLE[it.role]}</span>
-                <span className="title">{l.title}{l.source === 'ai' && <span className="badge">by your coach</span>}</span>
-                <span className="small">{it.minutes} min</span>
-                <button onClick={() => openItem(i)}>{done ? 'Again' : 'Open'}</button>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+      {milestone && <div className="card">
+        <h3>Stage {path.indexOf(milestone) + 1} · {milestone.title}</h3>
+        <Trail lessons={trail} current={hero} done={done} isChallenge={l => milestone.checkpoints.includes(l.checkpoint ?? l.id)} onOpen={id => setOpen({ lessonId: id })} />
+      </div>}
 
       <details className="planFold">
-        <summary>More: your path, coach lessons, weekly plan, settings</summary>
+        <summary>Full path, coach lessons, weekly plan, settings</summary>
         {milestone && (
           <div className="card">
             <h3>Your coach</h3>
@@ -157,6 +184,36 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
           <button className="link danger" onClick={() => { if (confirm('Reset all lesson progress and redo the setup questions? Your run history in Trophies is kept.')) resetAllLessons(); }}>Reset all lesson progress</button>
         </div>
       </details>
+    </div>
+  );
+}
+
+const TOOL_LABEL: Record<Tool, string> = { jam: 'Play along', copy: 'I play, you copy', challenge: 'Mini challenge', drill: 'Practice' };
+const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
+const TOOL_ICON: Record<Tool, string> = { jam: '🎸', copy: '🔁', challenge: '🔥', drill: '' };
+const iconOf = (l: Lesson) => TOOL_ICON[toolOf(l.steps[0])] || KIND_ICON[l.kind] || '🎯';
+
+/** This stage as a winding trail of stops: done ones green, the next one big, the challenges as stars, a song at the end. */
+function Trail({ lessons, current, done, isChallenge, onOpen }: { lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
+  const n = lessons.length + 1; // + the song at the end
+  const pos = (i: number) => ({ x: 5 + (i * 90) / Math.max(1, n - 1), y: 50 + 26 * Math.sin(i * 1.3) });
+  const pts = Array.from({ length: n }, (_, i) => pos(i));
+  return (
+    <div className="trail">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden><polyline points={pts.map(p => `${p.x},${p.y}`).join(' ')} /></svg>
+      {lessons.map((l, i) => {
+        const p = pts[i], cls = l === current ? 'now' : done(l.id) ? 'done' : isChallenge(l) ? 'boss' : '';
+        return (
+          <button key={l.id} className={`stop ${cls}`} style={{ left: `${p.x}%`, top: `${p.y}%` }} onClick={() => onOpen(l.id)}
+            title={l.title} aria-label={`${l.title}${done(l.id) ? ', done' : ''}${isChallenge(l) ? ', stage challenge' : ''}`}>
+            <span className="dot" aria-hidden>{done(l.id) ? '✓' : isChallenge(l) ? '★' : iconOf(l)}</span>
+            <span className="name">{l.title}</span>
+          </button>
+        );
+      })}
+      <div className="stop song" style={{ left: `${pts[n - 1].x}%`, top: `${pts[n - 1].y}%` }}>
+        <span className="dot" aria-hidden>🎵</span><span className="name">Unlock a real song</span>
+      </div>
     </div>
   );
 }

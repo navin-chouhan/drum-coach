@@ -48,6 +48,10 @@ export type LessonProgress = {
   stars?: number; // best 1–3 earned when the lesson completes (older saves: none)
 };
 
+export type Tool = 'jam' | 'copy' | 'challenge' | 'drill';
+/** Which coach tool a step uses (server/prompts/lesson.md). */
+export const toolOf = (s: Step): Tool => (s.jam ? 'jam' : s.copy ? 'copy' : s.pass?.streak ? 'challenge' : 'drill');
+
 /** Call and response: each bar is played by the app (call), then by you (echo). A 2-bar chart becomes 4 bars. */
 export function copyChart(c: Chart): Chart {
   const bpb = beatsPerBar(c);
