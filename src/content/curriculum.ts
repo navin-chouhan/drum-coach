@@ -26,12 +26,12 @@ const crashOn = (notes: ChartNote[], beats: number[]) => [
   ...beats.map(t => ({ t, drum: 'crash' as const })),
 ].sort((a, b) => a.t - b.t);
 
-type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean; layers?: ChartDrum[][]; trade?: boolean; freeBars?: number[]; countAloud?: 'quarters' | '8ths' };
+type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean; layers?: ChartDrum[][]; trade?: boolean; freeBars?: number[]; countAloud?: 'quarters' | '8ths'; fadeClick?: number; clickOn?: Step['clickOn'] };
 function step(title: string, text: string, notes: ChartNote[], bpm: [number, number], o: StepOpts = {}): Step {
   const ts = o.ts ?? [4, 4], bpb = beatsPerBar({ timeSignature: ts });
   const bars = Math.floor(Math.max(...notes.map(n => n.t)) / bpb + 1e-6) + 1;
   const chart: Chart = { title, bpm: bpm[1], timeSignature: ts, bars, notes };
-  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy, layers: o.layers, trade: o.trade, freeBars: o.freeBars, countAloud: o.countAloud };
+  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy, layers: o.layers, trade: o.trade, freeBars: o.freeBars, countAloud: o.countAloud, fadeClick: o.fadeClick, clickOn: o.clickOn };
 }
 const lesson = (level: number, id: string, kind: LessonKind, title: string, what: string, why: string, how: string, steps: Step[], tags?: Genre[]): Lesson =>
   ({ id, level, kind, title, what, why, how, tags, steps: steps.map((s, i) => ({ ...s, chart: { ...s.chart, id: `lesson/${id}/${i + 1}`, title: `${title} · ${s.title}` } })) });
@@ -138,7 +138,7 @@ export const CURRICULUM: Lesson[] = [
     [step('Hi-hat only', 'Hi-hat 8ths; the app plays kick and snare.', P(2, MONEY8), [60, 70], { lanes: ['hihat'] }),
       step('+ kick', 'Add the kick on 1 and 3.', P(2, MONEY8), [60, 70], { lanes: ['hihat', 'kick'] }),
       step('+ snare', 'All three limbs.', P(2, MONEY8), [60, 90], { lanes: HH_K_S }),
-      step('On your own', 'The click drops out every other bar. Hold the tempo.', P(2, MONEY8, 2), [80, 100], { lanes: HH_K_S, gap: 2, pass: { maxAbsOffsetMs: 30 } })]),
+      step('On your own', 'The click is only on 2 and 4, like the snare. Feel 1 and 3 yourself.', P(2, MONEY8, 2), [80, 100], { lanes: HH_K_S, clickOn: '2and4', pass: { maxAbsOffsetMs: 30 } })]),
   lesson(2, 'doubles', 'rudiment', 'Double strokes',
     'Two notes per hand: R R L L.',
     'Doubles lead to rolls and fast fills, and they train your weaker hand.',
@@ -155,7 +155,7 @@ export const CURRICULUM: Lesson[] = [
     'A 16-bar tune built from the money beat, with a crash every 4 bars.',
     'Playing through a whole form, without stopping, is what playing songs feels like.',
     'Crash on 1 with the right hand instead of the hi-hat, then go straight back to the hi-hat. If you lose your place, keep the kick and snare going and join back in.',
-    [step('Whole song', 'Crash on beat 1 of bars 1, 5, 9 and 13.', crashOn(P(2, MONEY8, 16), [0, 16, 32, 48]), [70, 90], { lanes: [...HH_K_S, 'crash'] })]),
+    [step('Whole song', 'Crash on beat 1 of bars 1, 5, 9 and 13. The click fades out after 4 bars: keep the tempo yourself.', crashOn(P(2, MONEY8, 16), [0, 16, 32, 48]), [70, 90], { lanes: [...HH_K_S, 'crash'], fadeClick: 4 })]),
 
   // ───────── Level 3: variations, fills, first rock song ─────────
   lesson(3, 'kick-and3', 'groove', 'Kick on the & of 3',

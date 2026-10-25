@@ -1,6 +1,7 @@
 import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '../engine/chart';
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
 import { inFreeBar } from '../engine/jam';
+import { clickOnBeat } from '../engine/lesson';
 import { computeStats, createMatcher, minGapBeats, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
@@ -27,6 +28,7 @@ export type PlayOptions = RunOptions & {
   freeBars?: number[];       // 1-based chart bars that are yours (free / trade bars): strokes there aren't extras
   endless?: boolean;         // flow: loops until Stop (Esc / 4 crashes), which keeps the take instead of dropping it
   fadeClick?: number;        // the click fades to silence over this many bars
+  clickOn?: 'quarters' | '8ths' | '2and4'; // click feel (engine/lesson.ts clickOnBeat)
   oneOff?: boolean;          // a take the coach asked for in another tool (lessons): for fun, no tempo ladder
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
@@ -197,7 +199,7 @@ export function start(chart: Chart, options: PlayOptions) {
   startLive(options, hits, extras);
   const countVoice = getSettings().countIn && !options.demo;
   // Lookahead scheduler for clicks, app-played notes, live tips and the end of the run.
-  const sub = options.subdivision, bpb = beatsPerBar(chart);
+  const sub = options.clickOn === '8ths' ? 2 : options.subdivision, bpb = beatsPerBar(chart);
   const sounding = options.guide ? run.notes : auto;
   const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
   let a = 0;
@@ -217,7 +219,8 @@ export function start(chart: Chart, options: PlayOptions) {
       if (k < 0 && onBeat && countVoice) sayAt(NUMBERS[Math.floor((((k / sub) % bpb) + bpb) % bpb + 1e-6)], timeOf(k)); // "one, two, three, four"
       const gap = options.gapBars && k >= 0 && (Math.floor(k / sub / bpb + 1e-6) + 1) % options.gapBars === 0;
       const vol = options.fadeClick && k >= 0 ? Math.max(0, 1 - Math.floor(k / sub / bpb + 1e-6) / options.fadeClick) : 1; // keep time alone
-      if (!gap && vol > 0) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1, vol);
+      const feel = k < 0 || !onBeat || clickOnBeat(Math.round(((k / sub) % bpb + bpb) % bpb), options.clickOn); // the count-in always clicks
+      if (!gap && vol > 0 && feel) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1, vol);
     }
     for (; a < sounding.length && autoAt(sounding[a]) < c.currentTime + 0.2; a++) {
       const n = sounding[a];

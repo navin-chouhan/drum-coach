@@ -1,4 +1,5 @@
 import { beatsPerBar, type Chart, type ChartDrum } from './chart.ts';
+import { seededRandom } from './kitEmulator.ts';
 import type { RunStats } from './scoring.ts';
 
 // Lessons, pass criteria, the tempo ladder and spaced review. See docs/LEARNING.md.
@@ -33,7 +34,12 @@ export type Step = {
   freeBars?: number[]; // 1-based chart bars that are yours: no notes to miss, scored on the beat grid only
   trade?: boolean;      // trade bars: the app plays a bar, you answer with anything (copy + every echo bar free)
   bite?: { songId: string; fromBar: number; toBar: number; title?: string }; // bars of a saved song (chart cut from its notes)
-  countAloud?: 'quarters' | '8ths'; // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
+  countAloud?: 'quarters' | '8ths';
+  fadeClick?: number;   // keep time alone: the click fades to silence over this many bars
+  clickOn?: 'quarters' | '8ths' | '2and4'; // click feel: on every beat (default), every 8th, or only 2 and 4
+  variants?: Chart[];   // shuffle the phrases: each take plays one of these (same length) so you read, not memorise
+  bars?: number;        // long take: this many bars per take instead of 4 (8 for the proving take)
+  rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen) // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
 };
 export type LessonKind = NonNullable<Chart['kind']>;
@@ -93,6 +99,11 @@ export function playChart(s: Pick<Step, 'chart' | 'copy' | 'trade' | 'freeBars'>
   const bpb = beatsPerBar(base);
   return { freeBars, chart: freeBars.length ? { ...base, notes: base.notes.filter(n => !freeBars.includes(Math.floor(n.t / bpb + 1e-6) + 1)) } : base };
 }
+
+/** Click feel: does the click sound on this beat of the bar (0-based)? "2and4" leaves 1 and 3 for you to feel. */
+export const clickOnBeat = (beatInBar: number, clickOn?: Step['clickOn']) => clickOn !== '2and4' || beatInBar % 2 === 1;
+/** Shuffle the phrases: which variant take number `take` plays (stable per take, varied across takes). */
+export const pickVariant = (n: number, take: number) => Math.floor(seededRandom(take * 7919 + 1)() * n);
 
 export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 2, BPM_STEP = 5, MIN_BPM = 40, ROUGH_ACCURACY = 60;
 export const REVIEW_DAYS = [2, 5, 12, 30];
@@ -168,7 +179,7 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
 export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes
+  if (step.jam || step.rest || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
     if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };

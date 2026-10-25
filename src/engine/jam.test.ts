@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeBarStats, inFreeBar } from './jam';
+import { freeBarStats, inFreeBar, takeDrift } from './jam';
 
 describe('freeBarStats', () => {
   // 60 BPM (1000 ms a beat), 4/4, a 2-bar section looped twice; bar 2 is free. Zero at 5000 ms.
@@ -21,5 +21,13 @@ describe('inFreeBar', () => {
     expect(inFreeBar(3.9, 4, 1, 2, [2])).toBe(false);
     expect(inFreeBar(12.5, 4, 1, 2, [2])).toBe(true); // second time round
     expect(inFreeBar(-0.5, 4, 1, 2, [2])).toBe(false); // count-in
+  });
+});
+
+describe('takeDrift', () => {
+  it('sees a player who speeds up, and stays quiet for short takes', () => {
+    const speeding = Array.from({ length: 60 }, (_, i) => ({ time: 1000 + i * 500 - i * 2, pad: 'snare' as const, velocity: 90 })); // 2 ms earlier each beat
+    expect(takeDrift(speeding, { zero: 1000, beatMs: 500 })!).toBeLessThan(-100);
+    expect(takeDrift(speeding.slice(0, 10), { zero: 1000, beatMs: 500 })).toBeNull();
   });
 });

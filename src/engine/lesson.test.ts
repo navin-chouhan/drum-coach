@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, copyChart, countPlan, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, clickOnBeat, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -122,6 +122,22 @@ describe('playChart', () => {
     const { chart: c, freeBars } = playChart({ chart: { ...chart, bars: 2, notes: [{ t: 0, drum: 'snare' }, { t: 4, drum: 'kick' }] }, trade: true });
     expect(freeBars).toEqual([2, 4]);
     expect(c.notes).toEqual([{ t: 0, drum: 'snare', auto: true }, { t: 8, drum: 'kick', auto: true }]);
+  });
+});
+
+describe('click feel, variants and rest', () => {
+  it('2and4 clicks only on beats 2 and 4', () => {
+    expect([0, 1, 2, 3].map(b => clickOnBeat(b, '2and4'))).toEqual([false, true, false, true]);
+    expect([0, 1, 2, 3].every(b => clickOnBeat(b))).toBe(true);
+  });
+  it('a variant is stable per take and the takes visit more than one', () => {
+    expect(pickVariant(3, 5)).toBe(pickVariant(3, 5));
+    expect(new Set(Array.from({ length: 12 }, (_, t) => pickVariant(3, t))).size).toBeGreaterThan(1);
+    expect(Array.from({ length: 12 }, (_, t) => pickVariant(3, t)).every(v => v >= 0 && v < 3)).toBe(true);
+  });
+  it('a rest step is done when the rest is over', () => {
+    const rest: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], rest: 20 }, lesson.steps[1]] };
+    expect(ladderStep({ ...startProgress(rest), bpm: 65, clean: 1 }, rest, false, D).event).toBe('stepDone');
   });
 });
 

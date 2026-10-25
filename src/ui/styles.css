@@ -490,3 +490,5 @@
   .slideNav button{font:800 20px system-ui;border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line);padding:8px 16px}
   .slideNav button.go{background:var(--accent);color:#fff}
   .slideNav i{font-style:normal;background:var(--pop);color:var(--line);border-radius:999px;padding:1px 10px;margin-left:8px;font-size:16px}
+  .restCountdown{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:360px;font:800 160px/1 var(--display);text-align:center}
+  .restCountdown p{font:700 28px system-ui;margin:16px 0 0}

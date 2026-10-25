@@ -61,3 +61,7 @@ export function freeBarStats(hits: PlayedHit[], extras: PlayedHit[], take: { zer
   const jam = hits.filter(inFree).map(h => ({ songSec: (h.time - zero) / 1000, pad: h.pad ?? 'snare', velocity: h.velocity }));
   return { stats: scoreJam(jam, { bpm: 60000 / beatMs, offsetSec: 0 }), extras: extras.filter(inFree).length };
 }
+
+/** Keep time alone: how far the tempo drifted (ms per minute; negative = speeding up) over a take's hits, null if under 20 s. */
+export const takeDrift = (hits: PlayedHit[], take: { zero: number; beatMs: number }) =>
+  scoreJam(hits.filter(h => h.time >= take.zero).map(h => ({ songSec: (h.time - take.zero) / 1000, pad: h.pad ?? 'snare', velocity: h.velocity })), { bpm: 60000 / take.beatMs, offsetSec: 0 }).driftMsPerMin;
