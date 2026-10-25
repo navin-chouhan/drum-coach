@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { countInNumber } from '../engine/run';
 import {
   Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, ModifierPosition, Parenthesis,
   Renderer, Stave, StaveNote, Tuplet, Voice,
@@ -238,7 +239,7 @@ export function SheetPlayer() {
       const c = count.current!, cur = cursor.current!, hi = barHi.current!;
       if (pos < 0) { // count-in
         if (page !== 0) draw(0);
-        const n = String(Math.ceil(-pos));
+        const n = String(countInNumber(pos, run.beatsPerBar)); // 1 2 3 4, with the voice
         if (c.textContent !== n && !reduceMotion) c.animate([{ scale: 1.5 }, { scale: 1 }], { duration: 220, easing: 'cubic-bezier(.2,.8,.25,1)' });
         c.textContent = n; c.className = 'sheetCount big';
         cur.style.opacity = hi.style.opacity = '0';
