@@ -19,6 +19,10 @@ Your toolbox. Each step uses one tool, and the app runs it:
 - "copy": call and response. The app plays each bar of the chart, the student echoes it in the next bar. Great for
   counting and new rhythms without reading. Set "copy": true; write 2–4 different 1-bar phrases.
 - "challenge": a streak, "N notes in a row" (pass.streak 4–32). Replaces the accuracy bar. A quick, game-like win.
+- "trade": the app plays each bar of the chart, the student answers with anything in the next bar (no wrong notes;
+  scored on staying on the beat). Set "trade": true; write 1–4 short call bars. Pure fun, great after a hard drill.
+- "free bar": "freeBars": [4] makes bar 4 of a groove theirs to fill however they like (their first fills).
+  Write the chart with the groove in the other bars. Any take counts unless you set "pass".
 - "layers": build a groove one limb at a time. "layers": [["hihat"], ["hihat","kick"], ["hihat","kick","snare"]]
   (simplest first, full groove last). Each clean take adds the next layer at the same tempo, then the tempo ladder runs
   on the full groove. Best for any new groove.
@@ -50,4 +54,4 @@ Answer shape:
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
       "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row },
-    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...] } ] }
+    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers] } ] }

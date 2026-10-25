@@ -87,6 +87,12 @@ describe('tempo ladder', () => {
     expect(lanesNow(lay.steps[0], { ...p, layer: 1 })).toEqual(['hihat', 'kick']);
     expect(lanesNow(lesson.steps[0], p)).toBeUndefined();
   });
+  it('free bars and trade count any take, unless the step sets a pass bar', () => {
+    const free: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], freeBars: [2] }, lesson.steps[1]] };
+    expect(ladderStep(startProgress(free), free, false, D, 30).event).toBe('hold'); // first clean take of two
+    const strict: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], trade: true, pass: { accuracy: 80 } }, lesson.steps[1]] };
+    expect(ladderStep(startProgress(strict), strict, false, D, 30).event).toBe('slowDown');
+  });
   it('a jam step counts any take and moves on', () => {
     const jam: Lesson = { ...lesson, steps: lesson.steps.map(s => ({ ...s, jam: true })) };
     expect(ladderStep(startProgress(jam), jam, false, D, 20)).toMatchObject({ event: 'stepDone', next: { step: 1, bpm: 70 } });

@@ -30,6 +30,8 @@ export type Step = {
   gapBars?: number;
   jam?: boolean;  // play along for fun: any full take counts, the tempo stays put
   copy?: boolean; // call and response: the app plays each bar, you echo it (see copyChart)
+  freeBars?: number[]; // 1-based chart bars that are yours: no notes to miss, scored on the beat grid only
+  trade?: boolean;      // trade bars: the app plays a bar, you answer with anything (copy + every echo bar free)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
 };
 export type LessonKind = NonNullable<Chart['kind']>;
@@ -50,9 +52,9 @@ export type LessonProgress = {
   layer?: number; // index into the step's `layers` (older saves: none = 0)
 };
 
-export type Tool = 'jam' | 'copy' | 'challenge' | 'layers' | 'drill';
+export type Tool = 'jam' | 'copy' | 'trade' | 'free' | 'challenge' | 'layers' | 'drill';
 /** Which coach tool a step uses (server/prompts/lesson.md). */
-export const toolOf = (s: Step): Tool => (s.jam ? 'jam' : s.copy ? 'copy' : s.pass?.streak ? 'challenge' : s.layers?.length ? 'layers' : 'drill');
+export const toolOf = (s: Step): Tool => (s.jam ? 'jam' : s.trade ? 'trade' : s.copy ? 'copy' : s.freeBars?.length ? 'free' : s.pass?.streak ? 'challenge' : s.layers?.length ? 'layers' : 'drill');
 
 /** Call and response: each bar is played by the app (call), then by you (echo). A 2-bar chart becomes 4 bars. */
 export function copyChart(c: Chart): Chart {
@@ -138,7 +140,7 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
 export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam) passed = true;
+  if (step.jam || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
     if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };

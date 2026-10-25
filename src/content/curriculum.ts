@@ -26,12 +26,12 @@ const crashOn = (notes: ChartNote[], beats: number[]) => [
   ...beats.map(t => ({ t, drum: 'crash' as const })),
 ].sort((a, b) => a.t - b.t);
 
-type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean; layers?: ChartDrum[][] };
+type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean; layers?: ChartDrum[][]; trade?: boolean; freeBars?: number[] };
 function step(title: string, text: string, notes: ChartNote[], bpm: [number, number], o: StepOpts = {}): Step {
   const ts = o.ts ?? [4, 4], bpb = beatsPerBar({ timeSignature: ts });
   const bars = Math.floor(Math.max(...notes.map(n => n.t)) / bpb + 1e-6) + 1;
   const chart: Chart = { title, bpm: bpm[1], timeSignature: ts, bars, notes };
-  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy, layers: o.layers };
+  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy, layers: o.layers, trade: o.trade, freeBars: o.freeBars };
 }
 const lesson = (level: number, id: string, kind: LessonKind, title: string, what: string, why: string, how: string, steps: Step[], tags?: Genre[]): Lesson =>
   ({ id, level, kind, title, what, why, how, tags, steps: steps.map((s, i) => ({ ...s, chart: { ...s.chart, id: `lesson/${id}/${i + 1}`, title: `${title} · ${s.title}` } })) });
@@ -62,6 +62,11 @@ export const CURRICULUM: Lesson[] = [
     'Copying by ear is how most drummers learn. It trains counting without you noticing.',
     'Listen to the bar the app plays (dimmed notes), then play the same thing in the next bar. Count "1 2 3 4" in your head.',
     [step('Copy me', 'Listen, then echo each bar.', cat([P(1, { snare: 'xxxx' }), P(1, { snare: 'xx.x' }), P(1, { snare: 'x.xx' }), P(1, { snare: 'x.x.' })]), [60, 70], { copy: true })]),
+  lesson(0, 'trade-bars', 'exercise', 'Trade bars',
+    'The app plays a bar, you answer with anything you like.',
+    'Like a conversation on the drums. There are no wrong notes, so you can just play and listen to yourself keep time.',
+    'Listen to the app\'s bar, then answer in the next bar: any rhythm, any drum. Keep counting "1 2 3 4" so your answer starts on 1.',
+    [step('Answer me', 'The app plays, you answer with anything. Stay on the beat.', cat([P(1, { snare: 'xxxx' }), P(2, { snare: 'x.xxx.x.' }), P(1, { snare: 'xx.x', kick: 'x...' })]), [70, 70], { trade: true })]),
   lesson(0, 'count-quarters', 'exercise', 'Counting quarter notes',
     'Playing in time with the click while counting "1 2 3 4" out loud.',
     'Drummers keep the band in time. Counting out loud links your hands to the beat; every pro still does it when learning something new.',
@@ -182,6 +187,11 @@ export const CURRICULUM: Lesson[] = [
     'Step 1 is the fill alone. Step 2 puts it after three bars of groove; land on beat 1 with a crash. Keep the 8ths even as you move around: arms move, not the timing.',
     [step('Fill alone', 'Two notes on each drum, R L.', P(2, FILL8), [60, 90]),
       step('Groove + fill', 'Three bars of groove, the fill, then crash on 1.', cat([crashOn(P(2, MONEY8, 3), [0]), P(2, FILL8), crashOn(P(2, MONEY8), [0])]), [70, 100])]),
+  lesson(3, 'own-fill', 'fill', 'Your own fill',
+    'Three bars of groove, then bar 4 is yours to fill however you like.',
+    'Real drummers make up fills on the spot. No wrong notes here: just land back on beat 1 of the groove.',
+    'Play the money beat for three bars. In bar 4, play anything: toms, snare, a crash. Then come straight back to the groove on 1.',
+    [step('Groove + your bar', 'Three bars of groove, then bar 4 is yours.', cat([P(2, MONEY8), P(2, MONEY8), P(2, MONEY8), P(2, { snare: 'x' })]), [70, 80], { freeBars: [4] })]),
   lesson(3, 'fill-16-snare', 'fill', 'Snare 16ths fill',
     'Groove, then the last two beats as 16ths on the snare.',
     'Short fills keep the groove going while still marking the phrase.',
