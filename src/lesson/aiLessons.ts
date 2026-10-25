@@ -11,7 +11,7 @@ let all: Lesson[] = CURRICULUM;
 let loaded = false; // until the server's list arrives, "no coach lesson" isn't known yet
 let stitched: Lesson | undefined; // the stage's song, played all the way through (built here, never stored)
 const listeners = new Set<() => void>();
-const set = (list: Lesson[]) => { ai = list; all = [...CURRICULUM, ...ai, ...(stitched ? [stitched] : [])]; listeners.forEach(l => l()); };
+const set = (list: Lesson[]) => { ai = list; all = [...CURRICULUM, ...ai]; listeners.forEach(l => l()); }; // the stitched song is only opened by id
 
 export async function refreshAiLessons() {
   try { const r = await fetch('/api/lessons'); if (r.ok) { const list = await r.json(); loaded = true; set(list); } } catch { /* server down: built-ins still work */ }

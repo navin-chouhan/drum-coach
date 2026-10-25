@@ -31,6 +31,7 @@ export type PlayOptions = RunOptions & {
   endless?: boolean;         // flow: loops until Stop (Esc / 4 crashes), which keeps the take instead of dropping it
   fadeClick?: number;        // the click fades to silence over this many bars
   clickOn?: 'quarters' | '8ths' | '2and4'; // click feel (engine/lesson.ts clickOnBeat)
+  then?: () => void;         // a demo that plays to its end runs this next (not when stopped or replaced)
   oneOff?: boolean;          // a take the coach asked for in another tool (lessons): for fun, no tempo ladder
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
@@ -301,7 +302,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
 function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: string) {
   endEarly = undefined;
   const { chart, options } = player;
-  if (options!.demo) { stop(); return; }
+  if (options!.demo) { stop(); options!.then?.(); return; }
   cleanup.forEach(f => f()); cleanup = [];
   const results = scored.notes.map(n => player.results[n.i]);
   const stats = { ...computeStats(scored, results, extras.length), reaction: options!.wait ? null : reactingToClick(scored.notes.map(n => ({ time: player.zero + n.t * player.beatMs, drum: n.drum })), hits) };
@@ -315,9 +316,4 @@ export function stop() {
   endEarly = undefined;
   cleanup.forEach(f => f()); cleanup = [];
   if (player.phase !== 'idle') { player.phase = 'idle'; notify(); }
-}
-
-/** Runs `fn` once the current take or demo has ended (back to idle). */
-export function afterThis(fn: () => void) {
-  const off = subscribePlayer(() => { if (player.phase === 'idle') { off(); fn(); } });
 }

@@ -50,7 +50,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   useEffect(() => {
     const wk = isoWeek(new Date());
     if (!dash?.totalRuns || getSettings().lastRecapWeek === wk) return;
-    const text = weekRecap(dash, BADGES.find(b => b.id === getSettings().badges?.at(-1))?.name);
+    const text = weekRecap(dash, newBadges.length ? BADGES.find(b => b.id === newBadges[newBadges.length - 1])?.name : undefined); // only a badge earned just now
     setSettings({ lastRecapWeek: wk }); setRecap(text);
     if (getSettings().voice) void say(text);
   }, [dash]);

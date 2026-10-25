@@ -10,7 +10,7 @@ export type Session = { date: string; items: SessionItem[]; done: number[] }; //
 export type Settings = {
   latencyMs: number; browserSounds: boolean;
   profile: Profile; lessons: Record<string, LessonProgress>; session?: Session;
-  fills?: { id: string; at: string; bpm: number; notes: ChartNote[] }[]; // your fills from free bars (last 20)
+  fills?: { id: string; at: string; bpm: number; timeSignature?: [number, 2 | 4 | 8 | 16]; notes: ChartNote[] }[]; // your fills from free bars (last 20)
   arcade?: Record<string, number>; // beat the clock: best clean bars in 2 minutes, per lesson
   autopilot?: boolean; // after a verdict, the next move starts by itself after 5 s unless you hit a pad
   lastRecapWeek?: string; // the ISO week the Monday recap was last given
