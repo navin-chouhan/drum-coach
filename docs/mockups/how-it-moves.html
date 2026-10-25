@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it moves</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .him{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+  .stage{background:var(--night);border:3px solid var(--line);box-shadow:6px 6px 0 var(--line);position:relative}
+  .stage svg{display:block;width:100%;height:auto}
+  .word{position:absolute;top:14px;left:18px;font:800 44px/1 var(--display);color:var(--pop);letter-spacing:.02em;text-shadow:3px 3px 0 #000}
+  .word.wrong{color:var(--bad)}
+  .count{position:absolute;top:18px;right:18px;display:flex;gap:10px;font:800 28px var(--display);color:#666}
+  .count .on{color:var(--cyan)}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px;background:var(--panel);border-top:3px solid var(--line)}
+  .bar button{font-weight:700}
+  .demos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .demos button{font:800 15px var(--display);padding:8px 14px;border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line)}
+  .demos button.on{background:var(--pop)}
+  .side .card{margin-bottom:14px}
+  .side h4{margin:0 0 6px}
+  .side li{margin:0 0 6px;font-size:16px}
+  .seg{display:inline-flex;border:2px solid var(--line)}.seg button{border:0;border-radius:0;border-right:2px solid var(--line)}.seg button:last-child{border-right:0}
+  .right{background:var(--good)!important;color:#fff}.wrongb{background:var(--bad)!important;color:#fff}
+  .kbd{display:inline-block;background:var(--night);color:var(--pop);border-radius:999px;padding:1px 9px;font:700 12px system-ui}
+  @media (max-width:1000px){.him{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · How it moves (R5, v2)</b> Replaces the stick-on-a-dot diagram in the lesson card, the 4th intro slide and the self-check. Not built.</div>
+
+<section class="state">
+  <h2>Side view, at the lesson's tempo</h2>
+  <div class="note">Drawn from data: each movement is a list of poses (shoulder, elbow, wrist, fingers) per beat, eased between them, so a
+    new technique is a few lines of keyframes and runs at any tempo. The stick tip height is measured against the ruler (3 / 15 / 30 cm).
+    <b>Right vs wrong</b> plays the usual beginner mistake, so you know what to look for in the mirror.</div>
+  <div class="demos" id="demos"></div>
+  <div class="him">
+    <div class="stage">
+      <svg id="svg" viewBox="0 0 900 520" aria-label="Animated drummer arm">
+        <defs>
+          <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#C9954B"/><stop offset="1" stop-color="#EBC888"/></linearGradient>
+        </defs>
+        <g id="scene"></g>
+      </svg>
+      <div class="word" id="word">DROP</div>
+      <div class="count" id="count"></div>
+      <div class="bar">
+        <button id="play">⏸ Pause</button>
+        <span class="seg" id="speeds"></span>
+        <label>Tempo <select id="bpm"><option>50</option><option selected>70</option><option>90</option><option>110</option></select> BPM</label>
+        <span class="seg"><button id="rightBtn" class="right">✓ Right</button><button id="wrongBtn">✗ Wrong</button></span>
+        <label class="check"><input type="checkbox" id="trail" checked> Tip path</label>
+        <label class="check"><input type="checkbox" id="joints"> Joints</label>
+      </div>
+    </div>
+    <aside class="side">
+      <div class="card"><h3 id="title">Full stroke</h3><p id="what" style="font-size:17px"></p></div>
+      <div class="card"><h4>Watch for</h4><ul id="watch"></ul></div>
+      <div class="card"><h4>The mistake (✗ Wrong)</h4><p id="mistake" style="font-size:16px"></p></div>
+      <div class="card small"><h4>At the kit</h4><p><span class="kbd">hi-hat × 1</span> next movement · <span class="kbd">snare × 1</span> slow motion on/off ·
+        <span class="kbd">tom 1 × 1</span> right / wrong · keyboard: ← → Space W.</p></div>
+    </aside>
+  </div>
+</section>
+
+<section class="state">
+  <h2>The grip, from above (still picture, next to the animation)</h2>
+  <div class="note">Hand positioning that a side view can't show: where the stick sits in the hand.</div>
+  <div class="cols">
+    <div class="stage" style="padding:10px">
+      <svg viewBox="0 0 640 300" aria-label="Matched grip seen from above">
+        <rect x="0" y="0" width="640" height="300" fill="#141414"/>
+        <!-- stick -->
+        <rect x="40" y="143" width="570" height="14" rx="7" fill="url(#wood)" stroke="#000" stroke-width="2"/>
+        <circle cx="606" cy="150" r="9" fill="#EBC888" stroke="#000" stroke-width="2"/>
+        <!-- back fingers wrapping under (seen as knuckles over the stick) -->
+        <g fill="#E9B493" stroke="#5a3b2a" stroke-width="2">
+          <rect x="96" y="128" width="22" height="58" rx="11"/>
+          <rect x="122" y="124" width="24" height="66" rx="12"/>
+          <rect x="150" y="122" width="25" height="70" rx="12"/>
+        </g>
+        <!-- palm (back of the hand) -->
+        <path d="M70 110 Q120 80 200 92 L232 118 Q240 150 232 180 L200 206 Q120 222 72 196 Q50 150 70 110 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+        <!-- index finger curled round at the fulcrum -->
+        <path d="M224 120 Q262 112 268 140 Q270 168 246 176 L230 168 Q248 160 246 142 Q240 128 222 132 Z" fill="#E9B493" stroke="#5a3b2a" stroke-width="2"/>
+        <!-- thumb along the side of the stick -->
+        <path d="M200 92 Q236 78 270 104 Q290 120 282 136 L266 140 Q252 120 228 114 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+        <ellipse cx="276" cy="126" rx="7" ry="5" fill="#f7dccb" stroke="#5a3b2a"/>
+        <!-- labels -->
+        <g font-family="system-ui" font-weight="700" font-size="15" fill="#FFE14D">
+          <line x1="262" y1="150" x2="330" y2="60" stroke="#FFE14D" stroke-width="2"/><text x="300" y="50">FULCRUM: thumb pad + index, a third up the stick</text>
+          <line x1="140" y1="190" x2="110" y2="262" stroke="#2DE1C2" stroke-width="2"/><text x="40" y="282" fill="#2DE1C2">back fingers: wrapped, loose (they guide, they don't squeeze)</text>
+          <line x1="236" y1="200" x2="330" y2="236" stroke="#fff" stroke-width="2"/><text x="336" y="242" fill="#fff">a small gap between palm and stick</text>
+          <text x="420" y="132" fill="#fff">palm faces the floor (matched grip)</text>
+        </g>
+      </svg>
+    </div>
+    <div class="card"><h3>Why it matters</h3><p style="font-size:17px">The stick pivots between the thumb and index finger; everything else just
+      steers. Squeeze with the back fingers and the stick can't bounce (that's the ✗ Wrong of "Full stroke"). The thumb lies along the
+      side of the stick, not on top.</p></div>
+  </div>
+</section>
+
+<script>
+// ---------- geometry ----------
+const PAD_Y = 356, PX_PER_CM = 8.6;
+const R = Math.PI / 180, cos = d => Math.cos(d * R), sin = d => Math.sin(d * R);
+const ARM = { upper: 135, fore: 150, hand: 48, butt: 85, tip: 215 };
+const at = (p, len, deg) => [p[0] + len * cos(deg), p[1] + len * sin(deg)];
+// pose: up = upper-arm angle, fa = forearm angle, wr = wrist (− cocked up), fg = fingers (stick vs hand). Degrees, + = down.
+function armPoints(shoulder, p) {
+  const E = at(shoulder, ARM.upper, p.up), W = at(E, ARM.fore, p.fa), hand = p.fa + p.wr, F = at(W, ARM.hand, hand), stick = hand + p.fg;
+  return { S: shoulder, E, W, F, hand, stick, tip: at(F, ARM.tip, stick), butt: at(F, -ARM.butt, stick) };
+}
+// ---------- poses (contact puts the tip on the pad) ----------
+const P = {
+  contact: { up: 72, fa: 14, wr: 0, fg: 2 },
+  high: { up: 66, fa: 6, wr: -38, fg: -4 },      // ~30 cm
+  mid: { up: 69, fa: 10, wr: -20, fg: -2 },      // ~15 cm
+  low: { up: 71.5, fa: 13, wr: -3, fg: 0.5 },    // ~3 cm
+  liftW: { up: 68, fa: 9, wr: -24, fg: 22 },     // wrist up, fingers keep the tip low (doubles)
+  fingers: { up: 70, fa: 12, wr: -14, fg: 22.5 },  // the fingers pull the 2nd note
+  armOnly: { up: 52, fa: -14, wr: 0, fg: 2 },    // wrist locked, whole arm lifts (mistake)
+  buried: { up: 72.5, fa: 14.5, wr: 0.5, fg: 2.5 },
+};
+const K = (t, pose, ease = 'io', word) => ({ t, p: P[pose] ?? pose, ease, word });
+// ---------- movements ----------
+const DEMOS = {
+  stroke: {
+    title: 'Full stroke', beats: 2, counts: ['1', '&', '2', '&'],
+    what: 'Drop the stick from 30 cm and let it bounce back up by itself. The wrist starts it; the stick does the rest.',
+    watch: ['The tip comes back up to the same height without you lifting it.', 'Wrist and forearm relaxed: the elbow barely moves.', 'Contact is short: hit and leave, like touching a hot stove.'],
+    mistake: 'Squeezing: the back fingers clamp, the stick stays on the pad, then the whole arm lifts it. Tiring, loud and slow.',
+    right: [K(0, 'contact', 'in', 'BOUNCE'), K(0.28, 'high', 'out'), K(0.62, 'high', 'io', 'DROP'), K(1, 'contact', 'in', 'BOUNCE'), K(1.28, 'high', 'out'), K(1.62, 'high', 'io', 'DROP')],
+    wrong: [K(0, 'buried', 'in', 'PRESSED IN'), K(0.25, 'buried', 'lin'), K(0.6, 'armOnly', 'io', 'ARM LIFTS'), K(1, 'buried', 'in', 'PRESSED IN'), K(1.25, 'buried', 'lin'), K(1.6, 'armOnly', 'io', 'ARM LIFTS')],
+  },
+  accent: {
+    title: 'Accent and taps', beats: 2, counts: ['>1', '&', '2', '&'],
+    what: 'The accent drops from high and STOPS low (a down stroke). Taps stay at 3 cm. The tap before the next accent lifts the stick back up (an up stroke).',
+    watch: ['After the accent the tip freezes low: no bounce back up.', 'Taps are small wrist movements, the same height every time.', 'The last tap and the lift are one motion.'],
+    mistake: 'Every stroke from the same height: the accent is no louder, or the taps are as loud as the accent.',
+    right: [K(0, 'contact', 'in', 'STOP LOW'), K(0.14, 'low', 'out'), K(0.3, 'low', 'io', 'TAP'), K(0.5, 'contact', 'in'), K(0.64, 'low', 'out'), K(0.8, 'low', 'io', 'TAP'), K(1, 'contact', 'in'), K(1.14, 'low', 'out'), K(1.3, 'low', 'io', 'TAP + LIFT'), K(1.5, 'contact', 'in'), K(1.74, 'high', 'out'), K(1.84, 'high', 'io', 'DROP')],
+    wrong: [K(0, 'contact', 'in', 'ALL THE SAME'), K(0.25, 'mid', 'out'), K(0.5, 'contact', 'in'), K(0.75, 'mid', 'out'), K(1, 'contact', 'in'), K(1.25, 'mid', 'out'), K(1.5, 'contact', 'in'), K(1.75, 'mid', 'out')],
+  },
+  doubles: {
+    title: 'Doubles (R R)', beats: 2, counts: ['1', '&', '2', '&'],
+    what: 'Two notes from one motion: the wrist throws the first, then the wrist rises while the fingers pull the stick down for the second.',
+    watch: ['Between the two notes the wrist goes UP while the tip stays down.', 'The second note comes from the fingers: watch them close.', 'Both notes the same volume (the app measures the drop).'],
+    mistake: 'Two wrist strokes: the second one is weaker and late, and at speed it falls apart.',
+    right: [K(0, 'contact', 'in', 'WRIST'), K(0.22, 'liftW', 'out', 'FINGERS'), K(0.5, 'fingers', 'in'), K(0.8, 'high', 'out', 'BOUNCE UP'), K(1.7, 'high', 'io', 'DROP')],
+    wrong: [K(0, 'contact', 'in', 'WRIST'), K(0.25, 'mid', 'out', 'WRIST AGAIN'), K(0.5, 'contact', 'in'), K(0.9, 'high', 'out'), K(1.7, 'high', 'io')],
+  },
+  flam: {
+    title: 'Alternating flams', beats: 2, counts: ['lR', '&', 'rL', '&'], hands: 2,
+    what: 'One stick low (3 cm), one high (30 cm). Both drop together; the low one lands a hair first. Then they swap: the high hand stays low, the low hand comes up.',
+    watch: ['Two heights before every flam: 3 cm and 30 cm.', 'The hand that played loud stays down; the soft one lifts.', 'Two notes, very close: "fla-am", not "flam" and not "flam-am".'],
+    mistake: 'Both sticks at the same height: they land together (one fat note) or far apart (two notes).',
+    right: [K(0, 'contact', 'in', 'MAIN'), K(0.14, 'low', 'out', 'STAY LOW'), K(0.9, 'low', 'io'), K(0.94, 'contact', 'in', 'GRACE'), K(1.4, 'high', 'out', 'UP'), K(1.78, 'high', 'io', 'DROP')],
+    left: [K(0, 'high', 'io', 'UP'), K(0.6, 'high', 'io'), K(1, 'contact', 'in', 'MAIN'), K(1.14, 'low', 'out'), K(1.9, 'low', 'io'), K(1.94, 'contact', 'in', 'GRACE'), K(1.99, 'high', 'out')],
+    leftWrong: [K(0, 'mid', 'out'), K(0.6, 'mid', 'io'), K(0.97, 'contact', 'in'), K(1.3, 'mid', 'out'), K(1.6, 'mid', 'io'), K(1.97, 'contact', 'in')],
+    wrong: [K(0, 'contact', 'in', 'SAME HEIGHT'), K(0.3, 'mid', 'out'), K(0.6, 'mid', 'io'), K(1, 'contact', 'in', 'ONE FAT NOTE'), K(1.3, 'mid', 'out'), K(1.6, 'mid', 'io')],
+  },
+  kick: {
+    title: 'Kick: heel down / heel up', beats: 2, counts: ['1', '&', '2', '&'], leg: true,
+    what: 'Heel down: the ankle does the work, soft and controlled. Heel up: the whole leg drops onto the ball of the foot, for volume. Both let the beater come back off the head.',
+    watch: ['Heel down: the heel stays on the plate, only the foot rocks.', 'Heel up: the heel floats, the knee lifts a little before each note.', 'The beater bounces back off the head.'],
+    mistake: 'Burying: the foot stays pressed after the note, the beater rests on the head and kills the sound.',
+    right: [K(0, { board: -8, lift: 0 }, 'in', 'ANKLE'), K(0.3, { board: -24, lift: 0 }, 'out'), K(0.7, { board: -24, lift: 0 }, 'io'), K(1, { board: -8, lift: 30 }, 'in', 'WHOLE LEG'), K(1.3, { board: -26, lift: 38 }, 'out'), K(1.7, { board: -26, lift: 38 }, 'io')],
+    wrong: [K(0, { board: -6, lift: 0 }, 'in', 'BURIED'), K(0.6, { board: -6, lift: 0 }, 'lin'), K(0.9, { board: -24, lift: 0 }, 'io'), K(1, { board: -6, lift: 0 }, 'in', 'BURIED'), K(1.6, { board: -6, lift: 0 }, 'lin'), K(1.9, { board: -24, lift: 0 }, 'io')],
+  },
+};
+// ---------- timeline sampling ----------
+const EASE = { in: x => x * x, out: x => 1 - (1 - x) ** 2, io: x => x * x * (3 - 2 * x), lin: x => x };
+function sample(keys, beats, beat) {
+  const b = ((beat % beats) + beats) % beats, ks = [...keys, { ...keys[0], t: keys[0].t + beats }];
+  let i = ks.length - 2; while (i > 0 && ks[i].t > b) i--;
+  const a = ks[i], z = ks[i + 1], u = EASE[z.ease]((b - a.t) / Math.max(1e-6, z.t - a.t));
+  const pose = Object.fromEntries(Object.keys(a.p).map(k => [k, a.p[k] + (z.p[k] - a.p[k]) * u]));
+  const word = [...keys].reverse().find(k => k.word && k.t <= b)?.word ?? keys.findLast?.(k => k.word)?.word;
+  return { pose, word };
+}
+// ---------- drawing ----------
+const NS = 'http://www.w3.org/2000/svg', scene = document.getElementById('scene');
+const el = (tag, attrs, parent = scene) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+const pts = a => a.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ');
+const tf = (p, deg) => `translate(${p[0].toFixed(1)} ${p[1].toFixed(1)}) rotate(${deg.toFixed(2)})`;
+function limb(g, a, b, w, fill) { el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: fill, 'stroke-width': w, 'stroke-linecap': 'round' }, g); }
+function drawArm(g, a, sleeve, alpha, joints) {
+  g.setAttribute('opacity', alpha);
+  limb(g, a.S, a.E, 46, sleeve); limb(g, a.E, a.W, 34, '#E9B493'); limb(g, a.E, a.W, 34 - 6, '#F2C4A4');
+  // palm, in the hand's frame (origin = wrist, x towards the fulcrum)
+  const hand = el('g', { transform: tf(a.W, a.hand) }, g);
+  el('path', { d: 'M-8 -16 Q20 -22 44 -14 L54 -6 L54 9 Q34 22 6 19 Q-10 14 -8 -16 Z', fill: '#F2C4A4', stroke: '#5a3b2a', 'stroke-width': 2 }, hand);
+  // stick + fingers, in the stick's frame (origin = fulcrum)
+  const st = el('g', { transform: tf(a.F, a.stick) }, g);
+  el('path', { d: `M${-ARM.butt} -4 L${ARM.tip} -2.6 L${ARM.tip} 2.6 L${-ARM.butt} 4 Z`, fill: 'url(#wood)', stroke: '#000', 'stroke-width': 1.5 }, st);
+  el('ellipse', { cx: ARM.tip, cy: 0, rx: 6, ry: 4.5, fill: '#EBC888', stroke: '#000', 'stroke-width': 1.5 }, st);
+  for (const [x, len] of [[-16, 17], [-30, 16], [-43, 14]]) // back fingers wrap under and move with the stick
+    el('path', { d: `M${x + 6} -2 Q${x + 10} ${len} ${x - 2} ${len} Q${x - 9} ${len - 4} ${x - 6} 2`, fill: '#E9B493', stroke: '#5a3b2a', 'stroke-width': 1.6 }, st);
+  el('path', { d: 'M4 -2 Q12 14 0 15 Q-9 13 -6 2', fill: '#E9B493', stroke: '#5a3b2a', 'stroke-width': 1.6 }, st); // index, round the fulcrum
+  el('path', { d: 'M-34 -9 Q-6 -15 14 -8 Q18 -5 14 -2 L-30 -2 Z', fill: '#F2C4A4', stroke: '#5a3b2a', 'stroke-width': 1.8 }, st); // thumb along the side
+  if (joints) for (const [p, n] of [[a.S, 'shoulder'], [a.E, 'elbow'], [a.W, 'wrist'], [a.F, 'fulcrum']]) {
+    el('circle', { cx: p[0], cy: p[1], r: 6, fill: '#FFE14D', stroke: '#000', 'stroke-width': 2 }, g);
+    el('text', { x: p[0] + 9, y: p[1] - 9, fill: '#FFE14D', 'font-size': 13, 'font-weight': 700, 'font-family': 'system-ui' }, g).textContent = n;
+  }
+}
+function drawKit(hit) {
+  el('rect', { x: 470, y: PAD_Y, width: 230, height: 22, rx: 4, fill: hit ? '#2DE1C2' : '#3a3a3a', stroke: '#000', 'stroke-width': 2 });
+  el('rect', { x: 480, y: PAD_Y + 22, width: 210, height: 10, fill: '#222' });
+  el('line', { x1: 585, y1: PAD_Y + 32, x2: 585, y2: 510, stroke: '#555', 'stroke-width': 6 });
+}
+function drawRuler(tipY) {
+  const x = 740;
+  el('line', { x1: x, y1: PAD_Y, x2: x, y2: PAD_Y - 32 * PX_PER_CM, stroke: '#777', 'stroke-width': 2 });
+  for (const cm of [3, 15, 30]) {
+    const y = PAD_Y - cm * PX_PER_CM;
+    el('line', { x1: x - 8, y1: y, x2: x + 8, y2: y, stroke: '#aaa', 'stroke-width': 2 });
+    el('text', { x: x + 14, y: y + 5, fill: '#aaa', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = `${cm} cm`;
+  }
+  const cm = Math.max(0, (PAD_Y - tipY) / PX_PER_CM);
+  el('line', { x1: x - 14, y1: tipY, x2: x + 14, y2: tipY, stroke: '#FFE14D', 'stroke-width': 4 });
+  el('text', { x: x + 14, y: tipY - 8, fill: '#FFE14D', 'font-size': 17, 'font-weight': 800, 'font-family': 'system-ui' }).textContent = `${Math.round(cm)} cm`;
+}
+// leg: hip fixed on the throne, foot on the pedal; the knee by two-bone IK
+const LEG = { hip: [300, 250], thigh: 178, shin: 178, heelPlate: [520, 452], board: 200, foot: 170 };
+function ik(a, b, l1, l2) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.min(l1 + l2 - 1, Math.hypot(dx, dy)), base = Math.atan2(dy, dx) / R;
+  const alpha = Math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)) / R;
+  const k1 = at(a, l1, base - alpha), k2 = at(a, l1, base + alpha);
+  return k1[1] < k2[1] ? k1 : k2; // the knee is up
+}
+function drawLeg(p, joints) {
+  const H0 = LEG.heelPlate, toeEnd = at(H0, LEG.board, p.board);
+  // pedal frame, board, beater (linked to the board angle) and the drum head
+  el('rect', { x: H0[0] - 20, y: H0[1], width: 260, height: 14, fill: '#333', stroke: '#000', 'stroke-width': 2 });
+  el('line', { x1: H0[0] + 214, y1: H0[1], x2: H0[0] + 214, y2: H0[1] - 150, stroke: '#555', 'stroke-width': 8 });
+  const pivot = [H0[0] + 214, H0[1] - 140], beaterDeg = -150 + (p.board + 24) * 4.6;
+  const head = [760, 0], bEnd = at(pivot, 130, beaterDeg);
+  const hit = bEnd[0] >= head[0] - 14;
+  el('rect', { x: head[0], y: 150, width: 26, height: 300, fill: hit ? '#2DE1C2' : '#3a3a3a', stroke: '#000', 'stroke-width': 2 });
+  el('line', { x1: pivot[0], y1: pivot[1], x2: bEnd[0], y2: bEnd[1], stroke: '#ccc', 'stroke-width': 5 });
+  el('circle', { cx: bEnd[0], cy: bEnd[1], r: 14, fill: '#eee', stroke: '#000', 'stroke-width': 2 });
+  el('line', { x1: toeEnd[0], y1: toeEnd[1], x2: pivot[0], y2: pivot[1] + 20, stroke: '#888', 'stroke-width': 3, 'stroke-dasharray': '6 5' }); // chain
+  el('line', { x1: H0[0], y1: H0[1], x2: toeEnd[0], y2: toeEnd[1], stroke: '#999', 'stroke-width': 12, 'stroke-linecap': 'round' });
+  // foot: heel on the plate (lift 0) or raised, rolling on the ball of the foot
+  const dir = p.board + p.lift, ball = at(H0, 128, p.board);
+  const heel = p.lift ? at(ball, -122, dir) : at(H0, 6, p.board), fdir = p.lift ? dir : p.board;
+  const n = fdir - 90, toe = at(heel, LEG.foot, fdir), ankle = at(at(heel, 34, fdir), 44, n);
+  const knee = ik(LEG.hip, ankle, LEG.thigh, LEG.shin);
+  el('rect', { x: 210, y: 262, width: 150, height: 26, rx: 8, fill: '#2a2a2a', stroke: '#000', 'stroke-width': 2 }); // throne
+  limb(scene, LEG.hip, knee, 56, '#2F6FE4'); limb(scene, knee, ankle, 42, '#2F6FE4');
+  el('polygon', { points: pts([at(heel, 0, n), at(at(heel, 0, n), 14, n), at(ankle, 18, n), at(at(toe, -40, fdir), 22, n), toe, at(heel, -4, fdir)]), fill: '#1b1b1b', stroke: '#888', 'stroke-width': 2 });
+  if (joints) for (const [pt, label] of [[LEG.hip, 'hip'], [knee, 'knee'], [ankle, 'ankle'], [heel, 'heel'], [ball, 'ball']]) {
+    el('circle', { cx: pt[0], cy: pt[1], r: 6, fill: '#FFE14D', stroke: '#000', 'stroke-width': 2 });
+    el('text', { x: pt[0] + 9, y: pt[1] - 9, fill: '#FFE14D', 'font-size': 13, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = label;
+  }
+}
+// ---------- loop ----------
+const state = { demo: 'stroke', speed: 1, playing: true, wrong: false, beat: 0, last: performance.now(), trail: [] };
+const $ = id => document.getElementById(id);
+function setDemo(id) {
+  state.demo = id; state.trail = [];
+  const d = DEMOS[id];
+  $('title').textContent = d.title; $('what').textContent = d.what; $('mistake').textContent = d.mistake;
+  $('watch').innerHTML = d.watch.map(w => `<li>${w}</li>`).join('');
+  [...$('demos').children].forEach(b => b.classList.toggle('on', b.dataset.id === id));
+}
+Object.entries(DEMOS).forEach(([id, d]) => { const b = document.createElement('button'); b.textContent = d.title; b.dataset.id = id; b.onclick = () => setDemo(id); $('demos').appendChild(b); });
+[[1, '1×'], [0.5, '½×'], [0.25, '¼× slow motion']].forEach(([v, label]) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => { state.speed = v; [...$('speeds').children].forEach(x => x.classList.toggle('on', x === b)); }; $('speeds').appendChild(b); if (v === 1) b.classList.add('on'); });
+$('play').onclick = () => { state.playing = !state.playing; $('play').textContent = state.playing ? '⏸ Pause' : '▶ Play'; };
+const setWrong = w => { state.wrong = w; state.trail = []; $('rightBtn').className = w ? '' : 'right'; $('wrongBtn').className = w ? 'wrongb' : ''; };
+$('rightBtn').onclick = () => setWrong(false); $('wrongBtn').onclick = () => setWrong(true);
+addEventListener('keydown', e => {
+  const ids = Object.keys(DEMOS), i = ids.indexOf(state.demo);
+  if (e.key === 'ArrowRight') setDemo(ids[(i + 1) % ids.length]);
+  if (e.key === 'ArrowLeft') setDemo(ids[(i + ids.length - 1) % ids.length]);
+  if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  if (e.key === 'w') setWrong(!state.wrong);
+});
+function frame(now) {
+  const bpm = +$('bpm').value, d = DEMOS[state.demo];
+  if (state.playing) state.beat += ((now - state.last) / 60000) * bpm * state.speed;
+  state.last = now;
+  scene.replaceChildren();
+  const joints = $('joints').checked;
+  let word, tipY = PAD_Y;
+  if (d.leg) {
+    const s = sample(state.wrong ? d.wrong : d.right, d.beats, state.beat); word = s.word;
+    drawLeg(s.pose, joints);
+  } else {
+    const s = sample(state.wrong ? d.wrong : d.right, d.beats, state.beat); word = s.word;
+    const right = armPoints([175, 118], s.pose);
+    const left = d.hands === 2 ? armPoints([140, 118], sample(state.wrong ? d.wrong : d.left, d.beats, state.beat).pose) : null;
+    const hit = [right, left].some(a => a && a.tip[1] >= PAD_Y - 3);
+    drawKit(hit);
+    if (left) { const g = el('g', {}); drawArm(g, left, '#2F6FE4', 0.6, joints); }
+    // the tip's path
+    state.trail.push(right.tip); if (state.trail.length > 70) state.trail.shift();
+    if ($('trail').checked) el('polyline', { points: pts(state.trail), fill: 'none', stroke: '#FFE14D', 'stroke-width': 3, 'stroke-dasharray': '2 6', opacity: 0.8 });
+    const g = el('g', {}); drawArm(g, right, '#E8423F', 1, joints);
+    tipY = Math.min(right.tip[1], left ? left.tip[1] : Infinity);
+    drawRuler(right.tip[1]);
+    if (left) el('text', { x: 40, y: 500, fill: '#9ec5ff', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = 'blue = left hand (behind)';
+  }
+  $('word').textContent = word ?? ''; $('word').className = `word ${state.wrong ? 'wrong' : ''}`;
+  const n = d.counts.length, k = Math.floor(((state.beat % d.beats) / d.beats) * n);
+  $('count').innerHTML = d.counts.map((c, i) => `<span class="${i === k ? 'on' : ''}">${c}</span>`).join('');
+  requestAnimationFrame(frame);
+}
+setDemo('stroke');
+requestAnimationFrame(frame);
+window.__him = { armPoints, P, PAD_Y, PX_PER_CM, DEMOS, sample }; // for checking the geometry
+</script>
+</body>
+</html>
