@@ -3,13 +3,14 @@ import { getSettings } from '../input/settings';
 
 // One shared AudioContext. Sounds ported from prototype/drum-stage.html.
 let ctx: AudioContext | null = null;
-let master: GainNode, voiceOut: GainNode, noiseBuf: AudioBuffer;
+let master: GainNode, voiceOut: GainNode, bandOut: GainNode, noiseBuf: AudioBuffer;
 
 export function audio(): AudioContext {
   if (!ctx) {
     ctx = new AudioContext({ latencyHint: 'interactive' });
     master = ctx.createGain(); master.gain.value = level(); master.connect(ctx.destination);
     voiceOut = ctx.createGain(); voiceOut.gain.value = getSettings().voiceVolume; voiceOut.connect(ctx.destination); // the coach's voice isn't ducked
+    bandOut = ctx.createGain(); bandOut.gain.value = bandLevel(); bandOut.connect(master); // under master: ducked under the voice too
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const ch = noiseBuf.getChannelData(0);
     for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
@@ -18,14 +19,16 @@ export function audio(): AudioContext {
   return ctx;
 }
 
-// Clicks, synth drums and backing music; the coach's voice has its own level.
+// Clicks, synth drums and backing music; the coach's voice has its own level, the band its own under master.
 const level = () => 0.8 * getSettings().clickVolume;
+const bandLevel = () => 0.5 * (getSettings().bandVolume ?? 0.6);
 
 /** Sets the app's sound levels from settings now (the sound check's sliders). */
 export function applyLevels() {
   const c = audio(), t = c.currentTime;
   master.gain.setTargetAtTime(level(), t, 0.02);
   voiceOut.gain.setTargetAtTime(getSettings().voiceVolume, t, 0.02);
+  bandOut.gain.setTargetAtTime(bandLevel(), t, 0.02);
 }
 
 /** AudioContext time (s) → performance.now() ms when it is heard (output latency included). */
@@ -67,6 +70,28 @@ function tone(t: number, type: OscillatorType, f0: number, f1: number, sweep: nu
   const g = c.createGain(); env(g, t, peak, decay);
   o.connect(g); g.connect(master);
   o.start(t); o.stop(t + decay + 0.05);
+}
+
+const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
+/** A held synth note into the band bus: attack, hold for `dur` seconds, release. Follows the tempo (no pitch shift). */
+function pad(t: number, midi: number, dur: number, peak: number, type: OscillatorType, cutoff: number, detune = 0) {
+  const c = ctx!, o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+  o.type = type; o.frequency.value = hz(midi); o.detune.value = detune;
+  f.type = 'lowpass'; f.frequency.value = cutoff;
+  const end = t + Math.max(0.05, dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+  g.gain.setTargetAtTime(peak * 0.7, t + 0.05, 0.15);
+  g.gain.setTargetAtTime(0.0001, end, 0.04);
+  o.connect(f); f.connect(g); g.connect(bandOut);
+  o.start(t); o.stop(end + 0.3);
+}
+/** One band note (engine/band.ts) at audio time `at`; `seconds` = its length at this tempo. */
+export function playBand(n: { part: 'bass' | 'keys'; midi: number[]; vel: number }, at: number, seconds: number) {
+  audio();
+  const v = n.vel / 127;
+  if (n.part === 'bass') { pad(at, n.midi[0], seconds * 0.92, 0.5 * v, 'sawtooth', 420); pad(at, n.midi[0] - 12, seconds * 0.92, 0.35 * v, 'sine', 200); }
+  else for (const m of n.midi) { pad(at, m, seconds * 0.95, 0.09 * v, 'triangle', 2200, -6); pad(at, m, seconds * 0.95, 0.06 * v, 'sawtooth', 1400, 7); }
 }
 
 /** Synth drum at audio time `at` (default: now). */

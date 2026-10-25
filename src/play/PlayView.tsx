@@ -13,6 +13,7 @@ import { canRunAction, coachTake, onCoachAction, replyFor, runAction, screenActi
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from './player';
 import { LatencyHint, Results, saveRun } from './Results';
 import { CoachLine, LiveHint, Move } from './AtKit';
+import { bandStyle, DEFAULT_CHORDS } from '../engine/band';
 import { IntroSlides } from './IntroSlides';
 import { beatsPerBar } from '../engine/chart';
 
@@ -82,7 +83,9 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
       try { backing = { buffer: await loadBacking(chart.id, audio()), syncOffsetMs: chart.syncOffsetMs ?? 0 }; }
       catch { setError('Could not load the backing audio; playing without it.'); }
     }
-    const run = () => start(chart, { ...o, speed, fromBar: from, toBar: to, backing, hints, ...extra });
+    // The band under grooves and songs (not under a chart's own backing audio).
+    const style = bandStyle(chart), band = !backing && getSettings().band !== false && (chart.kind === 'groove' || chart.kind === 'song') ? { style, chords: DEFAULT_CHORDS[style] } : undefined;
+    const run = () => start(chart, { ...o, speed, fromBar: from, toBar: to, backing, hints, band, ...extra });
     // Intro slides before the first take of an exercise (or after a tempo jump of more than 10 BPM).
     const b = chart.bpm * speed, seen = introShown.current.get(chart.id);
     if (!extra?.demo && !o.wait && getSettings().intro !== false && (seen === undefined || Math.abs(seen - b) > 10)) {

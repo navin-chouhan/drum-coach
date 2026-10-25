@@ -54,6 +54,7 @@ export type Lesson = {
   steps: Step[]; tags?: Genre[];
   source?: 'ai'; focus?: string; // AI-curated for this student; `focus` says why
   checkpoint?: string; // a coach lesson that stands in for this checkpoint: finishing it passes the checkpoint
+  band?: { chords?: string }; // the backing band's chord line, one symbol per bar (engine/band.ts); default by style
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
 export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[] }; // rank: your title once it's passed

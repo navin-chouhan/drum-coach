@@ -1,4 +1,5 @@
 import { beatsPerBar, type Chart } from './chart.ts';
+import type { Lesson, Step } from './lesson.ts';
 import type { Run } from './run.ts';
 
 // The backing band (R1): a synth bass and keys under grooves and songs, so the student learns to lock with a band.
@@ -69,4 +70,18 @@ export function bandStyle(chart: Pick<Chart, 'timeSignature' | 'notes'>): BandSt
   if (chart.notes.some(x => on(x.t, 3) && !on(x.t, 2))) return chart.notes.some(x => x.drum === 'ride') ? 'swing' : 'shuffle';
   if (chart.notes.some(x => x.ghost) || chart.notes.some(x => x.drum === 'kick' && on(x.t, 4) && !on(x.t, 2))) return 'funk';
   return 'rock';
+}
+
+/** A chord line per style when a lesson has none (one chord per bar, wrapping). */
+export const DEFAULT_CHORDS: Record<BandStyle, string> = {
+  rock: 'A A D E', funk: 'Em7 Em7 A7 A7', shuffle: 'A A A A D D A A E D A E', swing: 'C Am Dm G', sixeight: 'C Am F G', odd: 'D D G A',
+};
+/**
+ * The band for a lesson step: on for grooves, songs and fills; off where the click is the point (counting, rudiments,
+ * find-your-tempo, rests). Chords from the lesson, else the style's default line.
+ */
+export function bandFor(lesson: Pick<Lesson, 'kind' | 'band'>, step: Pick<Step, 'chart' | 'probe' | 'rest'>): BandSpec | undefined {
+  if (!['groove', 'song', 'fill'].includes(lesson.kind) || step.probe || step.rest) return undefined;
+  const style = bandStyle(step.chart);
+  return { style, chords: lesson.band?.chords ?? DEFAULT_CHORDS[style] };
 }

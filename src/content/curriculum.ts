@@ -320,6 +320,14 @@ export const CURRICULUM: Lesson[] = [
     ]), [100, 130])], ['jazz']),
 ];
 
+// The backing band's chords for the built-in songs (one per bar, wrapping; engine/band.ts).
+const SONG_CHORDS: Record<string, string> = {
+  'song-steady': 'G G C D', 'song-garage': 'E E A B',
+  'song-shuffle': 'A A A A D D A A E D A E', // a 12-bar blues
+  'song-swing': 'C Am Dm G7 C Am Dm G7 F F7 C A7 Dm G7 C G7',
+};
+for (const l of CURRICULUM) if (SONG_CHORDS[l.id]) l.band = { chords: SONG_CHORDS[l.id] };
+
 export const LESSON_BY_ID = Object.fromEntries(CURRICULUM.map(l => [l.id, l])) as Record<string, Lesson>;
 
 export const MILESTONES: Milestone[] = [

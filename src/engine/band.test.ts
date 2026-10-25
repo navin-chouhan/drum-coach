@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LESSON_BY_ID } from '../content/curriculum';
-import { bandNotes, bandStyle, chordMidi } from './band';
+import { bandFor, bandNotes, bandStyle, chordMidi } from './band';
 import { pattern, type Chart } from './chart';
 import { buildRun } from './run';
 
@@ -67,5 +67,25 @@ describe('bandStyle', () => {
     expect(bandStyle(chart(pattern({ hihat: 'xxxxxx', snare: '...x..' }, 2), 1, [6, 8]))).toBe('sixeight');
     expect(bandStyle(chart(pattern({ hihat: 'xxxxx' }, 1), 1, [5, 4]))).toBe('odd');
     expect(bandStyle(chart(pattern({ hihat: 'x.x.x.x.x.x.x.x.', snare: '....X..g.g..X..g', kick: 'x.x....x..x.....' }, 4)))).toBe('funk');
+  });
+});
+
+describe('bandFor', () => {
+  const L = (id: string) => LESSON_BY_ID[id];
+  it('on for grooves, songs and fills; off for counting, rudiments, probes and rests', () => {
+    expect(bandFor(L('money-8ths'), L('money-8ths').steps.at(-1)!)).toMatchObject({ style: 'rock' });
+    expect(bandFor(L('song-shuffle'), L('song-shuffle').steps[0])).toEqual({ style: 'shuffle', chords: 'A A A A D D A A E D A E' });
+    expect(bandFor(L('count-8ths'), L('count-8ths').steps[0])).toBeUndefined();
+    expect(bandFor(L('singles'), L('singles').steps[0])).toBeUndefined();
+    const groove = L('money-8ths');
+    expect(bandFor(groove, { ...groove.steps[0], probe: true })).toBeUndefined();
+    expect(bandFor(groove, { ...groove.steps[0], rest: 20 })).toBeUndefined();
+  });
+  it('every built-in song has a chord line that the chord parser reads', () => {
+    for (const id of ['song-steady', 'song-garage', 'song-shuffle', 'song-swing']) {
+      const b = bandFor(L(id), L(id).steps[0])!;
+      expect(L(id).band?.chords, id).toBeDefined();
+      for (const c of b.chords!.split(' ')) expect(() => chordMidi(c)).not.toThrow();
+    }
   });
 });

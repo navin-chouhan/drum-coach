@@ -17,6 +17,7 @@ export type Settings = {
   intro?: boolean; // intro slides before the first take of an exercise or step (default on)
   hints?: boolean; // the count and who plays each note under the sheet (default on)
   setupDone?: boolean; setupNudged?: boolean; // onboarding's kit step (pads + latency) done; Journey's one reminder given
+  band?: boolean; bandVolume?: number; // the backing band under grooves and songs (default on, 0.6)
   latencyChecked?: boolean; // a latency test was saved (lay-back lessons need it)
   badges?: string[]; // earned badge ids (engine/progress.ts BADGES), so a new one is announced once
   updatedAt?: number; // ms; the newer copy wins when browser and server disagree

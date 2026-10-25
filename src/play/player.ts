@@ -2,13 +2,14 @@ import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '.
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
 import { inFreeBar } from '../engine/jam';
 import { clickOnBeat } from '../engine/lesson';
+import { bandNotes, type BandSpec } from '../engine/band';
 import { computeStats, createMatcher, noteWindows, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
 import { hush, NUMBERS, sayAt } from '../voice/voice';
 import { applyTip, loadTips } from '../coach/aiTips';
-import { audio, audioToPerf, click, playBuffer, playDrum, whenRunning } from './audio';
+import { audio, audioToPerf, click, playBand, playBuffer, playDrum, whenRunning } from './audio';
 
 export type PlayOptions = RunOptions & {
   speed: number; // 0.5–1
@@ -36,6 +37,7 @@ export type PlayOptions = RunOptions & {
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
+  band?: BandSpec;           // the backing band (engine/band.ts): bass and keys under the take
   lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach
 };
 export type Finished = { cues: Cue[]; zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
@@ -213,6 +215,11 @@ export function start(chart: Chart, options: PlayOptions) {
   const plan = options.countAloud, perBar = plan?.[0]?.length ?? 1, slots = plan ? Math.min(plan.length, Math.ceil(run.beats / bpb)) * perBar : 0; // never past the take's end
   const slotAt = (w: number) => zeroAudio + ((w * bpb) / perBar) * beatMs / 1000;
   let w = 0;
+  // The band: free bars (yours) get one hit on beat 1; it goes quiet with the gap click and fades with the click.
+  const runBars = Math.ceil(run.beats / bpb - 1e-9), sectionBars = options.toBar - options.fromBar + 1;
+  const fillBars = options.freeBars ? Array.from({ length: runBars }, (_, b) => b).filter(b => inFreeBar(b * bpb, bpb, options.fromBar, sectionBars, options.freeBars!)) : [];
+  const band = options.band && !options.wait ? bandNotes({ ...options.band, fillBars }, run) : [];
+  let bi = 0;
   const lastK = options.metronome ? run.beats * sub : 0; // metronome off → count-in only
   const timeOf = (k: number) => t0 + ((k / sub + countIn) * beatMs) / 1000;
   const timer = setInterval(() => {
@@ -232,6 +239,11 @@ export function start(chart: Chart, options: PlayOptions) {
       const n = sounding[a];
       if (autoAt(n) < late) continue;
       playDrum(DRUM_PAD[n.drum][0], (n.accent ? 110 : n.ghost ? 40 : 80) * (options.guide ? 0.5 : 1), autoAt(n));
+    }
+    for (; bi < band.length && zeroAudio + (band[bi].t * beatMs) / 1000 < c.currentTime + 0.2; bi++) {
+      const n = band[bi], at = zeroAudio + (n.t * beatMs) / 1000, bar = Math.floor(n.t / bpb + 1e-6);
+      const vol = options.fadeClick ? Math.max(0, 1 - bar / options.fadeClick) : 1;
+      if (at >= late && vol > 0 && !(options.gapBars && (bar + 1) % options.gapBars === 0)) playBand({ ...n, vel: n.vel * vol }, at, (n.dur * beatMs) / 1000);
     }
     for (; w < slots && slotAt(w) < c.currentTime + 0.2; w++) {
       const word = plan![Math.floor(w / perBar)][w % perBar];

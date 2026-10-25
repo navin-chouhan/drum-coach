@@ -6,6 +6,7 @@ import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
 import { afterReview, autoProbe, floorLine, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
+import { bandFor } from '../engine/band';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
 import type { SessionRole } from '../engine/planner';
@@ -234,10 +235,15 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     return { chart: { ...chart, notes }, dim: (i: number) => !!notes[i].auto || (!!lanes && !lanes.includes(notes[i].drum)) };
   }, [chart, laneKey]); // eslint-disable-line react-hooks/exhaustive-deps -- lanes by value
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'h' && !(e.target instanceof HTMLInputElement)) setSettings({ hints: getSettings().hints === false }); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+      if (e.key === 'h') setSettings({ hints: getSettings().hints === false });
+      if (e.key === 'b') setSettings({ band: getSettings().band === false }); // the band on / off
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  const bandSpec = bandFor(lesson, step); // on for grooves, songs and fills (engine/band.ts)
   const options = (demo: boolean, wait = false): PlayOptions => ({
     // Short takes so a rough one is over quickly: 4 bars; 8 for the proving take (last step at its target tempo),
     // a jam (long enough to enjoy) and copy-me (4 calls and 4 echoes).
@@ -247,6 +253,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud),
     activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false, freeBars: free.length ? free : undefined, fadeClick: demo ? undefined : step.fadeClick, clickOn: step.clickOn,
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
+    band: getSettings().band !== false ? bandSpec : undefined,
   });
   // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).
   const [intro, setIntro] = useState<{ run: () => void }>();
@@ -265,7 +272,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     { ...options(true), fromBar: 1, toBar: 999, repeats: 1, speed: 1, activeLanes: undefined, then });
   // One bar of find-your-tempo at the current probe tempo (count-in only before the first).
   // Four clicks, then one bar, every time: chained bars without a count-in didn't line up.
-  const probeBar = () => start(chart, { ...options(false), toBar: 1, repeats: 1, speed: (probing.current?.tempo ?? bpm) / chart.bpm, countInBars: 1, probe: true });
+  const probeBar = () => start(chart, { ...options(false), toBar: 1, repeats: 1, speed: (probing.current?.tempo ?? bpm) / chart.bpm, countInBars: 1, probe: true, band: undefined });
   // Only an untouched step; a flying student probes every drill step with a ladder (autoProbe), not only probe steps.
   const canProbe = (!!step.probe || autoProbe(step, studentRead(getSettings().lessons).pace)) && !oneTake && probed.current !== stepIdx && p.bpm === step.bpm.start && !p.clean && !p.fails;
   // Zoom in: loop one bar 4 times, 10 BPM slower, with the app playing softly underneath.
@@ -391,6 +398,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         {dots.length > 1 && <span className="stepDots" aria-label={layer !== undefined ? `Layer ${layer + 1} of ${dots.length}` : `Step ${stepIdx + 1} of ${dots.length}`}>{dots.map((d, i) => <i key={i} className={d} />)}</span>}
         <span className="bigTempo">{arcade ? arcadeBpm : bpm} <small>BPM{!oneTake && ` → ${step.bpm.target}`}</small>{!oneTake && <span className="meter"><b style={{ width: `${toTarget * 100}%` }} /></span>}</span>
         <button className={`hintToggle ${hints ? 'on' : ''}`} aria-pressed={hints} onClick={() => setSettings({ hints: !hints })} title="Show the count and which hand or foot plays each note (key H)">💡 Hints {hints ? 'on' : 'off'}</button>
+        {bandSpec ? <button className={`hintToggle ${getSettings().band !== false ? 'on' : ''}`} aria-pressed={getSettings().band !== false} onClick={() => setSettings({ band: getSettings().band === false })} title="Bass and keys play along (key B). Volume: Setup → Sound check">🎸 Band {getSettings().band !== false ? 'on' : 'off'}</button>
+          : <span className="small" title="Counting, rudiments and find-your-tempo are just you and the click">🎸 just you and the click</span>}
       </div>
 
       {resting ? <>
