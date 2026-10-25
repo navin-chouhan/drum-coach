@@ -35,9 +35,9 @@ export const toResult = (m: Match, velocity: number, pad?: PadId): NoteResult =>
 
 /**
  * Online matcher: each hit takes the nearest not-yet-matched expected note of a compatible drum
- * within the Good window. Failing that, a stroke within the Near window of its closest note of that drum
- * (if still open) is off time: the note stays a miss, but the stroke isn't an extra. Otherwise it's an
- * extra (returns null). `expected` must be sorted by time.
+ * within the Good window. Failing that, a stroke within the Near window of a note of that drum is off time
+ * (the latest open note before it, else the closest after it): the note stays a miss, but the stroke isn't
+ * an extra. A stroke whose closest note was already played is an extra (returns null). `expected` must be sorted by time.
  */
 export function createMatcher(expected: Expected[], w = WINDOWS) {
   const taken = new Uint8Array(expected.length);
@@ -51,14 +51,20 @@ export function createMatcher(expected: Expected[], w = WINDOWS) {
       if (!taken[k] && a < bestAbs && padMatches(expected[k].drum, hit.pad)) { best = k; bestAbs = a; }
     }
     if (best < 0) {
-      let near = -1, nearAbs = Infinity;
+      // Strokes arrive in time order, so an open note behind the stroke can only be this stroke's: a late stroke
+      // takes the note before it, not the nearer note after it (that one's own stroke is still to come, and
+      // dragging would otherwise read as rushing).
+      let near = -1, nearAbs = Infinity, past = -1;
       for (let k = from(w.near); k < expected.length && expected[k].time <= hit.time + w.near; k++) {
         const a = Math.abs(hit.time - expected[k].time);
-        if (a <= w.near && a < nearAbs && padMatches(expected[k].drum, hit.pad)) { near = k; nearAbs = a; }
+        if (a > w.near || !padMatches(expected[k].drum, hit.pad)) continue;
+        if (a < nearAbs) { near = k; nearAbs = a; }
+        if (!taken[k] && expected[k].time <= hit.time) past = k;
       }
       if (near < 0 || taken[near]) return null; // nothing close, or that note was already played: a real extra
-      taken[near] = 1;
-      return { index: near, offset: hit.time - expected[near].time, judgement: 'miss' };
+      const idx = past >= 0 ? past : near;
+      taken[idx] = 1;
+      return { index: idx, offset: hit.time - expected[idx].time, judgement: 'miss' };
     }
     taken[best] = 1;
     const offset = hit.time - expected[best].time;
