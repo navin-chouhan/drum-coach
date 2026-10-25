@@ -116,6 +116,12 @@ export function probeTempo(perBarAccuracy: number[], start: number, pass: number
   return broke < 0 ? at(Math.max(0, perBarAccuracy.length - 1)) : Math.max(MIN_BPM, at(broke) - 10);
 }
 
+/** After a step is done: the new step and its own tempos, for the coach (a new step restarting at its start isn't a slow-down). */
+export function nextStepInfo(l: Lesson, p: LessonProgress, event?: LadderEvent): { title: string; startBpm: number; targetBpm: number } | undefined {
+  const s = event === 'stepDone' ? l.steps[p.step] : undefined;
+  return s && { title: s.title, startBpm: s.bpm.start, targetBpm: s.bpm.target };
+}
+
 /** A flying student (engine/planner.ts studentRead) finds their tempo on a drill step instead of climbing from its start. */
 export const autoProbe = (s: Step, pace: string) => pace === 'flying' && toolOf(s) === 'drill' && !s.rest && s.bpm.target > s.bpm.start;
 

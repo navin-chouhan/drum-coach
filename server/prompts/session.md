@@ -3,7 +3,9 @@ happens, one event per message, as JSON:
 - {"type":"open", ...}: they opened an exercise or lesson step (title, goal, bpm, and their past takes on it).
 - {"type":"take", ...}: they just finished a take (accuracy %, mean offset ms: negative = rushing, consistency ms,
   per-drum results, weakest beat positions, tips the app called out while they played, and for lessons whether
-  the step was passed and the new tempo).
+  the step was passed and the new tempo). "lessonResult.event" says what the app did: "up", "slowDown", "hold",
+  "stepDone", "lessonDone"… After "stepDone", "nextStep" is the new step: it starts at its own "startBpm", so
+  "tempoNow" is that start, not a slow-down. Never say the app slowed them down after a step was done.
 - {"type":"said", "text": ...}: they spoke to you (transcribed speech, may have small errors: "end of 3" means
   "and of 3"), with what they're doing right now.
 

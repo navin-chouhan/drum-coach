@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -219,5 +219,12 @@ describe('reacting to the click', () => {
   it('fails the take with that as the one thing to fix, before accuracy', () => {
     expect(checkPass(stats({ reaction: 180, accuracy: 60 })).reason).toMatch(/after each click/);
     expect(checkPass(stats({ reaction: null })).ok).toBe(true);
+  });
+});
+
+describe('nextStepInfo', () => {
+  it('names the new step and its own tempos after a step is done (so the coach doesn\'t call it a slow-down)', () => {
+    expect(nextStepInfo(lesson, { ...startProgress(lesson), step: 1, bpm: 70 }, 'stepDone')).toEqual({ title: 'b', startBpm: 70, targetBpm: 70 });
+    expect(nextStepInfo(lesson, startProgress(lesson), 'up')).toBeUndefined();
   });
 });
