@@ -17,7 +17,7 @@ import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
-type Open = { lessonId: string; item?: number; role?: SessionRole };
+type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean };
 
 export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => void; openLessonId?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
@@ -74,7 +74,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   if (open) {
     const item = open.item !== undefined ? session.items[open.item] : undefined;
     const nextIdx = session.items.findIndex((_, i) => i !== open.item && playable(i) && !session.done.includes(i));
-    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role ?? open.role} minutes={item?.minutes}
+    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role ?? open.role} minutes={item?.minutes} flow={open.flow}
       onBack={() => setOpen(undefined)} onOpen={id => setOpen({ lessonId: id })}
       onItemDone={open.item === undefined ? undefined : () => markDone(open.item!)}
       onNext={open.item === undefined ? undefined : () => { markDone(open.item!); setOpen(nextIdx >= 0 ? { lessonId: session.items[nextIdx].lessonId, item: nextIdx } : undefined); }} />;
@@ -119,6 +119,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               <button className="primary big" autoFocus onClick={go}>{hero ? "Yes, let's go ▶" : 'Jam ▶'}</button>
               {others.length > 0 && <button onClick={() => setSwap(swap + 1)}>Something else</button>}
               {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
+              {jam && <button onClick={() => setOpen({ lessonId: jam.id, flow: true })}>🌊 Flow</button>}
             </div>
           </div>
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}

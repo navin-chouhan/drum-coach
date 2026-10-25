@@ -21,7 +21,7 @@ import { SheetMusic } from '../notation';
 import { say, voiceEngine } from '../voice/voice';
 import { canRunAction, coachTake, dropCoachAction, onCoachAction, runAction, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
-import { CoachLine, LiveHint, Move } from '../play/AtKit';
+import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
@@ -41,8 +41,9 @@ export function LessonPlayer(props: Parameters<typeof Lesson>[0]) {
     : <div className="today"><div className="card"><p>This lesson no longer exists.</p><button onClick={props.onBack}>Back to Journey</button></div></div>;
 }
 
-function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }: {
+function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, flow }: {
   lessonId: string; role?: SessionRole; minutes?: number; onNext?: () => void; onBack: () => void; onItemDone?: () => void; onOpen?: (id: string) => void;
+  flow?: boolean; // flow mode: the groove loops until you stop, the click fades out, nothing to pass
 }) {
   const lesson = lessonById(lessonId)!;
   useSyncExternalStore(subscribePlayer, playerVersion);
@@ -88,6 +89,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     const st = f.stats; // strokes in your own bars never became extras (the player knows the free bars)
     const check = checkPass(st, recordStreak ? { ...step.pass, streak: recordStreak } : step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level);
     // A zoom loop is practice for the next real take: no ladder, not saved.
+    // Flow: however long you played, it counts; no ladder.
+    if (f.options.endless) {
+      const bars = Math.round(f.run.beats / f.run.beatsPerBar), say = bars ? `${bars} bar${bars === 1 ? '' : 's'} in the flow. Nice.` : 'Whenever you are ready, just play.';
+      outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: say, say, nums: { landed: f.stats.total - f.stats.miss, total: f.stats.total, streak: f.stats.streak, recoveries: f.stats.recoveries, better: false } });
+      saveRun(f, { passed: true });
+      setVersion(v => v + 1); return;
+    }
     // A one-off take the coach asked for (trade, count along, one limb): for fun, no ladder.
     if (f.options.oneOff) {
       const fsx = freeBarStats(f.hits, f.extras, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: beatsPerBar(f.chart), fromBar: f.options.fromBar, sectionBars: f.options.toBar - f.options.fromBar + 1 }, f.options.freeBars ?? []);
@@ -230,7 +238,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const fresh2 = coach.reply && coach.at > Math.max(opened, f ? Date.parse(f.startedAt) : 0) ? coach.reply : undefined; // the coach's answer to this take
   const goNext = onNext ?? onBack;
   const main: { label: string; run: () => void } =
-    fresh2?.action && canRunAction(fresh2.action) ? { label: fresh2.action.label, run: () => void runAction(fresh2.action!) }
+    flow ? { label: '🌊 Flow ▶', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, fadeClick: 8 }); } }
+    : fresh2?.action && canRunAction(fresh2.action) ? { label: fresh2.action.label, run: () => void runAction(fresh2.action!) }
     : outcome?.fixBar && !outcome.zoomed ? { label: `🔍 Fix bar ${outcome.fixBar}`, run: () => zoomIn(outcome.fixBar!) }
     : itemDone && (oneTake || outcome?.event === 'lessonDone') ? { label: onNext ? 'Next ▶' : '← Journey', run: goNext }
     : { label: outcome ? '▶ Again' : '▶ Play', run: () => play(false) };
@@ -268,7 +277,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const dots = step.layers && !oneTake ? step.layers.map((_, i) => (i < layer! ? 'done' : i === layer ? 'on' : ''))
     : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
   const toTarget = Math.max(0, Math.min(1, (bpm - step.bpm.start) / Math.max(1, step.bpm.target - step.bpm.start)));
-  const line = fresh2?.say ?? (coach.status === 'thinking' && f ? '…' : outcome?.say ?? step.text);
+  const line = fresh2?.say ?? (coach.status === 'thinking' && f ? '…' : outcome?.say ?? (flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text));
   const howHint = lesson.how.split(/(?<=\.)\s/)[0];
 
   return (
@@ -285,7 +294,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
         <button className={`hintToggle ${hints ? 'on' : ''}`} aria-pressed={hints} onClick={() => setSettings({ hints: !hints })} title="Show the count and which hand or foot plays each note (key H)">💡 Hints {hints ? 'on' : 'off'}</button>
       </div>
 
-      {playing ? <LiveHint /> : <>
+      {playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
         <CoachLine line={line} />
         <div className="moves">
           <Move go label={main.label} onClick={main.run} />

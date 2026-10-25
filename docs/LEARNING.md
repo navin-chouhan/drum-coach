@@ -52,6 +52,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | This week's thing | Journey names the live tip given most in the last 7 days (3+ times, `weekTheme`) as the habit to work on, with "lesson for this": the coach writes a lesson aimed at it. Runs keep their tip ids (`tipIds` in the summary). |
 | Stitch the song | When every bar of the stage's song is ready, Journey offers "Play *song* all the way through": a lesson built on the fly (`stitchLesson`, chart = `songChart`) from 75% of the song's tempo up to it, played through once per take. Finishing it offers "Now with the real song →" (Songs → Play). |
 | Your fills | After a take with free bars, each one you filled (2+ strokes) can be kept ("Keep fill N", `fillFromTake` snaps it to 16ths). Kept fills (last 20, `Settings.fills`) are on Trophies with "Hear it", and free-bar lessons offer "Hear one of your fills". |
+| Flow mode | Journey's "🌊 Flow" opens the stage's jam groove in flow: it loops until Stop (Esc or 4 crashes, which keeps the take), the click fades to silence over 8 bars (`fadeClick`), a live line shows the last 4 bars (`recentAccuracy`), and the verdict is just how many bars you flowed. No ladder. |
 | Specific feedback, one fix | After each take, one friendly line and at most one tip. The AI coach is one click away. |
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |

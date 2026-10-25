@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { computeStats, createMatcher, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { computeStats, createMatcher, recentAccuracy, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -95,6 +95,16 @@ describe('worstBars', () => {
   it('returns nothing for a clean take or a one-bar section', () => {
     expect(worstBars(run, notes.map(() => hit), 4)).toEqual([]);
     expect(worstBars(run, notes.map(() => miss), 1)).toEqual([]);
+  });
+});
+
+describe('recentAccuracy', () => {
+  it('scores only the notes in the window', () => {
+    const notes = Array.from({ length: 32 }, (_, i) => ({ t: i, drum: 'snare' as const, i, bar: Math.floor(i / 4), pos: i % 4 }));
+    const results = notes.map(n => (n.t >= 16 && n.t % 4 === 0 ? { judgement: 'miss' as const } : { judgement: 'good' as const, offset: 0, velocity: 90 }));
+    expect(recentAccuracy(results, { notes, beats: 32, beatsPerBar: 4 }, 16, 32)).toBe(75);
+    expect(recentAccuracy(results, { notes, beats: 32, beatsPerBar: 4 }, 0, 16)).toBe(100);
+    expect(recentAccuracy(results, { notes, beats: 32, beatsPerBar: 4 }, 40, 44)).toBeNull();
   });
 });
 

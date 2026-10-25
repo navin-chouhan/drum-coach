@@ -25,6 +25,8 @@ export type PlayOptions = RunOptions & {
   hints?: boolean;           // the sheet shows the count and who plays each note under the staff
   countAloud?: string[][];   // words the voice says per bar, one per slot ('' = silent): engine/lesson.ts countPlan
   freeBars?: number[];       // 1-based chart bars that are yours (free / trade bars): strokes there aren't extras
+  endless?: boolean;         // flow: loops until Stop (Esc / 4 crashes), which keeps the take instead of dropping it
+  fadeClick?: number;        // the click fades to silence over this many bars
   oneOff?: boolean;          // a take the coach asked for in another tool (lessons): for fun, no tempo ladder
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
@@ -55,6 +57,7 @@ export const subscribePlayer = (fn: () => void) => { listeners.add(fn); return (
 export const playerVersion = () => version;
 
 let cleanup: (() => void)[] = [];
+let endEarly: (() => void) | undefined; // an endless take: Stop finishes it with the bars played so far
 
 // ---------- live tips (see engine/liveCoach.ts) ----------
 let live: { coach: ReturnType<typeof createLiveCoach>; bar: number; hits: PlayedHit[]; extras: PlayedHit[]; cues: Cue[] } | null = null;
@@ -117,10 +120,12 @@ function waitGroups() {
 
 export function start(chart: Chart, options: PlayOptions) {
   if (!options.external && audio().state !== 'running') { whenRunning(() => start(chart, options)); return; }
+  endEarly = undefined; // starting something else drops a running flow
   stop();
   hush();
   if (!options.demo && !options.wait) loadTips(chart, options.lesson?.goal);
-  const run = buildRun(chart, options);
+  // shortcut: an endless take is 64 bars (about 3 minutes at 90 BPM); extend the run on the fly if flows get longer
+  const run = buildRun(chart, options.endless ? { ...options, repeats: Math.ceil(64 / (options.toBar - options.fromBar + 1)) } : options);
   const { scored, auto } = splitRun(run, options.demo ? [] : options.activeLanes);
   const isAuto = run.notes.map(() => false);
   auto.forEach(n => { isAuto[n.i] = true; });
@@ -211,7 +216,8 @@ export function start(chart: Chart, options: PlayOptions) {
       const barStart = onBeat && (((k / sub) % bpb) + bpb) % bpb < 1e-6;
       if (k < 0 && onBeat && countVoice) sayAt(NUMBERS[Math.floor((((k / sub) % bpb) + bpb) % bpb + 1e-6)], timeOf(k)); // "one, two, three, four"
       const gap = options.gapBars && k >= 0 && (Math.floor(k / sub / bpb + 1e-6) + 1) % options.gapBars === 0;
-      if (!gap) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1);
+      const vol = options.fadeClick && k >= 0 ? Math.max(0, 1 - Math.floor(k / sub / bpb + 1e-6) / options.fadeClick) : 1; // keep time alone
+      if (!gap && vol > 0) click(timeOf(k), !onBeat ? 2 : barStart ? 0 : 1, vol);
     }
     for (; a < sounding.length && autoAt(sounding[a]) < c.currentTime + 0.2; a++) {
       const n = sounding[a];
@@ -228,6 +234,10 @@ export function start(chart: Chart, options: PlayOptions) {
     if (performance.now() > player.zero + run.beats * beatMs + 400) finish(scored, hits, extras, startedAt);
   }, 25);
   cleanup.push(() => clearInterval(timer));
+  if (options.endless) endEarly = () => {
+    const beats = Math.max(0, Math.floor(position() / bpb)) * bpb; // whole bars played
+    finish({ ...scored, notes: scored.notes.filter(n => n.t < beats), beats }, hits, extras, startedAt);
+  };
 
   if (options.backing) {
     // Song audio: beat b of the chart is at b*60/bpm + offset seconds in the file. Rate = speed (pitch shifts).
@@ -280,6 +290,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
 
 /** Results cover only the notes the student played (`scored`); a demo just ends. */
 function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: string) {
+  endEarly = undefined;
   const { chart, options } = player;
   if (options!.demo) { stop(); return; }
   cleanup.forEach(f => f()); cleanup = [];
@@ -291,6 +302,8 @@ function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: 
 }
 
 export function stop() {
+  if (endEarly && player.phase === 'playing') { const end = endEarly; endEarly = undefined; end(); return; }
+  endEarly = undefined;
   cleanup.forEach(f => f()); cleanup = [];
   if (player.phase !== 'idle') { player.phase = 'idle'; notify(); }
 }

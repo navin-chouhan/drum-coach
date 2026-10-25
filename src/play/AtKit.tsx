@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { player, playerVersion, subscribePlayer } from './player';
+import { recentAccuracy } from '../engine/scoring';
+import { player, playerVersion, position, subscribePlayer } from './player';
 
 // Building blocks of the screens you use at the kit (lessons, Practice): read from 1–2 m, driven by pad gestures
 // (engine/padCommands.ts). Each move shows its gesture, so you learn them by looking.
@@ -31,4 +32,14 @@ export function LiveHint() {
   useEffect(() => { const t = setInterval(() => tick(n => n + 1), 500); return () => clearInterval(t); }, []);
   const c = player.cue, show = c && performance.now() - c.at < 3000;
   return <div className={`liveHint ${show ? 'on' : ''}`} role="status">{show ? `💡 ${c!.cue.text}` : ' '}</div>;
+}
+
+/** Flow mode's live line: how many of the notes in the last 4 bars landed. */
+export function FlowMeter() {
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 500); return () => clearInterval(t); }, []);
+  const run = player.run, pos = position(), bpb = run?.beatsPerBar ?? 4;
+  const mine = run ? run.notes.flatMap((_, i) => (player.auto[i] ? [] : [i])) : []; // your notes, not the app's
+  const pct = run && pos > bpb ? recentAccuracy(mine.map(i => player.results[i]), { ...run, notes: mine.map(i => run.notes[i]) }, Math.max(0, pos - 4 * bpb), pos - 0.5) : null;
+  return <div className="liveHint on">🌊 {Math.max(0, Math.floor(pos / bpb))} bars in the flow{pct !== null ? ` · last 4 bars: ${pct}% landed` : ''}</div>;
 }
