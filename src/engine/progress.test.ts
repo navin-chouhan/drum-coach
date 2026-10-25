@@ -85,6 +85,15 @@ describe('weekTheme', () => {
     expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-snare', 'missing-snare', 'missing-snare'] })], now)?.words).toBe('the snare');
     expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-hhOpen', 'missing-hhOpen', 'missing-hhOpen'] })], now)?.words).toBe('the open hi-hat');
   });
+  it('forgets a habit that is fixed: it has to show up in the last 5 takes too', () => {
+    const early = [1, 2, 3].map(i => run({ startedAt: `2026-10-20T09:0${i}:00`, tips: ['dragging', 'dragging'] }));
+    const clean = [1, 2, 3, 4, 5].map(i => run({ startedAt: `2026-10-23T09:0${i}:00`, tips: ['praise'] }));
+    expect(weekTheme([...early, ...clean], now)).toBeNull();
+    const rushing = [1, 2, 3].map(i => run({ startedAt: `2026-10-22T09:0${i}:00`, tips: ['rushing'] }));
+    // dragging is the most given, but only rushing is still around lately
+    expect(weekTheme([...early, ...rushing, ...clean.slice(1)], now)?.cue).toBe('rushing');
+    expect(weekTheme([...clean.slice(1), ...early.reverse()], now)?.cue).toBe('dragging'); // order of the rows doesn't matter
+  });
 });
 
 describe('weekly recap', () => {

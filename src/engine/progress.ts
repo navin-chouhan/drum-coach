@@ -134,11 +134,15 @@ const THEME_WORDS: Record<string, string> = {
   reacting: 'playing with the click, not after it', 'missing-kick': 'the kick', extras: 'playing only the notes shown',
   'hh-open': 'keeping the hi-hat pedal down', accents: 'louder accents', ghosts: 'softer ghost notes', even: 'even strokes',
 };
-/** This week's thing: the live tip given most in the last 7 days (3+ times, praise aside), in plain words. */
+/**
+ * This week's thing: the live tip given most in the last 7 days (3+ times, praise aside), in plain words. It must
+ * also show up in the last 5 takes: a habit fixed since then is forgotten.
+ */
 export function weekTheme(runs: RunRow[], now = new Date()): { cue: string; count: number; words: string } | null {
+  const lately = new Set([...runs].sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt)).slice(-5).flatMap(r => r.tips ?? []));
   const counts = new Map<string, number>();
   for (const r of runs) if ((now.getTime() - Date.parse(r.startedAt)) / 86_400_000 < 7)
-    for (const id of r.tips ?? []) if (id !== 'praise') counts.set(id, (counts.get(id) ?? 0) + 1);
+    for (const id of r.tips ?? []) if (id !== 'praise' && lately.has(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
   const [cue, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
   if (!cue || count < 3) return null;
   return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${drumName(cue.slice(8))}` : cue) };
