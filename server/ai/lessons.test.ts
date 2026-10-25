@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AiLessonSchema, RunRecordSchema } from '../../src/coach/schemas';
 import { CURRICULUM } from '../../src/content/curriculum';
 import { startProgress } from '../../src/engine/lesson';
-import { applyBites, canStandIn, lessonInput, standsInFor, toLesson } from './lessons';
+import { applyBites, canStandIn, lessonInput, standsInFor, toLesson, uniqueTitle } from './lessons';
 
 const profile = { goals: [], minutesPerDay: 25, onboarded: true };
 const done = () => ({ ...startProgress(CURRICULUM[0]), completedAt: '2026-10-01' });
@@ -70,5 +70,17 @@ describe('coach lessons', () => {
     expect(ok([{ ...s, probe: true }])).toBe(false);
     expect(ok([{ ...s, rest: 20 }, s])).toBe(true);
     expect(ok([{ ...s, variants: [s.chart] }])).toBe(false);
+  });
+});
+
+describe('coach lesson titles', () => {
+  const builtins = ['Rests are notes too', 'The money beat'];
+  it('never copies a built-in or checkpoint title: the focus is added', () => {
+    expect(uniqueTitle('rests are notes too ', 'the &s, so the rest feels like a note. Count out loud.', builtins)).toBe('rests are notes too: the &s');
+    expect(uniqueTitle('The Money Beat', '', builtins)).toBe('The Money Beat: your version');
+    expect(uniqueTitle('Kick on the & of 3', 'the & of 3', builtins)).toBe('Kick on the & of 3');
+  });
+  it('keeps the title within 80 characters', () => {
+    expect(uniqueTitle('The money beat', 'x'.repeat(200), builtins).length).toBeLessThanOrEqual(80);
   });
 });

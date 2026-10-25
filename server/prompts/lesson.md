@@ -68,7 +68,7 @@ How to choose:
 - Every lesson has one clear, fun win.
 
 Answer shape:
-{ "title": string (≤ 60 chars), "kind": "exercise" | "rudiment" | "groove" | "fill",
+{ "title": string (≤ 60 chars; never reuse a built-in or checkpoint title: name what this lesson is for you), "kind": "exercise" | "rudiment" | "groove" | "fill",
   "focus": string, "checkpoint"?: string, "what": string, "why": string, "how": string,
   "steps": [ { "title": string (≤ 40 chars), "text": "one instruction line",
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },

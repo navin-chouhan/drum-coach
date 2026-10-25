@@ -8,7 +8,7 @@ import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import type { RunRow } from '../src/engine/progress.ts';
 import { ask, getProvider } from './ai/coach.ts';
-import { applyBites, canStandIn, lessonInput, standsInFor, toLesson } from './ai/lessons.ts';
+import { applyBites, canStandIn, lessonInput, standsInFor, toLesson, uniqueTitle } from './ai/lessons.ts';
 import { LESSON_BY_ID } from '../src/content/curriculum.ts';
 import { studentRead } from '../src/engine/planner.ts';
 import type { Lesson } from '../src/engine/lesson.ts';
@@ -330,6 +330,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
   if (!input) return bad(reply, 'You have finished every milestone. Hold V or the mic button and ask the coach for new challenges.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
+    r.data = { ...r.data, title: uniqueTitle(r.data.title, r.data.focus, Object.values(LESSON_BY_ID).map(l => l.title)) };
     const now = aiLessons(); // re-read: another request may have saved a lesson while the coach was thinking
     const same = now.find(l => l.title === r.data.title && l.level === input.milestone.level);
     if (same) return { data: same, cached: true };

@@ -60,6 +60,18 @@ export function applyBites(a: AiLesson, song: (id: string) => YtSong | undefined
   }) };
 }
 
+/**
+ * A coach lesson never copies a built-in or checkpoint title (a coach "Rests are notes too" sat beside the built-in
+ * one): the focus's first few words are added ("Rests are notes too: the &s"), or "your version".
+ */
+export function uniqueTitle(title: string, focus: string, builtinTitles: string[]): string {
+  const t = title.trim(), key = (s: string) => s.trim().toLowerCase();
+  if (!builtinTitles.some(b => key(b) === key(t))) return title;
+  const words = (focus.split(/[.,;:!?—–(]/)[0] ?? '').trim().split(/\s+/).slice(0, 6).join(' ');
+  const tail = words && t.length + 2 + words.length <= 80 ? words : 'your version';
+  return `${t}: ${tail}`.slice(0, 80);
+}
+
 /** Gives a coach answer its id, level and chart ids so it plugs into the path like a built-in lesson. */
 export function toLesson(a: AiLesson, level: number, rand = Math.random().toString(36).slice(2, 7)): Lesson {
   const slug = a.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'lesson';
