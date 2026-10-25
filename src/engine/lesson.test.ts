@@ -96,3 +96,10 @@ describe('starsFor', () => {
     expect(starsFor(stats({ accuracy: 100, perfect: 20, spread: 20 }))).toBe(2); // hits wandering ±20 ms is not three
   });
 });
+
+describe('reacting to the click', () => {
+  it('fails the take with that as the one thing to fix, before accuracy', () => {
+    expect(checkPass(stats({ reaction: 180, accuracy: 60 })).reason).toMatch(/after each click/);
+    expect(checkPass(stats({ reaction: null })).ok).toBe(true);
+  });
+});

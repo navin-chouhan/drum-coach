@@ -49,6 +49,7 @@ export const startProgress = (l: Lesson): LessonProgress =>
 /** Did this take pass? `reason` is the one thing to fix, in plain words. */
 export function checkPass(s: RunStats, p?: Partial<Pass>): { ok: boolean; reason?: string } {
   const c = { ...DEFAULT_PASS, ...p };
+  if (s.reaction) return { ok: false, reason: `You're hitting ${s.reaction} ms after each click. Play with the click, not after it.` };
   if (s.accuracy < c.accuracy) return { ok: false, reason: `${s.accuracy}% of notes on time, ${c.accuracy}% needed. ${worstDrum(s)}` };
   if (s.total && (s.extra / s.total) * 100 > c.maxExtraPct) return { ok: false, reason: `${s.extra} extra hits. Play only the notes shown.` };
   if (c.maxAbsOffsetMs !== undefined && Math.abs(s.meanOffset) > c.maxAbsOffsetMs)

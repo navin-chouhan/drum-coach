@@ -91,6 +91,24 @@ export function latencySuspect(results: NoteResult[]): number | null {
   return Math.abs(m) >= 40 && sameSide >= 0.85 ? Math.round(m) : null;
 }
 
+/**
+ * A player who waits for each click and then hits (reaction time, ~100–400 ms) lands near the *next* note of an
+ * even pattern and scores well; mid-pattern the strokes look on time. The tell-tales are at the edges: the first
+ * stroke comes a reaction time after the first note with nothing before it, and the latest stroke the same
+ * reaction time after the latest note that has come up (a player who merely came in late plays the later notes
+ * on their notes; a rusher played the first one). Works mid-take. Returns the reaction ms, or null. `expected` sorted.
+ */
+export function reactingToClick(expected: Expected[], hits: PlayedHit[]): number | null {
+  if (hits.length < 8 || !expected.length) return null;
+  const band = (x: number) => x >= 100 && x <= 400;
+  const first = Math.min(...hits.map(h => h.time)), last = Math.max(...hits.map(h => h.time));
+  const head = first - expected[0].time;
+  if (!band(head)) return null;
+  const passed = expected.filter(e => e.time <= last);
+  const tail = last - passed[passed.length - 1].time;
+  return band(tail) && Math.abs(head - tail) <= 100 ? Math.round((head + tail) / 2) : null;
+}
+
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
 const std = (xs: number[]) => { const m = mean(xs); return xs.length > 1 ? Math.sqrt(mean(xs.map(x => (x - m) ** 2))) : 0; };
 const r1 = (x: number) => Math.round(x * 10) / 10;
@@ -107,6 +125,7 @@ export type RunStats = {
     pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
   flam: number | null; // ms, mean split between limbs on notes meant to land together (null: none played)
   heat: HeatCell[];   // one cell per 16th position in the bar
+  reaction?: number | null; // ms a player who hits after each click is behind (set by the player at the end of a take)
 };
 
 export function computeStats(run: Run, results: NoteResult[], extra: number): RunStats {

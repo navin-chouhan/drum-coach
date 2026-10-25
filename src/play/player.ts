@@ -1,6 +1,6 @@
 import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '../engine/chart';
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
-import { computeStats, createMatcher, minGapBeats, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
+import { computeStats, createMatcher, minGapBeats, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
@@ -50,14 +50,14 @@ export const playerVersion = () => version;
 let cleanup: (() => void)[] = [];
 
 // ---------- live tips (see engine/liveCoach.ts) ----------
-let live: { coach: ReturnType<typeof createLiveCoach>; bar: number; extras: PlayedHit[]; cues: Cue[] } | null = null;
+let live: { coach: ReturnType<typeof createLiveCoach>; bar: number; hits: PlayedHit[]; extras: PlayedHit[]; cues: Cue[] } | null = null;
 const cueListeners = new Set<(c: Cue) => void>();
 /** Called with every live tip as it's given (for the voice). */
 export const onCue = (fn: (c: Cue) => void) => { cueListeners.add(fn); return () => { cueListeners.delete(fn); }; };
 
-function startLive(options: PlayOptions, extras: PlayedHit[]) {
+function startLive(options: PlayOptions, hits: PlayedHit[], extras: PlayedHit[]) {
   const s = getSettings();
-  live = s.liveTips === 'off' || options.wait || options.demo || options.guide ? null : { coach: createLiveCoach(s.chattiness), bar: 0, extras, cues: [] };
+  live = s.liveTips === 'off' || options.wait || options.demo || options.guide ? null : { coach: createLiveCoach(s.chattiness), bar: 0, hits, extras, cues: [] };
 }
 /** Once per bar: look at the last two bars and maybe give one tip. */
 function liveCheck(pos: number) {
@@ -69,13 +69,16 @@ function liveCheck(pos: number) {
   const from = (bar - 2) * bpb, to = bar * bpb;
   const notes = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [{ drum: n.drum, accent: n.accent, ghost: n.ghost, ...player.results[i] }]));
   const extras = live.extras.filter(h => { const b = (h.time - player.zero) / player.beatMs; return b >= from && b < to; }).length;
-  const raw = live.coach({ bar, notes, extras });
+  const raw = live.coach({ bar, notes, extras, reaction: reactingToClick(expectedTimes(run), live.hits) });
   if (!raw) return;
   const cue = applyTip(player.chart, raw); // the coach's own words for this exercise, when it has written them
   player.cue = { cue, at: performance.now() };
   live.cues.push(cue);
   cueListeners.forEach(l => l(cue));
 }
+
+/** The notes the student plays, on the hit clock (both clocks: zero + beats × beatMs). */
+const expectedTimes = (run: Run) => run.notes.flatMap((n, i) => (player.auto[i] ? [] : [{ time: player.zero + n.t * player.beatMs, drum: n.drum }]));
 
 /** Current position in run beats (negative during count-in). */
 export function position(now = performance.now()) {
@@ -177,7 +180,7 @@ export function start(chart: Chart, options: PlayOptions) {
     if (player.feedback.length > 64) player.feedback.splice(0, 32);
   }));
 
-  startLive(options, extras);
+  startLive(options, hits, extras);
   const countVoice = getSettings().countIn && !options.demo;
   // Lookahead scheduler for clicks, app-played notes, live tips and the end of the run.
   const sub = options.subdivision, bpb = beatsPerBar(chart);
@@ -252,7 +255,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
     }
     if (player.feedback.length > 64) player.feedback.splice(0, 32);
   }));
-  startLive(options, extras);
+  startLive(options, hits, extras);
   const timer = setInterval(() => { const pos = ext.position(performance.now()); liveCheck(pos); if (pos > run.beats + 0.5) finish(run, hits, extras, startedAt); }, 50);
   cleanup.push(() => { clearInterval(timer); ext.end(); });
   ext.begin();
@@ -265,7 +268,7 @@ function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: 
   if (options!.demo) { stop(); return; }
   cleanup.forEach(f => f()); cleanup = [];
   const results = scored.notes.map(n => player.results[n.i]);
-  const stats = computeStats(scored, results, extras.length);
+  const stats = { ...computeStats(scored, results, extras.length), reaction: options!.wait ? null : reactingToClick(scored.notes.map(n => ({ time: player.zero + n.t * player.beatMs, drum: n.drum })), hits) };
   player.phase = 'done';
   player.finished = { cues: live?.cues ?? [], zero: player.zero, chart: chart!, run: scored, options: options!, results, extras, hits, stats, startedAt, durationS: Math.round((Date.now() - Date.parse(startedAt)) / 1000) };
   notify();

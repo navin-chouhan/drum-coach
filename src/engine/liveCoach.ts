@@ -7,7 +7,7 @@ import type { PadId } from './kit.ts';
 export type Chattiness = 'quiet' | 'normal' | 'talkative';
 export type WindowNote = { drum: ChartDrum; accent?: boolean; ghost?: boolean; judgement: 'perfect' | 'good' | 'miss'; offset?: number; off?: number; velocity?: number; pad?: PadId }; // off: an off-time stroke's ms (a miss, but played)
 /** What happened in the last two bars (notes already past the hit line, oldest first). */
-export type LiveWindow = { bar: number; notes: WindowNote[]; extras: number };
+export type LiveWindow = { bar: number; notes: WindowNote[]; extras: number; reaction?: number | null }; // reaction: see scoring.reactingToClick
 export type Cue = { id: string; text: string; spoken: string; priority: number };
 
 const NAME: Partial<Record<ChartDrum, string>> = { hihat: 'hi-hat', hhOpen: 'open hi-hat', hhPedal: 'hi-hat foot', tom1: 'tom 1', tom2: 'tom 2', floor: 'floor tom' };
@@ -26,6 +26,7 @@ const COOLDOWN_BARS = 8;
 export function candidateCues(w: LiveWindow, c: Chattiness): Cue[] {
   const L = LEVEL[c], out: Cue[] = [];
   if (w.notes.length < 6) return out;
+  if (w.reaction) out.push({ id: 'reacting', priority: 95, text: `Hitting ${w.reaction} ms after each click. Play with the click, not after it`, spoken: 'Play with the click, not after it' });
   for (const drum of new Set(w.notes.map(n => n.drum))) {
     const last3 = w.notes.filter(n => n.drum === drum).slice(-3);
     if (last3.length === 3 && last3.every(n => n.judgement === 'miss' && n.off === undefined)) { // not played at all (off time is a timing tip)

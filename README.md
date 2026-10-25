@@ -142,7 +142,7 @@ at the top right of the play area). A cursor glides through the current bar, pla
 are grey, and the page turns after each page of bars. Before you press Start it shows the music you're about to play.
 
 ## The coach while you play
-- **Tips while you play** (Setup → Coach and voice): short banners on the highway such as "Dragging by 30 ms. Push a little",
+- **Tips while you play** (Setup → Coach and voice): short banners on the highway such as "Dragging by 30 ms. Push a little" or "Hitting 180 ms after each click. Play with the click, not after it",
   "Bring the kick back in", "Hi-hat foot down" (the MPS-150 sends *open* unless the pedal is held). At most one
   tip every couple of bars. **How chatty**: quiet (only big problems), normal, talkative (adds dynamics tips
   and more praise). Tips also show on the results screen and go to the AI coach.

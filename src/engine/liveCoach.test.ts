@@ -11,6 +11,9 @@ describe('candidate cues', () => {
     expect(candidateCues({ bar: 4, notes: groove(-25), extras: 0 }, 'quiet')).toEqual([]); // quiet waits for 30 ms
     expect(candidateCues({ bar: 4, notes: groove(5), extras: 0 }, 'normal')).toEqual([]);
   });
+  it('reacting to the click is a tip even when the offsets look fine', () => {
+    expect(candidateCues({ bar: 4, notes: groove(-5), extras: 0, reaction: 180 }, 'quiet')[0].id).toBe('reacting');
+  });
   it('a lane missed three times in a row outranks timing', () => {
     const notes = groove(30).map(n => (n.drum === 'kick' ? { ...n, judgement: 'miss' as const, offset: undefined } : n));
     expect(candidateCues({ bar: 4, notes, extras: 0 }, 'normal').map(c => c.id)).toEqual(['missing-kick', 'dragging']);

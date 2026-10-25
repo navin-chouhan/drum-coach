@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { computeStats, createMatcher, estimateLatency, latencySuspect, minGapBeats, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { computeStats, createMatcher, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -117,6 +117,25 @@ describe('timing stats count off-time strokes', () => {
     expect(s.meanOffset).toBe(85); // (4×20 + 4×150) / 8, not 20
     expect(s.spread).toBe(65);
     expect(s.perDrum.snare?.meanOffset).toBe(85);
+  });
+});
+
+describe('reactingToClick', () => {
+  const sixteenths = (bpm: number, n = 32): Expected[] => Array.from({ length: n }, (_, i) => ({ time: 1000 + (i * 15000) / bpm, drum: 'snare' }));
+  const play = (q: Expected[], late: number, wobble = 0): PlayedHit[] => q.map((e, i) => ({ time: e.time + late + ((i % 3) - 1) * wobble, pad: 'snare', velocity: 80 }));
+  it('a reaction time after the first note and after the latest one is reacting, even though the matcher scores it well', () => {
+    const q = sixteenths(80); // 187.5 ms apart: 180 ms late lands just before the next note
+    const r = reactingToClick(q, play(q, 180, 30));
+    expect(r).toBeGreaterThanOrEqual(150); expect(r).toBeLessThanOrEqual(210);
+    expect(reactingToClick(q, play(q, 180).slice(0, 12))).toBe(180); // mid-take, for the live tip
+    expect(scoreRun(q, play(q, 180, 30)).results.filter(r => r.judgement !== 'miss').length).toBeGreaterThan(28);
+  });
+  it('merely late, rushing on fast notes, a stroke on the first note, or coming in late but then on time: not reacting', () => {
+    const q = sixteenths(80), fast = sixteenths(160);
+    expect(reactingToClick(q, play(q, 40, 30))).toBeNull();
+    expect(reactingToClick(fast, play(fast, -30, 10))).toBeNull(); // rusher: a stroke before the first note
+    expect(reactingToClick(q, [{ time: q[0].time, pad: 'snare', velocity: 80 }, ...play(q, 180).slice(1)])).toBeNull();
+    expect(reactingToClick(q, play(q, 15).slice(1))).toBeNull(); // missed note 1, then on the notes
   });
 });
 
