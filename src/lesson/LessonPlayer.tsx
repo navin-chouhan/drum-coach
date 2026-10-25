@@ -3,7 +3,7 @@ import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
 import { worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
-import { freeBarStats } from '../engine/jam';
+import { freeBarStats, inFreeBar } from '../engine/jam';
 import { afterReview, checkPass, CLEAN_TAKES, countPlan, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
@@ -14,7 +14,8 @@ import { NotesView } from '../play/NotesView';
 import { KitView } from '../ui/KitView';
 import { afterThis, player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { LatencyHint, Results, saveRun } from '../play/Results';
-import { takeChart } from '../engine/transcribe';
+import { fillFromTake, takeChart } from '../engine/transcribe';
+import { hearFill, keepFill } from '../play/fills';
 import { requestSong } from '../ui/nav';
 import { SheetMusic } from '../notation';
 import { say, voiceEngine } from '../voice/voice';
@@ -51,6 +52,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
   const lastTake = useRef<Finished>(undefined);
+  const [kept, setKept] = useState(new Set<string>()); // fills kept from a take: `${startedAt}/${bar}`
   const [engine, setEngine] = useState<'piper' | 'browser'>();
   useEffect(() => { void voiceEngine().then(setEngine); }, []);
   const lastAccuracy = useRef<number>(undefined); // for "better than last take"
@@ -257,6 +259,11 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   );
 
   const hints = getSettings().hints !== false;
+  // Your fills: each free bar of the last take with 2+ strokes can be kept (up to 4 per take).
+  const yourFills = f && f.options.freeBars && !playing ? Array.from({ length: Math.ceil(f.run.beats / f.run.beatsPerBar) }, (_, b) => b)
+    .filter(b => inFreeBar(b * f.run.beatsPerBar, f.run.beatsPerBar, f.options.fromBar, f.options.toBar - f.options.fromBar + 1, f.options.freeBars!))
+    .map(b => ({ bar: b, notes: fillFromTake(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: f.run.beatsPerBar }, b) }))
+    .filter(x => x.notes.length >= 2).slice(0, 4) : [];
   const layer = step.layers && !oneTake ? Math.min(p.layer ?? 0, step.layers.length - 1) : undefined;
   const dots = step.layers && !oneTake ? step.layers.map((_, i) => (i < layer! ? 'done' : i === layer ? 'on' : ''))
     : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
@@ -305,6 +312,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
             {outcome.reason && <p className="tip">💡 {outcome.reason}</p>}
             <p className="small">{outcome.nums.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && (layer === undefined || layer === step.layers!.length - 1) ? `${p.clean} of ${CLEAN_TAKES} clean takes at ${p.bpm} BPM` : ''}</p>
             {f && <LatencyHint f={f} />}
+            {yourFills.length > 0 && <div className="actions">{yourFills.map((fl, k) => kept.has(`${f!.startedAt}/${fl.bar}`)
+              ? <span key={fl.bar} className="small">✓ fill {k + 1} kept</span>
+              : <button key={fl.bar} onClick={() => { keepFill(fl.notes, bpm); setKept(new Set(kept).add(`${f!.startedAt}/${fl.bar}`)); }}>💾 Keep fill {k + 1}</button>)}</div>}
             {f && f.hits.length > 0 && <button className="link" onClick={() => play(true)}>👂 Hear it right</button>}
           </div> : <div className="card">
             <p><b>{lesson.what}</b></p>
@@ -317,6 +327,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
             {step.countAloud && <p>{engine === 'browser' ? "I'd count along here with the Piper voice (Setup → Coach and voice)." : 'I count along with you for the first bars, then you take over.'}</p>}
             {step.trade && <p>Trade bars: I play a bar, you answer with anything. No wrong notes, just stay on the beat.</p>}
             {!step.trade && free.length > 0 && <p>Bar {free.join(' and ')} is yours: play any fill you like.</p>}
+            {free.length > 0 && !!getSettings().fills?.length && <button className="link" onClick={() => { const all = getSettings().fills!; hearFill(all[Math.floor(Math.random() * all.length)]); }}>🎧 Hear one of your fills</button>}
             {step.pass?.streak && <p>Challenge: {recordStreak ?? step.pass.streak} notes in a row. Missed one? The count just starts again.</p>}
             {lanes && step.chart.notes.some(n => !lanes.includes(n.drum)) && <p>You play: {lanes.map(laneName).join(', ')}. The app plays the rest (grey).</p>}
             {step.gapBars && <p>The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}

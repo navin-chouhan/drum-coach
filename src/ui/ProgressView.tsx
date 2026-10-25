@@ -4,6 +4,7 @@ import { checkpointsOf } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
 import { songBarCount, useYtSongs } from '../youtube/api';
+import { hearFill } from '../play/fills';
 import { BADGES, barsReady, dashboard, type Dashboard, type RunRow } from '../engine/progress';
 import { requestLesson, requestPlay, requestSong } from './nav';
 
@@ -132,6 +133,9 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
           : <div key={m.level} className="rankSticker small locked" title={`Pass stage ${m.level + 1}, ${m.title}, to earn this`}>?</div>)}
       </div>
       <p><span className="stars">★</span> <b>{stars}</b> stars from your lessons</p>
+      <h4>Your fills</h4>
+      {s.fills?.length ? <ul className="songList">{[...s.fills].reverse().map(fl => <li key={fl.id}><span>{new Date(fl.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} · {fl.notes.length} notes · {fl.bpm} BPM</span><button onClick={() => hearFill(fl)}>🎧 Hear it</button></li>)}</ul>
+        : <p className="small">Fills you make up in free bars and trade bars can be kept after the take. They land here.</p>}
       <h4>Badges</h4>
       <div className="stickers">
         {BADGES.map(b => <div key={b.id} className={`rankSticker small ${s.badges?.includes(b.id) ? '' : 'locked'}`} title={b.how}>{s.badges?.includes(b.id) ? `🏅 ${b.name}` : b.name}</div>)}

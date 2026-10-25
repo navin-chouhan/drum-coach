@@ -50,3 +50,10 @@ export function songChart(song: { title: string; originalId: string; timeSignatu
   const bars = notes.length ? Math.floor(notes[notes.length - 1].t / beatsPerBar({ timeSignature: song.timeSignature }) + 1e-6) + 1 : 1;
   return { title: song.title, bpm, timeSignature: song.timeSignature, bars, notes, kind: 'song' };
 }
+
+/** Your fills: the hits of one bar of a take (0-based bar of the take), as 16th-note chart notes from 0 to beatsPerBar. */
+export function fillFromTake(hits: { time: number; pad?: PadId; velocity: number }[], take: { zero: number; beatMs: number; beatsPerBar: number }, bar: number): ChartNote[] {
+  const start = bar * take.beatsPerBar;
+  const inBar = hits.flatMap(h => (h.pad ? [{ beat: (h.time - take.zero) / take.beatMs - start, pad: h.pad, velocity: h.velocity }] : []));
+  return quantizeTake(inBar, 0, take.beatsPerBar);
+}
