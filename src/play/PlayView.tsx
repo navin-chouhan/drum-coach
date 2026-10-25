@@ -13,6 +13,8 @@ import { canRunAction, coachTake, onCoachAction, runAction, useCoach } from '../
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from './player';
 import { LatencyHint, Results, saveRun } from './Results';
 import { CoachLine, LiveHint, Move } from './AtKit';
+import { IntroSlides } from './IntroSlides';
+import { beatsPerBar } from '../engine/chart';
 
 const OPTS_KEY = 'drumcoach.playOptions';
 type Saved = Omit<PlayOptions, 'fromBar' | 'toBar' | 'backing'> & { chartId: string };
@@ -36,6 +38,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const [details, setDetails] = useState(false);
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [error, setError] = useState('');
+  const [intro, setIntro] = useState<{ run: () => void }>();
+  const introShown = useRef(new Map<string, number>());
   const set = (patch: Partial<Saved>) => setO(prev => {
     const next = { ...prev, ...patch };
     try { localStorage.setItem(OPTS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
@@ -75,7 +79,13 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
       try { backing = { buffer: await loadBacking(chart.id, audio()), syncOffsetMs: chart.syncOffsetMs ?? 0 }; }
       catch { setError('Could not load the backing audio; playing without it.'); }
     }
-    start(chart, { ...o, speed, fromBar: from, toBar: to, backing, hints, ...extra });
+    const run = () => start(chart, { ...o, speed, fromBar: from, toBar: to, backing, hints, ...extra });
+    // Intro slides before the first take of an exercise (or after a tempo jump of more than 10 BPM).
+    const b = chart.bpm * speed, seen = introShown.current.get(chart.id);
+    if (!extra?.demo && !o.wait && getSettings().intro !== false && (seen === undefined || Math.abs(seen - b) > 10)) {
+      introShown.current.set(chart.id, b); setIntro({ run }); return;
+    }
+    run();
   }
   const atBpm = (b: number) => Math.max(0.5, Math.min(MAX_SPEED, b / chart.bpm));
   const playAt = (b: number) => { const speed = atBpm(b); set({ speed }); void go(speed); };
@@ -131,6 +141,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
 
   return (
     <div className={`lessonScreen ${playing ? 'playing' : ''}`}>
+      {intro && <IntroSlides title={chart.title} bpm={bpm} what={chart.description ?? `${chart.bars} bar${chart.bars === 1 ? '' : 's'}, ${o.repeats} times round.`} notes={chart.notes.filter(n => n.t >= (from - 1) * beatsPerBar(chart)).map(n => ({ ...n, t: n.t - (from - 1) * beatsPerBar(chart) }))}
+        beatsPerBar={beatsPerBar(chart)} focus={f?.cues.at(-1)?.text} onDone={() => { const r = intro.run; setIntro(undefined); r(); }} onClose={() => setIntro(undefined)} />}
       <div className="lbar card">
         <button className="link back" onClick={() => { stop(); setPicking(true); }}>← All exercises</button>
         <h2>{chart.title}</h2>
@@ -190,6 +202,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
             {toggle('🎶 Play along (I play softly under you)', !!o.guide, () => set({ guide: !o.guide }))}
             {toggle('🐢 Wait mode (waits for each note)', o.wait, () => set({ wait: !o.wait }))}
             {toggle('💡 Hints (key H)', hints, () => setSettings({ hints: !hints }))}
+            {toggle('📋 Intro slides before the first take', settings.intro !== false, () => setSettings({ intro: settings.intro === false }))}
           </div>
           <details className="card">
             <summary>⚙ More</summary>

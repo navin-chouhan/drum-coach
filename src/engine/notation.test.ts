@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
-import { durationOf, layoutMeasures, xAtBeat, type NotationEvent, noteHints } from './notation';
+import { durationOf, layoutMeasures, xAtBeat, type NotationEvent, limbPlan, noteHints } from './notation';
 
 const brief = (evs: NotationEvent[]) => evs.map(e => `${e.heads.map(h => h.drum).sort().join('+') || 'rest'}:${e.slots}${e.triplet ? 't' : ''}`);
 
@@ -63,5 +63,19 @@ describe('noteHints', () => {
   it('alternates singles from R each bar, counts 16ths and triplets, names the hi-hat foot', () => {
     expect(noteHints([0, 0.25, 0.5, 0.75, 4].map(t => ({ t, drum: 'snare' })), 4).map(h => `${h.count}${h.limbs}`)).toEqual(['1R', 'eL', '&R', 'aL', '1R']);
     expect(noteHints([{ t: 1 / 3, drum: 'tom1' }, { t: 1, drum: 'hhPedal' }], 4).map(h => `${h.count}:${h.limbs}`)).toEqual(['trip:R', '2:H']);
+  });
+});
+
+describe('limbPlan', () => {
+  it('says who plays what in the money beat', () => {
+    const notes = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map(t => ({ t, drum: 'hihat' })).concat([{ t: 0, drum: 'kick' }, { t: 2, drum: 'kick' }, { t: 1, drum: 'snare' }, { t: 3, drum: 'snare' }, { t: 4, drum: 'kick' }]);
+    expect(limbPlan(notes, 4)).toEqual([
+      { limb: 'R', name: 'right hand', drums: ['hi-hat'], when: 'every 8th' },
+      { limb: 'L', name: 'left hand', drums: ['snare'], when: '2 and 4' },
+      { limb: 'K', name: 'right foot', drums: ['kick'], when: '1 and 3' },
+    ]);
+  });
+  it('alternating singles on the snare use both hands', () => {
+    expect(limbPlan([0, 1, 2, 3].map(t => ({ t, drum: 'snare' })), 4).map(p => `${p.limb}:${p.when}`)).toEqual(['R:1 and 3', 'L:2 and 4']);
   });
 });
