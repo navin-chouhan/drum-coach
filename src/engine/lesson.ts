@@ -115,6 +115,9 @@ export function probeTempo(perBarAccuracy: number[], start: number, pass: number
   return broke < 0 ? start + 5 * Math.max(0, perBarAccuracy.length - 1) : Math.max(MIN_BPM, start + 5 * broke - 10);
 }
 
+/** A flying student (engine/planner.ts studentRead) finds their tempo on a drill step instead of climbing from its start. */
+export const autoProbe = (s: Step, pace: string) => pace === 'flying' && toolOf(s) === 'drill' && !s.rest && s.bpm.target > s.bpm.start;
+
 export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 2, BPM_STEP = 5, MIN_BPM = 40, ROUGH_ACCURACY = 60;
 export const REVIEW_DAYS = [2, 5, 12, 30];
 

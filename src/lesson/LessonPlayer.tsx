@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
-import { afterReview, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, autoProbe, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
@@ -55,7 +55,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
   const lastTake = useRef<Finished>(undefined);
-  const probing = useRef<{ tempo: number; accs: number[] }>(undefined), probed = useRef(false), probeTimer = useRef<ReturnType<typeof setTimeout>>(undefined); // find your tempo
+  const probing = useRef<{ tempo: number; accs: number[] }>(undefined), probed = useRef<number>(undefined), probeTimer = useRef<ReturnType<typeof setTimeout>>(undefined); // find your tempo
   const [kept, setKept] = useState(new Set<string>()); // fills kept from a take: `${startedAt}/${bar}`
   const [engine, setEngine] = useState<'piper' | 'browser'>();
   useEffect(() => { void voiceEngine().then(setEngine); }, []);
@@ -117,7 +117,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         probeTimer.current = setTimeout(probeBar, 0);
       } else {
         const working = probeTempo(pr.accs, step.bpm.start, pass);
-        probing.current = undefined; probed.current = true;
+        probing.current = undefined; probed.current = stepIdx;
         saveProgress(lesson.id, { ...progressOf(lesson), bpm: working, clean: 0, fails: 0 });
         const say = `Your tempo today: ${working} BPM. That's where we practise.`;
         outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: say, say });
@@ -249,7 +249,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   // One bar of find-your-tempo at the current probe tempo (count-in only before the first).
   // Four clicks, then one bar, every time: chained bars without a count-in didn't line up.
   const probeBar = () => start(chart, { ...options(false), toBar: 1, repeats: 1, speed: (probing.current?.tempo ?? bpm) / chart.bpm, countInBars: 1, probe: true });
-  const canProbe = !!step.probe && !oneTake && !probed.current && p.bpm === step.bpm.start && !p.clean && !p.fails; // only an untouched step
+  // Only an untouched step; a flying student probes every drill step with a ladder (autoProbe), not only probe steps.
+  const canProbe = (!!step.probe || autoProbe(step, studentRead(getSettings().lessons).pace)) && !oneTake && probed.current !== stepIdx && p.bpm === step.bpm.start && !p.clean && !p.fails;
   // Zoom in: loop one bar 4 times, 10 BPM slower, with the app playing softly underneath.
   const zoomIn = (bar: number) => { setDetails(false); start(chart, { ...options(false), fromBar: bar, toBar: bar, repeats: 4, speed: Math.max(MIN_BPM, bpm - 10) / chart.bpm, guide: true, zoom: bar }); };
   // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.

@@ -59,6 +59,17 @@ lesson; stand-ins were checked only for their tool, not their tempo or rhythm.
 Checked live: with the read `flying` (100%, spread 6 ms, comfortable 70 BPM), the coach wrote "Hi-hat eighths with the
 pedal down", aimed at the `hh-8ths` checkpoint, starting at 70 instead of 60.
 
+### Round 3 (Stage 3): built-in lessons didn't adapt their start tempo
+Evidence: "Single strokes" took 14 takes and "Hi-hat 8th notes" 16 for a student landing 100%: every step climbed from
+its written start (60) one +5 at a time.
+
+| Change | Detail |
+|---|---|
+| `autoProbe` (`src/engine/lesson.ts`) | For a flying student, every untouched drill step with a ladder opens with "🔍 Find my tempo": 1-bar takes from the start, +5 per clean bar; practice starts 10 below where it broke, or at the target if nothing broke. Copy, trade, jam, layers and challenge steps keep their own flow; new / steady / struggling students climb as before. The step still ends with the 8-bar proving take. |
+| Lesson screen | Probing is remembered per step (it was once per lesson), so every step of a lesson can probe. |
+
+Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 cleanly and finished in 6 actions, ★★★.
+
 ### Open observations (not fixed yet)
 - Even when flying, the coach (Haiku, low effort) still opens with an echo warm-up step the prompt tells it to skip.
 - When today's set is done, Journey's big button is "Jam ▶". A student who wants more has to use "Something else" or
@@ -67,7 +78,9 @@ pedal down", aimed at the `hh-8ths` checkpoint, starting at 70 instead of 60.
   several seconds.
 - The live coach misreads a new step's start tempo as being slowed down ("The app slowed you to 60").
 
+
 ## Stage log
 | Stage | Rank | Lessons played | Notes |
 |---|---|---|---|
+| 2 · Every limb on its own | Limb Wrangler ✓ | Single strokes ✓cp (14 takes), Hi-hat 8th notes ✓cp (16), Hand and foot together ✓cp (7) | Flying: checkpoints only, all ★★★. The practice lessons (hi-hat quarters, kick, accents, the coach's singles lesson) were skipped by the new planner and are left for the end-of-run sweep. Most takes went to climbing from 60 BPM. |
 | 1 · Ready to play | Stick Rookie ✓ | Sit hold strike, Your first jam, Echo game, Trade bars (1★, silent answer before fix 3), Counting quarter notes, Eight in a row, Even quarters then counting 8ths (coach), Counting 8th notes ✓cp, Counting the & in 8th notes (coach), Rests are notes too (coach stand-in ✓cp) | All takes 100%. The built-in "rests" checkpoint was passed by an easier coach stand-in (fixed for later stages). |
