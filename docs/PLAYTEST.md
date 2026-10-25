@@ -305,3 +305,58 @@ song audio capture (tab share prompt), drumless/cover search, the mistake paths 
 | 3 · The money beat | Groove Keeper ✓ | The money beat ✓cp (6), Song: Steady Eight ✓cp (2: probe + one 16-bar take, 192/192) | The probe on a song only plays bar 1, but the full song still has to pass. |
 | 2 · Every limb on its own | Limb Wrangler ✓ | Single strokes ✓cp (14 takes), Hi-hat 8th notes ✓cp (16), Hand and foot together ✓cp (7) | Flying: checkpoints only, all ★★★. The practice lessons (hi-hat quarters, kick, accents, the coach's singles lesson) were skipped by the new planner and are left for the end-of-run sweep. Most takes went to climbing from 60 BPM. |
 | 1 · Ready to play | Stick Rookie ✓ | Sit hold strike, Your first jam, Echo game, Trade bars (1★, silent answer before fix 3), Counting quarter notes, Eight in a row, Even quarters then counting 8ths (coach), Counting 8th notes ✓cp, Counting the & in 8th notes (coach), Rests are notes too (coach stand-in ✓cp) | All takes 100%. The built-in "rests" checkpoint was passed by an easier coach stand-in (fixed for later stages). |
+
+## M2: real-kit checklist (for the owner at the MPS-150)
+Run on the branch, your own data is fine (`npm run dev`, Chrome, kit on USB, module volume down if the app plays
+sounds). Takes ~20 minutes. Write the numbers into the table at the end; the implementer tunes from them.
+
+**Before you start**
+1. `amidi -l` shows `e-Drum MIDI 1`. The app header says the kit is connected (not "No MIDI device").
+2. ⚙ Setup → Pads → Emulated kit: **off** (it would play your takes for you).
+3. Setup → Coach → "Show live tips": on, so you can see what the app hears.
+
+**A. Latency first** (your week says "landing behind the click", and the app's latency hint keeps firing)
+1. ⚙ Setup → Pads → latency test: tap 8+ times with the click on the **snare**. Note the number and the spread.
+2. Do it again with headphones on the module vs. on the laptop. Note both.
+3. Play one take of "Counting 8th notes" at 60 BPM. Does the results page still say "Almost every stroke landed about
+   N ms late"? Write N down.
+
+**B. Calibration wizard** ("hit each pad")
+1. Setup → Pads → the calibration screen: hit each pad once when asked, in order.
+2. Check that every pad lands on the right name, and the hi-hat with the pedal **down** shows *closed*, pedal up *open*.
+3. Press the hi-hat pedal alone: it should show *pedal*, and pressing it after an open hit must not count as a hit
+   (the choke).
+4. Anything wrong → note which pad and what it showed.
+
+**C. Crosstalk and retriggers** (`src/input/hits.ts`: `CROSSTALK_MS = 15`, `CROSSTALK_SNARE_MAX = 44`, `BOUNCE_MS = 60`)
+1. Journey → path → Stage 5 "Ghost notes" (or Practice → "Funk groove with ghost notes"), full groove, 3 takes at a
+   tempo you can play.
+2. After each take open "Details and history". Note: hi-hat accuracy, extra hits, and any hi-hat **miss** right after a
+   ghost snare.
+3. Then play 2 bars of just loud hi-hat 8ths with ghost snares between: does any *real* hi-hat stroke go missing? (If
+   yes, the crosstalk filter is too eager: say so.)
+4. Play 16 hard single strokes on the snare, then on each tom. Extra hits on the results page = retriggers getting
+   through.
+
+**D. Accents and ghosts with real sticks** (velocity ~15–127)
+1. Stage 2 "Accents": one take. Does "accent ratio" pass when you play accents clearly louder?
+2. "Ghost notes": one take. Do soft ghosts register at all (not as misses)? What's the softest stroke you can play that
+   still counts?
+
+**E. Gestures at the kit**
+1. Hi-hat pedal × 3 starts the main move, crash × 2 = yes, tom 2 × 2 = listen, floor × 2 = slower, ride × 2 = next.
+2. In the intro slides: hi-hat × 1 = forward, snare × 1 = back.
+3. At 40 BPM after a rough take: floor × 2 should now start **wait mode** ("Learn it slowly"), not a scored take.
+
+**Write down**
+| Check | Your number / note |
+|---|---|
+| Latency (snare, laptop audio) | ms, spread |
+| Latency (module headphones) | ms, spread |
+| Results "N ms late" after the test | |
+| Calibration: wrong pads | |
+| Ghost-note groove: hi-hat misses after a ghost / extras | |
+| A real hi-hat stroke dropped? | |
+| Retrigger extras (snare / toms) | |
+| Softest ghost that counts | |
+| Gestures that didn't work | |
