@@ -4,7 +4,16 @@ Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1
 `~/.claude/plans/plan-all-the-change-purrfect-flamingo.md`.
 
 ## Questions for the owner
-(none yet)
+1. **A take where every note landed but the timing failed slows the tempo (−5, down to 40).** Slower makes staying
+   with the click harder, not easier. Should a timing-only fail *hold* the tempo instead (and give the timing tip)?
+   *I'd recommend: hold the tempo for timing-only fails, slow down only for missed notes.* Waiting: a small ladder
+   change in `src/engine/lesson.ts` (`ladderStep`) plus `docs/LEARNING.md`.
+2. **Level 0–1 lets a take ~90 ms late pass** (Good is ±150 ms) while the live tip says "play with the click, not after
+   it". Mixed message. Keep the generous window and soften the tip at levels 0–1, or make the verdict mention it?
+   *I'd recommend: keep the window, and say "Nice! A touch late: lean into the click" in the verdict when the mean
+   offset is over 50 ms.* Waiting: one line in `LessonPlayer.tsx`.
+3. **Your own data looks like setup latency** (34% landed this week, "landing behind the click", the latency hint
+   fires). Please run part A of the M2 kit checklist (docs/PLAYTEST.md) first. Nothing is waiting on it in code.
 
 ## Log
 | Time | Item | Status | Commit | Tests | Checked in Chrome |
@@ -26,3 +35,6 @@ Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1
 | 01:20 | M17 groove confidence + Ask again | done | 95045f2 | 220 | later (batch) |
 | 01:30 | M18 show-off song ≥ 16 bars | done | cb526e9 | 221 | later (batch) |
 | 01:35 | M19 Practice levels match the path | done | (next) | 222 | later (batch) |
+| 01:35 | M19 | done | 3094bfa | 222 | – |
+| 02:00 | M1 play test, Beginner preset (round 6) | done | 543f74f, fe83e7b, 5ea2b4e, 9da0848, dfcf635, 6ddb795 | 223 | ✓ Chrome on 5180/8790 with a copy of your data: slow-downs, floor, wait mode, Fix bar, "something different", live tips, trade one-off, M3/M4/M6 lines, Practice (Solid) |
+| 02:40 | M2 real-kit checklist written | done | a279a50 | – | – (owner runs it) |
