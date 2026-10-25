@@ -7,7 +7,7 @@ import { freeBarStats } from '../engine/jam';
 import { afterReview, checkPass, CLEAN_TAKES, copyChart, countPlan, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
-import { Celebration } from './Celebration';
+import { Celebration, flourish } from './Celebration';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { NotesView } from '../play/NotesView';
@@ -22,7 +22,7 @@ import { coachTake, dropCoachAction, onCoachAction } from '../coach/session';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
-const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
+const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 type Outcome = { passed: boolean; text: string; reason?: string; fixBar?: number; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 
@@ -50,10 +50,12 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const stickyBar = useRef<number>(undefined); // the bar most notes slipped in, last take (for the coach's "zoom")
 
   const p = progressOf(lesson);
-  const oneTake = role === 'warmup' || role === 'review';
+  const oneTake = role === 'warmup' || role === 'review' || role === 'record';
   const stepIdx = oneTake ? lesson.steps.length - 1 : Math.min(p.step, lesson.steps.length - 1);
   const step = lesson.steps[stepIdx];
-  const bpm = oneTake ? Math.max(step.bpm.start, p.bestBpm || step.bpm.target) : p.bpm;
+  // Beat your best: a streak challenge asks for 4 more in a row than your best, anything else 5 BPM above it.
+  const recordStreak = role === 'record' && step.pass?.streak ? Math.max(step.pass.streak, p.bestStreak ?? 0) + 4 : undefined;
+  const bpm = role === 'record' && !recordStreak ? (p.bestBpm || step.bpm.target) + 5 : oneTake ? Math.max(step.bpm.start, p.bestBpm || step.bpm.target) : p.bpm;
   const fresh = !getSettings().lessons[lesson.id];
   const mine = player.options?.lesson?.id === lesson.id;
   const playing = mine && player.phase === 'playing';
@@ -76,7 +78,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     // A step's extra limits (flams, timing) are for the full groove, not its first layers.
     const fs = freeBarStats(f.hits, f.extras, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: beatsPerBar(f.chart), fromBar: f.options.fromBar, sectionBars: f.options.toBar - f.options.fromBar + 1 }, free);
     const st = fs ? { ...f.stats, extra: f.stats.extra - fs.extras } : f.stats; // strokes in your own bars aren't extras
-    const check = checkPass(st, step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level);
+    const check = checkPass(st, recordStreak ? { ...step.pass, streak: recordStreak } : step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level);
     // A zoom loop is practice for the next real take: no ladder, not saved.
     if (f.options.zoom) {
       outcomes.set(f, { passed: check.ok, itemDone: false, text: `Bar ${f.options.zoom}, four times: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. Now the whole thing again at ${progressOf(lesson).bpm} BPM.` });
@@ -94,7 +96,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     let o: Outcome;
     if (oneTake) {
       if (role === 'review') saveProgress(lesson.id, afterReview(p, check.ok, today()));
-      o = { passed: check.ok, itemDone: true, text: check.ok ? `${landed} Still solid.` : `${landed} We'll come back to this one tomorrow.` };
+      if (role === 'record') {
+        if (check.ok) { saveProgress(lesson.id, recordStreak ? { ...p, bestStreak: recordStreak } : { ...p, bestBpm: bpm }); flourish(false); }
+        o = { passed: check.ok, itemDone: true, text: check.ok ? `🏆 NEW RECORD: ${recordStreak ? `${recordStreak} in a row` : `${bpm} BPM`}! ${landed}` : `${landed} Not this time. Your record stays, try again any day.` };
+      } else o = { passed: check.ok, itemDone: true, text: check.ok ? `${landed} Still solid.` : `${landed} We'll come back to this one tomorrow.` };
     } else {
       const { next, event } = ladderStep(p, lesson, check.ok, today(), st.accuracy);
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;

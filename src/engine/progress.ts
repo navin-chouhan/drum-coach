@@ -1,6 +1,7 @@
 export type RunRow = {
   chartId: string; chartTitle: string; level?: number; startedAt: string; durationS: number;
   bpm: number; speed: number; accuracy: number; meanOffset: number; spread: number;
+  notes?: number; // notes in the take (older rows may lack it)
 };
 export type CatalogItem = { id: string; title: string; bpm: number; level?: number; kind?: string };
 export type Suggestion = { chartId: string; bpm: number; reason: string };
@@ -74,4 +75,31 @@ export function dashboard(runs: RunRow[], now = new Date()): Dashboard {
     minutesWeek: r1(Array.from({ length: 7 }, (_, i) => minutesByDay.get(back(i)) ?? 0).reduce((a, b) => a + b, 0)),
     days, charts,
   };
+}
+
+/** Badges: a fixed list, earned from runs and lesson progress. Earned ids are kept in Settings.badges (announced once). */
+export const BADGES = [
+  { id: 'first-3star', name: 'First ★★★', how: 'Three stars on any lesson' },
+  { id: 'fast-100', name: 'Clean at 100', how: '90% of notes landed at 100 BPM or faster' },
+  { id: 'streak-7', name: '7-day streak', how: 'Play 7 days in a row' },
+  { id: 'streak-30', name: '30-day streak', how: 'Play 30 days in a row' },
+  { id: 'notes-1k', name: '1,000 notes', how: 'Land 1,000 notes' },
+  { id: 'notes-10k', name: '10,000 notes', how: 'Land 10,000 notes' },
+  { id: 'showoff', name: 'Show-off song', how: 'Play a real song at 85% or better' },
+  { id: 'stage-3star', name: 'Perfect stage', how: 'Every challenge of a stage at three stars' },
+] as const;
+
+/** `stages`: each stage's checkpoint lesson ids. */
+export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: number; completedAt?: string }>, stages: string[][], now = new Date()): string[] {
+  const streak = dashboard(runs, now).streak;
+  const landed = runs.reduce((a, r) => a + Math.round(((r.notes ?? 0) * r.accuracy) / 100), 0);
+  const got: Record<(typeof BADGES)[number]['id'], boolean> = {
+    'first-3star': Object.values(lessons).some(p => p.stars === 3),
+    'fast-100': runs.some(r => r.bpm >= 100 && r.accuracy >= 90),
+    'streak-7': streak >= 7, 'streak-30': streak >= 30,
+    'notes-1k': landed >= 1000, 'notes-10k': landed >= 10000,
+    'showoff': runs.some(r => r.chartId.startsWith('yt-') && r.accuracy >= 85),
+    'stage-3star': stages.some(ids => ids.length > 0 && ids.every(id => lessons[id]?.stars === 3)),
+  };
+  return BADGES.filter(b => got[b.id]).map(b => b.id);
 }

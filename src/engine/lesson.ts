@@ -52,6 +52,7 @@ export type LessonProgress = {
   completedAt?: string; reviewStage: number; reviewDue?: string; // dates are local YYYY-MM-DD
   stars?: number; // best 1–3 earned when the lesson completes (older saves: none)
   layer?: number; // index into the step's `layers` (older saves: none = 0)
+  bestStreak?: number; // best "in a row" on a streak challenge's record take
 };
 
 export type Tool = 'jam' | 'copy' | 'trade' | 'free' | 'challenge' | 'layers' | 'bite' | 'drill';

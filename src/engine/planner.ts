@@ -1,6 +1,6 @@
 import { dueReviews, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson.ts';
 
-export type SessionRole = 'warmup' | 'review' | 'skill' | 'groove';
+export type SessionRole = 'warmup' | 'review' | 'skill' | 'groove' | 'record'; // record: one take to beat your best
 export type SessionItem = { role: SessionRole; lessonId: string; minutes: number };
 
 const SKILL: LessonKind[] = ['exercise', 'rudiment'];

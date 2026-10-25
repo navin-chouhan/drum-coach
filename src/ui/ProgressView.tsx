@@ -4,7 +4,7 @@ import { checkpointsOf } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
 import { useYtSongs } from '../youtube/api';
-import { dashboard, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, dashboard, type Dashboard, type RunRow } from '../engine/progress';
 import { requestLesson, requestPlay, requestSong } from './nav';
 
 const ACCENT = '#2F6FE4';
@@ -132,6 +132,10 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
           : <div key={m.level} className="rankSticker small locked" title={`Pass stage ${m.level + 1}, ${m.title}, to earn this`}>?</div>)}
       </div>
       <p><span className="stars">★</span> <b>{stars}</b> stars from your lessons</p>
+      <h4>Badges</h4>
+      <div className="stickers">
+        {BADGES.map(b => <div key={b.id} className={`rankSticker small ${s.badges?.includes(b.id) ? '' : 'locked'}`} title={b.how}>{s.badges?.includes(b.id) ? `🏅 ${b.name}` : b.name}</div>)}
+      </div>
       <h4>Show-off set</h4>
       {showoff.length ? (
         <ul className="songList">

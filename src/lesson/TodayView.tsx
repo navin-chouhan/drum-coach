@@ -5,15 +5,16 @@ import { MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
 import { toolOf, type Genre, type Lesson, type Tool } from '../engine/lesson';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
-import { dashboard, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
+import { flourish } from './Celebration';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
 import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
-const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
-type Open = { lessonId: string; item?: number };
+const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
+type Open = { lessonId: string; item?: number; role?: SessionRole };
 
 export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => void; openLessonId?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
@@ -21,9 +22,11 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const [open, setOpen] = useState<Open | undefined>(openLessonId ? { lessonId: openLessonId } : undefined);
   const [editing, setEditing] = useState(false);
   const [dash, setDash] = useState<Dashboard>();
+  const [runs, setRuns] = useState<RunRow[]>([]);
+  const [newBadges, setNewBadges] = useState<string[]>([]);
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
-  useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => setDash(dashboard(runs))).catch(() => {}); }, [open]);
+  useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => { setRuns(runs); setDash(dashboard(runs)); }).catch(() => {}); }, [open]);
 
   const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
@@ -35,6 +38,15 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   useEffect(() => {
     if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length) requestCoachLesson(coachKey);
   }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons]);
+
+  // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
+  useEffect(() => {
+    if (!runs.length) return;
+    const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints)), fresh = earned.filter(id => !s.badges?.includes(id));
+    if (!fresh.length) return;
+    setSettings({ badges: [...(s.badges ?? []), ...fresh] });
+    setNewBadges(fresh); flourish(false);
+  }, [runs, s.lessons, s.badges]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 
@@ -51,7 +63,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   if (open) {
     const item = open.item !== undefined ? session.items[open.item] : undefined;
     const nextIdx = session.items.findIndex((_, i) => i !== open.item && playable(i) && !session.done.includes(i));
-    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role} minutes={item?.minutes}
+    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role ?? open.role} minutes={item?.minutes}
       onBack={() => setOpen(undefined)} onOpen={id => setOpen({ lessonId: id })}
       onItemDone={open.item === undefined ? undefined : () => markDone(open.item!)}
       onNext={open.item === undefined ? undefined : () => { markDone(open.item!); setOpen(nextIdx >= 0 ? { lessonId: session.items[nextIdx].lessonId, item: nextIdx } : undefined); }} />;
@@ -74,12 +86,17 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const line = greeting({ hour: new Date().getHours(), streak: dash?.streak ?? 0, runs: dash?.totalRuns ?? 0, landedWeek: dash?.landedWeek ?? null, landedLastWeek: dash?.landedLastWeek ?? null,
     next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus } });
   const trailDone = trail.filter(l => done(l.id)).length;
+  // Beat your best: a finished lesson you haven't played for longest (improvising tools have no record to beat).
+  const lastPlayed = (l: Lesson) => dash?.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
+  const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])))
+    .sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   return (
     <div className="today home">
       <div className="homeHero">
         <div className="avatar" aria-hidden>🥁</div>
         <div>
           <div className="bubble" aria-live="polite">
+            {newBadges.length > 0 && <p className="newBadge">🏅 New badge: <b>{newBadges.map(id => BADGES.find(b => b.id === id)?.name).join(', ')}</b>!</p>}
             <p>{line}</p>
             <div className="actions">
               <button className="primary big" autoFocus onClick={go}>{hero ? "Yes, let's go ▶" : 'Jam ▶'}</button>
@@ -119,6 +136,10 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               </button>
             );
           })}
+          {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}>
+            <span className="ic" aria-hidden>🏆</span><b>Beat your best</b>
+            <span className="small">{record.title} · {s.lessons[record.id]?.bestBpm ? `${s.lessons[record.id].bestBpm + 5} BPM` : 'one take'}</span>
+          </button>}
         </div>
       </div>}
 

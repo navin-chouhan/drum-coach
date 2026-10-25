@@ -43,6 +43,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Listen back | "Hear your take" plays your own hits at their real times (`takeChart`, extras included) with the click, then "Hear it right" plays the chart. Hearing the difference, not only seeing it. |
 | Count with me | `countAloud` makes the coach's voice count during the take ("1 2 3 4" or "1 & 2 &"), fading to only "one" after 4 bars (`countPlan`) so the student takes over. Needs the Piper voice (the words are pre-rendered). |
 | Song bite | A step's `bite` names 1–8 bars of a saved song (`yt_songs` with notes); the server cuts the chart from the song's notes (`applyBites`), so it practises offline on the app's drums. "Play it with the song" opens Songs → Play on those bars. |
+| Beat your best and badges | Journey's set ends with a "Beat your best" tile: one take of a finished lesson you haven't played for longest, 5 BPM above your best (a streak challenge: 4 more in a row). A pass is a NEW RECORD. Badges (`BADGES`, `earnedBadges`) are earned from runs and progress, announced once on Journey and shown on the trophy shelf. |
 | Specific feedback, one fix | After each take, one friendly line and at most one tip. The AI coach is one click away. |
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |

@@ -236,6 +236,8 @@
   .setTile{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:4px;min-height:150px;text-align:left;padding:16px 18px;border:3px solid var(--line);border-radius:0;background:var(--panel2);box-shadow:4px 4px 0 var(--line)}
   .setTile.cur{background:var(--pop);transform:translateY(-4px);box-shadow:6px 8px 0 var(--line)}
   .setTile.done{background:#E3F5EA}
+  .setTile.record{background:var(--night);color:var(--nightText)} .setTile.record .small{color:#ddd}
+  .newBadge{background:var(--pop);border:2px solid var(--line);padding:4px 10px;display:inline-block}
   .setTile .ic{font-size:40px;margin-bottom:auto}
   .setTile b{font:800 19px var(--display)}
   .setTile .tag{position:absolute;top:-12px;right:10px;background:var(--night);color:var(--nightText);font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px}
