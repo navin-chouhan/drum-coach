@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, copyChart, countPlan, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -102,6 +102,50 @@ describe('tempo ladder', () => {
     const r = play([true, true, true, true, true, true]);
     expect(r.events.at(-1)).toBe('lessonDone');
     expect(r.p).toMatchObject({ completedAt: D, reviewDue: '2026-10-26', reviewStage: 0, bestBpm: 70 });
+  });
+});
+
+describe('beat your best', () => {
+  const quarters = { ...chart, bars: 1, notes: [0, 1, 2, 3].map(t => ({ t, drum: 'snare' as const })) }; // 32 notes in 8 bars
+  const s = { title: 's', text: '', chart: quarters, bpm: { start: 60, target: 60 }, pass: { streak: 8 } };
+  const p = startProgress({ ...lesson, steps: [s] });
+  it('asks for 4 more in a row, capped at the notes in the take', () => {
+    expect(recordTarget(s, p)).toBe(12);
+    expect(recordTarget(s, { ...p, bestStreak: 30 })).toBe(32);
+    expect(recordTarget(s, { ...p, bestStreak: 32 })).toBe(32); // the whole take: Journey stops offering it
+    expect(recordTarget({ ...s, pass: undefined }, p)).toBeUndefined();
+  });
+});
+
+describe('playChart', () => {
+  it('trade: calls by the app, every echo bar free and empty', () => {
+    const { chart: c, freeBars } = playChart({ chart: { ...chart, bars: 2, notes: [{ t: 0, drum: 'snare' }, { t: 4, drum: 'kick' }] }, trade: true });
+    expect(freeBars).toEqual([2, 4]);
+    expect(c.notes).toEqual([{ t: 0, drum: 'snare', auto: true }, { t: 8, drum: 'kick', auto: true }]);
+  });
+});
+
+describe('click feel, variants and rest', () => {
+  it('2and4 clicks only on beats 2 and 4', () => {
+    expect([0, 1, 2, 3].map(b => clickOnBeat(b, '2and4'))).toEqual([false, true, false, true]);
+    expect([0, 1, 2, 3].every(b => clickOnBeat(b))).toBe(true);
+  });
+  it('a variant is stable per take and the takes visit more than one', () => {
+    expect(pickVariant(3, 5)).toBe(pickVariant(3, 5));
+    expect(new Set(Array.from({ length: 12 }, (_, t) => pickVariant(3, t))).size).toBeGreaterThan(1);
+    expect(Array.from({ length: 12 }, (_, t) => pickVariant(3, t)).every(v => v >= 0 && v < 3)).toBe(true);
+  });
+  it('a rest step is done when the rest is over', () => {
+    const rest: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], rest: 20 }, lesson.steps[1]] };
+    expect(ladderStep({ ...startProgress(rest), bpm: 65, clean: 1 }, rest, false, D).event).toBe('stepDone');
+  });
+});
+
+describe('find your tempo', () => {
+  it('works 10 below the bar that fell apart, or at the last tempo', () => {
+    expect(probeTempo([100, 95, 90, 60], 60, 75)).toBe(65); // broke at 75 BPM
+    expect(probeTempo([100, 100, 100], 60, 75)).toBe(70);
+    expect(probeTempo([50], 45, 75)).toBe(40); // never under 40
   });
 });
 

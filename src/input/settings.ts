@@ -1,3 +1,4 @@
+import type { ChartNote } from '../engine/chart';
 import type { LessonProgress, Profile } from '../engine/lesson';
 import type { SessionItem } from '../engine/planner';
 import type { Chattiness } from '../engine/liveCoach';
@@ -9,6 +10,10 @@ export type Session = { date: string; items: SessionItem[]; done: number[] }; //
 export type Settings = {
   latencyMs: number; browserSounds: boolean;
   profile: Profile; lessons: Record<string, LessonProgress>; session?: Session;
+  fills?: { id: string; at: string; bpm: number; notes: ChartNote[] }[]; // your fills from free bars (last 20)
+  arcade?: Record<string, number>; // beat the clock: best clean bars in 2 minutes, per lesson
+  autopilot?: boolean; // after a verdict, the next move starts by itself after 5 s unless you hit a pad
+  lastRecapWeek?: string; // the ISO week the Monday recap was last given
   intro?: boolean; // intro slides before the first take of an exercise or step (default on)
   hints?: boolean; // the count and who plays each note under the sheet (default on)
   badges?: string[]; // earned badge ids (engine/progress.ts BADGES), so a new one is announced once

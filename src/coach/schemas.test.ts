@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TipsSchema } from './schemas';
+import { CoachReplySchema, TipsSchema } from './schemas';
 
 describe('TipsSchema', () => {
   it('drops a tip that is too long instead of failing the whole answer', () => {
@@ -9,5 +9,12 @@ describe('TipsSchema', () => {
       praise: { text: 'Nice!', spoken: 'y'.repeat(46) },
     } });
     expect(Object.keys(r.tips)).toEqual(['rushing']);
+  });
+});
+
+describe('CoachReplySchema', () => {
+  it('accepts the tools the coach can switch to for one take', () => {
+    for (const kind of ['trade', 'count', 'layers', 'listen'])
+      expect(CoachReplySchema.safeParse({ say: 'Trade bars with me', action: { kind, label: 'Go' } }).success).toBe(true);
   });
 });

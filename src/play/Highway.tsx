@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { countInNumber } from '../engine/run';
 import type { DrumId } from '../engine/kit';
 import { DRUM_BY_ID } from '../ui/drums';
 import { player, position } from './player';
@@ -94,7 +95,7 @@ export function Highway() {
       // count-in and progress
       if (pos < 0) {
         c.fillStyle = '#FFFFFF'; c.font = '900 76px "Arial Black", Impact, sans-serif';
-        c.fillText(String(Math.ceil(-pos)), W / 2, H / 2 - 40);
+        c.fillText(String(countInNumber(pos, run.beatsPerBar)), W / 2, H / 2 - 40); // 1 2 3 4, with the voice
       } else if (player.options?.count && pos < run.beats) { // count out loud: 1 & 2 & …
         const beat = Math.floor(pos % run.beatsPerBar) + 1;
         c.fillStyle = 'rgba(255,255,255,.35)'; c.font = '900 64px "Arial Black", Impact, sans-serif';

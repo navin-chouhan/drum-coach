@@ -3,6 +3,7 @@ export type RunRow = {
   bpm: number; speed: number; accuracy: number; meanOffset: number; spread: number;
   notes?: number; // notes in the take (older rows may lack it)
   fromBar?: number; toBar?: number; // the bars the take covered
+  tips?: string[]; // ids of the live tips given during the take (engine/liveCoach.ts)
 };
 export type CatalogItem = { id: string; title: string; bpm: number; level?: number; kind?: string };
 export type Suggestion = { chartId: string; bpm: number; reason: string };
@@ -106,6 +107,7 @@ export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: n
 }
 
 /** Song project: which of a song's bars you've played at 85% or better (in any take covering them). */
+// shortcut: a take's whole accuracy marks every bar it covered ready; upgrade to per-bar accuracy (results per bar in summary_json) when bites are 4+ bars
 export function barsReady(runs: RunRow[], songId: string, totalBars: number): number {
   const ok = new Set<number>();
   for (const r of runs) if (r.chartId === songId && r.accuracy >= 85 && r.fromBar && r.toBar)
@@ -124,4 +126,39 @@ export function forYou<C extends { id: string; kind?: string; level?: number; so
   charts.filter(c => c.level === level).forEach(c => add(c, 'at your level'));
   charts.filter(c => c.level === level + 1).forEach(c => add(c, 'a step up'));
   return out;
+}
+
+const THEME_WORDS: Record<string, string> = {
+  rushing: 'rushing ahead of the click', dragging: 'landing behind the click', unsteady: 'keeping the click steady',
+  reacting: 'playing with the click, not after it', 'missing-kick': 'the kick', extras: 'playing only the notes shown',
+  'hh-open': 'keeping the hi-hat pedal down', accents: 'louder accents', ghosts: 'softer ghost notes', even: 'even strokes',
+};
+/** This week's thing: the live tip given most in the last 7 days (3+ times, praise aside), in plain words. */
+export function weekTheme(runs: RunRow[], now = new Date()): { cue: string; count: number; words: string } | null {
+  const counts = new Map<string, number>();
+  for (const r of runs) if ((now.getTime() - Date.parse(r.startedAt)) / 86_400_000 < 7)
+    for (const id of r.tips ?? []) if (id !== 'praise') counts.set(id, (counts.get(id) ?? 0) + 1);
+  const [cue, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+  if (!cue || count < 3) return null;
+  return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${cue.slice(8)}` : cue) };
+}
+
+/** ISO week key ("2026-W43"), for "once a week" things like the Monday recap. */
+export function isoWeek(d: Date): string {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day); // the week's Thursday decides its year
+  const week = Math.ceil(((t.getTime() - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86_400_000 + 1) / 7);
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+/** The Monday recap: three plain sentences about the last 7 days (whole numbers only). `newBadge`: a badge name earned lately. */
+export function weekRecap(d: Pick<Dashboard, 'minutesWeek' | 'landedWeek' | 'landedLastWeek'>, newBadge?: string): string {
+  const mins = Math.round(d.minutesWeek);
+  const first = mins ? `Last week you played ${mins} minute${mins === 1 ? '' : 's'}.` : "Last week was a quiet one, and that's fine.";
+  const second = d.landedWeek === null ? 'Every take you play shows here.'
+    : d.landedLastWeek !== null && d.landedWeek > d.landedLastWeek ? `Your notes landed ${d.landedWeek}% of the time, up from ${d.landedLastWeek}%.`
+    : `Your notes landed ${d.landedWeek}% of the time.`;
+  const third = newBadge ? `New on your shelf: ${newBadge}.` : 'This week, one small thing at a time.';
+  return `${first} ${second} ${third}`;
 }

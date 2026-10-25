@@ -3,21 +3,22 @@ import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
-import { toolOf, type Genre, type Lesson } from '../engine/lesson';
+import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
-import { BADGES, barsReady, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
+import { say } from '../voice/voice';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
-import { aiLessonsLoaded, lessonById, requestCoachLesson, useLessons } from './aiLessons';
+import { aiLessonsLoaded, lessonById, requestCoachLesson, setStitched, stitchLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
 import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
-type Open = { lessonId: string; item?: number; role?: SessionRole };
+type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean; arcade?: boolean };
 
 export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => void; openLessonId?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
@@ -28,6 +29,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [songs] = useYtSongs();
   const [newBadges, setNewBadges] = useState<string[]>([]);
+  const [recap, setRecap] = useState<string>();
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
   useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => { setRuns(runs); setDash(dashboard(runs)); }).catch(() => {}); }, [open]);
@@ -35,6 +37,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
   const coach = useCoachEntry<Lesson>(coachKey);
+  const themeKey = `theme-${new Date().toDateString()}`, themeEntry = useCoachEntry<Lesson>(themeKey);
   const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
   // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone,
   // once you've played something (with no takes yet, the built-in first lessons are the right start).
@@ -42,6 +45,15 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   useEffect(() => {
     if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length) requestCoachLesson(coachKey);
   }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons]);
+
+  // The Monday recap: on the first visit of a week (with some playing behind you), once, spoken if the voice is on.
+  useEffect(() => {
+    const wk = isoWeek(new Date());
+    if (!dash?.totalRuns || getSettings().lastRecapWeek === wk) return;
+    const text = weekRecap(dash, BADGES.find(b => b.id === getSettings().badges?.at(-1))?.name);
+    setSettings({ lastRecapWeek: wk }); setRecap(text);
+    if (getSettings().voice) void say(text);
+  }, [dash]);
 
   // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
   useEffect(() => {
@@ -51,6 +63,12 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
     setSettings({ badges: [...(s.badges ?? []), ...fresh] });
     setNewBadges(fresh); flourish(false);
   }, [runs, s.lessons, s.badges]);
+
+  // The stage's song becomes a lesson once every bar is ready (so the trail and the lesson player know it).
+  const pSong = songs.find(x => x.id === (s.profile.song?.stage === milestone?.level ? s.profile.song?.id : undefined));
+  const pBars = pSong ? songBarCount(pSong) : 0;
+  const pReady = !!pSong && pBars > 0 && barsReady(runs, pSong.id, pBars) >= pBars;
+  useEffect(() => { setStitched(pReady && pSong ? stitchLesson(pSong, s.profile.song!.stage) : undefined); }, [pReady, pSong, s.profile.song]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 
@@ -67,7 +85,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   if (open) {
     const item = open.item !== undefined ? session.items[open.item] : undefined;
     const nextIdx = session.items.findIndex((_, i) => i !== open.item && playable(i) && !session.done.includes(i));
-    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role ?? open.role} minutes={item?.minutes}
+    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role ?? open.role} minutes={item?.minutes} flow={open.flow} arcade={open.arcade}
       onBack={() => setOpen(undefined)} onOpen={id => setOpen({ lessonId: id })}
       onItemDone={open.item === undefined ? undefined : () => markDone(open.item!)}
       onNext={open.item === undefined ? undefined : () => { markDone(open.item!); setOpen(nextIdx >= 0 ? { lessonId: session.items[nextIdx].lessonId, item: nextIdx } : undefined); }} />;
@@ -90,12 +108,17 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const line = greeting({ hour: new Date().getHours(), streak: dash?.streak ?? 0, runs: dash?.totalRuns ?? 0, landedWeek: dash?.landedWeek ?? null, landedLastWeek: dash?.landedLastWeek ?? null,
     next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus } });
   const trailDone = trail.filter(l => done(l.id)).length;
+  const theme = weekTheme(runs);
   const project = s.profile.song?.stage === milestone?.level ? s.profile.song : undefined;
   const projectSong = songs.find(x => x.id === project?.id);
   const songBars = projectSong ? songBarCount(projectSong) : 0;
   // Beat your best: a finished lesson you haven't played for longest (improvising tools have no record to beat).
   const lastPlayed = (l: Lesson) => dash?.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
-  const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])))
+  // Beat the clock: a finished groove, the one played longest ago.
+  const arcade = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill').sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  // A streak record already as long as the whole take has nothing left to beat.
+  const maxedOut = (l: Lesson) => { const t = recordTarget(l.steps[l.steps.length - 1], s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
+  const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
     .sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   return (
     <div className="today home">
@@ -103,12 +126,14 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
         <div className="avatar" aria-hidden>🥁</div>
         <div>
           <div className="bubble" aria-live="polite">
+            {recap && <p className="recap">📅 {recap}</p>}
             {newBadges.length > 0 && <p className="newBadge">🏅 New badge: <b>{newBadges.map(id => BADGES.find(b => b.id === id)?.name).join(', ')}</b>!</p>}
             <p>{line}</p>
             <div className="actions">
               <button className="primary big" autoFocus onClick={go}>{hero ? "Yes, let's go ▶" : 'Jam ▶'}</button>
               {others.length > 0 && <button onClick={() => setSwap(swap + 1)}>Something else</button>}
               {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
+              {jam && <button onClick={() => setOpen({ lessonId: jam.id, flow: true })}>🌊 Flow</button>}
             </div>
           </div>
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
@@ -123,6 +148,8 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               <li>🔥 <b>{dash?.streak ?? 0}-day</b> streak</li>
               {dash?.landedWeek != null && <li>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</li>}
               <li>⏱ <b>{Math.round(dash?.minutesToday ?? 0)}</b> min today</li>
+              {theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
+                : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
               {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : 'add its notes in Songs'}</li>}
             </ul>
           </div>
@@ -144,9 +171,16 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               </button>
             );
           })}
+          {pReady && pSong && <button className="setTile record" onClick={() => setOpen({ lessonId: `song-${pSong.id}` })}>
+            <span className="ic" aria-hidden>🎵</span><b>Play {pSong.title} all the way through ▶</b><span className="small">every bar is ready</span>
+          </button>}
+          {arcade && <button className="setTile record" onClick={() => setOpen({ lessonId: arcade.id, arcade: true })}>
+            <span className="ic" aria-hidden>⏱</span><b>2-minute challenge</b>
+            <span className="small">{arcade.title} · {s.arcade?.[arcade.id] ? `best ${s.arcade[arcade.id]} clean bars` : 'how many clean bars?'}</span>
+          </button>}
           {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}>
             <span className="ic" aria-hidden>🏆</span><b>Beat your best</b>
-            <span className="small">{record.title} · {s.lessons[record.id]?.bestBpm ? `${s.lessons[record.id].bestBpm + 5} BPM` : 'one take'}</span>
+            <span className="small">{record.title} · {recordTarget(record.steps[record.steps.length - 1], s.lessons[record.id]) ? `${recordTarget(record.steps[record.steps.length - 1], s.lessons[record.id])} in a row` : s.lessons[record.id]?.bestBpm ? `${s.lessons[record.id].bestBpm + 5} BPM` : 'one take'}</span>
           </button>}
         </div>
       </div>}

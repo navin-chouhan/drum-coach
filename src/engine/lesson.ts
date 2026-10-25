@@ -1,4 +1,5 @@
 import { beatsPerBar, type Chart, type ChartDrum } from './chart.ts';
+import { seededRandom } from './kitEmulator.ts';
 import type { RunStats } from './scoring.ts';
 
 // Lessons, pass criteria, the tempo ladder and spaced review. See docs/LEARNING.md.
@@ -33,7 +34,13 @@ export type Step = {
   freeBars?: number[]; // 1-based chart bars that are yours: no notes to miss, scored on the beat grid only
   trade?: boolean;      // trade bars: the app plays a bar, you answer with anything (copy + every echo bar free)
   bite?: { songId: string; fromBar: number; toBar: number; title?: string }; // bars of a saved song (chart cut from its notes)
-  countAloud?: 'quarters' | '8ths'; // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
+  countAloud?: 'quarters' | '8ths';
+  fadeClick?: number;   // keep time alone: the click fades to silence over this many bars
+  clickOn?: 'quarters' | '8ths' | '2and4'; // click feel: on every beat (default), every 8th, or only 2 and 4
+  variants?: Chart[];   // shuffle the phrases: each take plays one of these (same length) so you read, not memorise
+  bars?: number;        // long take: this many bars per take instead of 4 (8 for the proving take)
+  probe?: boolean;      // find your tempo: 1-bar takes from bpm.start, +5 per clean bar, until one falls apart
+  rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen) // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
 };
 export type LessonKind = NonNullable<Chart['kind']>;
@@ -66,6 +73,16 @@ export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | 
   return Array.from({ length: bars }, (_, b) => (b < 4 ? full : full.map((w, i) => (i ? '' : w))));
 }
 
+/** Beat your best: a record take is 8 bars of the step (its full groove). */
+export const RECORD_BARS = 8;
+export const notesInRecordTake = (s: Step) => {
+  const lanes = s.layers?.at(-1) ?? s.activeLanes;
+  return s.chart.notes.filter(n => !n.auto && (!lanes || lanes.includes(n.drum))).length * Math.ceil(RECORD_BARS / s.chart.bars);
+};
+/** A streak challenge's record asks for 4 more in a row than your best, never more than the take holds. */
+export const recordTarget = (s: Step, p: LessonProgress) =>
+  s.pass?.streak ? Math.min(Math.max(s.pass.streak, p.bestStreak ?? 0) + 4, notesInRecordTake(s)) : undefined;
+
 /** Call and response: each bar is played by the app (call), then by you (echo). A 2-bar chart becomes 4 bars. */
 export function copyChart(c: Chart): Chart {
   const bpb = beatsPerBar(c);
@@ -74,6 +91,28 @@ export function copyChart(c: Chart): Chart {
     return [{ ...n, t, auto: true }, { ...n, t: t + bpb }];
   }).sort((a, b) => a.t - b.t);
   return { ...c, bars: c.bars * 2, notes };
+}
+
+/** The chart a step plays and its free bars: copy-me / trade double the bars; trade's echo bars are yours (no notes). */
+export function playChart(s: Pick<Step, 'chart' | 'copy' | 'trade' | 'freeBars'>): { chart: Chart; freeBars: number[] } {
+  const base = s.copy || s.trade ? copyChart(s.chart) : s.chart;
+  const freeBars = s.trade ? Array.from({ length: s.chart.bars }, (_, i) => 2 * i + 2) : s.freeBars ?? [];
+  const bpb = beatsPerBar(base);
+  return { freeBars, chart: freeBars.length ? { ...base, notes: base.notes.filter(n => !freeBars.includes(Math.floor(n.t / bpb + 1e-6) + 1)) } : base };
+}
+
+/** Click feel: does the click sound on this beat of the bar (0-based)? "2and4" leaves 1 and 3 for you to feel. */
+export const clickOnBeat = (beatInBar: number, clickOn?: Step['clickOn']) => clickOn !== '2and4' || beatInBar % 2 === 1;
+/** Shuffle the phrases: which variant take number `take` plays (stable per take, varied across takes). */
+export const pickVariant = (n: number, take: number) => Math.floor(seededRandom(take * 7919 + 1)() * n);
+
+/**
+ * Find your tempo: bar i was played at start + 5·i. The working tempo is 10 below the first bar that fell apart
+ * (under the pass bar), or the last tempo when none did; never under MIN_BPM.
+ */
+export function probeTempo(perBarAccuracy: number[], start: number, pass: number): number {
+  const broke = perBarAccuracy.findIndex(a => a < pass);
+  return broke < 0 ? start + 5 * Math.max(0, perBarAccuracy.length - 1) : Math.max(MIN_BPM, start + 5 * broke - 10);
 }
 
 export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 2, BPM_STEP = 5, MIN_BPM = 40, ROUGH_ACCURACY = 60;
@@ -150,7 +189,7 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
 export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes
+  if (step.jam || step.rest || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
     if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };

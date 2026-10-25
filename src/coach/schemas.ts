@@ -13,7 +13,6 @@ export const FeedbackSchema = z.object({
     chart: ChartSchema.optional(),
   }),
 });
-export const NextSchema = z.object({ chartId: z.string().max(80), bpm: z.number().min(30).max(300), reason: z.string().max(800) });
 export const PlanSchema = z.object({
   title: z.string().max(120),
   days: z.array(z.object({
@@ -64,12 +63,15 @@ export const AiLessonSchema = z.object({
     gapBars: z.number().int().min(2).max(8).optional(),
     jam: z.boolean().optional(), copy: z.boolean().optional(),
     countAloud: z.enum(['quarters', '8ths']).optional(),
+    fadeClick: z.number().int().min(1).max(16).optional(), clickOn: z.enum(['quarters', '8ths', '2and4']).optional(),
+    variants: z.array(ChartSchema).min(1).max(4).optional(), bars: z.number().int().min(4).max(32).optional(), rest: z.number().int().min(5).max(60).optional(), probe: z.boolean().optional(),
     bite: z.object({ songId: z.string().max(80), title: z.string().max(200).optional(), fromBar: z.number().int().min(1).max(999), toBar: z.number().int().min(1).max(999) })
       .refine(b => b.fromBar <= b.toBar && b.toBar - b.fromBar < 8, { message: 'a bite is 1–8 bars' }).optional(),
     freeBars: z.array(z.number().int().min(1).max(16)).min(1).max(8).optional(), trade: z.boolean().optional(),
     layers: z.array(z.array(z.enum(CHART_DRUMS)).min(1)).min(2).max(5).optional(),
   }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })
-    .refine(s => [...(s.activeLanes ?? []), ...(s.layers ?? []).flat()].every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' }))
+    .refine(s => [...(s.activeLanes ?? []), ...(s.layers ?? []).flat()].every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' })
+    .refine(s => (s.variants ?? []).every(v => v.bars === s.chart.bars && v.timeSignature.join() === s.chart.timeSignature.join()), { message: 'variants need the same bars and time signature as the chart' }))
     .min(1).max(4),
 });
 export const LessonRequestSchema = z.object({
@@ -78,7 +80,6 @@ export const LessonRequestSchema = z.object({
 export type AiLesson = z.infer<typeof AiLessonSchema>;
 
 export type Feedback = z.infer<typeof FeedbackSchema>;
-export type NextExercise = z.infer<typeof NextSchema>;
 export type Plan = z.infer<typeof PlanSchema>;
 export type ChatReply = z.infer<typeof ChatReplySchema>;
 
@@ -91,10 +92,6 @@ export const RunRecordSchema = z.object({
   summary: z.record(z.string(), z.unknown()),
 });
 export type RunRecord = z.infer<typeof RunRecordSchema> & { id: number };
-export const ChatRequestSchema = z.object({
-  messages: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(4000) })).min(1).max(30),
-  context: z.record(z.string(), z.unknown()).optional(), // what the student is doing right now (screen, last take)
-});
 export const PlanRequestSchema = z.object({
   goals: z.string().min(1).max(500), minutesPerDay: z.number().int().min(5).max(180), daysPerWeek: z.number().int().min(1).max(7),
 });
@@ -107,7 +104,7 @@ export const CoachReplySchema = z.object({
   say: z.string().min(1).max(400),
   show: z.string().max(500).optional(),
   action: z.object({
-    kind: z.enum(['again', 'slower', 'faster', 'next', 'drill', 'zoom']), label: z.string().min(1).max(40),
+    kind: z.enum(['again', 'slower', 'faster', 'next', 'drill', 'zoom', 'trade', 'count', 'layers', 'listen']), label: z.string().min(1).max(40),
     bar: z.number().int().min(1).max(64).optional(), // zoom: the bar to loop (default: the stickiest bar of the last take)
     bpm: z.number().min(30).max(300).optional(), chartId: z.string().max(80).optional(), chart: ChartSchema.optional(), now: z.boolean().optional(),
   }).optional(),

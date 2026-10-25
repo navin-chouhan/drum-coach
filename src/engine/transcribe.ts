@@ -1,4 +1,4 @@
-import type { ChartDrum, ChartNote } from './chart.ts';
+import { beatsPerBar, type Chart, type ChartDrum, type ChartNote } from './chart.ts';
 import type { PadId } from './kit.ts';
 
 export const PAD_DRUM: Record<PadId, ChartDrum> = {
@@ -42,3 +42,18 @@ export const cutBars = (notes: ChartNote[], beatsPerBar: number, fromBar: number
   const a = (fromBar - 1) * beatsPerBar, b = toBar * beatsPerBar;
   return notes.filter(n => n.t >= a - 1e-6 && n.t < b - 1e-6).map(n => ({ ...n, t: n.t - a }));
 };
+
+/** The whole saved song as one chart (tempo from its original video's beat grid), to play it through on the app's drums. */
+export function songChart(song: { title: string; originalId: string; timeSignature: [number, 2 | 4 | 8 | 16]; notes: ChartNote[]; grids: Record<string, { bpm: number }> }): Chart {
+  const notes = song.notes.filter(n => n.t >= 0).sort((a, b) => a.t - b.t);
+  const bpm = Math.round(song.grids[song.originalId]?.bpm ?? Object.values(song.grids)[0]?.bpm ?? 100);
+  const bars = notes.length ? Math.floor(notes[notes.length - 1].t / beatsPerBar({ timeSignature: song.timeSignature }) + 1e-6) + 1 : 1;
+  return { title: song.title, bpm, timeSignature: song.timeSignature, bars, notes, kind: 'song' };
+}
+
+/** Your fills: the hits of one bar of a take (0-based bar of the take), as 16th-note chart notes from 0 to beatsPerBar. */
+export function fillFromTake(hits: { time: number; pad?: PadId; velocity: number }[], take: { zero: number; beatMs: number; beatsPerBar: number }, bar: number): ChartNote[] {
+  const start = bar * take.beatsPerBar;
+  const inBar = hits.flatMap(h => (h.pad ? [{ beat: (h.time - take.zero) / take.beatMs - start, pad: h.pad, velocity: h.velocity }] : []));
+  return quantizeTake(inBar, 0, take.beatsPerBar);
+}

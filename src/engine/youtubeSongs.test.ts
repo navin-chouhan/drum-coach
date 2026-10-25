@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scoreJam } from './jam';
 import { alignPhase, fitBeatGrid, songSecAt } from './tempo';
-import { cutBars, quantizeTake, replaceRange, takeChart, toggleNote } from './transcribe';
+import { cutBars, fillFromTake, quantizeTake, replaceRange, songChart, takeChart, toggleNote } from './transcribe';
 import { parseYouTubeId } from './youtube';
 
 describe('parseYouTubeId', () => {
@@ -94,5 +94,23 @@ describe('cutBars', () => {
   it('keeps the bars asked for and moves them to beat 0', () => {
     const notes = [{ t: 3.5, drum: 'kick' as const }, { t: 4, drum: 'snare' as const }, { t: 11.5, drum: 'hihat' as const }, { t: 12, drum: 'crash' as const }];
     expect(cutBars(notes, 4, 2, 3)).toEqual([{ t: 0, drum: 'snare' }, { t: 7.5, drum: 'hihat' }]);
+  });
+});
+
+describe('songChart', () => {
+  it('is the whole song in order, at its grid tempo', () => {
+    const c = songChart({ title: 'S', originalId: 'v', timeSignature: [4, 4], grids: { v: { bpm: 96.4 } },
+      notes: [{ t: 4.5, drum: 'snare' }, { t: 0, drum: 'kick' }, { t: -1, drum: 'crash' }] });
+    expect(c).toMatchObject({ bpm: 96, bars: 2, notes: [{ t: 0, drum: 'kick' }, { t: 4.5, drum: 'snare' }] });
+  });
+});
+
+describe('fillFromTake', () => {
+  it('keeps one bar of hits, snapped to 16ths, from 0 to the bar length', () => {
+    const take = { zero: 1000, beatMs: 500, beatsPerBar: 4 }; // bar 2 (index 1) is beats 4–8: 3000–5000 ms
+    const at = (beat: number, pad: 'snare' | 'tom1' = 'snare') => ({ time: 1000 + beat * 500, pad, velocity: 90 });
+    const notes = fillFromTake([at(3.5), at(4.02), at(5.5, 'tom1'), at(7.75), at(8.1)], take, 1);
+    expect(notes).toEqual([{ t: 0, drum: 'snare' }, { t: 1.5, drum: 'tom1' }, { t: 3.75, drum: 'snare' }]);
+    expect(notes.every(n => n.t >= 0 && n.t < 4)).toBe(true);
   });
 });

@@ -31,3 +31,6 @@ export function splitRun(run: Run, activeLanes?: readonly ChartDrum[]): { scored
   const on = (n: RunNote) => !n.auto && (!activeLanes || activeLanes.includes(n.drum));
   return { scored: { ...run, notes: run.notes.filter(on) }, auto: run.notes.filter(n => !on(n)) };
 }
+
+/** The count-in number on screen at a (negative) beat position: counts up 1 2 3 4 with the voice, not down. */
+export const countInNumber = (pos: number, beatsPerBar: number) => ((Math.floor(pos) % beatsPerBar) + beatsPerBar) % beatsPerBar + 1;

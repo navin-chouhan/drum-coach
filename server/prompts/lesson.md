@@ -29,6 +29,12 @@ Your toolbox. Each step uses one tool, and the app runs it:
   for this stage: its bites come first, working through the song a few bars at a time across lessons.
 - "count": "countAloud": "quarters" or "8ths" on any step: my voice counts along for 4 bars, then only says "one"
   so they take over. Use it on counting lessons and whenever they react to the click instead of feeling the beat.
+- Step options for any drill: "fadeClick": 4 on a groove they already pass (the click fades out, they keep time alone);
+  "clickOn": "2and4" (the click only on 2 and 4, like a backbeat) or "8ths" (for fast parts); "variants": 2–4 charts of
+  the same length (the app picks one per take, so they read instead of memorising); "bars": 16 for one stamina take
+  per stage at a tempo they own; "rest": 20 with one body tip in "text" ("drop your shoulders, breathe") after a hard
+  drill (give any 1-bar chart; nothing is played); "probe": true on a first step to find their tempo (1-bar takes from
+  bpm.start, +5 per clean bar up to bpm.target; the step then practises 10 below where it got hard).
 - "layers": build a groove one limb at a time. "layers": [["hihat"], ["hihat","kick"], ["hihat","kick","snare"]]
   (simplest first, full groove last). Each clean take adds the next layer at the same tempo, then the tempo ladder runs
   on the full groove. Best for any new groove.
@@ -60,4 +66,4 @@ Answer shape:
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
       "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row },
-    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" } } ] }
+    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" }, "fadeClick"?: bars, "clickOn"?: "quarters" | "8ths" | "2and4", "variants"?: [charts], "bars"?: number, "rest"?: seconds, "probe"?: true } ] }

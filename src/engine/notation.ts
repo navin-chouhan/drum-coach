@@ -83,18 +83,24 @@ const SLOT_WORD: Record<string, string> = { '0.25': 'e', '0.5': '&', '0.75': 'a'
  * Hints under the notes: the count ("1", "&", "e", "a", "trip", "let") and who plays it: R / L hand, K kick foot,
  * H hi-hat foot. Cymbals are the right hand; a drum with a cymbal is the left; drums alone alternate R L (from R each bar).
  */
-export function noteHints(notes: { t: number; drum: string }[], beatsPerBar: number): { t: number; count: string; limbs: string }[] {
-  const groups = new Map<number, string[]>();
-  for (const n of notes) { const t = Math.round(n.t * 1000) / 1000; groups.set(t, [...(groups.get(t) ?? []), n.drum]); }
+export function noteHints(notes: { t: number; drum: string; mine?: boolean }[], beatsPerBar: number): { t: number; count: string; limbs: string }[] {
+  // `mine: false` = the app plays it: it still decides the sticking (an app hi-hat keeps your right hand busy) but gets no label.
+  const groups = new Map<number, { drum: string; mine: boolean }[]>();
+  for (const n of notes) { const t = Math.round(n.t * 1000) / 1000; groups.set(t, [...(groups.get(t) ?? []), { drum: n.drum, mine: n.mine !== false }]); }
+  const anyCymbal = notes.some(n => CYMBALS.has(n.drum) && n.drum !== 'crash'); // a timekeeping hand in the groove
   let next = 'R', bar = -1;
-  return [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([t, drums]) => {
+  return [...groups.entries()].sort((a, b) => a[0] - b[0]).flatMap(([t, here]) => {
     const b = Math.floor(t / beatsPerBar + 1e-6), pos = t - b * beatsPerBar, frac = Math.round((pos % 1) * 1000) / 1000;
     if (b !== bar) { bar = b; next = 'R'; }
-    const cym = drums.filter(d => CYMBALS.has(d)).length, skins = drums.filter(d => !CYMBALS.has(d) && d !== 'kick' && d !== 'hhPedal').length;
-    const hands = cym && skins ? ['R', 'L'] : cym ? ['R'] : skins > 1 ? ['R', 'L'] : skins ? [next] : [];
-    if (!cym && skins === 1) next = next === 'R' ? 'L' : 'R';
-    const limbs = [...hands, ...(drums.includes('kick') ? ['K'] : []), ...(drums.includes('hhPedal') ? ['H'] : [])];
-    return { t, count: frac ? SLOT_WORD[String(frac)] ?? '' : String(Math.floor(pos) + 1), limbs: limbs.join('+') };
+    const cym = here.some(n => CYMBALS.has(n.drum)), skins = here.filter(n => !CYMBALS.has(n.drum) && n.drum !== 'kick' && n.drum !== 'hhPedal');
+    // A drum alone in a groove with a timekeeping cymbal is the left hand's; with no cymbal anywhere, singles alternate.
+    const lone = skins.length === 1 && !cym ? (anyCymbal ? 'L' : next) : undefined;
+    if (lone && !anyCymbal) next = next === 'R' ? 'L' : 'R';
+    const limbOf = (d: string, i: number) => (d === 'kick' ? 'K' : d === 'hhPedal' ? 'H' : CYMBALS.has(d) ? 'R' : cym ? 'L' : lone ?? (i ? 'L' : 'R'));
+    const limbs = [...new Set(here.flatMap((n, i) => (n.mine ? [limbOf(n.drum, skins.indexOf(n) < 0 ? 0 : skins.indexOf(n))] : [])))]
+      .sort((x, y) => 'RLKH'.indexOf(x) - 'RLKH'.indexOf(y));
+    if (!limbs.length) return [];
+    return [{ t, count: frac ? SLOT_WORD[String(frac)] ?? '' : String(Math.floor(pos) + 1), limbs: limbs.join('+') }];
   });
 }
 
@@ -104,7 +110,7 @@ const LIMB_NAME: Record<string, string> = { R: 'right hand', L: 'left hand', K: 
  * Who plays what, for the intro slides: each limb (same letters as noteHints), its drums and when in the first bar
  * ("every 8th", "every beat", "1 and 3", "2, & of 3"…).
  */
-export function limbPlan(notes: { t: number; drum: string }[], beatsPerBar: number) {
+export function limbPlan(notes: { t: number; drum: string; mine?: boolean }[], beatsPerBar: number) {
   const first = notes.filter(n => n.t < beatsPerBar - 1e-6);
   const hints = noteHints(first, beatsPerBar);
   return (['R', 'L', 'K', 'H'] as const).flatMap(limb => {
@@ -112,11 +118,11 @@ export function limbPlan(notes: { t: number; drum: string }[], beatsPerBar: numb
     if (!at.length) return [];
     // Which of the drums at each moment are this limb's: with a cymbal and a drum together, the cymbal is R's, the drum L's.
     const mine = (t: number) => {
-      const here = first.filter(n => Math.abs(n.t - t) < 1e-3).map(n => n.drum);
+      const all = first.filter(n => Math.abs(n.t - t) < 1e-3), here = all.filter(n => n.mine !== false).map(n => n.drum);
       if (limb === 'K') return here.filter(d => d === 'kick');
       if (limb === 'H') return here.filter(d => d === 'hhPedal');
       const hands = here.filter(d => d !== 'kick' && d !== 'hhPedal'), cym = hands.filter(d => CYMBALS.has(d)), skins = hands.filter(d => !CYMBALS.has(d));
-      return cym.length && skins.length ? (limb === 'R' ? cym : skins) : hands;
+      return cym.length || skins.length > 1 || limb === 'L' && skins.length && all.some(n => CYMBALS.has(n.drum)) ? (limb === 'R' ? cym : skins) : hands;
     };
     const drums = [...new Set(at.flatMap(h => mine(h.t)))].map(d => DRUM_NAME[d] ?? d);
     const slots = at.map(h => h.t);

@@ -60,6 +60,10 @@ describe('noteHints', () => {
     const notes = [0, 0.5, 1, 1.5].map(t => ({ t, drum: 'hihat' })).concat([{ t: 0, drum: 'kick' }, { t: 1, drum: 'snare' }]);
     expect(noteHints(notes, 4)).toEqual([{ t: 0, count: '1', limbs: 'R+K' }, { t: 0.5, count: '&', limbs: 'R' }, { t: 1, count: '2', limbs: 'R+L' }, { t: 1.5, count: '&', limbs: 'R' }]);
   });
+  it("an app-played hi-hat still makes the snare the left hand, and isn't labelled", () => {
+    const notes = [0, 1, 2, 3].map(t => ({ t, drum: 'hihat', mine: false })).concat([{ t: 1, drum: 'snare', mine: true }, { t: 3, drum: 'snare', mine: true }, { t: 0, drum: 'kick', mine: true }]);
+    expect(noteHints(notes, 4).map(h => `${h.count}:${h.limbs}`)).toEqual(['1:K', '2:L', '4:L']);
+  });
   it('alternates singles from R each bar, counts 16ths and triplets, names the hi-hat foot', () => {
     expect(noteHints([0, 0.25, 0.5, 0.75, 4].map(t => ({ t, drum: 'snare' })), 4).map(h => `${h.count}${h.limbs}`)).toEqual(['1R', 'eL', '&R', 'aL', '1R']);
     expect(noteHints([{ t: 1 / 3, drum: 'tom1' }, { t: 1, drum: 'hhPedal' }], 4).map(h => `${h.count}:${h.limbs}`)).toEqual(['trip:R', '2:H']);
