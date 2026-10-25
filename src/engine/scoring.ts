@@ -154,6 +154,13 @@ export function recentAccuracy(results: NoteResult[], run: Run, fromBeat: number
   return due.length ? Math.round((due.filter(r => r.offset !== undefined).length / due.length) * 100) : null;
 }
 
+/** Beat the clock: bars with no missed note and no extra hit (extras given in beats of the run). */
+export function cleanBars(run: Run, results: NoteResult[], extraBeats: number[]): number {
+  const bars = Math.round(run.beats / run.beatsPerBar);
+  const bad = new Set([...run.notes.flatMap((n, i) => (results[i].offset === undefined ? [n.bar] : [])), ...extraBeats.map(b => Math.floor(b / run.beatsPerBar))]);
+  return Array.from({ length: bars }, (_, b) => b).filter(b => !bad.has(b)).length;
+}
+
 function streaks(results: NoteResult[]) {
   let streak = 0, run = 0, recoveries = 0;
   results.forEach((r, i) => {

@@ -17,7 +17,7 @@ import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
-type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean };
+type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean; arcade?: boolean };
 
 export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => void; openLessonId?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
@@ -74,7 +74,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   if (open) {
     const item = open.item !== undefined ? session.items[open.item] : undefined;
     const nextIdx = session.items.findIndex((_, i) => i !== open.item && playable(i) && !session.done.includes(i));
-    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role ?? open.role} minutes={item?.minutes} flow={open.flow}
+    return <LessonPlayer key={`${open.lessonId}/${open.item}`} lessonId={open.lessonId} role={item?.role ?? open.role} minutes={item?.minutes} flow={open.flow} arcade={open.arcade}
       onBack={() => setOpen(undefined)} onOpen={id => setOpen({ lessonId: id })}
       onItemDone={open.item === undefined ? undefined : () => markDone(open.item!)}
       onNext={open.item === undefined ? undefined : () => { markDone(open.item!); setOpen(nextIdx >= 0 ? { lessonId: session.items[nextIdx].lessonId, item: nextIdx } : undefined); }} />;
@@ -103,6 +103,8 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const songBars = projectSong ? songBarCount(projectSong) : 0;
   // Beat your best: a finished lesson you haven't played for longest (improvising tools have no record to beat).
   const lastPlayed = (l: Lesson) => dash?.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
+  // Beat the clock: a finished groove, the one played longest ago.
+  const arcade = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill').sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   // A streak record already as long as the whole take has nothing left to beat.
   const maxedOut = (l: Lesson) => { const t = recordTarget(l.steps[l.steps.length - 1], s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
@@ -159,6 +161,10 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
           })}
           {pReady && pSong && <button className="setTile record" onClick={() => setOpen({ lessonId: `song-${pSong.id}` })}>
             <span className="ic" aria-hidden>🎵</span><b>Play {pSong.title} all the way through ▶</b><span className="small">every bar is ready</span>
+          </button>}
+          {arcade && <button className="setTile record" onClick={() => setOpen({ lessonId: arcade.id, arcade: true })}>
+            <span className="ic" aria-hidden>⏱</span><b>2-minute challenge</b>
+            <span className="small">{arcade.title} · {s.arcade?.[arcade.id] ? `best ${s.arcade[arcade.id]} clean bars` : 'how many clean bars?'}</span>
           </button>}
           {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}>
             <span className="ic" aria-hidden>🏆</span><b>Beat your best</b>

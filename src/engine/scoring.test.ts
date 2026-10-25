@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { computeStats, createMatcher, recentAccuracy, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { cleanBars, computeStats, createMatcher, recentAccuracy, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -95,6 +95,14 @@ describe('worstBars', () => {
   it('returns nothing for a clean take or a one-bar section', () => {
     expect(worstBars(run, notes.map(() => hit), 4)).toEqual([]);
     expect(worstBars(run, notes.map(() => miss), 1)).toEqual([]);
+  });
+});
+
+describe('cleanBars', () => {
+  it('counts bars with no miss and no extra', () => {
+    const notes = Array.from({ length: 16 }, (_, i) => ({ t: i, drum: 'snare' as const, i, bar: Math.floor(i / 4), pos: i % 4 }));
+    const results = notes.map(n => (n.t === 5 ? { judgement: 'miss' as const } : { judgement: 'good' as const, offset: 0, velocity: 90 }));
+    expect(cleanBars({ notes, beats: 16, beatsPerBar: 4 }, results, [10.5])).toBe(2); // bar 2 missed, bar 3 had an extra
   });
 });
 

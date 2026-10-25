@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, clickOnBeat, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -138,6 +138,14 @@ describe('click feel, variants and rest', () => {
   it('a rest step is done when the rest is over', () => {
     const rest: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], rest: 20 }, lesson.steps[1]] };
     expect(ladderStep({ ...startProgress(rest), bpm: 65, clean: 1 }, rest, false, D).event).toBe('stepDone');
+  });
+});
+
+describe('find your tempo', () => {
+  it('works 10 below the bar that fell apart, or at the last tempo', () => {
+    expect(probeTempo([100, 95, 90, 60], 60, 75)).toBe(65); // broke at 75 BPM
+    expect(probeTempo([100, 100, 100], 60, 75)).toBe(70);
+    expect(probeTempo([50], 45, 75)).toBe(40); // never under 40
   });
 });
 

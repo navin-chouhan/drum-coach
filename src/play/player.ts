@@ -26,6 +26,8 @@ export type PlayOptions = RunOptions & {
   hints?: boolean;           // the sheet shows the count and who plays each note under the staff
   countAloud?: string[][];   // words the voice says per bar, one per slot ('' = silent): engine/lesson.ts countPlan
   freeBars?: number[];       // 1-based chart bars that are yours (free / trade bars): strokes there aren't extras
+  seconds?: number;          // an endless take that ends by itself after this long (beat the clock)
+  probe?: boolean;           // one bar of find-your-tempo (lessons chain them)
   endless?: boolean;         // flow: loops until Stop (Esc / 4 crashes), which keeps the take instead of dropping it
   fadeClick?: number;        // the click fades to silence over this many bars
   clickOn?: 'quarters' | '8ths' | '2and4'; // click feel (engine/lesson.ts clickOnBeat)
@@ -234,6 +236,7 @@ export function start(chart: Chart, options: PlayOptions) {
     const d = audioToPerf(zeroAudio) - player.zero;
     if (Math.abs(d) < 50) drift += (d - drift) * 0.1; // smoothed; a bigger jump is a stale timestamp, not drift
     liveCheck(position());
+    if (options.seconds && endEarly && performance.now() > player.zero + options.seconds * 1000) { const end = endEarly; endEarly = undefined; end(); return; }
     if (performance.now() > player.zero + run.beats * beatMs + 400) finish(scored, hits, extras, startedAt);
   }, 25);
   cleanup.push(() => clearInterval(timer));

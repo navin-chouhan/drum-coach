@@ -64,7 +64,7 @@ export const AiLessonSchema = z.object({
     jam: z.boolean().optional(), copy: z.boolean().optional(),
     countAloud: z.enum(['quarters', '8ths']).optional(),
     fadeClick: z.number().int().min(1).max(16).optional(), clickOn: z.enum(['quarters', '8ths', '2and4']).optional(),
-    variants: z.array(ChartSchema).min(1).max(4).optional(), bars: z.number().int().min(4).max(32).optional(), rest: z.number().int().min(5).max(60).optional(),
+    variants: z.array(ChartSchema).min(1).max(4).optional(), bars: z.number().int().min(4).max(32).optional(), rest: z.number().int().min(5).max(60).optional(), probe: z.boolean().optional(),
     bite: z.object({ songId: z.string().max(80), title: z.string().max(200).optional(), fromBar: z.number().int().min(1).max(999), toBar: z.number().int().min(1).max(999) })
       .refine(b => b.fromBar <= b.toBar && b.toBar - b.fromBar < 8, { message: 'a bite is 1–8 bars' }).optional(),
     freeBars: z.array(z.number().int().min(1).max(16)).min(1).max(8).optional(), trade: z.boolean().optional(),

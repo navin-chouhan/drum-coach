@@ -39,6 +39,7 @@ export type Step = {
   clickOn?: 'quarters' | '8ths' | '2and4'; // click feel: on every beat (default), every 8th, or only 2 and 4
   variants?: Chart[];   // shuffle the phrases: each take plays one of these (same length) so you read, not memorise
   bars?: number;        // long take: this many bars per take instead of 4 (8 for the proving take)
+  probe?: boolean;      // find your tempo: 1-bar takes from bpm.start, +5 per clean bar, until one falls apart
   rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen) // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
 };
@@ -104,6 +105,15 @@ export function playChart(s: Pick<Step, 'chart' | 'copy' | 'trade' | 'freeBars'>
 export const clickOnBeat = (beatInBar: number, clickOn?: Step['clickOn']) => clickOn !== '2and4' || beatInBar % 2 === 1;
 /** Shuffle the phrases: which variant take number `take` plays (stable per take, varied across takes). */
 export const pickVariant = (n: number, take: number) => Math.floor(seededRandom(take * 7919 + 1)() * n);
+
+/**
+ * Find your tempo: bar i was played at start + 5·i. The working tempo is 10 below the first bar that fell apart
+ * (under the pass bar), or the last tempo when none did; never under MIN_BPM.
+ */
+export function probeTempo(perBarAccuracy: number[], start: number, pass: number): number {
+  const broke = perBarAccuracy.findIndex(a => a < pass);
+  return broke < 0 ? start + 5 * Math.max(0, perBarAccuracy.length - 1) : Math.max(MIN_BPM, start + 5 * broke - 10);
+}
 
 export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 2, BPM_STEP = 5, MIN_BPM = 40, ROUGH_ACCURACY = 60;
 export const REVIEW_DAYS = [2, 5, 12, 30];
