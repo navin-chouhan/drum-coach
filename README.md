@@ -158,7 +158,8 @@ are grey, and the page turns after each page of bars. Before you press Start it 
     (Whisper, offline). **Hands-free:** when the coach asks you something, it listens for ~6 s by itself.
   - Fast: one `claude` process stays running for the session, and the coach starts speaking as soon as its first
     sentence is written (about 1–2 s). Model and effort: `CLAUDE_CLI_MODEL` / `CLAUDE_CLI_EFFORT` in `.env`
-    (Haiku + low by default).
+    (Haiku + low by default). Lessons, plans, show-off picks and song grooves are written in the background by
+    `CLAUDE_CLI_LESSON_MODEL` / `CLAUDE_CLI_LESSON_EFFORT` (Sonnet + medium by default).
   - *The coach writes the tips*: once per exercise it writes its own wording for the live tips; the rules still
     decide when they fire.
   - Speech-to-text needs `uv`; the speech model (~140 MB) is downloaded into `data/whisper` the first time.
@@ -247,6 +248,7 @@ the CLI is missing or logged out, Setup → Coach and voice says so and everythi
 | `ANTHROPIC_API_KEY` | Key for the API provider |
 | `CLAUDE_MODEL` | Model for the API provider (default `claude-sonnet-5-5`) |
 | `CLAUDE_CLI_MODEL` | Model for the CLI provider (default: your Claude Code default) |
+| `CLAUDE_CLI_LESSON_MODEL` / `CLAUDE_CLI_LESSON_EFFORT` | Model and effort for lessons, plans, show-off picks and song grooves (default `claude-sonnet-5-5`, `medium`) |
 | `CLAUDE_BIN` | Path to the `claude` binary, if it's not on `PATH` |
 | `DATA_DIR` | Where SQLite and uploaded audio live (default `./data`) |
 | `PORT` | API port (default 8787). The Vite dev server proxies `/api` to it. |

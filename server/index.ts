@@ -7,7 +7,7 @@ import { SessionEventSchema, AiLessonSchema, ChatReplySchema, FeedbackSchema, Le
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import type { RunRow } from '../src/engine/progress.ts';
-import { ask, getProvider } from './ai/coach.ts';
+import { ask, getProvider, lessonModel } from './ai/coach.ts';
 import { applyBites, canStandIn, lessonInput, standsInFor, toLesson, uniqueTitle } from './ai/lessons.ts';
 import { LESSON_BY_ID } from '../src/content/curriculum.ts';
 import { studentRead } from '../src/engine/planner.ts';
@@ -141,7 +141,7 @@ app.get('/api/coach/status', async () => {
     cliCheck = r.status === 0 ? { ok: true, version: r.stdout.trim() } : { ok: false };
   }
   return cliCheck.ok
-    ? { provider: name, ready: true, message: `Using your Claude subscription via ${cliCheck.version}, model ${process.env.CLAUDE_CLI_MODEL || 'your Claude Code default'}${process.env.CLAUDE_CLI_EFFORT ? `, ${process.env.CLAUDE_CLI_EFFORT} effort` : ''}.` }
+    ? { provider: name, ready: true, message: `Using your Claude subscription via ${cliCheck.version}, model ${process.env.CLAUDE_CLI_MODEL || 'your Claude Code default'}${process.env.CLAUDE_CLI_EFFORT ? `, ${process.env.CLAUDE_CLI_EFFORT} effort` : ''}; lessons and plans are written by ${lessonModel().model} on ${lessonModel().effort} effort.` }
     : { provider: name, ready: false, message: 'The claude CLI was not found. Install Claude Code and run `claude` once to log in. Everything else works without it.' };
 });
 
