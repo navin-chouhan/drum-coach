@@ -130,7 +130,7 @@ export type RunStats = {
   velocity: { normalMean: number; normalCv: number; accentMean: number | null; ghostMean: number | null;
     pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
   flam: number | null; // ms, mean split between limbs on notes meant to land together (null: none played)
-  heat: HeatCell[];   // one cell per 16th position in the bar
+  heat: HeatCell[];   // one cell per grid position in the bar: 16ths, or triplets for a triplet groove (heatSlotName)
   streak: number;     // most notes hit in a row
   recoveries: number; // times a hit came straight after a miss: you kept going
   reaction?: number | null; // ms a player who hits after each click is behind (set by the player at the end of a take)
@@ -172,6 +172,18 @@ function streaks(results: NoteResult[]) {
   return { streak, recoveries };
 }
 
+/** Heat-map cells per beat: 4 (16ths) when every note sits on the 16th grid, 3 for a triplet groove, 12 for both. */
+function heatGrid(pos: number[]): number {
+  const fits = (k: number) => pos.every(p => Math.abs(p * k - Math.round(p * k)) < 1e-3);
+  return fits(4) ? 4 : fits(3) ? 3 : 12;
+}
+const COUNT_NAMES: Record<number, string[]> = { 4: ['', 'e', '&', 'a'], 3: ['', 'trip', 'let'] };
+/** A heat cell's name, e.g. "beat 2 &" (16ths) or "beat 2 let" (triplets). */
+export function heatSlotName(i: number, slots: number, beatsPerBar: number): string {
+  const perBeat = Math.round(slots / beatsPerBar), k = i % perBeat, name = COUNT_NAMES[perBeat]?.[k] ?? (k ? `+${k}/${perBeat}` : '');
+  return `beat ${Math.floor(i / perBeat) + 1}${name ? ' ' + name : ''}`;
+}
+
 export function computeStats(run: Run, results: NoteResult[], extra: number): RunStats {
   const hitOffsets = results.flatMap(r => (r.offset === undefined ? [] : [r.offset]));
   // Timing counts off-time strokes too: at fast tempos a dragging player's late strokes fall outside Good,
@@ -195,11 +207,11 @@ export function computeStats(run: Run, results: NoteResult[], extra: number): Ru
     run.notes.flatMap((n, i) => (f(n) && results[i].velocity !== undefined ? [results[i].velocity!] : []));
   const normal = vel(n => !n.accent && !n.ghost), accents = vel(n => !!n.accent), ghosts = vel(n => !!n.ghost);
 
-  const slots = Math.round(run.beatsPerBar * 4);
+  const perBeat = heatGrid(run.notes.map(n => n.pos)), slots = Math.round(run.beatsPerBar * perBeat);
   const heat: HeatCell[] = Array.from({ length: slots }, () => ({ total: 0, miss: 0, meanAbsOffset: 0 }));
   const absSum = new Array(slots).fill(0), absN = new Array(slots).fill(0);
   run.notes.forEach((n, i) => {
-    const s = Math.round(n.pos * 4) % slots, c = heat[s];
+    const s = Math.round(n.pos * perBeat) % slots, c = heat[s];
     c.total++;
     if (results[i].offset === undefined) c.miss++;
     else { absSum[s] += Math.abs(results[i].offset!); absN[s]++; }

@@ -3,13 +3,12 @@ import type { DrumId } from '../engine/kit';
 import { CoachFeedback } from '../coach/CoachFeedback';
 import { coachTake } from '../coach/session';
 import { summarizeRun } from '../coach/summary';
-import { latencySuspect } from '../engine/scoring';
+import { heatSlotName, latencySuspect } from '../engine/scoring';
 import { DRUM_BY_ID } from '../ui/drums';
 import { HIGHWAY_LANES } from './Highway';
 import type { Finished } from './player';
 
 const laneOf = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
-const COUNT = ['1', 'e', '&', 'a'];
 const timingText = (ms: number) => (Math.abs(ms) < 5 ? 'Right on the grid' : ms < 0 ? `Rushing by ${-ms} ms` : `Dragging by ${ms} ms`);
 
 const saved = new WeakMap<Finished, Promise<void>>();
@@ -41,7 +40,7 @@ export function LatencyHint({ f }: { f: Finished }) {
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
   const s = f.stats, wait = f.options.wait;
   useEffect(() => { saveRun(f); coachTake(f); }, [f]);
-  const slotLabel = (i: number) => (i % 4 === 0 ? String(i / 4 + 1) : COUNT[i % 4]);
+  const slotLabel = (i: number) => { const [, beat, count] = heatSlotName(i, f.stats.heat.length, f.run.beatsPerBar).split(' '); return count ?? beat; }; // "2", "&", "let"
   return (
     <div className="results">
       <div className="resultsHead">

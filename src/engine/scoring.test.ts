@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { cleanBars, computeStats, createMatcher, recentAccuracy, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { cleanBars, computeStats, createMatcher, heatSlotName, recentAccuracy, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -72,6 +72,21 @@ describe('stats', () => {
     expect(s.accuracy).toBe(83.3); // 10 of 12 notes
     expect(s.heat).toHaveLength(16);
     expect(s.heat[0]).toMatchObject({ total: 2, miss: 1 }); // hi-hat hit + kick missed on beat 1
+  });
+
+  it('weak spots of a triplet groove land on the triplet grid (12 slots per 4/4 bar)', () => {
+    const shuffle = { ...chart, notes: pattern({ hihat: 'x.xx.xx.xx.x', snare: '...x.....x..', kick: 'x.....x.....' }, 3) };
+    const r = buildRun(shuffle, { fromBar: 1, toBar: 1, repeats: 1 });
+    const exp: Expected[] = r.notes.map(n => ({ time: 1000 + n.t * 500, drum: n.drum }));
+    const letOf2 = r.notes.findIndex(n => n.drum === 'hihat' && Math.abs(n.pos - 5 / 3) < 1e-6);
+    const hits = exp.flatMap((e, i) => (i === letOf2 ? [] : [{ time: e.time, pad: PAD[e.drum as keyof typeof PAD], velocity: 90 }]));
+    const s = computeStats(r, scoreRun(exp, hits).results, 0);
+    expect(s.heat).toHaveLength(12);
+    expect(s.heat[5]).toMatchObject({ total: 1, miss: 1 }); // beat 2, "let"
+    expect(s.heat.filter(c => c.miss)).toHaveLength(1);
+    expect(heatSlotName(5, 12, 4)).toBe('beat 2 let');
+    expect(heatSlotName(6, 16, 4)).toBe('beat 2 &');
+    expect(s.heat[0]).toMatchObject({ total: 2, miss: 0 });
   });
 
   it('velocity: accent and ghost means, consistency', () => {
