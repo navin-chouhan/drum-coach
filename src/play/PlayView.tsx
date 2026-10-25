@@ -55,6 +55,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   }
   // The coach's suggested next step: again / slower / faster replays this exercise, next picks the next one.
   useEffect(() => onCoachAction(a => {
+    if (a.kind === 'listen') return false;
     if (a.kind === 'next') {
       const n = charts[charts.findIndex(c => c.id === chart.id) + 1];
       if (n) { set({ chartId: n.id }); setSection(null); }

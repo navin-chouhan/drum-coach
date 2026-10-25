@@ -40,7 +40,7 @@ export function CoachSettings() {
         <label className="check"><input type="checkbox" checked={settings.aiTips} onChange={e => setSettings({ aiTips: e.target.checked })} /> The coach writes the tips for each exercise (one Claude call per exercise, then cached)</label>
         <label className="check"><input type="checkbox" checked={settings.liveCoach} onChange={e => setSettings({ liveCoach: e.target.checked })} /> The coach follows my practice: greets each exercise, reacts to every take, suggests the next step (Claude, one call each)</label>
         <label className="check"><input type="checkbox" checked={settings.handsFree} onChange={e => setSettings({ handsFree: e.target.checked })} /> Hands-free: when the coach asks me something, listen for my answer (no need to hold V)</label>
-        <label className="check"><input type="checkbox" checked={settings.padCommands} onChange={e => setSettings({ padCommands: e.target.checked })} /> Pad commands, sticks in hand: between takes hit twice quickly on the crash = yes / play again, floor tom = slower, tom 1 = faster, ride = next; four quick crashes during a take = stop</label>
+        <label className="check"><input type="checkbox" checked={settings.padCommands} onChange={e => setSettings({ padCommands: e.target.checked })} /> Pad commands, sticks in hand: between takes press the hi-hat pedal three times quickly (or hit the crash twice) = yes / the big move; hit twice quickly on the floor tom = slower, tom 1 = faster, tom 2 = listen, ride = next; four quick crashes during a take = stop</label>
       </div>
     </div>
   );

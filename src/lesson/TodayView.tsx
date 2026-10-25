@@ -3,7 +3,8 @@ import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
-import { toolOf, type Genre, type Lesson, type Tool } from '../engine/lesson';
+import { toolOf, type Genre, type Lesson } from '../engine/lesson';
+import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
 import { BADGES, barsReady, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
@@ -218,10 +219,6 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   );
 }
 
-const TOOL_LABEL: Record<Tool, string> = { jam: 'Play along', copy: 'I play, you copy', trade: 'Trade bars', free: 'Your own fill', bite: 'Song bite', challenge: 'Mini challenge', layers: 'One limb at a time', drill: 'Practice' };
-const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
-const TOOL_ICON: Record<Tool, string> = { jam: '🎸', copy: '🔁', trade: '🤜', free: '✨', bite: '🎵', challenge: '🔥', layers: '🧱', drill: '' };
-const iconOf = (l: Lesson) => TOOL_ICON[toolOf(l.steps[0])] || KIND_ICON[l.kind] || '🎯';
 
 /**
  * This stage as a winding trail of stops: done ones green, the next one big, the challenges as stars, a song at the end.
