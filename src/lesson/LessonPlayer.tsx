@@ -171,7 +171,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const options = (demo: boolean, wait = false): PlayOptions => ({
     // Short takes so a rough one is over quickly: 4 bars; 8 for the proving take (last step at its target tempo),
     // a jam (long enough to enjoy) and copy-me (4 calls and 4 echoes).
-    fromBar: 1, toBar: chart.bars, repeats: Math.max(1, Math.ceil((step.copy || step.trade || step.jam || (stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target) ? 8 : 4) / chart.bars)),
+    // A song plays through once; anything else loops to the take length.
+    fromBar: 1, toBar: chart.bars, repeats: lesson.kind === 'song' ? 1 : Math.max(1, Math.ceil((step.copy || step.trade || step.jam || (stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target) ? 8 : 4) / chart.bars)),
     speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
     countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud),
     activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false, freeBars: free.length ? free : undefined,
@@ -250,7 +251,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     <Celebration lesson={lesson} stars={outcome.stars ?? 1} milestone={stage} rankUp={!!outcome.rankUp}
       next={stage && MILESTONES.find(m => m.level === stage.level + 1)}
       done={stageChecks.filter(l => getSettings().lessons[l.id]?.completedAt).length} total={stageChecks.length}
-      nextLabel={onNext ? "Next in today's session →" : 'Back to Journey'} onNext={onNext ?? onBack}
+      nextLabel={lesson.id.startsWith('song-') ? 'Now with the real song →' : onNext ? "Next in today's session →" : 'Back to Journey'}
+      onNext={lesson.id.startsWith('song-') ? () => requestSong(lesson.id.slice(5)) : onNext ?? onBack}
       onAgain={() => { setCelebrated(f); play(false); }} onClose={() => setCelebrated(f)} />
   );
 

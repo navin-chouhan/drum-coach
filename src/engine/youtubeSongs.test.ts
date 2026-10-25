@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scoreJam } from './jam';
 import { alignPhase, fitBeatGrid, songSecAt } from './tempo';
-import { cutBars, quantizeTake, replaceRange, takeChart, toggleNote } from './transcribe';
+import { cutBars, quantizeTake, replaceRange, songChart, takeChart, toggleNote } from './transcribe';
 import { parseYouTubeId } from './youtube';
 
 describe('parseYouTubeId', () => {
@@ -94,5 +94,13 @@ describe('cutBars', () => {
   it('keeps the bars asked for and moves them to beat 0', () => {
     const notes = [{ t: 3.5, drum: 'kick' as const }, { t: 4, drum: 'snare' as const }, { t: 11.5, drum: 'hihat' as const }, { t: 12, drum: 'crash' as const }];
     expect(cutBars(notes, 4, 2, 3)).toEqual([{ t: 0, drum: 'snare' }, { t: 7.5, drum: 'hihat' }]);
+  });
+});
+
+describe('songChart', () => {
+  it('is the whole song in order, at its grid tempo', () => {
+    const c = songChart({ title: 'S', originalId: 'v', timeSignature: [4, 4], grids: { v: { bpm: 96.4 } },
+      notes: [{ t: 4.5, drum: 'snare' }, { t: 0, drum: 'kick' }, { t: -1, drum: 'crash' }] });
+    expect(c).toMatchObject({ bpm: 96, bars: 2, notes: [{ t: 0, drum: 'kick' }, { t: 4.5, drum: 'snare' }] });
   });
 });

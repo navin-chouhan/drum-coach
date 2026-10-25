@@ -11,7 +11,7 @@ import { flourish } from './Celebration';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
-import { aiLessonsLoaded, lessonById, requestCoachLesson, useLessons } from './aiLessons';
+import { aiLessonsLoaded, lessonById, requestCoachLesson, setStitched, stitchLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
 import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
@@ -52,6 +52,12 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
     setSettings({ badges: [...(s.badges ?? []), ...fresh] });
     setNewBadges(fresh); flourish(false);
   }, [runs, s.lessons, s.badges]);
+
+  // The stage's song becomes a lesson once every bar is ready (so the trail and the lesson player know it).
+  const pSong = songs.find(x => x.id === (s.profile.song?.stage === milestone?.level ? s.profile.song?.id : undefined));
+  const pBars = pSong ? songBarCount(pSong) : 0;
+  const pReady = !!pSong && pBars > 0 && barsReady(runs, pSong.id, pBars) >= pBars;
+  useEffect(() => { setStitched(pReady && pSong ? stitchLesson(pSong, s.profile.song!.stage) : undefined); }, [pReady, pSong, s.profile.song]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 
@@ -150,6 +156,9 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               </button>
             );
           })}
+          {pReady && pSong && <button className="setTile record" onClick={() => setOpen({ lessonId: `song-${pSong.id}` })}>
+            <span className="ic" aria-hidden>🎵</span><b>Play {pSong.title} all the way through ▶</b><span className="small">every bar is ready</span>
+          </button>}
           {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}>
             <span className="ic" aria-hidden>🏆</span><b>Beat your best</b>
             <span className="small">{record.title} · {recordTarget(record.steps[record.steps.length - 1], s.lessons[record.id]) ? `${recordTarget(record.steps[record.steps.length - 1], s.lessons[record.id])} in a row` : s.lessons[record.id]?.bestBpm ? `${s.lessons[record.id].bestBpm + 5} BPM` : 'one take'}</span>
