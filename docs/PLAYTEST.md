@@ -23,6 +23,8 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
   `performance.getEntriesByType('resource')`, or restart Vite.
 - The celebration always renders three ★ characters and lights them with CSS (`.bigStars .on`), so reading its text
   says ★★★ even for 1 star.
+- A reload that isn't started by a click can lose Chrome's permission to play sound; the new "turn on the sound"
+  chip showed exactly that during the run, and one real key press fixed it.
 - Editing app code while a page is open makes Vite hot-swap modules; once that left the lesson screen not showing a
   finished lesson's verdict (the lesson had completed and saved). Reload the page after code changes before trusting
   what it shows. The autopilot lives in a git-excluded `.playtest-helpers.js`, re-armed after a reload with one
@@ -78,6 +80,7 @@ Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 clea
 | # | Finding | Kind | Fix |
 |---|---|---|---|
 | 8 | The coach-line fix from round 1 was incomplete: when the coach started thinking about a new take it moved the "which take" marker but kept the previous reply, so for a few seconds the last lesson's debrief showed as the answer to the new take (seen on "Kick on the & of 3" and "Your first fill"; the coach log proved the replies themselves were right). | Bug | The reply and the thinking each remember their own take (`take`, `thinking` in `src/coach/session.ts`), with tests in `src/coach/session.test.ts`. (047583a) |
+| 10 | Ghost notes (full groove) failed for a ±8 ms player: 129/136, hits "wandering" ±47 ms. A ghost snare fires the MPS-150 hi-hat ~10 ms later (measured on the owner's kit); that echo claimed the next hi-hat note as a miss and the real stroke became an extra. Known as open item F10, never filtered. On the real kit every ghost-note and funk groove would punish the student for the hardware. | Bug | A hi-hat hit within 15 ms after a snare ≤ 44 velocity and no louder than it is dropped as crosstalk (`src/input/hits.ts`); real hi-hat strokes and backbeats are kept. After: 68/68. (a420eac) |
 | 9 | The emulated kit could never pass an accent check: accents 115, every other stroke 92 (ratio 0.8 > 0.7). The app was right; the test player accented weakly. | Test tool | In an accented pattern its other strokes are taps (70). (d1f8873) |
 
 ### Open observations (not fixed yet)
