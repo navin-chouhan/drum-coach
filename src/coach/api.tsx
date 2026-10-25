@@ -8,9 +8,10 @@ const listeners = new Set<() => void>();
 let version = 0;
 const notify = () => { version++; listeners.forEach(l => l()); };
 
-export function askCoach<T>(key: string, path: string, body: unknown = {}, onDone?: (data: T) => void) {
+/** Asks once per key; `again` asks anew even after an answer (not while one is on its way). */
+export function askCoach<T>(key: string, path: string, body: unknown = {}, onDone?: (data: T) => void, again = false) {
   const e = entries.get(key);
-  if (e && e.status !== 'error') return;
+  if (e && (e.status === 'thinking' || (e.status === 'done' && !again))) return;
   entries.set(key, { status: 'thinking' });
   notify();
   fetch(`/api/coach/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })

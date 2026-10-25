@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { askCoach, Thinking, useCoachEntry } from '../coach/api';
-import type { ChatReply } from '../coach/schemas';
+import type { Groove } from '../coach/schemas';
 import { beatsPerBar, DRUM_PAD, type ChartNote } from '../engine/chart';
 import { beatAt, songSecAt } from '../engine/tempo';
 import { quantizeTake, replaceRange, toggleNote } from '../engine/transcribe';
@@ -96,7 +96,8 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
 
   // Coach's guess of the groove (from knowledge, not from hearing), tiled over the bars.
   const grooveKey = `groove:${song.id}:${Math.round(grid.bpm)}:${song.timeSignature.join('/')}`;
-  const groove = useCoachEntry<ChatReply>(grooveKey);
+  const groove = useCoachEntry<Groove>(grooveKey);
+  const askGroove = (again = false) => askCoach(grooveKey, 'groove', { title: song.title, bpm: Math.round(grid.bpm), timeSignature: song.timeSignature, ...(again && { again }) }, undefined, again);
   const loadGroove = () => {
     const c = groove?.data?.chart;
     if (!c) return;
@@ -131,7 +132,7 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
           disabled={!suggestions.length}>Use suggestions ({suggestions.length})</button>
         <button onClick={() => setDraft([])}>Clear</button>
         <button className="primary" onClick={save}>Save bars {range.from}–{range.to}</button>
-        <button onClick={() => askCoach(grooveKey, 'groove', { title: song.title, bpm: Math.round(grid.bpm), timeSignature: song.timeSignature })} disabled={groove?.status === 'thinking'}>
+        <button onClick={() => askGroove()} disabled={groove?.status === 'thinking'}>
           Ask coach for the groove</button>
       </div>
       {tab && suggest && <p className="small">Suggestions (dashed squares): {passes.length ? `${suggestions.length} notes heard in ${passes.length > 1 ? 'at least 2 of the last ' + passes.length + ' passes' : 'the first pass'}` : 'listening… finish one loop'}.
@@ -142,8 +143,12 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
       {groove?.status === 'error' && <p className="warn">{groove.error}</p>}
       {groove?.status === 'done' && groove.data && (
         <div className="drill">
+          <p><b>{groove.data.confidence === 'know' ? '✓ I know this one.' : '🤔 A style guess: check it by ear.'}</b></p>
           <p>{groove.data.reply}</p>
-          {groove.data.chart && <button onClick={loadGroove}>Load the coach's guess into bars {range.from}–{range.to}</button>}
+          <div className="actions">
+            {groove.data.chart && <button onClick={loadGroove}>Load the coach's guess into bars {range.from}–{range.to}</button>}
+            <button onClick={() => askGroove(true)}>Ask again</button>
+          </div>
           <p className="small">The coach can't hear the recording: treat this as a starting point and check it by ear.</p>
         </div>
       )}

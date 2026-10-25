@@ -60,6 +60,13 @@ describe('coach', () => {
     expect(seen[2]).toEqual({ model: 'claude-opus-5-5', effort: 'medium' });
     delete process.env.CLAUDE_CLI_LESSON_MODEL;
   });
+  it('"ask again" skips the cached answer and replaces it', async () => {
+    let n = 0;
+    setProvider({ name: 'fake4', complete: async () => `{"chartId":"x","bpm":${80 + n++},"reason":"r"}` });
+    expect((await ask('groove', Answer, { g: 1 })).data.bpm).toBe(80);
+    expect((await ask('groove', Answer, { g: 1 }, { noCache: true })).data.bpm).toBe(81);
+    expect(await ask('groove', Answer, { g: 1 })).toMatchObject({ cached: true, data: { bpm: 81 } });
+  });
   it('rejects answers in the wrong shape', async () => {
     setProvider({ name: 'fake2', complete: async () => '{"chartId":"x"}' });
     await expect(ask('feedback', Answer, { y: 2 })).rejects.toMatchObject({ code: 'failed' });

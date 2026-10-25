@@ -12,7 +12,7 @@ export const YtSongPatchSchema = z.object({
   title: z.string().min(1).max(200).optional(), drumlessId: VideoId.nullable().optional(), coverId: VideoId.nullable().optional(),
   timeSignature: TimeSigSchema.optional(), notes: z.array(ChartNoteSchema).max(50_000).optional(),
 });
-export const GrooveRequestSchema = z.object({ title: z.string().min(1).max(200), bpm: z.number().min(30).max(300), timeSignature: TimeSigSchema });
+export const GrooveRequestSchema = z.object({ title: z.string().min(1).max(200), bpm: z.number().min(30).max(300), timeSignature: TimeSigSchema, again: z.boolean().optional() });
 
 export type Grid = z.infer<typeof GridSchema>;
 export type YtSong = {

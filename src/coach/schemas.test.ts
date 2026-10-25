@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CoachReplySchema, TipsSchema } from './schemas';
+import { CoachReplySchema, GrooveSchema, TipsSchema } from './schemas';
 
 describe('TipsSchema', () => {
   it('drops a tip that is too long instead of failing the whole answer', () => {
@@ -22,5 +22,13 @@ describe('CoachReplySchema', () => {
     const long = CoachReplySchema.parse({ say: 'Nice.', show: 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen' });
     expect(long.show).toBeUndefined();
     expect(long.say).toBe('Nice.');
+  });
+});
+
+describe('GrooveSchema', () => {
+  it('says how sure the coach is; an answer without it (or with a made-up value) is a style guess', () => {
+    expect(GrooveSchema.parse({ reply: 'Eighths on the hat.', confidence: 'know' }).confidence).toBe('know');
+    expect(GrooveSchema.parse({ reply: 'Eighths on the hat.' }).confidence).toBe('style-guess');
+    expect(GrooveSchema.parse({ reply: 'Eighths on the hat.', confidence: 'sure' }).confidence).toBe('style-guess');
   });
 });

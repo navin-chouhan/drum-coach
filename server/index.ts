@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { SessionEventSchema, AiLessonSchema, ChatReplySchema, FeedbackSchema, LessonRequestSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, ShowoffRequestSchema, ShowoffSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
+import { SessionEventSchema, AiLessonSchema, FeedbackSchema, GrooveSchema, LessonRequestSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, ShowoffRequestSchema, ShowoffSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import type { RunRow } from '../src/engine/progress.ts';
@@ -293,7 +293,8 @@ app.put('/api/ytgrids/:videoId', async (req, reply) => {
 app.post('/api/coach/groove', async (req, reply) => {
   const b = GrooveRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
-  try { return await ask('groove', ChatReplySchema, b.data); } catch (e) { return aiFail(reply, e); }
+  const { again, ...input } = b.data; // "Ask again" skips the cached answer (same key, so the new one replaces it)
+  try { return await ask('groove', GrooveSchema, input, { noCache: again }); } catch (e) { return aiFail(reply, e); }
 });
 
 app.post('/api/coach/showoff', async (req, reply) => {

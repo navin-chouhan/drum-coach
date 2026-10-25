@@ -28,6 +28,8 @@ export const ShowoffRequestSchema = z.object({ stage: z.string().max(120), canDo
 export const ShowoffSchema = z.object({ songs: z.array(z.object({ title: z.string().max(120), artist: z.string().max(120), why: z.string().max(300) })).min(1).max(3) });
 export type ShowoffSongs = { songs: (z.infer<typeof ShowoffSchema>['songs'][number] & { video?: { id: string; title: string; thumbnail: string } })[] };
 export const ChatReplySchema = z.object({ reply: z.string().min(1).max(4000), spoken: z.string().max(500).optional(), chart: ChartSchema.optional() });
+/** A real song's groove: "know" = the coach knows this recording, "style-guess" = a typical groove for its style. */
+export const GrooveSchema = ChatReplySchema.extend({ confidence: z.enum(['know', 'style-guess']).catch('style-guess') });
 
 /** Live-tip wording written by the coach for one exercise (ids = engine/liveCoach.ts cue ids). "{ms}" = the measured ms. */
 // A tip that's too long for the banner (70) or to say mid-bar (45) is dropped on its own (that cue keeps the
@@ -83,6 +85,7 @@ export type AiLesson = z.infer<typeof AiLessonSchema>;
 export type Feedback = z.infer<typeof FeedbackSchema>;
 export type Plan = z.infer<typeof PlanSchema>;
 export type ChatReply = z.infer<typeof ChatReplySchema>;
+export type Groove = z.infer<typeof GrooveSchema>;
 
 // Requests from the browser (validated at the server boundary).
 export const RunRecordSchema = z.object({

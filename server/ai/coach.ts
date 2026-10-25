@@ -36,13 +36,14 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
 export const LESSON_KINDS = ['lesson', 'plan', 'showoff', 'groove'] as const;
 export const lessonModel = (): ModelChoice => ({ model: process.env.CLAUDE_CLI_LESSON_MODEL || 'claude-sonnet-5-5', effort: process.env.CLAUDE_CLI_LESSON_EFFORT || 'medium' });
 
-export async function ask<T>(kind: 'feedback' | 'plan' | 'groove' | 'lesson' | 'tips' | 'showoff', schema: z.ZodType<T>, input: unknown): Promise<{ data: T; cached: boolean }> {
+/** `noCache`: ask again (a wrong answer would otherwise come back from the cache forever); the new one replaces it. */
+export async function ask<T>(kind: 'feedback' | 'plan' | 'groove' | 'lesson' | 'tips' | 'showoff', schema: z.ZodType<T>, input: unknown, opts: { noCache?: boolean } = {}): Promise<{ data: T; cached: boolean }> {
   const system = `${prompt('system')}\n\n${prompt(kind)}`;
   const user = JSON.stringify(input);
   const choice = (LESSON_KINDS as readonly string[]).includes(kind) ? lessonModel() : undefined;
   // (the fast tasks keep their old key, so their cached answers stay valid)
   const key = createHash('sha256').update([provider.name, ...(choice ? [`${choice.model}:${choice.effort}`] : []), system, user].join('\0')).digest('hex');
-  const hit = db.prepare('SELECT response FROM ai_cache WHERE key = ?').get(key) as { response: string } | undefined;
+  const hit = opts.noCache ? undefined : db.prepare('SELECT response FROM ai_cache WHERE key = ?').get(key) as { response: string } | undefined;
   if (hit) return { data: schema.parse(JSON.parse(hit.response)), cached: true };
 
   const call = limited(() => provider.complete(system, user, choice));
