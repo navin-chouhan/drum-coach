@@ -19,11 +19,23 @@ export function onHit(fn: (h: Hit) => void) {
 export const BOUNCE_MS = 60, BOUNCE_RATIO = 0.7;
 const last = new Map<number, { time: number; velocity: number }>();
 
+/**
+ * Crosstalk on the MPS-150: a soft snare stroke (a ghost, velocity ≤ CROSSTALK_SNARE_MAX) can also fire the hi-hat
+ * ~10 ms later, no louder than the snare. Real hi-hat strokes in ghost-note grooves are far louder, and a backbeat
+ * never causes it, so only that soft echo is dropped.
+ */
+export const CROSSTALK_MS = 15, CROSSTALK_SNARE_MAX = 44;
+let lastSnare = { time: -Infinity, velocity: 0 };
+
 export function emitNote(note: number, velocity: number, time = performance.now()) {
   const prev = last.get(note);
   last.set(note, { time, velocity });
   if (prev && time - prev.time >= 0 && time - prev.time < BOUNCE_MS && velocity < prev.velocity * BOUNCE_RATIO) return;
-  const hit: Hit = { note, velocity, time, pad: padForNote(getNoteMap(), note) };
+  const pad = padForNote(getNoteMap(), note);
+  if (pad === 'snare') lastSnare = { time, velocity };
+  else if ((pad === 'hhClosed' || pad === 'hhOpen') && time - lastSnare.time >= 0 && time - lastSnare.time < CROSSTALK_MS
+    && lastSnare.velocity <= CROSSTALK_SNARE_MAX && velocity <= lastSnare.velocity) return;
+  const hit: Hit = { note, velocity, time, pad };
   listeners.forEach(l => l(hit));
 }
 

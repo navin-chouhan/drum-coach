@@ -14,4 +14,16 @@ describe('stick bounces', () => {
     off();
     expect(got).toEqual([42, 20, 90, 50, 30, 40, 30, 92, 80, 67, 35]);
   });
+
+  it('drops soft-snare crosstalk on the hi-hat, keeps real hi-hat strokes', () => {
+    const got: string[] = [];
+    const off = onHit(h => got.push(`${h.note}:${h.velocity}`));
+    emitNote(38, 35, 10000); emitNote(46, 31, 10010); // ghost snare, then the hi-hat it triggered ~10 ms later: dropped
+    emitNote(38, 30, 11000); emitNote(42, 28, 11009); // same with the pedal down (closed)
+    emitNote(38, 35, 12000); emitNote(42, 80, 12005); // a ghost under a real hi-hat stroke: both kept
+    emitNote(38, 110, 13000); emitNote(46, 40, 13010); // a backbeat never makes crosstalk: a soft hi-hat after it stays
+    emitNote(38, 35, 14000); emitNote(46, 30, 14040); // 40 ms later: a stroke of its own
+    off();
+    expect(got).toEqual(['38:35', '38:30', '38:35', '42:80', '38:110', '46:40', '38:35', '46:30']);
+  });
 });

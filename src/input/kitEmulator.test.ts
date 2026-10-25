@@ -51,9 +51,9 @@ describe('emulated MPS-150 through the real input path', () => {
     expect(t.hits.map(h => h.pad)).toEqual(['hhPedal', 'hhPedal', 'hhPedal', 'hhPedal']);
   });
 
-  it('soft-snare crosstalk reaches scoring as hi-hat extras (open item F10)', () => {
+  it('soft-snare crosstalk never reaches scoring as hi-hat extras (was open item F10)', () => {
     const t = take('snare', eighths, 70, { ...CLEAN, crosstalk: 1 }, { ghost: true });
-    expect(t.extras.length).toBe(16);
-    expect(t.extras.every(h => h.pad === 'hhOpen')).toBe(true);
+    expect(t.raw.filter(m => m.data[0] === 0x99 && m.data[1] === 46 && m.data[2] > 0)).toHaveLength(16); // the kit sent them
+    expect(t.extras).toHaveLength(0);
   });
 });
