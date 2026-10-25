@@ -100,6 +100,7 @@ Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `
 | 14 | At the 40 BPM floor, "🐢 Learn it slowly" (and floor × 2) didn't start wait mode: it ran "slower", a scored take at 35 BPM (below the floor), which passed and climbed: "Nice! Up to 45 BPM!", best 35. The label promised wait mode; the take counted. | Bug | At the floor the move is wait mode, as labelled. Checked live: the music waits, the verdict is "Nice and slow…", nothing is saved and the tempo stays. |
 | 15 | After a floor fail with missed notes the line said "Try Learn it slowly" but the big move (hi-hat pedal × 3 / "yes") was "▶ Again". | UX | The main move becomes "🐢 Learn it slowly" in that case. |
 | 16 | "🔍 Fix bar 2" worked (bar 2 looped 4× at 50 instead of 60, the ladder didn't move), but its verdict always said "Bar 2 sounds better", even when the loop went badly. | Honesty | "sounds better" only when the loop passed, else "is getting there". |
+| 17 | After ~15 rough takes (avg 75% landed, hits wandering ±75 ms, no lesson finished, comfortable at 40 BPM) the student read was *steady*, not *struggling*: the cut-off was accuracy < 75 and spread was ignored. The coach would write for a steady student. | Teaching | A spread wider than 40 ms (looser than any checkpoint allows) also reads as struggling (`studentRead`). On the test data the read is now *struggling*. |
 
 ### Open observations (not fixed yet)
 - **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very

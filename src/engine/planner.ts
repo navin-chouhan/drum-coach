@@ -25,8 +25,10 @@ const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 /**
  * How this student is doing, from the evidence (not an assumption): the stars of their last 4+ finished lessons and
  * their last 12 takes. Flying = ★★★ lessons (2+) and takes that land (95%+) and are tight (spread ≤ 20 ms);
- * struggling = takes under 75% or mostly 1-star lessons. `comfortableBpm`: the median tempo of their clean takes.
+ * struggling = takes under 75%, hits wandering more than any checkpoint allows (spread > 40 ms), or mostly 1-star
+ * lessons. `comfortableBpm`: the median tempo of their clean takes.
  */
+const STRUGGLE_SPREAD_MS = 40; // the loosest checkpoint spread limit (levels 0–2)
 export function studentRead(progress: Progress, runs: { accuracy: number; spread?: number; bpm: number }[] = []) {
   // completedAt is a day: lessons finished on the same day as the 4th newest all count (no arbitrary pick among them)
   const finished = Object.values(progress).filter(p => p.completedAt && p.stars).sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
@@ -37,7 +39,7 @@ export function studentRead(progress: Progress, runs: { accuracy: number; spread
   const meanStars = stars.length ? avg(stars) : undefined;
   const clean = recent.filter(r => r.accuracy >= 90).map(r => r.bpm).sort((a, b) => a - b);
   const pace: Pace = !stars.length && recent.length < 4 ? 'new'
-    : (accuracy !== undefined && accuracy < 75) || (meanStars !== undefined && meanStars < 1.5) ? 'struggling'
+    : (accuracy !== undefined && accuracy < 75) || (spread !== undefined && spread > STRUGGLE_SPREAD_MS) || (meanStars !== undefined && meanStars < 1.5) ? 'struggling'
     : stars.length >= 2 && meanStars! >= 2.75 && (accuracy ?? 100) >= 95 && (spread ?? 0) <= 20 ? 'flying'
     : 'steady';
   return { pace, recentStars: stars, accuracyPct: accuracy, spreadMs: spread, comfortableBpm: clean.length ? Math.round(clean[clean.length >> 1]) : undefined,

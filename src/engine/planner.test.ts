@@ -73,5 +73,7 @@ describe('student read', () => {
     expect(studentRead(stars(1, 1, 2), []).pace).toBe('struggling');
     expect(studentRead(stars(2, 3), [run(90), run(88), run(92), run(85)]).pace).toBe('steady');
     expect(studentRead(stars(3, 3), [run(99, 30), run(99, 30), run(99, 30), run(99, 30)]).pace).toBe('steady'); // landing, but loose
+    // A beginner landing three in four but all over the place (wider than any checkpoint allows), nothing finished yet
+    expect(studentRead({}, [run(75, 75), run(80, 70), run(70, 80), run(76, 75)]).pace).toBe('struggling');
   });
 });
