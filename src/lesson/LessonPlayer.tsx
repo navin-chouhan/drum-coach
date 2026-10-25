@@ -170,14 +170,16 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       const emptyBars = !!fs && !fs.stats.hits;
       const { next, event } = emptyBars ? { next: p, event: 'hold' as const } : ladderStep(p, lesson, check.ok, today(), st.accuracy, check.ok && starsFor(st) === 3);
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
+      // The checkpoint this lesson proves (itself, or the one a coach lesson stands in for) was it already passed?
+      const provedBefore = !!getSettings().lessons[lesson.checkpoint ?? lesson.id]?.completedAt;
       saveProgress(lesson.id, stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next);
       // A coach lesson standing in for a checkpoint passes it; the checkpoint itself comes back for review.
       const cp = lesson.checkpoint && LESSON_BY_ID[lesson.checkpoint];
       if (event === 'lessonDone' && cp && !getSettings().lessons[cp.id]?.completedAt)
         saveProgress(cp.id, { ...startProgress(cp), bestBpm: next.bestBpm, completedAt: next.completedAt, reviewDue: next.reviewDue, stars });
-      // Rank up: this was the last open checkpoint of its stage.
+      // Rank up: this was the last open checkpoint of its stage (a coach lesson for an already passed checkpoint isn't).
       const stage = MILESTONES.find(m => m.checkpoints.includes(cp ? cp.id : lesson.id)), s = getSettings();
-      const rankUp = event === 'lessonDone' && !p.completedAt && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
+      const rankUp = event === 'lessonDone' && !provedBefore && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
       const ok = !emptyBars && (check.ok || !!step.jam || (free.length > 0 && !step.pass));
       const msg: Record<LadderEvent, string> = {
         hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
