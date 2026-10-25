@@ -1,3 +1,4 @@
+import { getSettings } from '../input/settings';
 import { audio, playVoice, stopVoices } from '../play/audio';
 
 // The coach's voice: Piper on the local server (offline, natural) when it's set up, else the browser's voice.
@@ -74,7 +75,7 @@ export async function say(text: string, urgent = false) {
   if (!('speechSynthesis' in window)) return;
   if (urgent) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.05;
+  u.rate = 1.05; u.volume = Math.min(1, getSettings().voiceVolume);
   busyUntil = now + 300 + text.length * 70; // rough length, the browser doesn't tell us
   speechSynthesis.speak(u);
 }
@@ -93,7 +94,7 @@ export async function sayNext(text: string) {
   }
   if (!('speechSynthesis' in window)) return;
   log(`browser:${text}`);
-  speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { rate: 1.05 }));
+  speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { rate: 1.05, volume: Math.min(1, getSettings().voiceVolume) }));
   busyUntil = Math.max(busyUntil, performance.now()) + 300 + text.length * 70;
 }
 /** A take is starting: whatever the coach was saying stops, so it can't talk over the count-in. */

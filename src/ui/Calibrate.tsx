@@ -5,6 +5,7 @@ import { onHit } from '../input/hits';
 import { getNoteMap, setNoteMap, subscribeNoteMap } from '../input/store';
 import { EmulatedKitCard } from './EmulatedKitCard';
 import { LatencyCard } from './LatencyCard';
+import { SoundCheckCard } from './SoundCheckCard';
 
 const MODULE_HELP = 'On the module: press MODE until VOICE lights, hit the pad, press PAGE until the display shows Nxx, then set the note with [–]/[+].';
 
@@ -98,6 +99,7 @@ export function Calibrate({ device }: { device: string }) {
         )}
         <button onClick={() => setNoteMap({ ...DEFAULT_NOTE_MAP })}>Reset to MPS-150 defaults</button>
       </section>
+      <SoundCheckCard />
       <LatencyCard />
       <EmulatedKitCard />
     </div>

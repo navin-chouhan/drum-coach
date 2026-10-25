@@ -1,4 +1,5 @@
 import type { PadId } from '../engine/kit';
+import { getSettings } from '../input/settings';
 
 // One shared AudioContext. Sounds ported from prototype/drum-stage.html.
 let ctx: AudioContext | null = null;
@@ -7,14 +8,24 @@ let master: GainNode, voiceOut: GainNode, noiseBuf: AudioBuffer;
 export function audio(): AudioContext {
   if (!ctx) {
     ctx = new AudioContext({ latencyHint: 'interactive' });
-    master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
-    voiceOut = ctx.createGain(); voiceOut.gain.value = 1; voiceOut.connect(ctx.destination); // the coach's voice isn't ducked
+    master = ctx.createGain(); master.gain.value = level(); master.connect(ctx.destination);
+    voiceOut = ctx.createGain(); voiceOut.gain.value = getSettings().voiceVolume; voiceOut.connect(ctx.destination); // the coach's voice isn't ducked
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const ch = noiseBuf.getChannelData(0);
     for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
   }
   if (ctx.state === 'suspended') void ctx.resume();
   return ctx;
+}
+
+// Clicks, synth drums and backing music; the coach's voice has its own level.
+const level = () => 0.8 * getSettings().clickVolume;
+
+/** Sets the app's sound levels from settings now (the sound check's sliders). */
+export function applyLevels() {
+  const c = audio(), t = c.currentTime;
+  master.gain.setTargetAtTime(level(), t, 0.02);
+  voiceOut.gain.setTargetAtTime(getSettings().voiceVolume, t, 0.02);
 }
 
 /** AudioContext time (s) → performance.now() ms when it is heard (output latency included). */
@@ -99,8 +110,8 @@ export function playVoice(buf: AudioBuffer, when = audio().currentTime) {
   const c = audio(), src = c.createBufferSource();
   src.buffer = buf; src.connect(voiceOut); src.start(when);
   voices.add(src); src.onended = () => voices.delete(src);
-  master.gain.setTargetAtTime(0.35, when, 0.03);
-  master.gain.setTargetAtTime(0.8, when + buf.duration, 0.1);
+  master.gain.setTargetAtTime(0.45 * level(), when, 0.03);
+  master.gain.setTargetAtTime(level(), when + buf.duration, 0.1);
   return when + buf.duration;
 }
 /** Stops every voice clip playing or scheduled (and brings the music back up). */
@@ -109,5 +120,5 @@ export function stopVoices() {
   voices.clear();
   const t = audio().currentTime; // drop the dips scheduled for those clips, or they'd still quiet the clicks
   master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t);
-  master.gain.setTargetAtTime(0.8, t, 0.05);
+  master.gain.setTargetAtTime(level(), t, 0.05);
 }

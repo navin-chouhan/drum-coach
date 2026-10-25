@@ -15,11 +15,12 @@ export type Settings = {
   playView: 'sheet' | 'highway';     // how notes are shown while playing
   aiTips: boolean;                    // the coach writes the live tip wording per exercise (one Claude call each)
   liveCoach: boolean; handsFree: boolean; // the live coaching conversation; listen for answers without holding V
-  padCommands: boolean;               // double hits between takes control the app (engine/padCommands.ts)
+  padCommands: boolean;
+  clickVolume: number; voiceVolume: number; // app sound levels (0.2–1.25), balanced against the kit in the sound check               // double hits between takes control the app (engine/padCommands.ts)
   v?: number; // settings version, for one-time migrations
 };
 const DEFAULTS: Settings = {
-  latencyMs: 0, browserSounds: false, liveTips: 'screen', chattiness: 'normal', voice: true, countIn: true, playView: 'sheet', aiTips: true, liveCoach: true, handsFree: false, padCommands: true, v: 3,
+  latencyMs: 0, browserSounds: false, liveTips: 'screen', chattiness: 'normal', voice: true, countIn: true, playView: 'sheet', aiTips: true, liveCoach: true, handsFree: false, padCommands: true, clickVolume: 1, voiceVolume: 1, v: 3,
   profile: { goals: [], minutesPerDay: 25, onboarded: false }, lessons: {},
 };
 
