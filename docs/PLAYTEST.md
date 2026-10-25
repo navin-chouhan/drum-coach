@@ -23,6 +23,10 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
   `performance.getEntriesByType('resource')`, or restart Vite.
 - The celebration always renders three ★ characters and lights them with CSS (`.bigStars .on`), so reading its text
   says ★★★ even for 1 star.
+- Editing app code while a page is open makes Vite hot-swap modules; once that left the lesson screen not showing a
+  finished lesson's verdict (the lesson had completed and saved). Reload the page after code changes before trusting
+  what it shows. The autopilot lives in a git-excluded `.playtest-helpers.js`, re-armed after a reload with one
+  `await import('/.playtest-helpers.js?' + Date.now())`.
 - The Chrome tool's JavaScript call times out after 45 s, so long runs go in the background inside the page and
   report through `fetch('/api/autopilot-…')`, which shows up in the server log.
 
@@ -70,6 +74,12 @@ its written start (60) one +5 at a time.
 
 Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 cleanly and finished in 6 actions, ★★★.
 
+### Round 4 (Stages 4–5)
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 8 | The coach-line fix from round 1 was incomplete: when the coach started thinking about a new take it moved the "which take" marker but kept the previous reply, so for a few seconds the last lesson's debrief showed as the answer to the new take (seen on "Kick on the & of 3" and "Your first fill"; the coach log proved the replies themselves were right). | Bug | The reply and the thinking each remember their own take (`take`, `thinking` in `src/coach/session.ts`), with tests in `src/coach/session.test.ts`. (047583a) |
+| 9 | The emulated kit could never pass an accent check: accents 115, every other stroke 92 (ratio 0.8 > 0.7). The app was right; the test player accented weakly. | Test tool | In an accented pattern its other strokes are taps (70). (d1f8873) |
+
 ### Open observations (not fixed yet)
 - Even when flying, the coach (Haiku, low effort) still opens with an echo warm-up step the prompt tells it to skip.
 - When today's set is done, Journey's big button is "Jam ▶". A student who wants more has to use "Something else" or
@@ -82,5 +92,7 @@ Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 clea
 ## Stage log
 | Stage | Rank | Lessons played | Notes |
 |---|---|---|---|
+| 4 · Variations and first fills | Fill Maker ✓ | Kick on the & of 3 ✓cp (4 takes), Your first fill ✓cp, Song: Garage Eight ✓cp (2: probe + one 24-bar take, 310/310) | With the probe, each checkpoint is a probe plus a proving take. |
+| 3 · The money beat | Groove Keeper ✓ | The money beat ✓cp (6), Song: Steady Eight ✓cp (2: probe + one 16-bar take, 192/192) | The probe on a song only plays bar 1, but the full song still has to pass. |
 | 2 · Every limb on its own | Limb Wrangler ✓ | Single strokes ✓cp (14 takes), Hi-hat 8th notes ✓cp (16), Hand and foot together ✓cp (7) | Flying: checkpoints only, all ★★★. The practice lessons (hi-hat quarters, kick, accents, the coach's singles lesson) were skipped by the new planner and are left for the end-of-run sweep. Most takes went to climbing from 60 BPM. |
 | 1 · Ready to play | Stick Rookie ✓ | Sit hold strike, Your first jam, Echo game, Trade bars (1★, silent answer before fix 3), Counting quarter notes, Eight in a row, Even quarters then counting 8ths (coach), Counting 8th notes ✓cp, Counting the & in 8th notes (coach), Rests are notes too (coach stand-in ✓cp) | All takes 100%. The built-in "rests" checkpoint was passed by an easier coach stand-in (fixed for later stages). |
