@@ -49,6 +49,12 @@ export async function runAction(a: NonNullable<CoachReply['action']>) {
   handlers.find(h => h(a));
 }
 
+/** A pad command between takes: "yes" takes the coach's suggestion (or plays again); only on a screen that can carry it out. */
+export function padAction(cmd: 'yes' | 'slower' | 'faster' | 'next') {
+  if (!handlers.length) return; // e.g. hitting pads on the calibration screen
+  void runAction(cmd === 'yes' ? state.reply?.action ?? { kind: 'again', label: 'Again' } : { kind: cmd, label: cmd });
+}
+
 let seq = 0;
 /** Tells the coach what just happened; speaks and shows its answer. */
 export async function coachEvent(event: SessionEvent) {

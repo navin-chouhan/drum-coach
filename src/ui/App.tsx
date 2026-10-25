@@ -10,7 +10,8 @@ import { playDrum } from '../play/audio';
 import { PlayView } from '../play/PlayView';
 import { onCue, player, playerVersion, stop, subscribePlayer } from '../play/player';
 import { NUMBERS, prepare, say } from '../voice/voice';
-import { dropCoachAction } from '../coach/session';
+import { dropCoachAction, padAction } from '../coach/session';
+import { padCommands } from '../engine/padCommands';
 import { TalkToCoach } from '../voice/TalkToCoach';
 import { SPOKEN_CUES } from '../engine/liveCoach';
 import { Calibrate } from './Calibrate';
@@ -43,6 +44,14 @@ export function App() {
   }, []);
   useEffect(startKeyboard, []);
   useEffect(() => onHit(h => { if (h.pad && getSettings().browserSounds) playDrum(h.pad, h.velocity); }), []);
+  useEffect(() => {
+    const detect = padCommands();
+    return onHit(h => {
+      const cmd = detect(h, player.phase === 'playing');
+      if (!cmd || !getSettings().padCommands) return;
+      if (cmd === 'stop') stop(); else padAction(cmd);
+    });
+  }, []);
   useEffect(() => onPlayRequest(r => { stop(); setPending(r); setTabState('play'); }), []);
   useEffect(() => onSongRequest(id => { stop(); setSong(o => ({ id, n: (o?.n ?? 0) + 1 })); setTabState('songs'); }), []);
   useEffect(() => onLessonRequest(id => { stop(); setLesson(o => ({ id, n: (o?.n ?? 0) + 1 })); setTabState('today'); }), []);
