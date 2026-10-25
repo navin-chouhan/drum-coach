@@ -29,6 +29,10 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
   finished lesson's verdict (the lesson had completed and saved). Reload the page after code changes before trusting
   what it shows. The autopilot lives in a git-excluded `.playtest-helpers.js`, re-armed after a reload with one
   `await import('/.playtest-helpers.js?' + Date.now())`.
+- The browser keeps settings in localStorage per origin. A new data copy on the same test port (5180) is merged with
+  the last test's browser copy: keys the server copy lacks (e.g. `badges`) survive. Run
+  `localStorage.removeItem('drumcoach.settings')` before loading a new data copy. (Round 6's trophy shelf showed the
+  old run's badges this way; the owner's real app on 5173 isn't affected.)
 - The Chrome tool's JavaScript call times out after 45 s, so long runs go in the background inside the page and
   report through `fetch('/api/autopilot-…')`, which shows up in the server log.
 
