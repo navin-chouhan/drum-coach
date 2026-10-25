@@ -56,6 +56,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Step options | `fadeClick` (the click fades out over N bars; the verdict says in words whether the tempo held, `takeDrift`), `clickOn` ("2and4" backbeat click or "8ths", `clickOnBeat`), `variants` (a different phrase each take, `pickVariant`), `bars` (a long stamina take), `rest` (a countdown with one body tip; "done" moves on). Built in: "The money beat" ends with a 2-and-4 click, "Steady Eight" fades the click after 4 bars. |
 | Find your tempo | A `probe` step plays 1-bar takes from `bpm.start`, 5 BPM faster after each clean bar, until one falls apart; the working tempo is 10 below it (`probeTempo`). |
 | 2-minute challenge | Journey offers a finished groove for 2 minutes at your best tempo (`seconds` on an endless take); the score is clean bars (no miss, no extra: `cleanBars`), best kept per lesson (`Settings.arcade`). |
+| Autopilot | Setup → Coach: after each verdict the main move starts by itself in 5 seconds; any pad hit waits. Off by default. |
 | Specific feedback, one fix | After each take, one friendly line and at most one tip. The AI coach is one click away. |
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |

@@ -19,6 +19,7 @@ import { hearFill, keepFill } from '../play/fills';
 import { requestSong } from '../ui/nav';
 import { SheetMusic } from '../notation';
 import { say, voiceEngine } from '../voice/voice';
+import { onHit } from '../input/hits';
 import { canRunAction, coachTake, dropCoachAction, onCoachAction, runAction, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
 import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
@@ -288,6 +289,19 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : itemDone && (oneTake || outcome?.event === 'lessonDone') ? { label: onNext ? 'Next ▶' : '← Journey', run: goNext }
     : { label: outcome ? '▶ Again' : '▶ Play', run: () => play(false) };
   const listen = () => (f && f.hits.length ? hearTake(f) : play(true));
+  // Autopilot: after a verdict the main move starts by itself in 5 s; any pad hit (or the keyboard kit) waits.
+  const mainRef = useRef(main); mainRef.current = main;
+  const [autoIn, setAutoIn] = useState<number>();
+  useEffect(() => {
+    if (!getSettings().autopilot || !f || !outcome || playing || outcome.event === 'lessonDone') return;
+    let left = 5, armed = false;
+    setAutoIn(left);
+    if (getSettings().voice) void say(`Next in five. Hit any pad to wait.`);
+    const arm = setTimeout(() => { armed = true; }, 700); // the take's last strokes don't count as "wait"
+    const off = onHit(() => { if (armed) { clearInterval(t); setAutoIn(undefined); } });
+    const t = setInterval(() => { left--; if (left > 0) setAutoIn(left); else { clearInterval(t); setAutoIn(undefined); mainRef.current.run(); } }, 1000);
+    return () => { clearTimeout(arm); clearInterval(t); off(); setAutoIn(undefined); };
+  }, [f, !!outcome, playing]); // eslint-disable-line react-hooks/exhaustive-deps -- once per verdict
   const slower = () => (oneTake ? play(false, bpm, true) : runAction({ kind: 'slower', label: 'Slower' }));
   useEffect(() => onCoachAction(a => {
     if (a.kind === 'main') { main.run(); return true; }
@@ -345,7 +359,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} /></div>
         <RestCountdown seconds={step.rest!} />
       </> : playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
-        <CoachLine line={line} />
+        <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} />
         <div className="moves">
           <Move go label={main.label} onClick={main.run} />
           <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
