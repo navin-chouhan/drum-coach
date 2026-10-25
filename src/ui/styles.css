@@ -20,7 +20,7 @@
   }
   .brand{display:flex;align-items:center;gap:10px;font:800 19px var(--display);letter-spacing:.02em}
   .brand .logo{width:12px;height:12px;border-radius:50%;background:var(--cyan);border:3px solid var(--pop)}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:999px;
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:999px;max-width:100%;overflow:hidden;text-overflow:ellipsis;
     background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:12.5px;white-space:nowrap}
   .chip .dot{width:8px;height:8px;border-radius:50%;background:#6b7280;flex:none}
   .chip.ok{color:var(--text)} .chip.ok .dot{background:var(--good);box-shadow:0 0 8px var(--good)}
@@ -89,7 +89,7 @@
     svg.kit{max-height:none}
   }
 
-  .app{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;overflow-x:hidden}
+  .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:minmax(0,1fr);min-height:100vh;overflow-x:hidden}
   .chip{font:inherit;font-size:12.5px;padding:5px 11px}
   .tabs{display:flex;gap:6px}
   .tabs button{background:transparent;border-color:transparent;font:700 13.5px var(--display);color:var(--nightText);padding:5px 12px}
@@ -218,14 +218,40 @@
   @media (max-width:1000px){ .songGrid{grid-template-columns:1fr} }
   /* Today and lessons */
   .today{max-width:1000px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:14px;width:100%}
-  .todayHead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-  .todayHead h2,.lessonTitle{margin:0 0 4px;font-size:22px}
-  .doneMsg{color:var(--good);margin:0}
-  ol.session{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:6px}
-  ol.session li{display:grid;grid-template-columns:96px 1fr auto auto;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
-  ol.session li.on{border-color:var(--accent)}
-  ol.session li.done .title{text-decoration:line-through;color:var(--muted)}
-  ol.session .role{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  /* Journey home: coach hero, today's set, the stage trail */
+  .home{gap:22px}
+  .homeHero{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center}
+  .homeHero .avatar{width:72px;height:72px;border-radius:50%;background:var(--cyan);border:3px solid var(--line);display:grid;place-items:center;font-size:34px;box-shadow:4px 4px 0 var(--line)}
+  .bubble{position:relative;background:var(--panel);border:3px solid var(--line);border-radius:18px;padding:16px 20px;box-shadow:6px 6px 0 var(--line);font-size:17px}
+  .bubble::after{content:"";position:absolute;left:-18px;top:26px;border:9px solid transparent;border-right-color:var(--line)}
+  .bubble p{margin:0 0 12px}
+  .bubble .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .statChips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .statChips span{background:var(--night);color:var(--nightText);border-radius:999px;padding:4px 12px;font-size:12.5px}
+  .statChips b{color:var(--pop)}
+  .stageRing{display:grid;justify-items:center;gap:6px}
+  .ring{width:110px;height:110px;border-radius:50%;background:conic-gradient(var(--good) 0 var(--p),var(--panel) var(--p) 100%);border:3px solid var(--line);display:grid;place-items:center;box-shadow:4px 4px 0 var(--line)}
+  .ring div{width:76px;height:76px;border-radius:50%;background:var(--panel);border:3px solid var(--line);display:grid;place-items:center;font:800 13px/1.1 var(--display);text-align:center}
+  .setTiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .setTile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:12px 14px;border:3px solid var(--line);border-radius:0;background:var(--panel2);box-shadow:4px 4px 0 var(--line)}
+  .setTile.cur{background:var(--pop);transform:translateY(-4px);box-shadow:6px 8px 0 var(--line)}
+  .setTile.done{background:#E3F5EA}
+  .setTile .ic{font-size:26px}
+  .setTile b{font:800 15px var(--display)}
+  .setTile .tag{position:absolute;top:-12px;right:10px;background:var(--night);color:var(--nightText);font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px}
+  .trail{position:relative;height:190px;margin:4px 8px 8px}
+  .trail svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .trail polyline{fill:none;stroke:var(--line);stroke-width:5;stroke-dasharray:2 12;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+  .stop{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:0;border:0;background:none;border-radius:0}
+  .stop .dot{width:48px;height:48px;border-radius:50%;border:3px solid var(--line);background:var(--panel);display:grid;place-items:center;font-size:19px;box-shadow:3px 3px 0 var(--line)}
+  .stop .name{position:absolute;top:calc(100% + 2px);font-size:10.5px;font-weight:700;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+  .stop.done .dot{background:var(--good);color:#fff}
+  .stop.now .dot{width:66px;height:66px;background:var(--pop);font-size:26px;box-shadow:0 0 0 7px #FFE14D66,4px 4px 0 var(--line)}
+  .stop.boss .dot{border-radius:12px;background:var(--night);color:var(--pop)}
+  .stop.song .dot{border-radius:12px;background:var(--cyan)}
+  .stop:hover .dot{transform:scale(1.08)}
+  @media (max-width:700px){ .homeHero{grid-template-columns:1fr} .homeHero .avatar{display:none} .bubble::after{display:none} .stageRing{grid-auto-flow:column;justify-content:start;align-items:center} .trail{height:230px} .stop .name{display:none} .stop.now .name{display:block} }
+  .lessonTitle{margin:0 0 4px;font-size:22px}
   .milestone{display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
   .milestone.later{opacity:.6}
   .milestone.current b{color:var(--accent)}
@@ -254,7 +280,7 @@
   .dots i.on{background:var(--good);border-color:var(--good)}
   .verdict.pass{border-color:var(--good)} .verdict.fail{border-color:var(--bad)}
   .verdict p{margin:0 0 6px}
-  @media (max-width:700px){ .milestone{grid-template-columns:1fr} ol.session li{grid-template-columns:1fr auto} ol.session .role{grid-column:1/-1} }
+  @media (max-width:700px){ .milestone{grid-template-columns:1fr} }
 
   /* --- sheet music --- */
   .sheet{margin-top:10px}
@@ -357,9 +383,6 @@
   @keyframes burstIn{from{transform:scale(.2) rotate(-14deg);opacity:0}}
   @keyframes starPop{from{transform:scale(0) rotate(-45deg)}}
   .rankSticker.small{font-size:18px;padding:5px 12px;margin:4px 0 8px;box-shadow:3px 3px 0 var(--line)}
-  .nextUp{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:420px;text-align:right}
-  .nextUp .primary.big{font-size:18px;padding:14px 22px}
-  @media (max-width:700px){ .nextUp{align-items:stretch;text-align:left} }
   .unlock{background:var(--pop);border:2px solid var(--line);padding:6px 10px;display:inline-block}
   .showoff{border-color:var(--line);background:#FFF6CC}
   /* Stage mode: the video is the show */
