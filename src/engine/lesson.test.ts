@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, floorLine, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, floorLine, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -234,5 +234,23 @@ describe('floorLine', () => {
     expect(floorLine(false)).toMatch(/Learn it slowly/);
     expect(floorLine(true, 'Dragging by 41 ms. Lock onto the click.')).toBe('All the notes are there. Dragging by 41 ms. Lock onto the click.');
     expect(floorLine(true)).not.toMatch(/Learn it slowly/);
+  });
+});
+
+describe('proven on another day (R7)', () => {
+  const passed = { ...startProgress(lesson), completedAt: '2026-10-24', bestBpm: 70 };
+  it('the same day is not proven; a pass at the target on a later day is', () => {
+    expect(isProven(proveOnAnotherDay(passed, true, '2026-10-24'))).toBe(false);
+    const p = proveOnAnotherDay(passed, true, '2026-10-26');
+    expect(p.provenAt).toBe('2026-10-26');
+    expect(isProven(p)).toBe(true);
+    expect(isProven(proveOnAnotherDay(passed, false, '2026-10-26'))).toBe(false); // a fail (or under the target) proves nothing
+  });
+  it('once proven it stays, and old saves with a passed review count', () => {
+    const p = proveOnAnotherDay(proveOnAnotherDay(passed, true, '2026-10-26'), false, '2026-10-30');
+    expect(p.provenAt).toBe('2026-10-26');
+    expect(isProven({ ...passed, reviewStage: 1 })).toBe(true);
+    expect(isProven(undefined)).toBe(false);
+    expect(isProven(proveOnAnotherDay(startProgress(lesson), true, '2026-10-26'))).toBe(false); // never finished: nothing to prove
   });
 });

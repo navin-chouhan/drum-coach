@@ -1,4 +1,4 @@
-import { dueReviews, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson.ts';
+import { dueReviews, isProven, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson.ts';
 
 export type SessionRole = 'warmup' | 'review' | 'skill' | 'groove' | 'record'; // record: one take to beat your best
 export type SessionItem = { role: SessionRole; lessonId: string; minutes: number };
@@ -16,6 +16,16 @@ export const checkpointsOf = (m: Milestone, lessons: Lesson[], profile: Profile)
   visibleLessons(lessons.filter(l => m.checkpoints.includes(l.id)), profile);
 
 /** The first milestone with an unpassed checkpoint; undefined when the whole path is done. */
+/**
+ * A rank: locked until its checkpoints pass, earned when they do (never blocks the next stage), proven when every
+ * checkpoint passed again on a later day (R7). `proven` of `total` checkpoints, for "prove it on another day (1 of 2)".
+ */
+export function rankState(m: Milestone, lessons: Lesson[], progress: Progress, profile: Profile): { state: 'locked' | 'earned' | 'proven'; proven: number; total: number } {
+  const cps = checkpointsOf(m, lessons, profile), proven = cps.filter(l => isProven(progress[l.id])).length;
+  const state = !cps.length || cps.some(l => !done(progress, l.id)) ? 'locked' : proven === cps.length ? 'proven' : 'earned';
+  return { state, proven, total: cps.length };
+}
+
 export const currentMilestone = (milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile) =>
   milestones.find(m => checkpointsOf(m, lessons, profile).some(l => !done(progress, l.id)));
 

@@ -60,7 +60,15 @@ export type LessonProgress = {
   stars?: number; // best 1–3 earned when the lesson completes (older saves: none)
   layer?: number; // index into the step's `layers` (older saves: none = 0)
   bestStreak?: number; // best "in a row" on a streak challenge's record take
+  provenAt?: string; // passed again at its target on a later day than completedAt (R7: a rank's ✓ proven)
 };
+
+/** Proven: passed again on a later day. Old saves count a passed review (reviewStage ≥ 1, always a later day). */
+export const isProven = (p?: LessonProgress) => !!p?.completedAt && (!!p.provenAt || p.reviewStage >= 1);
+/** After a take of a finished lesson: a pass at its target on a later day proves it. Once proven it stays. */
+export function proveOnAnotherDay(p: LessonProgress, passedAtTarget: boolean, today: string): LessonProgress {
+  return passedAtTarget && p.completedAt && !p.provenAt && today > p.completedAt ? { ...p, provenAt: today } : p;
+}
 
 export type Tool = 'jam' | 'copy' | 'trade' | 'free' | 'challenge' | 'layers' | 'bite' | 'drill';
 /** Which coach tool a step uses (server/prompts/lesson.md). */

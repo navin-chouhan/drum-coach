@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { startProgress, type Lesson, type LessonKind, type LessonProgress, type Milestone } from './lesson';
-import { buildSession, candidates, currentMilestone, studentRead } from './planner';
+import { buildSession, candidates, currentMilestone, rankState, studentRead } from './planner';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
 const L = (id: string, level: number, kind: LessonKind, o: Partial<Lesson> = {}): Lesson =>
@@ -75,5 +75,15 @@ describe('student read', () => {
     expect(studentRead(stars(3, 3), [run(99, 30), run(99, 30), run(99, 30), run(99, 30)]).pace).toBe('steady'); // landing, but loose
     // A beginner landing three in four but all over the place (wider than any checkpoint allows), nothing finished yet
     expect(studentRead({}, [run(75, 75), run(80, 70), run(70, 80), run(76, 75)]).pace).toBe('struggling');
+  });
+});
+
+describe('rankState (R7)', () => {
+  const m = milestones[0]; // checkpoint: rests
+  const p = (o: Partial<LessonProgress>) => ({ ...startProgress(lessons[1]), ...o });
+  it('locked, earned, then proven on another day', () => {
+    expect(rankState(m, lessons, {}, profile)).toEqual({ state: 'locked', proven: 0, total: 1 });
+    expect(rankState(m, lessons, { rests: p({ completedAt: '2026-10-24' }) }, profile)).toEqual({ state: 'earned', proven: 0, total: 1 });
+    expect(rankState(m, lessons, { rests: p({ completedAt: '2026-10-24', provenAt: '2026-10-26' }) }, profile)).toEqual({ state: 'proven', proven: 1, total: 1 });
   });
 });
