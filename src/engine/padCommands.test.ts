@@ -14,6 +14,7 @@ describe('padCommands', () => {
     expect(feed([['tom1', 0], ['tom1', 300]])).toEqual(['faster']);
     expect(feed([['ride', 0], ['ride', 300]])).toEqual(['next']);
     expect(feed([['tom2', 0], ['tom2', 300]])).toEqual(['listen']);
+    expect(feed([['snare', 0], ['snare', 300]])).toEqual(['again']);
   });
   it('three quick hi-hat pedal presses are yes; two are not, nor during a take', () => {
     expect(feed([['hhPedal', 0], ['hhPedal', 250], ['hhPedal', 500]])).toEqual(['yes']);
@@ -23,7 +24,7 @@ describe('padCommands', () => {
   it('slow, mixed or unmapped hits are not', () => {
     expect(feed([['crash', 0], ['crash', 500]])).toEqual([]);
     expect(feed([['crash', 0], ['snare', 100], ['crash', 200]])).toEqual([]);
-    expect(feed([['snare', 0], ['snare', 100], ['kick', 200], ['kick', 300]])).toEqual([]);
+    expect(feed([['kick', 0], ['kick', 100], ['hhClosed', 200], ['hhClosed', 300]])).toEqual([]);
   });
   it('a third hit does not fire again', () => {
     expect(feed([['crash', 0], ['crash', 150], ['crash', 300]])).toEqual(['yes']);

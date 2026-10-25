@@ -112,3 +112,16 @@ export function barsReady(runs: RunRow[], songId: string, totalBars: number): nu
     for (let b = r.fromBar; b <= Math.min(r.toBar, totalBars); b++) ok.add(b);
   return ok.size;
 }
+
+/** Practice's "For you": what you played lately, then the coach's drills, a warm-up rudiment, your level, a step up. */
+export function forYou<C extends { id: string; kind?: string; level?: number; source?: string }>(charts: C[], runs: RunRow[], level: number, n = 8) {
+  const out: { chart: C; why: string }[] = [], has = (c: C) => out.some(o => o.chart === c);
+  const add = (c: C | undefined, why: string) => { if (c && !has(c) && out.length < n) out.push({ chart: c, why }); };
+  const recent = [...new Set([...runs].reverse().map(r => r.chartId))];
+  recent.slice(0, 3).forEach(id => add(charts.find(c => c.id === id), 'played lately'));
+  charts.filter(c => c.source === 'ai').slice(-2).reverse().forEach(c => add(c, 'from your coach'));
+  add(charts.find(c => c.kind === 'rudiment' && (c.level ?? 0) <= level && !has(c)), 'good warm-up');
+  charts.filter(c => c.level === level).forEach(c => add(c, 'at your level'));
+  charts.filter(c => c.level === level + 1).forEach(c => add(c, 'a step up'));
+  return out;
+}

@@ -444,3 +444,49 @@
   .lessonScreen .sheetTip{display:none} /* the live tip shows big above the music instead */
   @media (max-width:1100px){ .lessonMain{grid-template-columns:1fr} .moves{grid-template-columns:1fr 1fr} .say .bubble{font-size:22px} }
   @media (max-width:700px){ .moves{grid-template-columns:1fr} .bigTempo{margin-left:0} .say .avatar{display:none} }
+
+  /* --- Practice at the kit: chooser, tempo steppers, bar picker, on/off switches --- */
+  .moves.five{grid-template-columns:2fr repeat(4,1fr)}
+  .tempoStep{width:46px;height:46px;border:3px solid var(--line);border-radius:50%;display:inline-grid;place-items:center;font:800 24px system-ui;background:var(--panel2);padding:0}
+  .barPick{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 12px 0;color:#fff;font-weight:700}
+  .barPick button{background:transparent;color:#fff;border:2px solid #fff;border-radius:6px;padding:2px 12px}
+  .barPick button.on{background:var(--pop);color:var(--line);border-color:var(--pop)}
+  .barPick input{width:60px}
+  .toggles{display:flex;flex-direction:column;gap:8px}
+  .toggles .tg{display:flex;justify-content:space-between;align-items:center;gap:10px;border:2px solid var(--line);border-radius:0;padding:8px 12px;font-size:16px;font-weight:700;background:var(--panel);text-align:left}
+  .toggles .tg em{font-style:normal;background:var(--good);color:#fff;border-radius:999px;padding:2px 12px;font-size:13px;flex:none}
+  .toggles .tg em.off{background:#BBB}
+  .chooserBar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .chooserBar button{font-weight:700;font-size:14px;padding:6px 14px}
+  .chooserBar input{margin-left:auto;min-width:200px;font-size:14px;padding:6px 12px;border:2px solid var(--line);border-radius:999px}
+  .exGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .exCard{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:140px;text-align:left;padding:14px;border:3px solid var(--line);border-radius:0;box-shadow:4px 4px 0 var(--line);background:var(--panel2)}
+  .exCard .ic{font-size:34px;margin-bottom:auto}
+  .exCard b{font:800 18px var(--display)}
+  .exCard .tag{background:var(--night);color:var(--nightText);font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px}
+  .exCard.recent{background:#E3F5EA}.exCard.ai{border-style:dashed}
+  @media (max-width:1100px){ .moves.five{grid-template-columns:1fr 1fr} }
+
+  /* --- intro slides before the first take: big, moved from the kit (hi-hat forward, snare back) --- */
+  .introSlides{position:fixed;inset:0;z-index:50;background-color:var(--bg);background-image:radial-gradient(#ffffff66 1.6px,transparent 1.8px);background-size:12px 12px;display:grid;padding:4vh 4vw}
+  .introSlides .slide{position:relative;background:var(--panel);border:4px solid var(--line);box-shadow:10px 10px 0 var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;padding:40px}
+  .introSlides .slide{animation:slideIn .3s cubic-bezier(.2,.8,.25,1)}
+  @keyframes slideIn{from{opacity:0;transform:translateX(60px) rotate(1deg)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .introSlides .slide{animation:none} }
+  .introSlides .pg{position:absolute;top:18px;left:24px;font:800 20px var(--display)}
+  .introSlides .k{font:800 24px var(--display);background:var(--night);color:var(--pop);padding:4px 14px}
+  .introSlides .t{font:800 clamp(40px,6vw,76px)/1.05 var(--display);margin:0}
+  .introSlides .s{font:700 clamp(22px,2.8vw,36px)/1.3 system-ui;max-width:1100px;margin:0}
+  .introSlides .s.small{font-size:clamp(18px,2vw,26px)}
+  .introSlides .limbs{display:flex;flex-wrap:wrap;justify-content:center;gap:22px}
+  .introSlides .limb{border:4px solid var(--line);box-shadow:6px 6px 0 var(--line);padding:20px 28px;background:var(--panel2);font:800 30px system-ui;display:flex;flex-direction:column;align-items:center;min-width:220px}
+  .introSlides .limb b{font:800 64px var(--display)}
+  .introSlides .limb span{font-size:22px;color:var(--muted)}
+  .introSlides .countBar{display:grid;gap:10px;width:min(1100px,92%)}
+  .introSlides .countBar div{border:3px solid var(--line);padding:12px 4px;font:800 clamp(24px,3vw,44px) var(--display);background:var(--panel)}
+  .introSlides .countBar div.beat{background:var(--pop)}
+  .introSlides .countBar small{display:block;font:800 clamp(14px,1.6vw,22px) system-ui;color:var(--accent)}
+  .slideNav{position:absolute;bottom:24px;left:0;right:0;display:flex;justify-content:center;gap:14px}
+  .slideNav button{font:800 20px system-ui;border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line);padding:8px 16px}
+  .slideNav button.go{background:var(--accent);color:#fff}
+  .slideNav i{font-style:normal;background:var(--pop);color:var(--line);border-radius:999px;padding:1px 10px;margin-left:8px;font-size:16px}

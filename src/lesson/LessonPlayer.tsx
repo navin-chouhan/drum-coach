@@ -20,6 +20,8 @@ import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
 import { canRunAction, coachTake, dropCoachAction, onCoachAction, runAction, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
+import { CoachLine, LiveHint, Move } from '../play/AtKit';
+import { IntroSlides } from '../play/IntroSlides';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -168,7 +170,18 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false,
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
   });
-  const play = (demo: boolean, atBpm = bpm, wait = false) => { setDetails(false); start(chart, { ...options(demo, wait), speed: atBpm / chart.bpm }); };
+  // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).
+  const [intro, setIntro] = useState<{ run: () => void }>();
+  const introShown = useRef(new Map<string, number>());
+  const play = (demo: boolean, atBpm = bpm, wait = false) => {
+    setDetails(false);
+    const run = () => start(chart, { ...options(demo, wait), speed: atBpm / chart.bpm });
+    const key = `${stepIdx}/${p.layer ?? 0}`, seen = introShown.current.get(key);
+    if (!demo && !wait && getSettings().intro !== false && (seen === undefined || Math.abs(seen - atBpm) > 10)) {
+      introShown.current.set(key, atBpm); setIntro({ run }); return;
+    }
+    run();
+  };
   // Listen back: your own hits, at their real times, with the click.
   const hearTake = (t: Finished) => start(takeChart(t.hits, { zero: t.zero, beatMs: 60000 / (t.chart.bpm * t.options.speed), beats: t.run.beats, beatsPerBar: t.run.beatsPerBar, title: 'Your take', timeSignature: t.chart.timeSignature }),
     { ...options(true), fromBar: 1, toBar: 999, repeats: 1, speed: 1, activeLanes: undefined });
@@ -232,6 +245,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   return (
     <div className={`lessonScreen ${playing ? 'playing' : ''}`}>
       {celebration}
+      {intro && <IntroSlides title={lesson.title} sub={step.title} bpm={bpm} what={step.text} notes={chart.notes.filter(n => !n.auto && (!lanes || lanes.includes(n.drum)))}
+        beatsPerBar={beatsPerBar(chart)} focus={outcome?.reason ?? (hints ? howHint : undefined)} onDone={() => { const r = intro.run; setIntro(undefined); r(); }} onClose={() => setIntro(undefined)} />}
       <div className="lbar card">
         <button className="link back" onClick={() => { stop(); onBack(); }}>← Journey</button>
         <h2>{lesson.title}</h2>
@@ -242,15 +257,12 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
       </div>
 
       {playing ? <LiveHint /> : <>
-        <div className="say">
-          <div className="avatar" aria-hidden>🥁</div>
-          <div className="bubble" aria-live="polite">{line}</div>
-        </div>
+        <CoachLine line={line} />
         <div className="moves">
-          <button className="move go" autoFocus onClick={main.run}><b>{main.label}</b><span className="g"><i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"</span></button>
-          <button className="move" onClick={listen}><b>{f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'}</b><span className="g"><i>tom 2 × 2</i></span></button>
-          <button className="move alt" onClick={slower}><b>🐢 {oneTake || p.bpm <= MIN_BPM ? 'Learn it slowly' : 'Slower'}</b><span className="g"><i>floor × 2</i></span></button>
-          <button className="move alt" onClick={() => { stop(); goNext(); }}><b>⏭ {onNext ? 'Skip to next' : 'Journey'}</b><span className="g"><i>ride × 2</i></span></button>
+          <Move go label={main.label} onClick={main.run} />
+          <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
+          <Move alt label={`🐢 ${oneTake || p.bpm <= MIN_BPM ? 'Learn it slowly' : 'Slower'}`} gesture="floor × 2" onClick={slower} />
+          <Move alt label={`⏭ ${onNext ? 'Skip to next' : 'Journey'}`} gesture="ride × 2" onClick={() => { stop(); goNext(); }} />
         </div>
       </>}
 
@@ -300,15 +312,6 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
       </div>
     </div>
   );
-}
-
-/** While you play: the live tip, big enough to read from the throne. */
-function LiveHint() {
-  useSyncExternalStore(subscribePlayer, playerVersion);
-  const [, tick] = useState(0);
-  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 500); return () => clearInterval(t); }, []);
-  const c = player.cue, show = c && performance.now() - c.at < 3000;
-  return <div className={`liveHint ${show ? 'on' : ''}`} role="status">{show ? `💡 ${c!.cue.text}` : ' '}</div>;
 }
 
 const LANE_NAMES: Record<string, string> = { hihat: 'hi-hat', hhOpen: 'open hi-hat', hhPedal: 'hi-hat foot', tom1: 'tom 1', tom2: 'tom 2', floor: 'floor tom' };

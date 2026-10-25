@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, suggestNext, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, forYou, suggestNext, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -62,5 +62,15 @@ describe('barsReady', () => {
       run({ chartId: 'yt-a', accuracy: 70, fromBar: 7, toBar: 9 }), run({ chartId: 'yt-b', accuracy: 99, fromBar: 7, toBar: 9 }), run({ chartId: 'yt-a', accuracy: 99 })];
     expect(barsReady(runs, 'yt-a', 24)).toBe(6);
     expect(barsReady(runs, 'yt-a', 5)).toBe(5);
+  });
+});
+
+describe('forYou', () => {
+  const charts = [{ id: 'a', kind: 'groove', level: 1 }, { id: 'r', kind: 'rudiment', level: 1 }, { id: 'n', kind: 'groove', level: 2 }, { id: 'x', kind: 'fill', level: 2 }, { id: 'ai1', source: 'ai' }];
+  it('recent first, then the coach, a warm-up, and new at this level', () => {
+    const picks = forYou(charts, [run({ chartId: 'n' }), run({ chartId: 'a' })], 2);
+    expect(picks.map(p => `${p.chart.id}:${p.why}`)).toEqual(['a:played lately', 'n:played lately', 'ai1:from your coach', 'r:good warm-up', 'x:at your level']);
+    expect(forYou(charts, [], 1).map(p => `${p.chart.id}:${p.why}`)).toEqual(['ai1:from your coach', 'r:good warm-up', 'a:at your level', 'n:a step up', 'x:a step up']);
+    expect(forYou(charts, [], 2, 2)).toHaveLength(2);
   });
 });

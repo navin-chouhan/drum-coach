@@ -97,3 +97,32 @@ export function noteHints(notes: { t: number; drum: string }[], beatsPerBar: num
     return { t, count: frac ? SLOT_WORD[String(frac)] ?? '' : String(Math.floor(pos) + 1), limbs: limbs.join('+') };
   });
 }
+
+const DRUM_NAME: Record<string, string> = { hihat: 'hi-hat', hhOpen: 'open hi-hat', hhPedal: 'hi-hat pedal', ride: 'ride', crash: 'crash', snare: 'snare', tom1: 'tom 1', tom2: 'tom 2', floor: 'floor tom', kick: 'kick' };
+const LIMB_NAME: Record<string, string> = { R: 'right hand', L: 'left hand', K: 'right foot', H: 'left foot' };
+/**
+ * Who plays what, for the intro slides: each limb (same letters as noteHints), its drums and when in the first bar
+ * ("every 8th", "every beat", "1 and 3", "2, & of 3"…).
+ */
+export function limbPlan(notes: { t: number; drum: string }[], beatsPerBar: number) {
+  const first = notes.filter(n => n.t < beatsPerBar - 1e-6);
+  const hints = noteHints(first, beatsPerBar);
+  return (['R', 'L', 'K', 'H'] as const).flatMap(limb => {
+    const at = hints.filter(h => h.limbs.split('+').includes(limb));
+    if (!at.length) return [];
+    // Which of the drums at each moment are this limb's: with a cymbal and a drum together, the cymbal is R's, the drum L's.
+    const mine = (t: number) => {
+      const here = first.filter(n => Math.abs(n.t - t) < 1e-3).map(n => n.drum);
+      if (limb === 'K') return here.filter(d => d === 'kick');
+      if (limb === 'H') return here.filter(d => d === 'hhPedal');
+      const hands = here.filter(d => d !== 'kick' && d !== 'hhPedal'), cym = hands.filter(d => CYMBALS.has(d)), skins = hands.filter(d => !CYMBALS.has(d));
+      return cym.length && skins.length ? (limb === 'R' ? cym : skins) : hands;
+    };
+    const drums = [...new Set(at.flatMap(h => mine(h.t)))].map(d => DRUM_NAME[d] ?? d);
+    const slots = at.map(h => h.t);
+    const when = slots.length === beatsPerBar * 2 && slots.every((t, i) => Math.abs(t - i / 2) < 1e-3) ? 'every 8th'
+      : slots.length === beatsPerBar && slots.every((t, i) => Math.abs(t - i) < 1e-3) ? 'every beat'
+      : at.map(h => (h.count === '&' ? `& of ${Math.floor(h.t) + 1}` : h.count)).join(', ').replace(/, ([^,]+)$/, ' and $1');
+    return [{ limb, name: LIMB_NAME[limb], drums, when }];
+  });
+}
