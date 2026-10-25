@@ -49,9 +49,9 @@ export function onCoachAction(fn: ActionHandler) {
   };
 }
 
-/** Leaving the screen a suggestion was for: keep the coach's words, drop its button (a drill can start anywhere). */
-export function dropCoachAction() {
-  if (state.reply?.action && state.reply.action.kind !== 'drill') set({ reply: { ...state.reply, action: undefined } });
+/** Leaving the screen a suggestion was for: keep the coach's words, drop its button (a drill can start anywhere, unless `all`). */
+export function dropCoachAction(all = false) {
+  if (state.reply?.action && (all || state.reply.action.kind !== 'drill')) set({ reply: { ...state.reply, action: undefined } });
 }
 
 type Action = NonNullable<CoachReply['action']>;

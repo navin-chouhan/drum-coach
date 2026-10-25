@@ -101,6 +101,7 @@ Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `
 | 15 | After a floor fail with missed notes the line said "Try Learn it slowly" but the big move (hi-hat pedal × 3 / "yes") was "▶ Again". | UX | The main move becomes "🐢 Learn it slowly" in that case. |
 | 16 | "🔍 Fix bar 2" worked (bar 2 looped 4× at 50 instead of 60, the ladder didn't move), but its verdict always said "Bar 2 sounds better", even when the loop went badly. | Honesty | "sounds better" only when the loop passed, else "is getting there". |
 | 17 | After ~15 rough takes (avg 75% landed, hits wandering ±75 ms, no lesson finished, comfortable at 40 BPM) the student read was *steady*, not *struggling*: the cut-off was accuracy < 75 and spread was ignored. The coach would write for a steady student. | Teaching | A spread wider than 40 ms (looser than any checkpoint allows) also reads as struggling (`studentRead`). On the test data the read is now *struggling*. |
+| 18 | After "Lesson complete" (M4 kept the verdict, with the coach's short line under it: verified) the big move and the kit's "yes" became the coach's "Try a slower tempo", replaying a finished lesson instead of moving on. | UX | A record, rank up or finished lesson keeps the app's own next move; the coach's button is dropped (`dropCoachAction(true)`), its words stay. |
 
 ### Open observations (not fixed yet)
 - **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very

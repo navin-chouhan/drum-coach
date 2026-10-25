@@ -299,7 +299,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const coach = useCoach(), opened = useRef(Date.now()).current;
   const fresh2 = replyFor(coach, f, opened); // the coach's answer to this take
   const goNext = onNext ?? onBack;
-  const coachAct = screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
+  // A record, a rank up or a finished lesson keeps the app's verdict and its next move; the coach's words go under it.
+  const big = !!outcome && (outcome.event === 'lessonDone' || !!outcome.rankUp || (role === 'record' && outcome.passed));
+  const coachAct = big ? undefined : screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
+  useEffect(() => { if (big && fresh2?.action) dropCoachAction(true); }, [big, fresh2]); // the kit's "yes" moves on too
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
   const resting = !!step.rest && !oneTake;
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
@@ -366,8 +369,6 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
   const toTarget = Math.max(0, Math.min(1, (bpm - step.bpm.start) / Math.max(1, step.bpm.target - step.bpm.start)));
   // The verdict never turns into "…" while the coach thinks: the thinking shows as a small line under it.
-  // A record, a rank up or a finished lesson keeps the app's verdict; the coach's words go under it.
-  const big = !!outcome && (outcome.event === 'lessonDone' || !!outcome.rankUp || (role === 'record' && outcome.passed));
   const said = coachLine(outcome?.say, fresh2, big);
   const line = said.line ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
     : canProbe ? (probeExplained ? `Find your tempo from ${step.bpm.start} BPM.` : "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard.")
