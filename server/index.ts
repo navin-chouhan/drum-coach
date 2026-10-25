@@ -8,7 +8,7 @@ import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import { suggestNext, type RunRow } from '../src/engine/progress.ts';
 import { ask, getProvider } from './ai/coach.ts';
-import { applyBites, lessonInput, toLesson } from './ai/lessons.ts';
+import { applyBites, canStandIn, lessonInput, toLesson } from './ai/lessons.ts';
 import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
@@ -346,8 +346,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
     const same = now.find(l => l.title === r.data.title && l.level === input.milestone.level);
     if (same) return { data: same, cached: true };
     // Only a checkpoint of this stage can be stood in for, and only by a lesson that ends in a drill.
-    const end = r.data.steps[r.data.steps.length - 1];
-    const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) && !end.jam && !end.copy && !end.pass?.streak ? r.data.checkpoint : undefined;
+    const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) && canStandIn(r.data.steps[r.data.steps.length - 1]) ? r.data.checkpoint : undefined;
     const lesson = toLesson(applyBites({ ...r.data, checkpoint: cp }, id => { const row = ytById(id); return row && ytSong(row); }), input.milestone.level);
     // The new lesson replaces the coach's unstarted ones for this stage, so they don't pile up.
     const progress = app.lessons ?? {};

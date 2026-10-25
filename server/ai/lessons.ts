@@ -3,7 +3,7 @@ import { beatsPerBar } from '../../src/engine/chart.ts';
 import { cutBars } from '../../src/engine/transcribe.ts';
 import type { YtSong } from '../../src/youtube/schemas.ts';
 import type { AiLesson } from '../../src/coach/schemas.ts';
-import { passFor, toolOf, type Lesson, type LessonProgress, type Profile } from '../../src/engine/lesson.ts';
+import { passFor, toolOf, type Lesson, type LessonProgress, type Profile, type Step } from '../../src/engine/lesson.ts';
 import { checkpointsOf, currentMilestone } from '../../src/engine/planner.ts';
 
 // Coach-written lessons: what the coach is told, and how its answer becomes a stored lesson.
@@ -37,6 +37,9 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
     yourEarlierLessons: aiLessons.filter(l => l.level === m.level).map(l => ({ title: l.title, tools: l.steps.map(toolOf), passed: !!progress[l.id]?.completedAt })),
   };
 }
+
+/** A coach lesson may stand in for a checkpoint only if it ends by playing written notes (not improvising or a streak). */
+export const canStandIn = (end: Pick<Step, 'jam' | 'copy' | 'trade' | 'freeBars' | 'pass' | 'layers' | 'bite'>) => ['drill', 'layers', 'bite'].includes(toolOf(end as Step));
 
 /** Song bites: each bite step's chart becomes those bars of the saved song; a bite naming no usable song is dropped. */
 export function applyBites(a: AiLesson, song: (id: string) => YtSong | undefined): AiLesson {

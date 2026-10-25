@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AiLessonSchema, RunRecordSchema } from '../../src/coach/schemas';
 import { CURRICULUM } from '../../src/content/curriculum';
 import { startProgress } from '../../src/engine/lesson';
-import { applyBites, lessonInput, toLesson } from './lessons';
+import { applyBites, canStandIn, lessonInput, toLesson } from './lessons';
 
 const profile = { goals: [], minutesPerDay: 25, onboarded: true };
 const done = () => ({ ...startProgress(CURRICULUM[0]), completedAt: '2026-10-01' });
@@ -45,5 +45,9 @@ describe('coach lessons', () => {
     const out = applyBites({ ...l, focus: '', steps: [step] }, id => (id === 'yt1' ? song : undefined));
     expect(out.steps[0]).toMatchObject({ bite: { title: 'Song' }, chart: { bars: 1, notes: [{ t: 0, drum: 'snare' }, { t: 1.5, drum: 'hihat' }] } });
     expect(applyBites({ ...l, focus: '', steps: [step] }, () => undefined).steps[0].bite).toBeUndefined();
+  });
+  it('only a lesson that ends by playing written notes can stand in for a checkpoint', () => {
+    expect([{}, { layers: [['hihat' as const]] }, { bite: { songId: 'x', fromBar: 1, toBar: 2 } }].map(canStandIn)).toEqual([true, true, true]);
+    expect([{ jam: true }, { copy: true }, { trade: true }, { freeBars: [4] }, { pass: { streak: 8 } }].map(canStandIn)).toEqual([false, false, false, false, false]);
   });
 });
