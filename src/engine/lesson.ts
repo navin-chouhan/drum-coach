@@ -1,4 +1,4 @@
-import type { Chart, ChartDrum } from './chart.ts';
+import { beatsPerBar, type Chart, type ChartDrum } from './chart.ts';
 import type { RunStats } from './scoring.ts';
 
 // Lessons, pass criteria, the tempo ladder and spaced review. See docs/LEARNING.md.
@@ -13,8 +13,14 @@ export type Pass = {
   maxSpreadMs?: number;       // consistency: std dev of hit offsets
   maxFlamMs?: number;         // limbs meant to land together: mean split between them
   maxPairDropPct?: number;    // doubles: how much softer the 2nd note of each pair may be
+  streak?: number;            // a mini challenge: this many notes in a row replaces the accuracy and extra-hit bars
 };
 export const DEFAULT_PASS: Pass = { accuracy: 90, maxExtraPct: 15 };
+/** The bar grows with the stage: beginners pass at 75% and stray strokes barely count. */
+export const passFor = (level: number): Pass =>
+  ({ accuracy: [75, 75, 80, 80, 85, 85][level] ?? 90, maxExtraPct: level <= 1 ? 40 : level <= 3 ? 25 : 15 });
+/** Good window (ms) by level: wider while you're finding the click. */
+export const goodMsFor = (level: number) => (level <= 1 ? 150 : 100);
 
 export type Step = {
   title: string; text: string; chart: Chart;
@@ -22,6 +28,8 @@ export type Step = {
   bpm: { start: number; target: number };
   pass?: Partial<Pass>;
   gapBars?: number;
+  jam?: boolean;  // play along for fun: any full take counts, the tempo stays put
+  copy?: boolean; // call and response: the app plays each bar, you echo it (see copyChart)
 };
 export type LessonKind = NonNullable<Chart['kind']>;
 export type Lesson = {
@@ -40,18 +48,37 @@ export type LessonProgress = {
   stars?: number; // best 1–3 earned when the lesson completes (older saves: none)
 };
 
-export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 3, BPM_STEP = 5;
+/** Call and response: each bar is played by the app (call), then by you (echo). A 2-bar chart becomes 4 bars. */
+export function copyChart(c: Chart): Chart {
+  const bpb = beatsPerBar(c);
+  const notes = c.notes.flatMap(n => {
+    const bar = Math.floor(n.t / bpb + 1e-6), t = n.t + bar * bpb;
+    return [{ ...n, t, auto: true }, { ...n, t: t + bpb }];
+  }).sort((a, b) => a.t - b.t);
+  return { ...c, bars: c.bars * 2, notes };
+}
+
+export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 2, BPM_STEP = 5, MIN_BPM = 40, ROUGH_ACCURACY = 60;
 export const REVIEW_DAYS = [2, 5, 12, 30];
 
 export const startProgress = (l: Lesson): LessonProgress =>
   ({ step: 0, bpm: l.steps[0].bpm.start, clean: 0, fails: 0, bestBpm: 0, reviewStage: 0 });
 
-/** Did this take pass? `reason` is the one thing to fix, in plain words. */
-export function checkPass(s: RunStats, p?: Partial<Pass>): { ok: boolean; reason?: string } {
-  const c = { ...DEFAULT_PASS, ...p };
+/**
+ * Did this take pass? `reason` is the one thing to fix, in plain words. With a `level`, the bar is that level's
+ * (`passFor`) and a lesson may relax it but not make it stricter.
+ */
+export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number): { ok: boolean; reason?: string } {
+  const base = level === undefined ? DEFAULT_PASS : passFor(level);
+  const c = level === undefined ? { ...base, ...p }
+    : { ...base, ...p, accuracy: Math.min(base.accuracy, p?.accuracy ?? 100), maxExtraPct: Math.max(base.maxExtraPct, p?.maxExtraPct ?? 0) };
   if (s.reaction) return { ok: false, reason: `You're hitting ${s.reaction} ms after each click. Play with the click, not after it.` };
-  if (s.accuracy < c.accuracy) return { ok: false, reason: `${s.accuracy}% of notes on time, ${c.accuracy}% needed. ${worstDrum(s)}` };
-  if (s.total && (s.extra / s.total) * 100 > c.maxExtraPct) return { ok: false, reason: `${s.extra} extra hits. Play only the notes shown.` };
+  if (c.streak !== undefined) {
+    if (s.streak < c.streak) return { ok: false, reason: `Best run: ${s.streak} in a row, aiming for ${c.streak}. ${worstDrum(s)}`.trim() };
+  } else {
+    if (s.accuracy < c.accuracy) return { ok: false, reason: worstDrum(s) || 'A few notes slipped away from the click.' };
+    if (s.total && (s.extra / s.total) * 100 > c.maxExtraPct) return { ok: false, reason: `${s.extra} extra hits. Play only the notes shown.` };
+  }
   if (c.maxAbsOffsetMs !== undefined && Math.abs(s.meanOffset) > c.maxAbsOffsetMs)
     return { ok: false, reason: `${s.meanOffset < 0 ? 'Rushing' : 'Dragging'} by ${Math.abs(s.meanOffset)} ms. Lock onto the click.` };
   if (c.maxVelocityCv !== undefined && s.velocity.normalCv > c.maxVelocityCv)
@@ -91,22 +118,34 @@ export function starsFor(s: RunStats): 1 | 2 | 3 {
   return 1;
 }
 
-export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'stepDone' | 'lessonDone';
+export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'atFloor' | 'stepDone' | 'lessonDone';
 
-/** Tempo ladder: CLEAN_TAKES passes → +5 BPM up to the target, then the next step; repeated fails → −5 BPM. */
-export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string): { next: LessonProgress; event: LadderEvent } {
+/**
+ * Tempo ladder that keeps you in the sweet spot. Pass: CLEAN_TAKES clean takes → +5 BPM up to the target, then the
+ * next step; below the step's start tempo (you eased off) one clean take climbs +10. Fail: a rough take (under
+ * ROUGH_ACCURACY % landed) → −10 at once; FAILS_BEFORE_SLOWDOWN close ones → −5. Never below MIN_BPM ('atFloor').
+ * A `jam` step counts any take as clean.
+ */
+export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
+  if (step.jam) passed = true;
   if (!passed) {
-    const fails = p.fails + 1;
-    if (fails < FAILS_BEFORE_SLOWDOWN || p.bpm <= step.bpm.start) return { next: { ...p, clean: 0, fails: fails >= FAILS_BEFORE_SLOWDOWN ? 0 : fails }, event: 'hold' };
-    return { next: { ...p, clean: 0, fails: 0, bpm: Math.max(step.bpm.start, p.bpm - BPM_STEP) }, event: 'slowDown' };
+    const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
+    if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };
+    if (p.bpm <= MIN_BPM) return { next: { ...p, clean: 0, fails: 0 }, event: 'atFloor' };
+    return { next: { ...p, clean: 0, fails: 0, bpm: Math.max(MIN_BPM, p.bpm - (rough ? 2 * BPM_STEP : BPM_STEP)) }, event: 'slowDown' };
   }
+  const eased = p.bpm < step.bpm.start;
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
-  if (clean < CLEAN_TAKES) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
-  if (p.bpm < step.bpm.target) return { next: { ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + BPM_STEP) }, event: 'up' };
-  if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm }, event: 'stepDone' };
+  if (step.jam) {
+    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm }, event: 'stepDone' };
+  } else {
+    if (clean < CLEAN_TAKES && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
+    if (p.bpm < step.bpm.target) return { next: { ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + (eased ? 2 : 1) * BPM_STEP) }, event: 'up' };
+    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm }, event: 'stepDone' };
+  }
   const done = p.completedAt ? {} : { completedAt: today, reviewStage: 0, reviewDue: addDays(today, REVIEW_DAYS[0]) };
   return { next: { ...p, clean: 0, fails: 0, bestBpm, ...done }, event: 'lessonDone' };
 }

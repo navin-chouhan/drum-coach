@@ -82,6 +82,15 @@ describe('stats', () => {
   });
 });
 
+describe('streaks', () => {
+  it('counts the longest run of hits and the comebacks after a miss', () => {
+    const notes = Array.from({ length: 6 }, (_, i) => ({ t: i, drum: 'snare' as const, i, bar: 0, pos: i % 4 }));
+    const hit = { judgement: 'good' as const, offset: 5, velocity: 90 }, miss = { judgement: 'miss' as const };
+    const s = computeStats({ notes, beats: 6, beatsPerBar: 4 }, [hit, hit, miss, hit, hit, hit], 0);
+    expect(s).toMatchObject({ streak: 3, recoveries: 1 });
+  });
+});
+
 describe('estimateLatency', () => {
   const clicks = Array.from({ length: 16 }, (_, i) => 1000 + i * 500);
   it('returns the median offset', () => {

@@ -1,7 +1,7 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
-import { afterReview, checkPass, CLEAN_TAKES, ladderStep, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, checkPass, CLEAN_TAKES, copyChart, goodMsFor, ladderStep, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration } from './Celebration';
@@ -40,6 +40,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const [celebrated, setCelebrated] = useState<Finished>(); // the take whose celebration was closed
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
+  const lastAccuracy = useRef<number>(undefined); // for "better than last take"
 
   const p = progressOf(lesson);
   const oneTake = role === 'warmup' || role === 'review';
@@ -56,14 +57,21 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   useEffect(() => subscribePlayer(() => {
     const f = player.finished;
     if (player.phase !== 'done' || !f || f.options.lesson?.id !== lesson.id || outcomes.has(f)) return;
-    const check = checkPass(f.stats, step.pass);
+    // Wait mode is for learning the pattern: no verdict, no ladder, not saved.
+    if (f.options.wait) { outcomes.set(f, { passed: false, itemDone: false, text: 'Nice and slow. When it feels easy, press Play to go with the click.' }); setVersion(v => v + 1); return; }
+    const check = checkPass(f.stats, step.pass, lesson.level);
     const p = progressOf(lesson);
+    const st = f.stats, prev = lastAccuracy.current;
+    lastAccuracy.current = st.accuracy;
+    // What went right first: notes landed, best run, comebacks, better than last take.
+    const landed = `${st.total - st.miss} of ${st.total} notes landed, best run ${st.streak} in a row`
+      + (prev !== undefined && st.accuracy > prev + 2 ? ', better than last take' : st.recoveries >= 3 ? `, and you got back in ${st.recoveries} times without stopping` : '') + '.';
     let o: Outcome;
     if (oneTake) {
       if (role === 'review') saveProgress(lesson.id, afterReview(p, check.ok, today()));
-      o = { passed: check.ok, itemDone: true, text: check.ok ? `${f.stats.accuracy}% · still solid.` : `${check.reason} It comes back tomorrow.` };
+      o = { passed: check.ok, itemDone: true, text: check.ok ? `${landed} Still solid.` : `${landed} We'll come back to this one tomorrow.` };
     } else {
-      const { next, event } = ladderStep(p, lesson, check.ok, today());
+      const { next, event } = ladderStep(p, lesson, check.ok, today(), st.accuracy);
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
       saveProgress(lesson.id, stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next);
       // A coach lesson standing in for a checkpoint passes it; the checkpoint itself comes back for review.
@@ -74,13 +82,15 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
       const stage = MILESTONES.find(m => m.checkpoints.includes(cp ? cp.id : lesson.id)), s = getSettings();
       const rankUp = event === 'lessonDone' && !p.completedAt && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
       const msg: Record<LadderEvent, string> = {
-        hold: check.ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : `${check.reason}`,
-        up: `Two clean takes. Up to ${next.bpm} BPM!`,
-        slowDown: `${check.reason} Let's slow down to ${next.bpm} BPM and lock it in.`,
+        hold: check.ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
+        up: `Up to ${next.bpm} BPM!`,
+        slowDown: `Let's take it to ${next.bpm} BPM. Slower is how it sticks.`,
+        atFloor: 'This one is tricky. Try "Learn it slowly": the music waits for each note.',
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
         lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
       };
-      o = { passed: check.ok, event, reason: check.reason, text: (check.ok ? 'Pass. ' : 'Not yet. ') + msg[event], itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
+      const ok = check.ok || !!step.jam;
+      o = { passed: ok, event, reason: ok ? undefined : check.reason, text: `${ok ? 'Nice! ' : ''}${landed} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
     // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting).
@@ -88,22 +98,24 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
       requestCoachLesson(`after-${lesson.id}-${f.startedAt}`);
     // Between takes of a step the verdict stays on screen; the coach speaks once the step or lesson is done.
     if (o.itemDone && getSettings().voice) void say(o.text);
-    if (o.itemDone) coachTake(f, { lesson: lesson.title, step: step.title, passed: check.ok, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target });
+    if (o.itemDone) coachTake(f, { lesson: lesson.title, step: step.title, passed: o.passed, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target });
     if (o.itemDone) onItemDone?.();
-    saveRun(f, { passed: check.ok });
+    saveRun(f, { passed: o.passed });
     setSecs(s => s + f.durationS);
     setVersion(v => v + 1);
   }), [lesson, step, oneTake, role, onItemDone]);
   useEffect(() => () => { stop(); dropCoachAction(); }, []);
 
-  const options = (demo: boolean): PlayOptions => ({
-    // 8 bars a take; the proving take (last step at its target tempo) is 16, since grooves drift around bar 12.
-    fromBar: 1, toBar: step.chart.bars, repeats: Math.max(1, Math.ceil((stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target ? 16 : 8) / step.chart.bars)),
-    speed: bpm / step.chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait: false,
-    activeLanes: step.activeLanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1,
+  const chart = step.copy ? copyChart(step.chart) : step.chart;
+  const options = (demo: boolean, wait = false): PlayOptions => ({
+    // Short takes so a rough one is over quickly: 4 bars; 8 for the proving take (last step at its target tempo),
+    // a jam (long enough to enjoy) and copy-me (4 calls and 4 echoes).
+    fromBar: 1, toBar: chart.bars, repeats: Math.max(1, Math.ceil((step.copy || step.jam || (stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target) ? 8 : 4) / chart.bars)),
+    speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
+    activeLanes: step.activeLanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level),
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
   });
-  const play = (demo: boolean, atBpm = bpm) => { setDetails(false); start(step.chart, { ...options(demo), speed: atBpm / step.chart.bpm }); };
+  const play = (demo: boolean, atBpm = bpm, wait = false) => { setDetails(false); start(chart, { ...options(demo, wait), speed: atBpm / chart.bpm }); };
   // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.
   useEffect(() => onCoachAction(a => {
     if (a.kind === 'next') { (onNext ?? onBack)(); return true; } // opened outside today's session: back to the Journey
@@ -158,13 +170,17 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
           <p className="tempo"><b>{bpm} BPM</b>{!oneTake && <> · target {step.bpm.target}</>}
             {!oneTake && <span className="dots" aria-label={`${p.clean} of ${CLEAN_TAKES} clean takes`}>{Array.from({ length: CLEAN_TAKES }, (_, i) => <i key={i} className={i < p.clean ? 'on' : ''} />)}</span>}
           </p>
+          {step.jam && <p className="small">Jam: just play along and enjoy. Every take counts.</p>}
+          {step.copy && <p className="small">Copy me: the app plays a bar, you play it back. Then the next one.</p>}
+          {step.pass?.streak && <p className="small">Challenge: {step.pass.streak} notes in a row. Missed one? Keep going, the count starts again.</p>}
           {step.activeLanes && step.chart.notes.some(n => !step.activeLanes!.includes(n.drum)) && <p className="small">You play: {step.activeLanes.map(laneName).join(', ')}. The app plays the rest (dimmed).</p>}
           {step.gapBars && <p className="small">The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
           <details><summary>Notation</summary><SheetMusic notes={step.chart.notes} timeSignature={step.chart.timeSignature} /></details>
         </div>
         {outcome && (
-          <div className={`card verdict ${outcome.passed ? 'pass' : 'fail'}`} aria-live="polite">
+          <div className={`card verdict ${outcome.passed ? 'pass' : ''}`} aria-live="polite">
             <p>{outcome.text}</p>
+            {outcome.reason && <p className="small">Tip: {outcome.reason}</p>}
             <LatencyHint f={f} />
             {timeUp && !outcome.itemDone && <p className="small">That's your {minutes} minutes for this one. Move on, or keep going if you're in the zone.</p>}
             <button className="link" onClick={() => setDetails(true)}>Details and coach</button>
@@ -172,7 +188,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
               : help?.status === 'done' ? <p className="small">Your coach wrote "{help.data?.title}".{' '}
                 {onOpen && help.data?.id ? <button className="primary" onClick={() => onOpen(help.data!.id)}>Open it</button> : "It's on Journey."}</p>
               : <>{help?.status === 'error' && <p className="warn">{help.error}</p>}
-                <button className="link" onClick={askHelp}>Ask the coach for a lesson that fixes this</button></>)}
+                <button className="link" onClick={askHelp}>Ask the coach for something different</button></>)}
+            {!outcome.passed && !playing && <button onClick={() => play(false, bpm, true)}>Learn it slowly</button>}
           </div>
         )}
         <div className="actions inFocus">
@@ -188,7 +205,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
           {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Trophies.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
         </div>
       </div>
-      <section className="highwayWrap practiceSplit"><NotesView idle={{ chart: step.chart, bpm, goal: step.text }} /><KitView /></section>
+      <section className="highwayWrap practiceSplit"><NotesView idle={{ chart, bpm, goal: step.text }} /><KitView /></section>
     </div>
   );
 }

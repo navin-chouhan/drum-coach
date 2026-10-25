@@ -7,8 +7,8 @@ export const WINDOWS = { perfect: 40, good: 100, near: 250 }; // near: an off-ti
  * Windows for a tempo: "near" grows with the beat (30% of it), so a slow-tempo slip isn't an extra; a hit on the & still is.
  * Fast notes shrink Good to 40% of the closest gap between two notes on one drum (`gapMs`), so a 16th can't be "good" halfway to the next one.
  */
-export function windowsFor(beatMs: number, gapMs = Infinity) {
-  const good = Math.min(WINDOWS.good, Math.round(gapMs * 0.4));
+export function windowsFor(beatMs: number, gapMs = Infinity, goodMs = WINDOWS.good) {
+  const good = Math.min(goodMs, Math.round(gapMs * 0.4));
   return { good, perfect: Math.min(WINDOWS.perfect, Math.round(good / 2)), near: Math.max(WINDOWS.near, beatMs * 0.3) };
 }
 /** Closest gap, in beats, between two notes on the same drum (Infinity if none repeat). */
@@ -131,8 +131,21 @@ export type RunStats = {
     pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
   flam: number | null; // ms, mean split between limbs on notes meant to land together (null: none played)
   heat: HeatCell[];   // one cell per 16th position in the bar
+  streak: number;     // most notes hit in a row
+  recoveries: number; // times a hit came straight after a miss: you kept going
   reaction?: number | null; // ms a player who hits after each click is behind (set by the player at the end of a take)
 };
+
+function streaks(results: NoteResult[]) {
+  let streak = 0, run = 0, recoveries = 0;
+  results.forEach((r, i) => {
+    const hit = r.offset !== undefined;
+    run = hit ? run + 1 : 0;
+    streak = Math.max(streak, run);
+    if (hit && i > 0 && results[i - 1].offset === undefined) recoveries++;
+  });
+  return { streak, recoveries };
+}
 
 export function computeStats(run: Run, results: NoteResult[], extra: number): RunStats {
   const hitOffsets = results.flatMap(r => (r.offset === undefined ? [] : [r.offset]));
@@ -186,7 +199,7 @@ export function computeStats(run: Run, results: NoteResult[], extra: number): Ru
       accentMean: accents.length ? r1(mean(accents)) : null, ghostMean: ghosts.length ? r1(mean(ghosts)) : null, pairDrop,
     },
     flam: splits.length ? r1(mean(splits)) : null,
-    heat,
+    heat, ...streaks(results),
   };
 }
 

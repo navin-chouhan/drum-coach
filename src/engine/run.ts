@@ -28,6 +28,6 @@ export const beatMs = (bpm: number, speed = 1) => 60000 / (bpm * speed);
  * No `activeLanes` means the student plays everything. Notes keep their run index `i`.
  */
 export function splitRun(run: Run, activeLanes?: readonly ChartDrum[]): { scored: Run; auto: RunNote[] } {
-  const on = (n: RunNote) => !activeLanes || activeLanes.includes(n.drum);
+  const on = (n: RunNote) => !n.auto && (!activeLanes || activeLanes.includes(n.drum));
   return { scored: { ...run, notes: run.notes.filter(on) }, auto: run.notes.filter(n => !on(n)) };
 }

@@ -26,12 +26,12 @@ const crashOn = (notes: ChartNote[], beats: number[]) => [
   ...beats.map(t => ({ t, drum: 'crash' as const })),
 ].sort((a, b) => a.t - b.t);
 
-type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS };
+type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean };
 function step(title: string, text: string, notes: ChartNote[], bpm: [number, number], o: StepOpts = {}): Step {
   const ts = o.ts ?? [4, 4], bpb = beatsPerBar({ timeSignature: ts });
   const bars = Math.floor(Math.max(...notes.map(n => n.t)) / bpb + 1e-6) + 1;
   const chart: Chart = { title, bpm: bpm[1], timeSignature: ts, bars, notes };
-  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap };
+  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy };
 }
 const lesson = (level: number, id: string, kind: LessonKind, title: string, what: string, why: string, how: string, steps: Step[], tags?: Genre[]): Lesson =>
   ({ id, level, kind, title, what, why, how, tags, steps: steps.map((s, i) => ({ ...s, chart: { ...s.chart, id: `lesson/${id}/${i + 1}`, title: `${title} · ${s.title}` } })) });
@@ -51,11 +51,28 @@ export const CURRICULUM: Lesson[] = [
     'Good setup prevents sore wrists and makes everything later easier. Pros spend years undoing bad habits; you get to skip that.',
     'Throne high enough that your thighs slope slightly down. Snare just above your lap. Hold each stick a third of the way up, between thumb and the first joint of your index finger (the fulcrum); the other fingers wrap loosely. Drop the stick from about 15 cm and let it bounce back up: you throw the stroke, the pad does the rest. Shoulders loose, wrists do most of the work. Keep headphones at a safe volume.',
     [step('Even strokes', 'Quarter notes on the snare, alternating hands (R L R L). Same height, same volume every time.', P(1, { snare: 'xxxx' }, 2), [60, 60], { pass: { maxVelocityCv: 25 } })]),
+  lesson(0, 'first-jam', 'groove', 'Your first jam',
+    'Play the snare part of a real rock beat while the app plays the rest.',
+    'This is the fun part of drumming, from day one. Two notes a bar is all it takes to sound like a band.',
+    'The app plays hi-hat and kick. You hit the snare on 2 and 4: count "1 2 3 4" and land on the even numbers. Every take counts; just enjoy it.',
+    [step('Snare on 2 and 4', 'Hit the snare on 2 and 4. The app plays the hi-hat and kick.', P(2, MONEY8), [70, 70], { lanes: ['snare'], jam: true }),
+      step('+ kick on 1 and 3', 'Add your right foot on 1 and 3. Now you play the heartbeat of the song.', P(2, MONEY8), [70, 70], { lanes: ['kick', 'snare'], jam: true })]),
+  lesson(0, 'echo-game', 'exercise', 'Echo game',
+    'The app plays a short phrase on the snare, you play it back.',
+    'Copying by ear is how most drummers learn. It trains counting without you noticing.',
+    'Listen to the bar the app plays (dimmed notes), then play the same thing in the next bar. Count "1 2 3 4" in your head.',
+    [step('Copy me', 'Listen, then echo each bar.', cat([P(1, { snare: 'xxxx' }), P(1, { snare: 'xx.x' }), P(1, { snare: 'x.xx' }), P(1, { snare: 'x.x.' })]), [60, 70], { copy: true })]),
   lesson(0, 'count-quarters', 'exercise', 'Counting quarter notes',
     'Playing in time with the click while counting "1 2 3 4" out loud.',
     'Drummers keep the band in time. Counting out loud links your hands to the beat; every pro still does it when learning something new.',
     'Listen to the count-in, then say the numbers out loud as you play. The high click is beat 1 of each bar. Don\'t chase the click: feel where the next one will land and meet it.',
     [step('Snare on every beat', 'Say "1 2 3 4" out loud with each hit.', P(1, { snare: 'xxxx' }), [60, 80])]),
+  lesson(0, 'eight-in-a-row', 'exercise', 'Eight in a row',
+    'A mini challenge: eight snare hits in a row, right on the click.',
+    'Small streaks build steady time. Miss one and the count simply starts again.',
+    'Alternate hands R L R L. Listen for the click and drop the stick onto it; don\'t chase it.',
+    [step('Eight in a row', 'Quarter notes on the snare. Get 8 in a row on the click.', P(1, { snare: 'xxxx' }), [60, 60], { pass: { streak: 8 } }),
+      step('Twelve in a row', 'Same again, a little quicker: 12 in a row.', P(1, { snare: 'xxxx' }), [70, 70], { pass: { streak: 12 } })]),
   lesson(0, 'count-8ths', 'exercise', 'Counting 8th notes',
     'Two even notes per beat, counted "1 & 2 & 3 & 4 &".',
     'Most rock and pop grooves are built on 8th notes. If you can count them, you can read most beginner grooves.',
