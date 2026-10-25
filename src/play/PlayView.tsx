@@ -20,7 +20,7 @@ const OPTS_KEY = 'drumcoach.playOptions';
 type Saved = Omit<PlayOptions, 'fromBar' | 'toBar' | 'backing'> & { chartId: string };
 const DEFAULTS: Saved = { chartId: 'rock-8ths', speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false, repeats: 4 };
 const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
-const TABS = [['foryou', 'For you'], ['groove', 'Grooves'], ['rudiment', 'Rudiments'], ['fill', 'Fills'], ['song', 'Songs'], ['ai', 'From your coach']] as const;
+const TABS = [['foryou', 'For you'], ['groove', 'Grooves'], ['rudiment', 'Rudiments and drills'], ['fill', 'Fills'], ['song', 'Songs'], ['ai', 'From your coach']] as const;
 
 /**
  * Practice: pick anything (before you sit down), then play it from the kit. Same moves and gestures as a lesson;
@@ -232,7 +232,8 @@ function Chooser({ charts, runs, level, onPick }: { charts: StoredChart[]; runs:
   const picks = useMemo(() => forYou(charts, runs, level), [charts, runs, level]);
   const list = q.trim() ? charts.filter(c => c.title.toLowerCase().includes(q.trim().toLowerCase())).map(chart => ({ chart, why: '' }))
     : tab === 'foryou' ? picks
-    : charts.filter(c => (tab === 'ai' ? c.source === 'ai' : (c.kind ?? 'exercise') === tab)).map(chart => ({ chart, why: '' }));
+    // Exercises (imported or untyped charts) live under Rudiments and drills, so every chart has a tab.
+    : charts.filter(c => (tab === 'ai' ? c.source === 'ai' : tab === 'rudiment' ? ['rudiment', 'exercise'].includes(c.kind ?? 'exercise') : c.kind === tab)).map(chart => ({ chart, why: '' }));
   const best = (id: string) => Math.max(0, ...runs.filter(r => r.chartId === id && r.accuracy >= 90).map(r => Math.round(r.bpm)));
   return (
     <div className="lessonScreen">

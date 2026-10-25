@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ChartSchema } from '../engine/chart';
-import { CURRICULUM } from './curriculum';
+import { CURRICULUM, LESSON_BY_ID } from './curriculum';
+import { LIBRARY } from './library';
 
 describe('curriculum', () => {
   it('has unique ids and valid charts', () => {
@@ -24,5 +25,21 @@ describe('curriculum', () => {
   it('triplet patterns land on thirds of a beat', () => {
     const t = CURRICULUM.find(l => l.id === 'triplets')!.steps[0].chart.notes.map(n => n.t);
     expect(t.slice(0, 4)).toEqual([0, 1 / 3, 2 / 3, 1]);
+  });
+});
+
+describe('Practice library', () => {
+  // Each built-in Practice chart sits at the level where the path teaches its skill.
+  const TAUGHT_IN: Record<string, string> = {
+    'rock-8ths': 'money-8ths', 'rock-kick-var': 'kick-and3', 'ride-pedal': 'ride-groove', disco: 'four-floor',
+    'funk-ghosts': 'ghost-notes', 'shuffle-68': 'six-eight', singles: 'singles', 'accent-8ths': 'accents',
+    paradiddle: 'paradiddle', 'singles-toms': 'singles-toms', 'fill-toms': 'fill-8ths', 'fill-snare16': 'fill-16-snare',
+  };
+  it('levels match the curriculum', () => {
+    for (const c of LIBRARY) {
+      const l = LESSON_BY_ID[TAUGHT_IN[c.id]];
+      expect(l, c.id).toBeDefined();
+      expect(c.level, c.id).toBe(l.level);
+    }
   });
 });
