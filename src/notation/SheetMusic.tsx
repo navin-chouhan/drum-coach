@@ -149,7 +149,7 @@ export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bp
     fontReady ??= document.fonts.load('30px Bravura');
     void fontReady.then(() => {
       if (cancelled || !host.current) return;
-      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, scale: width < 500 ? 1 : zoom, barMin: 250 }); setError(''); }
+      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, scale: width < 500 ? 1 : zoom, barMin: hints ? 320 : 250 }); setError(''); } // hints need room at the barlines
       catch (e) { setError(`Couldn't draw this part: ${(e as Error).message}`); }
     });
     return () => { cancelled = true; };
@@ -205,7 +205,7 @@ export function SheetPlayer() {
     let origin = { x: 0, y: 0 }; // where the SVG's (0,0) is inside the stage
     const done = new Set<NoteGroup>(), shownX = new Set<number>();
     const bpb = run.beatsPerBar, totalBars = Math.ceil(run.beats / bpb - 1e-6);
-    const scale = w < 700 ? 1.1 : player.options?.lesson ? 1.6 : 1.35, barMin = 270; // lessons are read from the throne
+    const scale = w < 700 ? 1.1 : player.options?.lesson || player.options?.hints ? 1.6 : 1.35, barMin = player.options?.hints ? 320 : 270; // read from the throne
     const perRow = Math.max(1, Math.floor(((w - 16) / scale - FIRST_EXTRA - 10) / barMin));
     const hints = player.options?.hints, rows = Math.max(1, Math.floor((h - 20) / (rowHeight(hints) * scale)));
     const perPage = perRow * rows;

@@ -1,20 +1,29 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useCharts, loadBacking, refreshCharts, type StoredChart } from '../content/charts';
-import { MAX_SPEED } from '../engine/progress';
+import { MILESTONES } from '../content/curriculum';
+import { currentMilestone } from '../engine/planner';
+import { forYou, MAX_SPEED, suggestNext, type RunRow } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
+import { allLessons } from '../lesson/aiLessons';
+import { takeChart } from '../engine/transcribe';
 import { audio } from './audio';
 import { NotesView } from './NotesView';
 import { KitView } from '../ui/KitView';
-import { onCoachAction } from '../coach/session';
-import { player, playerVersion, start, stop, subscribePlayer, type PlayOptions } from './player';
-import { Results } from './Results';
+import { canRunAction, coachTake, onCoachAction, runAction, useCoach } from '../coach/session';
+import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from './player';
+import { LatencyHint, Results, saveRun } from './Results';
+import { CoachLine, LiveHint, Move } from './AtKit';
 
 const OPTS_KEY = 'drumcoach.playOptions';
 type Saved = Omit<PlayOptions, 'fromBar' | 'toBar' | 'backing'> & { chartId: string };
-const DEFAULTS: Saved = { chartId: 'rock-8ths', speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false, repeats: 2 };
+const DEFAULTS: Saved = { chartId: 'rock-8ths', speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false, repeats: 4 };
+const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
+const TABS = [['foryou', 'For you'], ['groove', 'Grooves'], ['rudiment', 'Rudiments'], ['fill', 'Fills'], ['song', 'Songs'], ['ai', 'From your coach']] as const;
 
-const ALONG: Partial<PlayOptions> = { guide: true, repeats: 8, wait: false };
-
+/**
+ * Practice: pick anything (before you sit down), then play it from the kit. Same moves and gestures as a lesson;
+ * the result shows on the screen, and the next step comes from the coach or the rule (suggestNext).
+ */
 export function PlayView({ pending }: { pending?: { chartId: string; bpm?: number } }) {
   const charts = useCharts();
   useSyncExternalStore(subscribePlayer, playerVersion);
@@ -23,6 +32,9 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(OPTS_KEY) ?? '{}') }; } catch { return DEFAULTS; }
   });
   const [section, setSection] = useState<{ from: number; to: number } | null>(null);
+  const [picking, setPicking] = useState(!pending);
+  const [details, setDetails] = useState(false);
+  const [runs, setRuns] = useState<RunRow[]>([]);
   const [error, setError] = useState('');
   const set = (patch: Partial<Saved>) => setO(prev => {
     const next = { ...prev, ...patch };
@@ -36,36 +48,71 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   if (pending && target) {
     setApplied(pending);
     set({ chartId: target.id, ...(pending.bpm && { speed: Math.min(MAX_SPEED, Math.max(0.5, pending.bpm / target.bpm)) /* the tempo asked for, exactly */ }) });
-    setSection(null);
+    setSection(null); setPicking(false);
   }
 
   useEffect(() => () => stop(), []);
+  const mine = player.chart && player.options && !player.options.lesson; // a take of Practice's, not a lesson's
+  const justDone = mine && player.phase === 'done' ? player.finished : undefined;
+  useEffect(() => { fetch('/api/runs').then(r => r.json()).then(setRuns).catch(() => {}); }, [justDone]);
+  // The result stays on this screen: save the take and tell the coach once (both are idempotent).
+  useEffect(() => { if (justDone) { saveRun(justDone); coachTake(justDone); } }, [justDone]);
 
   const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
   const from = Math.min(section?.from ?? 1, chart.bars), to = Math.min(section?.to ?? chart.bars, chart.bars);
+  const bpm = Math.round(chart.bpm * o.speed);
+  const playing = player.phase === 'playing';
+  const lastTake = useRef<Finished>(undefined);
+  const idOf = (t?: Finished) => (t?.chart as { id?: string } | undefined)?.id;
+  if (justDone && idOf(justDone) === chart.id && !justDone.options.demo) lastTake.current = justDone;
+  const f = playing || idOf(lastTake.current) !== chart.id ? undefined : lastTake.current;
+  const hints = settings.hints !== false;
 
-  async function go(speed = o.speed, along?: Partial<PlayOptions>) {
-    setError('');
+  async function go(speed = o.speed, extra?: Partial<PlayOptions>) {
+    setError(''); setDetails(false);
     let backing: PlayOptions['backing'];
     if (chart.hasAudio) {
       try { backing = { buffer: await loadBacking(chart.id, audio()), syncOffsetMs: chart.syncOffsetMs ?? 0 }; }
       catch { setError('Could not load the backing audio; playing without it.'); }
     }
-    start(chart, { ...o, speed, fromBar: from, toBar: to, backing, ...along });
+    start(chart, { ...o, speed, fromBar: from, toBar: to, backing, hints, ...extra });
   }
-  // The coach's suggested next step: again / slower / faster replays this exercise, next picks the next one.
+  const atBpm = (b: number) => Math.max(0.5, Math.min(MAX_SPEED, b / chart.bpm));
+  const playAt = (b: number) => { const speed = atBpm(b); set({ speed }); void go(speed); };
+  const listen = () => (f && f.hits.length
+    ? start(takeChart(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beats: f.run.beats, beatsPerBar: f.run.beatsPerBar, title: 'Your take', timeSignature: f.chart.timeSignature }), { ...o, fromBar: 1, toBar: 999, repeats: 1, speed: 1, demo: true })
+    : void go(o.speed, { demo: true }));
+  const nextChart = () => { const n = charts[charts.findIndex(c => c.id === chart.id) + 1] ?? charts[0]; set({ chartId: n.id }); setSection(null); };
+
+  // What next: the coach's suggestion when it answered this take, otherwise the rule (two clean → +5, rough → −10).
+  const coach = useCoach(), opened = useRef(Date.now()).current;
+  const reply = coach.reply && coach.at > Math.max(opened, f ? Date.parse(f.startedAt) : 0) ? coach.reply : undefined;
+  const mineRuns = runs.filter(r => r.chartId === chart.id);
+  const last = mineRuns[mineRuns.length - 1];
+  const sug = f && !f.options.wait && mineRuns.length ? suggestNext(mineRuns, [{ id: chart.id, title: chart.title, bpm: chart.bpm, level: chart.level }]) : undefined;
+  const next = sug?.chartId === chart.id ? sug.bpm : bpm;
+  // Before the first take: start where you left off, a bit slower if last time was rough.
+  const startAt = last ? Math.max(40, Math.round(last.bpm) - (last.accuracy < 60 ? 10 : 0)) : bpm;
+  const main = reply?.action && canRunAction(reply.action) ? { label: reply.action.label, run: () => void runAction(reply.action!) }
+    : !f ? (startAt !== bpm ? { label: `▶ Play at ${startAt}`, run: () => playAt(startAt) } : { label: '▶ Play', run: () => void go() })
+    : next > bpm ? { label: `🐇 Try ${next}`, run: () => playAt(next) }
+    : next < bpm ? { label: `🐢 Try ${next}`, run: () => playAt(next) }
+    : { label: `▶ Again at ${bpm}`, run: () => void go() };
+  const line = reply?.say ?? (coach.status === 'thinking' && f ? '…'
+    : f ? (next > bpm ? `Two clean takes in a row! Ready for ${next}?` : next < bpm ? `Let's take it to ${next} and lock it in.` : `${f.stats.accuracy >= 90 ? 'Nice!' : 'Good.'} Once more at ${bpm}?`)
+    : last && last.accuracy < 60 ? `Last time ${Math.round(last.bpm)} BPM was tricky. Let's warm up at ${startAt}.`
+    : last ? `Last time ${Math.round(last.bpm)} BPM, ${Math.round(last.accuracy)}% landed. Start there?`
+    : chart.description ?? `Ready when you are: ${bpm} BPM.`);
+
+  // From the kit: yes = the main move, snare × 2 = again, floor / tom 1 = 5 BPM slower / faster and play, ride = next.
   useEffect(() => onCoachAction(a => {
-    if (a.kind === 'listen') return false;
-    if (a.kind === 'next') {
-      const n = charts[charts.findIndex(c => c.id === chart.id) + 1];
-      if (n) { set({ chartId: n.id }); setSection(null); }
-      return true;
-    }
-    const want = a.bpm ? a.bpm / chart.bpm : a.kind === 'slower' ? o.speed - 0.1 : a.kind === 'faster' ? o.speed + 0.05 : o.speed;
-    const speed = Math.max(0.5, Math.min(MAX_SPEED, a.bpm ? want : Math.round(want * 20) / 20)); // the coach's tempo exactly
-    set({ speed });
-    void go(speed);
-    return true;
+    if (picking) return false;
+    if (a.kind === 'main') { main.run(); return true; }
+    if (a.kind === 'listen') { listen(); return true; }
+    if (a.kind === 'next') { nextChart(); return true; }
+    if (a.bpm) { playAt(a.bpm); return true; }
+    if (a.kind === 'slower' || a.kind === 'faster') { playAt(bpm + (a.kind === 'slower' ? -5 : 5)); return true; }
+    void go(); return true;
   }));
 
   async function nudge(ms: number) {
@@ -74,74 +121,122 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     await refreshCharts();
   }
 
-  if (player.phase === 'done' && player.finished) {
-    const along = player.finished.options.guide ? ALONG : undefined;
-    return <Results f={player.finished} onAgain={() => void go(o.speed, along)} onBack={stop} />;
-  }
+  const level = Math.max(1, currentMilestone(MILESTONES, allLessons(), settings.lessons, settings.profile)?.level ?? 1);
+  if (picking) return <Chooser charts={charts} runs={runs} level={level} onPick={id => { set({ chartId: id }); setSection(null); setPicking(false); }} />;
+  if (f && details) return <Results f={f} onAgain={() => void go()} onBack={() => setDetails(false)} />;
 
-  const playing = player.phase === 'playing';
-  const groups = ['groove', 'rudiment', 'fill', 'exercise', 'song'] as const;
+  const pickBar = (b: number) => setSection(!section || section.from !== section.to ? { from: b, to: b } : { from: Math.min(section.from, b), to: Math.max(section.from, b) });
+  const toggle = (label: string, on: boolean, flip: () => void) => <button className="tg" aria-pressed={on} onClick={flip}>{label} <em className={on ? '' : 'off'}>{on ? 'on' : 'off'}</em></button>;
+  const s = f?.stats;
+
   return (
-    <div className="play">
-      <div className="playSide">
-        <div className="card">
-          <h3>Exercise</h3>
-          <select value={chart.id} disabled={playing} aria-label="Exercise"
-            onChange={e => { set({ chartId: e.target.value }); setSection(null); }}>
-            {groups.map(g => {
-              const list = charts.filter(c => (c.kind ?? 'exercise') === g);
-              return list.length ? (
-                <optgroup key={g} label={g[0].toUpperCase() + g.slice(1) + 's'}>
-                  {list.map(c => <option key={c.id} value={c.id}>{c.level ? `L${c.level} · ` : ''}{c.title}</option>)}
-                </optgroup>
-              ) : null;
-            })}
-          </select>
-          {chart.description && <p className="small">{chart.description}</p>}
-          <p className="small">{chart.bpm} BPM · {chart.timeSignature.join('/')} · {chart.bars} bars{chart.source === 'ai' ? ' · made by the coach' : ''}</p>
-        </div>
-        <div className="card form">
-          <h3>Practice</h3>
-          <label><span>Speed <b>{Math.round(o.speed * 100)}%</b> · {Math.round(chart.bpm * o.speed)} BPM</span>
-            <input type="range" min={0.5} max={MAX_SPEED} step={0.05} value={o.speed} disabled={playing} onChange={e => set({ speed: +e.target.value })} />
-          </label>
-          <div className="row2">
-            <label>Bars from <input type="number" min={1} max={chart.bars} value={from} disabled={playing}
-              onChange={e => setSection({ from: +e.target.value || 1, to: Math.max(to, +e.target.value || 1) })} /></label>
-            <label>to <input type="number" min={from} max={chart.bars} value={to} disabled={playing}
-              onChange={e => setSection({ from, to: +e.target.value || chart.bars })} /></label>
-            <label>× <input type="number" min={1} max={50} value={o.repeats} disabled={playing} onChange={e => set({ repeats: Math.max(1, +e.target.value || 1) })} /></label>
-          </div>
-          <label className="check"><input type="checkbox" checked={o.metronome} disabled={playing} onChange={e => set({ metronome: e.target.checked })} /> Metronome</label>
-          <label>Clicks per beat
-            <select value={o.subdivision} disabled={playing} onChange={e => set({ subdivision: +e.target.value as 1 | 2 | 4 })}>
-              <option value={1}>1 (quarters)</option><option value={2}>2 (8ths)</option><option value={4}>4 (16ths)</option>
-            </select>
-          </label>
-          <label>Count-in
-            <select value={o.countInBars} disabled={playing} onChange={e => set({ countInBars: +e.target.value })}>
-              <option value={0}>none</option><option value={1}>1 bar</option><option value={2}>2 bars</option>
-            </select>
-          </label>
-          <label className="check"><input type="checkbox" checked={o.wait} disabled={playing} onChange={e => set({ wait: e.target.checked })} /> Wait mode (waits for the right hit, no timing score)</label>
-          <label className="check"><input type="checkbox" checked={settings.browserSounds} onChange={e => setSettings({ browserSounds: e.target.checked })} /> Browser drum sounds (turn the module down)</label>
-          {settings.latencyMs !== 0 && <p className="small">Latency correction: {settings.latencyMs} ms</p>}
-        </div>
-        {chart.hasAudio && (
-          <div className="card">
-            <h3>Song sync</h3>
-            <p className="small">Audio offset: <b>{chart.syncOffsetMs ?? 0} ms</b>. If the notes arrive before the music, increase it.</p>
-            <div className="actions">
-              {[-50, -10, 10, 50].map(ms => <button key={ms} disabled={playing} onClick={() => nudge(ms)}>{ms > 0 ? '+' : ''}{ms}</button>)}
-            </div>
-          </div>
-        )}
-        <button className="primary big inFocus" onClick={playing ? stop : () => void go()}>{playing ? 'Stop (Esc)' : 'Start'}</button>
-        {!playing && <button className="big" title="The app plays the groove softly under you, 8 times round, and scores you. No tips while you play."
-          onClick={() => void go(o.speed, ALONG)}>Play along (8×)</button>}
-        {error && <p className="warn">{error}</p>}
+    <div className={`lessonScreen ${playing ? 'playing' : ''}`}>
+      <div className="lbar card">
+        <button className="link back" onClick={() => { stop(); setPicking(true); }}>← All exercises</button>
+        <h2>{chart.title}</h2>
+        <span className="toolBadge">{KIND_ICON[chart.kind ?? 'exercise']} {(chart.kind ?? 'exercise').toUpperCase()}{chart.source === 'ai' ? ' · BY YOUR COACH' : ''}</span>
+        <span className="bigTempo">
+          {!playing && <button className="tempoStep" aria-label="5 BPM slower" onClick={() => set({ speed: atBpm(bpm - 5) })}>−</button>}
+          {bpm} <small>BPM</small>
+          {!playing && <button className="tempoStep" aria-label="5 BPM faster" onClick={() => set({ speed: atBpm(bpm + 5) })}>+</button>}
+        </span>
       </div>
-      <section className="highwayWrap practiceSplit"><NotesView idle={{ chart, fromBar: from, toBar: to, bpm: chart.bpm * o.speed }} /><KitView /></section>
+
+      {playing ? <LiveHint /> : <>
+        <CoachLine line={line} />
+        <div className="moves five">
+          <Move go label={main.label} onClick={main.run} />
+          <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
+          {f && !main.label.startsWith('▶ Again') ? <Move alt label={`▶ Again at ${bpm}`} gesture="snare × 2" onClick={() => void go()} />
+            : <Move alt label="🐇 +5 BPM" gesture="tom 1 × 2" onClick={() => playAt(bpm + 5)} />}
+          <Move alt label="🐢 −5 BPM" gesture="floor × 2" onClick={() => playAt(bpm - 5)} />
+          <Move alt label="⏭ Next one" gesture="ride × 2" onClick={nextChart} />
+        </div>
+      </>}
+
+      <div className="lessonMain">
+        <section className="lessonMusic">
+          {playing && <button className="primary big stopBtn" onClick={stop}>Stop <small>(crash × 4, Esc)</small></button>}
+          {!playing && chart.bars > 1 && <div className="barPick">Loop bars:
+            {chart.bars <= 16 ? <>
+              <button className={!section ? 'on' : ''} onClick={() => setSection(null)}>All</button>
+              {Array.from({ length: chart.bars }, (_, i) => i + 1).map(b => <button key={b} className={section && b >= from && b <= to ? 'on' : ''} onClick={() => pickBar(b)}>{b}</button>)}
+            </> : <>
+              <input type="number" min={1} max={chart.bars} value={from} aria-label="From bar" onChange={e => setSection({ from: Math.max(1, +e.target.value || 1), to: Math.max(to, +e.target.value || 1) })} />
+              to <input type="number" min={from} max={chart.bars} value={to} aria-label="To bar" onChange={e => setSection({ from, to: Math.max(from, +e.target.value || from) })} />
+            </>}
+            · <button onClick={() => set({ repeats: Math.max(1, o.repeats - 1) })} aria-label="Fewer times round">−</button> {o.repeats}× round <button onClick={() => set({ repeats: Math.min(50, o.repeats + 1) })} aria-label="More times round">+</button>
+          </div>}
+          <NotesView idle={{ chart, fromBar: from, toBar: to, bpm, hints, zoom: 1.6 }} />
+          {hints && <p className="hintLegend">R right hand · L left hand · K kick · H hi-hat foot</p>}
+        </section>
+        {!playing && <aside className="lessonSide">
+          {f && s ? <div className={`card result ${s.accuracy >= 90 ? 'pass' : ''}`}>
+            <div className="nums">
+              <div><b>{s.total - s.miss}/{s.total}</b><span>landed</span></div>
+              <div><b>{s.streak}</b><span>in a row</span></div>
+              <div><b>{s.recoveries}</b><span>comebacks</span></div>
+            </div>
+            {f.cues.length > 0 && <p className="tip">💡 {f.cues[f.cues.length - 1].text}</p>}
+            <LatencyHint f={f} />
+            <p className="small">{mineRuns.some(r => r.accuracy >= 90) ? `Best here: ${Math.max(...mineRuns.filter(r => r.accuracy >= 90).map(r => Math.round(r.bpm)))} BPM at 90%+ · ` : ''}
+              <button className="link" onClick={() => setDetails(true)}>details and history</button> · <button className="link" onClick={() => void go(o.speed, { demo: true })}>👂 hear it right</button></p>
+          </div> : chart.description && <div className="card"><p>{chart.description}</p></div>}
+          <div className="card toggles">
+            <h3>How it plays</h3>
+            {toggle('🔔 Click', o.metronome, () => set({ metronome: !o.metronome }))}
+            {toggle('Click on every 8th', o.subdivision === 2, () => set({ subdivision: o.subdivision === 2 ? 1 : 2 }))}
+            {toggle('1 bar count-in', o.countInBars > 0, () => set({ countInBars: o.countInBars ? 0 : 1 }))}
+            {toggle('🎶 Play along (I play softly under you)', !!o.guide, () => set({ guide: !o.guide }))}
+            {toggle('🐢 Wait mode (waits for each note)', o.wait, () => set({ wait: !o.wait }))}
+            {toggle('💡 Hints (key H)', hints, () => setSettings({ hints: !hints }))}
+          </div>
+          <details className="card">
+            <summary>⚙ More</summary>
+            <label className="check"><input type="checkbox" checked={settings.browserSounds} onChange={e => setSettings({ browserSounds: e.target.checked })} /> Browser drum sounds (turn the module down)</label>
+            {settings.latencyMs !== 0 && <p className="small">Latency correction: {settings.latencyMs} ms</p>}
+            {chart.hasAudio && <>
+              <p className="small">Song sync: <b>{chart.syncOffsetMs ?? 0} ms</b>. If the notes arrive before the music, increase it.</p>
+              <div className="actions">{[-50, -10, 10, 50].map(ms => <button key={ms} onClick={() => nudge(ms)}>{ms > 0 ? '+' : ''}{ms}</button>)}</div>
+            </>}
+          </details>
+          {error && <p className="warn">{error}</p>}
+          <div className="lessonKit"><KitView /></div>
+        </aside>}
+      </div>
+    </div>
+  );
+}
+
+/** Choosing what to practise (before you sit down): "For you" first, tabs by kind, and search. */
+function Chooser({ charts, runs, level, onPick }: { charts: StoredChart[]; runs: RunRow[]; level: number; onPick: (id: string) => void }) {
+  const [tab, setTab] = useState<(typeof TABS)[number][0]>('foryou');
+  const [q, setQ] = useState('');
+  const picks = useMemo(() => forYou(charts, runs, level), [charts, runs, level]);
+  const list = q.trim() ? charts.filter(c => c.title.toLowerCase().includes(q.trim().toLowerCase())).map(chart => ({ chart, why: '' }))
+    : tab === 'foryou' ? picks
+    : charts.filter(c => (tab === 'ai' ? c.source === 'ai' : (c.kind ?? 'exercise') === tab)).map(chart => ({ chart, why: '' }));
+  const best = (id: string) => Math.max(0, ...runs.filter(r => r.chartId === id && r.accuracy >= 90).map(r => Math.round(r.bpm)));
+  return (
+    <div className="lessonScreen">
+      <div className="card">
+        <h3>Practise anything</h3>
+        <div className="chooserBar">
+          {TABS.map(([id, label]) => <button key={id} className={tab === id && !q ? 'on' : ''} onClick={() => { setTab(id); setQ(''); }}>{label}</button>)}
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔎 Search" aria-label="Search exercises" />
+        </div>
+        {list.length === 0 && <p className="small">Nothing here yet.</p>}
+        <div className="exGrid">
+          {list.map(({ chart: c, why }) => (
+            <button key={c.id} className={`exCard ${why === 'played lately' ? 'recent' : ''} ${c.source === 'ai' ? 'ai' : ''}`} onClick={() => onPick(c.id)}>
+              <span className="ic" aria-hidden>{KIND_ICON[c.kind ?? 'exercise']}</span>
+              {why && <span className="tag">{why}</span>}
+              <b>{c.title}</b>
+              <span className="small">{c.bpm} BPM{best(c.id) ? ` · best ${best(c.id)}` : ''} · {c.bars} bar{c.bars === 1 ? '' : 's'}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

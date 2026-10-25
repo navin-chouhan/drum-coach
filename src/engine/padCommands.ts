@@ -3,8 +3,8 @@ import type { PadId } from './kit';
 // Control the app from the kit, sticks in hand: quick double hits on one pad between takes,
 // three quick hi-hat pedal presses for "yes" (feet are free between takes, sticks stay in hand),
 // four quick crashes to stop a take (a groove doesn't crash four times in a second).
-export type PadCommand = 'yes' | 'slower' | 'faster' | 'next' | 'listen' | 'stop';
-export const PAD_COMMANDS: Partial<Record<PadId, PadCommand>> = { crash: 'yes', floor: 'slower', tom1: 'faster', tom2: 'listen', ride: 'next' };
+export type PadCommand = 'yes' | 'again' | 'slower' | 'faster' | 'next' | 'listen' | 'stop';
+export const PAD_COMMANDS: Partial<Record<PadId, PadCommand>> = { crash: 'yes', snare: 'again', floor: 'slower', tom1: 'faster', tom2: 'listen', ride: 'next' };
 export const PEDAL_PRESSES = 3;
 export const COMMAND_GAP_MS = 400, STOP_HITS = 4;
 
