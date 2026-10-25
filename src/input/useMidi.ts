@@ -32,7 +32,8 @@ export function useMidi() {
       const list: { id: string; name: string }[] = [];
       access!.inputs.forEach(inp => {
         inp.onmidimessage = onMessage;
-        if (inp.state === 'connected') list.push({ id: inp.id, name: inp.name ?? inp.id });
+        // Linux's "Midi Through" loopback port is never a kit; showing it as "connected" hides that the kit is missing.
+        if (inp.state === 'connected' && !/^midi through/i.test(inp.name ?? '')) list.push({ id: inp.id, name: inp.name ?? inp.id });
       });
       setInputs(list);
     };

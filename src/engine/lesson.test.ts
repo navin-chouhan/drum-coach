@@ -93,6 +93,12 @@ describe('tempo ladder', () => {
     const strict: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], trade: true, pass: { accuracy: 80 } }, lesson.steps[1]] };
     expect(ladderStep(startProgress(strict), strict, false, D, 30).event).toBe('slowDown');
   });
+  it('a ★★★ take counts as both clean takes; a streak challenge needs one', () => {
+    expect(ladderStep(p0, lesson, true, D, 100, true)).toMatchObject({ event: 'up', next: { bpm: 65 } });
+    expect(ladderStep({ ...p0, bpm: 65 }, lesson, true, D, 100, true)).toMatchObject({ event: 'stepDone', next: { step: 1 } });
+    const ch: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], bpm: { start: 60, target: 60 }, pass: { streak: 8 } }, lesson.steps[1]] };
+    expect(ladderStep(startProgress(ch), ch, true, D)).toMatchObject({ event: 'stepDone', next: { step: 1 } });
+  });
   it('a jam step counts any take and moves on', () => {
     const jam: Lesson = { ...lesson, steps: lesson.steps.map(s => ({ ...s, jam: true })) };
     expect(ladderStep(startProgress(jam), jam, false, D, 20)).toMatchObject({ event: 'stepDone', next: { step: 1, bpm: 70 } });
