@@ -11,7 +11,7 @@ import { player, playerVersion, subscribePlayer } from './player';
  * The play area: animated sheet music (default) or the falling-note highway, with a switch.
  * Before a take starts, the sheet view shows `idle` (the music you're about to play).
  */
-export function NotesView({ idle }: { idle?: { chart: Chart & { id?: string }; fromBar?: number; toBar?: number; bpm?: number; goal?: string } }) {
+export function NotesView({ idle }: { idle?: { chart: Chart & { id?: string }; fromBar?: number; toBar?: number; bpm?: number; goal?: string; hints?: boolean; dim?: (i: number) => boolean; zoom?: number } }) {
   const settings = useSyncExternalStore(subscribeSettings, getSettings), view = settings.playView;
   const idleChart = idle?.chart, goal = idle?.goal;
   const idleBpm = idle?.bpm ?? idle?.chart.bpm ?? 0;
@@ -33,7 +33,7 @@ export function NotesView({ idle }: { idle?: { chart: Chart & { id?: string }; f
       </div>
       {view === 'highway' ? <Highway />
         : playing ? <SheetPlayer />
-        : idle ? <div className="sheetIdle"><SheetMusic notes={idle.chart.notes} timeSignature={idle.chart.timeSignature} fromBar={idle.fromBar} toBar={idle.toBar} title={idle.chart.title} bpm={idle.bpm ?? idle.chart.bpm} /></div>
+        : idle ? <div className="sheetIdle"><SheetMusic notes={idle.chart.notes} timeSignature={idle.chart.timeSignature} fromBar={idle.fromBar} toBar={idle.toBar} title={idle.chart.title} bpm={idle.bpm ?? idle.chart.bpm} hints={idle.hints} dim={idle.dim} zoom={idle.zoom} /></div>
         : <SheetPlayer />}
     </div>
   );

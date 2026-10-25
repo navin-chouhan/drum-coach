@@ -19,8 +19,10 @@ const listeners = new Set<() => void>();
 const set = (s: Partial<CoachState>) => { state = { ...state, ...s }; listeners.forEach(l => l()); };
 export const useCoach = () => useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, () => state);
 
-// Play screens register how to carry out the coach's actions (again, slower, faster, next).
-type ActionHandler = (a: NonNullable<CoachReply['action']>) => boolean;
+// Play screens register how to carry out the coach's actions (again, slower, faster, next), plus two moves from the kit:
+// "main" (yes with no suggestion on the table: the screen's own next move) and "listen" (hear it / hear your take).
+export type Act = NonNullable<CoachReply['action']> | { kind: 'main' | 'listen'; label: string; bpm?: number; bar?: number };
+type ActionHandler = (a: Act) => boolean;
 const handlers: ActionHandler[] = [];
 export function onCoachAction(fn: ActionHandler) {
   handlers.unshift(fn);
@@ -39,7 +41,7 @@ export function dropCoachAction() {
 /** Something on screen can carry this out (a drill opens its own exercise from anywhere). */
 export const canRunAction = (a: NonNullable<CoachReply['action']>) => a.kind === 'drill' || handlers.length > 0;
 
-export async function runAction(a: NonNullable<CoachReply['action']>) {
+export async function runAction(a: Act) {
   if (a.kind === 'drill' && a.chartId?.startsWith('lesson/')) { requestLesson(a.chartId.split('/')[1]); return; } // lesson steps live on Journey
   if (a.kind === 'drill' && (a.chart || a.chartId)) {
     const id = a.chart ? (await saveChart(a.chart, 'ai')).id : a.chartId!;
@@ -50,9 +52,9 @@ export async function runAction(a: NonNullable<CoachReply['action']>) {
 }
 
 /** A pad command between takes: "yes" takes the coach's suggestion (or plays again); only on a screen that can carry it out. */
-export function padAction(cmd: 'yes' | 'slower' | 'faster' | 'next') {
+export function padAction(cmd: 'yes' | 'slower' | 'faster' | 'next' | 'listen') {
   if (!handlers.length) return; // e.g. hitting pads on the calibration screen
-  void runAction(cmd === 'yes' ? state.reply?.action ?? { kind: 'again', label: 'Again' } : { kind: cmd, label: cmd });
+  void runAction(cmd === 'yes' ? state.reply?.action ?? { kind: 'main', label: 'Yes' } : { kind: cmd, label: cmd });
 }
 
 let seq = 0;

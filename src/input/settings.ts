@@ -9,6 +9,7 @@ export type Session = { date: string; items: SessionItem[]; done: number[] }; //
 export type Settings = {
   latencyMs: number; browserSounds: boolean;
   profile: Profile; lessons: Record<string, LessonProgress>; session?: Session;
+  hints?: boolean; // the count and who plays each note under the sheet (default on)
   badges?: string[]; // earned badge ids (engine/progress.ts BADGES), so a new one is announced once
   updatedAt?: number; // ms; the newer copy wins when browser and server disagree
   liveTips: 'off' | 'screen' | 'voice'; chattiness: Chattiness;

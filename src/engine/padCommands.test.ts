@@ -13,6 +13,12 @@ describe('padCommands', () => {
     expect(feed([['floor', 0], ['floor', 300]])).toEqual(['slower']);
     expect(feed([['tom1', 0], ['tom1', 300]])).toEqual(['faster']);
     expect(feed([['ride', 0], ['ride', 300]])).toEqual(['next']);
+    expect(feed([['tom2', 0], ['tom2', 300]])).toEqual(['listen']);
+  });
+  it('three quick hi-hat pedal presses are yes; two are not, nor during a take', () => {
+    expect(feed([['hhPedal', 0], ['hhPedal', 250], ['hhPedal', 500]])).toEqual(['yes']);
+    expect(feed([['hhPedal', 0], ['hhPedal', 250]])).toEqual([]);
+    expect(feed([['hhPedal', 0], ['hhPedal', 250], ['hhPedal', 500]], true)).toEqual([]);
   });
   it('slow, mixed or unmapped hits are not', () => {
     expect(feed([['crash', 0], ['crash', 500]])).toEqual([]);

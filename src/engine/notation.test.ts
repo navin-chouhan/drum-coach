@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
-import { durationOf, layoutMeasures, xAtBeat, type NotationEvent } from './notation';
+import { durationOf, layoutMeasures, xAtBeat, type NotationEvent, noteHints } from './notation';
 
 const brief = (evs: NotationEvent[]) => evs.map(e => `${e.heads.map(h => h.drum).sort().join('+') || 'rest'}:${e.slots}${e.triplet ? 't' : ''}`);
 
@@ -52,5 +52,16 @@ describe('durationOf', () => {
       { duration: '16', dots: 0, inTuplet: false }, { duration: '8', dots: 0, inTuplet: false },
       { duration: '8', dots: 1, inTuplet: false }, { duration: 'q', dots: 0, inTuplet: false }]);
     expect(durationOf({ heads: [], slots: 1, triplet: true, beat: 0 })).toEqual({ duration: '8', dots: 0, inTuplet: true });
+  });
+});
+
+describe('noteHints', () => {
+  it('counts 8ths and names the limbs of the money beat', () => {
+    const notes = [0, 0.5, 1, 1.5].map(t => ({ t, drum: 'hihat' })).concat([{ t: 0, drum: 'kick' }, { t: 1, drum: 'snare' }]);
+    expect(noteHints(notes, 4)).toEqual([{ t: 0, count: '1', limbs: 'R+K' }, { t: 0.5, count: '&', limbs: 'R' }, { t: 1, count: '2', limbs: 'R+L' }, { t: 1.5, count: '&', limbs: 'R' }]);
+  });
+  it('alternates singles from R each bar, counts 16ths and triplets, names the hi-hat foot', () => {
+    expect(noteHints([0, 0.25, 0.5, 0.75, 4].map(t => ({ t, drum: 'snare' })), 4).map(h => `${h.count}${h.limbs}`)).toEqual(['1R', 'eL', '&R', 'aL', '1R']);
+    expect(noteHints([{ t: 1 / 3, drum: 'tom1' }, { t: 1, drum: 'hhPedal' }], 4).map(h => `${h.count}:${h.limbs}`)).toEqual(['trip:R', '2:H']);
   });
 });

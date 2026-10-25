@@ -76,3 +76,24 @@ export function xAtBeat(points: { beat: number; x: number }[], beat: number): nu
   }
   return points[points.length - 1].x;
 }
+
+const CYMBALS = new Set(['hihat', 'hhOpen', 'ride', 'crash']);
+const SLOT_WORD: Record<string, string> = { '0.25': 'e', '0.5': '&', '0.75': 'a', '0.333': 'trip', '0.667': 'let' };
+/**
+ * Hints under the notes: the count ("1", "&", "e", "a", "trip", "let") and who plays it: R / L hand, K kick foot,
+ * H hi-hat foot. Cymbals are the right hand; a drum with a cymbal is the left; drums alone alternate R L (from R each bar).
+ */
+export function noteHints(notes: { t: number; drum: string }[], beatsPerBar: number): { t: number; count: string; limbs: string }[] {
+  const groups = new Map<number, string[]>();
+  for (const n of notes) { const t = Math.round(n.t * 1000) / 1000; groups.set(t, [...(groups.get(t) ?? []), n.drum]); }
+  let next = 'R', bar = -1;
+  return [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([t, drums]) => {
+    const b = Math.floor(t / beatsPerBar + 1e-6), pos = t - b * beatsPerBar, frac = Math.round((pos % 1) * 1000) / 1000;
+    if (b !== bar) { bar = b; next = 'R'; }
+    const cym = drums.filter(d => CYMBALS.has(d)).length, skins = drums.filter(d => !CYMBALS.has(d) && d !== 'kick' && d !== 'hhPedal').length;
+    const hands = cym && skins ? ['R', 'L'] : cym ? ['R'] : skins > 1 ? ['R', 'L'] : skins ? [next] : [];
+    if (!cym && skins === 1) next = next === 'R' ? 'L' : 'R';
+    const limbs = [...hands, ...(drums.includes('kick') ? ['K'] : []), ...(drums.includes('hhPedal') ? ['H'] : [])];
+    return { t, count: frac ? SLOT_WORD[String(frac)] ?? '' : String(Math.floor(pos) + 1), limbs: limbs.join('+') };
+  });
+}

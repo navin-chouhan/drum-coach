@@ -35,7 +35,7 @@ export function PlayMode({ song, videoId, yt, rate, bars }: ModeProps) {
   });
 
   // the song can't change speed mid-way, so any step the coach suggests = play again
-  useEffect(() => (notes.length ? onCoachAction(() => { go(); return true; }) : undefined));
+  useEffect(() => (notes.length ? onCoachAction(a => { if (a.kind === 'listen') return false; go(); return true; }) : undefined));
 
   if (!notes.length) return <div className="card"><h3>Play (scored)</h3><p className="small">Transcribe some bars in "Learn by ear" first, then play them here with the song.</p></div>;
   if (encore) return (

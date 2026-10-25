@@ -4,10 +4,12 @@ import {
   Renderer, Stave, StaveNote, Tuplet, Voice,
 } from 'vexflow/bravura'; // Bravura is embedded: works offline
 import type { ChartNote } from '../engine/chart';
-import { durationOf, layoutMeasures, xAtBeat, type NotationEvent } from '../engine/notation';
+import { durationOf, layoutMeasures, noteHints, xAtBeat, type NotationEvent } from '../engine/notation';
 import { player, playerVersion, position, subscribePlayer } from '../play/player';
 
-const ROW_H = 120, MIN_BAR_W = 230, FIRST_EXTRA = 70;
+const ROW_H = 120, HINT_H = 36, MIN_BAR_W = 230, FIRST_EXTRA = 70;
+/** Row height: hints (count and hand/foot under each note) need room below the feet's stems. */
+const rowHeight = (hints?: boolean) => ROW_H + (hints ? HINT_H : 0);
 let fontReady: Promise<unknown> | null = null;
 
 /** Turns one voice's events into VexFlow notes, beams (per beat, or per dotted quarter in 6/8-type meters) and triplet brackets. */
@@ -53,6 +55,7 @@ type SheetOptions = {
   notes: (ChartNote & { i?: number })[]; timeSignature: readonly [number, number]; fromBar?: number; toBar?: number;
   width: number; title?: string; bpm?: number; dim?: (i: number) => boolean;
   scale?: number; barMin?: number; // zoom (1 = VexFlow size) and the narrowest bar before wrapping, in unscaled units
+  hints?: boolean; // the count and who plays each note (R / L hand, K kick, H hi-hat foot) under the staff
 };
 
 /** Draws the notation into `el` (SVG) and returns where every bar, beat and note ended up (in screen pixels). */
@@ -62,8 +65,8 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
   const bpb = (ts[0] * 4) / ts[1];
   const measures = layoutMeasures([...o.notes].sort((a, b) => a.t - b.t), bpb, o.fromBar ?? 1, o.toBar);
   const perRow = Math.max(1, Math.floor((width - FIRST_EXTRA - 10) / MIN));
-  const rows = Math.ceil(measures.length / perRow);
-  const top = o.title || o.bpm ? 52 : 10, height = top + rows * ROW_H + 10;
+  const rows = Math.ceil(measures.length / perRow), rowH = rowHeight(o.hints);
+  const top = o.title || o.bpm ? 52 : 10, height = top + rows * rowH + 10;
   const r = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG);
   r.resize(width * k, height * k);
   const ctx = r.getContext();
@@ -76,7 +79,7 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
   measures.forEach((m, i) => {
     const row = Math.floor(i / perRow), col = i % perRow;
     const barW = (width - FIRST_EXTRA - 10) / perRow;
-    const x = 5 + (col ? FIRST_EXTRA + col * barW : 0), w = barW + (col ? 0 : FIRST_EXTRA), y = top + row * ROW_H;
+    const x = 5 + (col ? FIRST_EXTRA + col * barW : 0), w = barW + (col ? 0 : FIRST_EXTRA), y = top + row * rowH;
     const stave = new Stave(x, y, w);
     if (col === 0) stave.addClef('percussion');
     if (i === 0) stave.addTimeSignature(`${ts[0]}/${ts[1]}`);
@@ -101,6 +104,14 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
     }));
     points.push({ beat: barStart + bpb, x: x + w - 4 });
     points.sort((a, b) => a.beat - b.beat || a.x - b.x);
+    if (o.hints) { // the student's notes only: the app's (grey) ones aren't theirs to count
+      const mine = o.notes.filter(n => n.t >= barStart - 1e-6 && n.t < barStart + bpb - 1e-6 && !(n.i !== undefined && o.dim?.(n.i)));
+      for (const h of noteHints(mine.map(n => ({ ...n, t: n.t - barStart })), bpb)) {
+        const hx = xAtBeat(points, barStart + h.t) + 2;
+        ctx.setFont('Arial', 14, 'bold'); ctx.fillText(h.count, hx - ctx.measureText(h.count).width / 2, y + ROW_H + 4);
+        ctx.setFont('Arial', 11, 'bold'); ctx.fillText(h.limbs, hx - ctx.measureText(h.limbs).width / 2, y + ROW_H + 20);
+      }
+    }
     boxes.push({ index: m.index, x0: x * k, x1: (x + w) * k, y: y * k, points: points.map(q => ({ beat: q.beat, x: q.x * k })) });
   });
   // On a row, the cursor glides on to the next bar's downbeat note: stopping at the barline made it snap forward there.
@@ -125,8 +136,9 @@ const useWidth = (ref: React.RefObject<HTMLElement | null>) => {
  * Drum notation for a chart (percussion staff, hands stem up, feet stem down), wrapped to the width.
  * Bars are 1-based; `title` prints above when given.
  */
-export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bpm }: {
-  notes: ChartNote[]; timeSignature: readonly [number, number]; fromBar?: number; toBar?: number; title?: string; bpm?: number;
+export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bpm, hints, dim, zoom = 1.15 }: {
+  notes: (ChartNote & { i?: number })[]; timeSignature: readonly [number, number]; fromBar?: number; toBar?: number; title?: string; bpm?: number;
+  hints?: boolean; dim?: (i: number) => boolean; zoom?: number; // zoom: notation size on wide screens
 }) {
   const host = useRef<HTMLDivElement>(null);
   const { w: width } = useWidth(host);
@@ -137,11 +149,11 @@ export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bp
     fontReady ??= document.fonts.load('30px Bravura');
     void fontReady.then(() => {
       if (cancelled || !host.current) return;
-      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, scale: width < 500 ? 1 : 1.15, barMin: 250 }); setError(''); }
+      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, scale: width < 500 ? 1 : zoom, barMin: 250 }); setError(''); }
       catch (e) { setError(`Couldn't draw this part: ${(e as Error).message}`); }
     });
     return () => { cancelled = true; };
-  }, [notes, timeSignature, fromBar, toBar, title, bpm, width]);
+  }, [notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, zoom]);
   return (
     <div className="sheet">
       <div ref={host} className="sheetPaper" role="img" aria-label={`Drum notation${title ? ` for ${title}` : ''}`} />
@@ -193,15 +205,15 @@ export function SheetPlayer() {
     let origin = { x: 0, y: 0 }; // where the SVG's (0,0) is inside the stage
     const done = new Set<NoteGroup>(), shownX = new Set<number>();
     const bpb = run.beatsPerBar, totalBars = Math.ceil(run.beats / bpb - 1e-6);
-    const scale = w < 700 ? 1.1 : 1.35, barMin = 270;
+    const scale = w < 700 ? 1.1 : player.options?.lesson ? 1.6 : 1.35, barMin = 270; // lessons are read from the throne
     const perRow = Math.max(1, Math.floor(((w - 16) / scale - FIRST_EXTRA - 10) / barMin));
-    const rows = Math.max(1, Math.floor((h - 20) / (ROW_H * scale)));
+    const hints = player.options?.hints, rows = Math.max(1, Math.floor((h - 20) / (rowHeight(hints) * scale)));
     const perPage = perRow * rows;
     const notes = run.notes.map(n => ({ ...n }));
     const dim = (i: number) => player.auto[i];
     const render = (p: number, el: HTMLElement) => {
       const fromBar = p * perPage + 1, toBar = Math.min(totalBars, fromBar + perPage - 1);
-      return renderSheet(el, { notes: notes.filter(n => n.t >= (fromBar - 1) * bpb && n.t < toBar * bpb), timeSignature: chart.timeSignature, fromBar, toBar, width: w - 16, dim, scale, barMin });
+      return renderSheet(el, { notes: notes.filter(n => n.t >= (fromBar - 1) * bpb && n.t < toBar * bpb), timeSignature: chart.timeSignature, fromBar, toBar, width: w - 16, dim, scale, barMin, hints });
     };
     // The next page is engraved in idle time while this one plays: a full render at the turn would stall the downbeat.
     let next: { p: number; layout?: ReturnType<typeof renderSheet> } | undefined;
