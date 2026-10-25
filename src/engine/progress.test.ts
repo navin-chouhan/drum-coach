@@ -33,6 +33,8 @@ describe('dashboard', () => {
     expect(dashboard(runs, now).streak).toBe(3);
     expect(dashboard([...runs, run({ startedAt: '2026-10-24T09:00:00' })], now).streak).toBe(4);
     expect(dashboard([run({ startedAt: '2026-10-20T09:00:00' })], now).streak).toBe(0);
+    const d = dashboard([run({ startedAt: '2026-10-12T09:00:00', accuracy: 60 }), run({ startedAt: '2026-10-24T09:00:00', accuracy: 80 }), run({ startedAt: '2026-10-23T09:00:00', accuracy: 90 })], now);
+    expect([d.landedWeek, d.landedLastWeek]).toEqual([85, 60]);
   });
   it('sums minutes and tracks the best tempo at 90%+', () => {
     const d = dashboard([
