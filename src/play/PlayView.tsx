@@ -131,7 +131,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     await refreshCharts();
   }
 
-  const level = Math.max(1, currentMilestone(MILESTONES, allLessons(), settings.lessons, settings.profile)?.level ?? 1);
+  // the whole path done (no current milestone): the last stage's level, not back to 1
+  const level = Math.max(1, currentMilestone(MILESTONES, allLessons(), settings.lessons, settings.profile)?.level ?? MILESTONES[MILESTONES.length - 1].level);
   if (picking) return <Chooser charts={charts} runs={runs} level={level} onPick={id => { set({ chartId: id }); setSection(null); setPicking(false); }} />;
   if (f && details) return <Results f={f} onAgain={() => void go()} onBack={() => setDetails(false)} />;
 
