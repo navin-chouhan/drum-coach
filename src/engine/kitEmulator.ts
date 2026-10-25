@@ -33,9 +33,10 @@ const FEET = new Set<PadId>(['kick', 'hhPedal']);
 /** The strokes a player makes for these notes (time in ms): hands alternate R L on hand pads, the weak hand plays softer. */
 export function playNotes(notes: { time: number; drum: ChartDrum; accent?: boolean; ghost?: boolean }[], human: Human, rnd = Math.random): Stroke[] {
   let hand = 0, last = -Infinity;
+  const accented = notes.some(n => n.accent); // around accents the other strokes are low taps, as a drummer plays them
   return [...notes].sort((a, b) => a.time - b.time).map(n => {
     const pad = DRUM_PAD[n.drum][0];
-    let velocity = n.accent ? 115 : n.ghost ? 35 : 92;
+    let velocity = n.accent ? 115 : n.ghost ? 35 : accented ? 70 : 92;
     if (!FEET.has(pad)) {
       if (n.time - last > 1e-6) hand ^= 1; // notes together (e.g. hi-hat + snare) are two hands, not one alternation step
       if (hand === 0) velocity *= human.weakHand;

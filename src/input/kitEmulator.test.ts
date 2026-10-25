@@ -23,6 +23,13 @@ function take(drum: ChartDrum, beats: number[], bpm: number, kit: KitProfile, op
 const eighths = Array.from({ length: 16 }, (_, i) => i / 2);
 
 describe('emulated MPS-150 through the real input path', () => {
+  it('a steady player accents like a drummer: in an accented pattern the other notes are taps', () => {
+    const notes = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ time: i * 250, drum: 'snare' as ChartDrum, accent: i % 4 === 0 }));
+    const v = playNotes(notes, STEADY_PLAYER, seededRandom(1)).map(s => s.velocity);
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    expect(mean(v.filter((_, i) => i % 4)) / mean(v.filter((_, i) => !(i % 4)))).toBeLessThan(0.7); // passes maxGhostToAccent 0.7
+    expect(mean(playNotes(notes.map(n => ({ ...n, accent: false })), STEADY_PLAYER, seededRandom(1)).map(s => s.velocity))).toBeGreaterThan(80); // no accents: full strokes
+  });
   it('clock, active sensing and Note Off never become hits', () => {
     const t = take('snare', eighths, 70, CLEAN);
     expect(t.raw.some(m => m.data[0] === 0xf8) && t.raw.some(m => m.data[0] === 0xfe)).toBe(true);
