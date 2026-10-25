@@ -3,10 +3,10 @@ import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { SessionEventSchema, AiLessonSchema, ChatReplySchema, ChatRequestSchema, FeedbackSchema, LessonRequestSchema, NextSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, ShowoffRequestSchema, ShowoffSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
+import { SessionEventSchema, AiLessonSchema, ChatReplySchema, FeedbackSchema, LessonRequestSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, ShowoffRequestSchema, ShowoffSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
-import { suggestNext, type RunRow } from '../src/engine/progress.ts';
+import type { RunRow } from '../src/engine/progress.ts';
 import { ask, getProvider } from './ai/coach.ts';
 import { applyBites, canStandIn, lessonInput, toLesson } from './ai/lessons.ts';
 import type { Lesson } from '../src/engine/lesson.ts';
@@ -149,18 +149,6 @@ app.post('/api/coach/feedback', async (req, reply) => {
   try { return await ask('feedback', FeedbackSchema, { run: b.data.summary, library: catalog() }); } catch (e) { return aiFail(reply, e); }
 });
 
-app.post('/api/coach/next', async () => {
-  const history = runRows(30), cat = catalog();
-  const rule = suggestNext(history, cat);
-  try {
-    const r = await ask('next', NextSchema, { history, ruleSuggestion: rule, library: cat });
-    return cat.some(c => c.id === r.data.chartId) ? r : { data: rule, cached: false, note: 'The coach picked an unknown exercise; using the built-in rule.' };
-  } catch (e) {
-    if (e instanceof AiError) return { data: rule, cached: false, note: `${e.message} Using the built-in rule instead.` };
-    throw e;
-  }
-});
-
 app.post('/api/coach/plan', async (req, reply) => {
   const b = PlanRequestSchema.safeParse(req.body);
   if (!b.success) return bad(reply, b.error);
@@ -181,12 +169,6 @@ app.put('/api/plan/:id/checks', async (req, reply) => {
   if (!p.success || !b.success) return bad(reply, 'Invalid request');
   db.prepare('UPDATE plans SET checks_json = ? WHERE id = ?').run(JSON.stringify(b.data), p.data.id);
   return { ok: true };
-});
-
-app.post('/api/coach/chat', async (req, reply) => {
-  const b = ChatRequestSchema.safeParse(req.body);
-  if (!b.success) return bad(reply, b.error);
-  try { return await ask('chat', ChatReplySchema, { messages: b.data.messages, context: b.data.context, library: catalog() }); } catch (e) { return aiFail(reply, e); }
 });
 
 // ---------- the live coaching conversation (streams sentences as server-sent events) ----------

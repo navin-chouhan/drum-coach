@@ -6,7 +6,8 @@ import { claudeCliProvider } from './providers';
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'dc-test-'));
 const { extractJson, ask, setProvider } = await import('./coach');
-const { NextSchema } = await import('../../src/coach/schemas');
+const { z } = await import('zod');
+const Answer = z.object({ chartId: z.string(), bpm: z.number(), reason: z.string() });
 
 const dir = mkdtempSync(join(tmpdir(), 'fake-claude-'));
 function fake(name: string, body: string) {
@@ -40,12 +41,12 @@ describe('coach', () => {
   it('validates, then serves repeats from the cache', async () => {
     let calls = 0;
     setProvider({ name: 'fake', complete: async () => { calls++; return '{"chartId":"rock-8ths","bpm":85,"reason":"go"}'; } });
-    expect((await ask('next', NextSchema, { x: 1 })).cached).toBe(false);
-    expect(await ask('next', NextSchema, { x: 1 })).toMatchObject({ cached: true, data: { bpm: 85 } });
+    expect((await ask('feedback', Answer, { x: 1 })).cached).toBe(false);
+    expect(await ask('feedback', Answer, { x: 1 })).toMatchObject({ cached: true, data: { bpm: 85 } });
     expect(calls).toBe(1);
   });
   it('rejects answers in the wrong shape', async () => {
     setProvider({ name: 'fake2', complete: async () => '{"chartId":"x"}' });
-    await expect(ask('next', NextSchema, { y: 2 })).rejects.toMatchObject({ code: 'failed' });
+    await expect(ask('feedback', Answer, { y: 2 })).rejects.toMatchObject({ code: 'failed' });
   });
 });

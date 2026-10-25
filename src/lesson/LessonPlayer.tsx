@@ -17,7 +17,7 @@ import { LatencyHint, Results, saveRun } from '../play/Results';
 import { takeChart } from '../engine/transcribe';
 import { requestSong } from '../ui/nav';
 import { SheetMusic } from '../notation';
-import { say } from '../voice/voice';
+import { say, voiceEngine } from '../voice/voice';
 import { canRunAction, coachTake, dropCoachAction, onCoachAction, runAction, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
 import { CoachLine, LiveHint, Move } from '../play/AtKit';
@@ -51,6 +51,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
   const lastTake = useRef<Finished>(undefined);
+  const [engine, setEngine] = useState<'piper' | 'browser'>();
+  useEffect(() => { void voiceEngine().then(setEngine); }, []);
   const lastAccuracy = useRef<number>(undefined); // for "better than last take"
   const stickyBar = useRef<number>(undefined); // the bar most notes slipped in, last take (for the coach's "zoom")
 
@@ -291,7 +293,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
             <details open={fresh}><summary>Why and how</summary><p>{lesson.why}</p><p>{lesson.how}</p></details>
           </div>}
           {step.bite && <div className="card"><p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b></p><button onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Play it with the song →</button></div>}
-          {(step.trade || free.length > 0 || step.pass?.streak || step.gapBars || (lanes && step.chart.notes.some(n => !lanes.includes(n.drum)))) && <div className="card small">
+          {(step.trade || free.length > 0 || step.pass?.streak || step.gapBars || step.countAloud || (lanes && step.chart.notes.some(n => !lanes.includes(n.drum)))) && <div className="card small">
+            {step.countAloud && <p>{engine === 'browser' ? "I'd count along here with the Piper voice (Setup → Coach and voice)." : 'I count along with you for the first bars, then you take over.'}</p>}
             {step.trade && <p>Trade bars: I play a bar, you answer with anything. No wrong notes, just stay on the beat.</p>}
             {!step.trade && free.length > 0 && <p>Bar {free.join(' and ')} is yours: play any fill you like.</p>}
             {step.pass?.streak && <p>Challenge: {recordStreak ?? step.pass.streak} notes in a row. Missed one? The count just starts again.</p>}

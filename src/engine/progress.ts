@@ -106,6 +106,7 @@ export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: n
 }
 
 /** Song project: which of a song's bars you've played at 85% or better (in any take covering them). */
+// shortcut: a take's whole accuracy marks every bar it covered ready; upgrade to per-bar accuracy (results per bar in summary_json) when bites are 4+ bars
 export function barsReady(runs: RunRow[], songId: string, totalBars: number): number {
   const ok = new Set<number>();
   for (const r of runs) if (r.chartId === songId && r.accuracy >= 85 && r.fromBar && r.toBar)

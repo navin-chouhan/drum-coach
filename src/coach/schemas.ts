@@ -13,7 +13,6 @@ export const FeedbackSchema = z.object({
     chart: ChartSchema.optional(),
   }),
 });
-export const NextSchema = z.object({ chartId: z.string().max(80), bpm: z.number().min(30).max(300), reason: z.string().max(800) });
 export const PlanSchema = z.object({
   title: z.string().max(120),
   days: z.array(z.object({
@@ -78,7 +77,6 @@ export const LessonRequestSchema = z.object({
 export type AiLesson = z.infer<typeof AiLessonSchema>;
 
 export type Feedback = z.infer<typeof FeedbackSchema>;
-export type NextExercise = z.infer<typeof NextSchema>;
 export type Plan = z.infer<typeof PlanSchema>;
 export type ChatReply = z.infer<typeof ChatReplySchema>;
 
@@ -91,10 +89,6 @@ export const RunRecordSchema = z.object({
   summary: z.record(z.string(), z.unknown()),
 });
 export type RunRecord = z.infer<typeof RunRecordSchema> & { id: number };
-export const ChatRequestSchema = z.object({
-  messages: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(4000) })).min(1).max(30),
-  context: z.record(z.string(), z.unknown()).optional(), // what the student is doing right now (screen, last take)
-});
 export const PlanRequestSchema = z.object({
   goals: z.string().min(1).max(500), minutesPerDay: z.number().int().min(5).max(180), daysPerWeek: z.number().int().min(1).max(7),
 });
