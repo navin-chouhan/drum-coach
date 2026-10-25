@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson screen revamp</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .sheet{background:#fff;border:3px solid var(--line);padding:16px;min-height:230px}
+  .sheet svg{width:100%;height:200px}
+  .feel{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+  .feel div{background:var(--panel2);border:2px solid var(--line);padding:8px 4px}.feel b{display:block;font:800 22px var(--display)}
+  .meter{position:relative;height:14px;border:2px solid var(--line);background:#fff;margin:6px 0}.meter i{position:absolute;top:-6px;width:4px;height:22px;background:var(--line)}.meter .t{background:var(--good);opacity:.35;position:absolute;top:0;bottom:0}
+  .demo{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center}
+  .demo svg{width:200px;height:150px;background:var(--night);border:3px solid var(--line)}
+  .stick{transform-origin:40px 110px;animation:drop 1s ease-in-out infinite}
+  @keyframes drop{0%,100%{transform:rotate(-28deg)}45%{transform:rotate(0deg)}55%{transform:rotate(-4deg)}}
+  .word{font:800 26px var(--display);fill:var(--pop)}
+  .toggles{display:flex;gap:10px;flex-wrap:wrap}
+  .lbar .hintToggle,.lbar .bandToggle{font-weight:700}
+  .bandToggle.on{background:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · lesson screen</b> R1 band toggle · R5 "how it moves" + check yourself · R4 feel row · R2 grace notes. Not built.</div>
+
+<section class="state">
+  <h2>Between takes (the screen you read from the throne)</h2>
+  <div class="note">Everything you already know stays: one big coach line, four moves with their kit gestures, big sheet music.
+    New things are outlined in blue. Nothing new needs the mouse.</div>
+  <div class="lessonScreen">
+    <div class="lbar card">
+      <button class="link back">← Journey</button>
+      <h2>The flam</h2>
+      <span class="toolBadge">🥢 NEW SKILL</span>
+      <span class="stepDots"><i class="done"></i><i class="on"></i><i></i></span>
+      <span class="bigTempo">70 <small>BPM → 90</small></span>
+      <button class="hintToggle on">💡 Hints on</button>
+      <button class="bandToggle on rel new" title="Key B">🎸 Band on <small>(B)</small></button>
+    </div>
+    <div class="say"><div class="avatar">🥁</div><div class="bubble">Nice! 14 of 16 flams came out as two notes. Keep the grace stick low.
+      <p class="under">The coach's short line goes here (≤ 12 words).</p></div></div>
+    <div class="moves">
+      <button class="move go"><b>▶ Again</b><span class="g"><i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"</span></button>
+      <button class="move"><b>🎧 Hear your take</b><span class="g"><i>tom 2 × 2</i></span></button>
+      <button class="move alt"><b>🐢 Slower</b><span class="g"><i>floor × 2</i></span></button>
+      <button class="move alt"><b>⏭ Skip to next</b><span class="g"><i>ride × 2</i></span></button>
+    </div>
+    <div class="lessonMain">
+      <section class="lessonMusic">
+        <div class="sheet rel new">
+          <svg viewBox="0 0 800 200" aria-label="Sheet music: four flams on the snare">
+            <g stroke="#141414" stroke-width="2">
+              <line x1="20" y1="60" x2="780" y2="60"/><line x1="20" y1="80" x2="780" y2="80"/><line x1="20" y1="100" x2="780" y2="100"/><line x1="20" y1="120" x2="780" y2="120"/><line x1="20" y1="140" x2="780" y2="140"/>
+            </g>
+            <g fill="#141414">
+              <g transform="translate(130 0)"><ellipse cx="0" cy="90" rx="11" ry="8"/><line x1="10" y1="90" x2="10" y2="30" stroke="#141414" stroke-width="3"/><ellipse cx="-34" cy="84" rx="6" ry="4.5"/><line x1="-29" y1="84" x2="-29" y2="52" stroke="#141414" stroke-width="2"/><line x1="-38" y1="70" x2="-20" y2="58" stroke="#141414" stroke-width="2"/><text x="-8" y="180" font-size="20" font-weight="700">lR</text></g>
+              <g transform="translate(310 0)"><ellipse cx="0" cy="90" rx="11" ry="8"/><line x1="10" y1="90" x2="10" y2="30" stroke="#141414" stroke-width="3"/><ellipse cx="-34" cy="84" rx="6" ry="4.5"/><line x1="-29" y1="84" x2="-29" y2="52" stroke="#141414" stroke-width="2"/><line x1="-38" y1="70" x2="-20" y2="58" stroke="#141414" stroke-width="2"/><text x="-8" y="180" font-size="20" font-weight="700">rL</text></g>
+              <g transform="translate(490 0)"><ellipse cx="0" cy="90" rx="11" ry="8"/><line x1="10" y1="90" x2="10" y2="30" stroke="#141414" stroke-width="3"/><ellipse cx="-34" cy="84" rx="6" ry="4.5"/><line x1="-29" y1="84" x2="-29" y2="52" stroke="#141414" stroke-width="2"/><line x1="-38" y1="70" x2="-20" y2="58" stroke="#141414" stroke-width="2"/><text x="-8" y="180" font-size="20" font-weight="700">lR</text></g>
+              <g transform="translate(670 0)"><ellipse cx="0" cy="90" rx="11" ry="8"/><line x1="10" y1="90" x2="10" y2="30" stroke="#141414" stroke-width="3"/><ellipse cx="-34" cy="84" rx="6" ry="4.5"/><line x1="-29" y1="84" x2="-29" y2="52" stroke="#141414" stroke-width="2"/><line x1="-38" y1="70" x2="-20" y2="58" stroke="#141414" stroke-width="2"/><text x="-8" y="180" font-size="20" font-weight="700">rL</text></g>
+              <text x="24" y="40" font-size="16" font-weight="700">mf</text>
+            </g>
+          </svg>
+        </div>
+        <p class="note"><b>R2 grace notes:</b> a small slashed note before the main note (VexFlow grace note), hints under each:
+          small letter = the grace hand, big = the main hand. The paradiddle finally shows R L R R. <b>R4:</b> p / mf / f marks above the bar.</p>
+      </section>
+      <aside class="lessonSide">
+        <div class="card result pass">
+          <div class="nums"><div><b>14/16</b><span>landed</span></div><div><b>11</b><span>in a row</span></div><div><b>14/16</b><span>flams</span></div></div>
+          <div class="feel rel new">
+            <div><b>28 ms</b>grace gap</div><div><b>0.5</b>grace : main</div><div><b>on it</b>feel</div>
+          </div>
+          <p class="tip">💡 Some flams came out as one note: keep the grace stick 3 cm off the pad.</p>
+          <p class="small">For a swing step this row shows <b>swing 62%</b> (50 straight · 67 triplet) with a band where you should be; for a
+            lay-back step, "behind the beat: 18 ms, aim 15–30"; for a phrase, "dynamics: soft verse → loud chorus ✓".</p>
+        </div>
+        <div class="card rel new">
+          <h3>How it moves</h3>
+          <div class="demo">
+            <svg viewBox="0 0 200 150" aria-label="Animated stick: low grace, high main stroke">
+              <circle cx="40" cy="110" r="6" fill="#FFE14D"/>
+              <g class="stick"><line x1="40" y1="110" x2="180" y2="110" stroke="#fff" stroke-width="7" stroke-linecap="round"/></g>
+              <rect x="150" y="122" width="44" height="8" fill="#2DE1C2"/>
+              <text class="word" x="10" y="30">DROP</text>
+            </svg>
+            <div><p><b>Grace stick 3 cm, main stick 30 cm.</b> Both drop, the low one lands a hair first.</p>
+              <button class="primary">📷 Check yourself</button> <span class="small">(snare × 2)</span></div>
+          </div>
+          <p class="small">Drawn from data (no video files), at the lesson's tempo. Also an optional 4th intro slide, "HOW IT MOVES".</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2>Band on: what you hear</h2>
+  <div class="note"><b>R1:</b> synth bass on every kick, keys by style (rock pads, funk stabs on the &amp;s, shuffle stabs on 2 and 4).
+    On for grooves, songs and fills; off for counting, probe, rest and rudiment steps. Gap and fading clicks silence the band
+    too, so "keep time alone" stays honest. Volume: Setup → Sound check → "Band" slider (default 60%). Key <b>B</b> toggles it.</div>
+  <div class="cols">
+    <div class="card"><h3>Groove step</h3><p>🎸 <b>Band on</b> by default · rock, chords from the song (Roadhouse Shuffle = 12-bar blues)</p></div>
+    <div class="card"><h3>Counting / rudiment step</h3><p>🎸 Band <b>off</b> (toggle greyed: "just you and the click for this one")</p></div>
+    <div class="card"><h3>Fill bar</h3><p>One band hit on beat 1, then silence: the fill is yours.</p></div>
+  </div>
+</section>
+</body>
+</html>
