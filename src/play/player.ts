@@ -21,6 +21,7 @@ export type PlayOptions = RunOptions & {
   demo?: boolean;            // the app plays every note and nothing is scored
   guide?: boolean;           // practice-along: the app plays every note softly under you, you're still scored, no live tips
   gapBars?: number;          // the click is silent on every n-th bar
+  zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
   lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach

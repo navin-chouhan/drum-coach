@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
-import { afterReview, checkPass, CLEAN_TAKES, copyChart, goodMsFor, ladderStep, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { worstBars } from '../engine/scoring';
+import { afterReview, checkPass, CLEAN_TAKES, copyChart, goodMsFor, ladderStep, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration } from './Celebration';
@@ -18,7 +19,7 @@ import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from '.
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove' };
-type Outcome = { passed: boolean; text: string; reason?: string; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
+type Outcome = { passed: boolean; text: string; reason?: string; fixBar?: number; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 
 /**
@@ -41,6 +42,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
   const lastAccuracy = useRef<number>(undefined); // for "better than last take"
+  const stickyBar = useRef<number>(undefined); // the bar most notes slipped in, last take (for the coach's "zoom")
 
   const p = progressOf(lesson);
   const oneTake = role === 'warmup' || role === 'review';
@@ -60,6 +62,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     // Wait mode is for learning the pattern: no verdict, no ladder, not saved.
     if (f.options.wait) { outcomes.set(f, { passed: false, itemDone: false, text: 'Nice and slow. When it feels easy, press Play to go with the click.' }); setVersion(v => v + 1); return; }
     const check = checkPass(f.stats, step.pass, lesson.level);
+    // A zoom loop is practice for the next real take: no ladder, not saved.
+    if (f.options.zoom) {
+      outcomes.set(f, { passed: check.ok, itemDone: false, text: `Bar ${f.options.zoom}, four times: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. Now the whole thing again at ${progressOf(lesson).bpm} BPM.` });
+      setVersion(v => v + 1); return;
+    }
+    const sticky = worstBars(f.run, f.results, f.options.toBar - f.options.fromBar + 1, f.options.fromBar);
+    stickyBar.current = sticky[0];
     const p = progressOf(lesson);
     const st = f.stats, prev = lastAccuracy.current;
     lastAccuracy.current = st.accuracy;
@@ -90,7 +99,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
         lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
       };
       const ok = check.ok || !!step.jam;
-      o = { passed: ok, event, reason: ok ? undefined : check.reason, text: `${ok ? 'Nice! ' : ''}${landed} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
+      o = { passed: ok, event, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
     // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting).
@@ -98,7 +107,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
       requestCoachLesson(`after-${lesson.id}-${f.startedAt}`);
     // Between takes of a step the verdict stays on screen; the coach speaks once the step or lesson is done.
     if (o.itemDone && getSettings().voice) void say(o.text);
-    if (o.itemDone) coachTake(f, { lesson: lesson.title, step: step.title, passed: o.passed, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target });
+    if (o.itemDone) coachTake(f, { lesson: lesson.title, step: step.title, passed: o.passed, verdict: o.text, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target, stickyBars: sticky });
     if (o.itemDone) onItemDone?.();
     saveRun(f, { passed: o.passed });
     setSecs(s => s + f.durationS);
@@ -116,9 +125,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
   });
   const play = (demo: boolean, atBpm = bpm, wait = false) => { setDetails(false); start(chart, { ...options(demo, wait), speed: atBpm / chart.bpm }); };
+  // Zoom in: loop one bar 4 times, 10 BPM slower, with the app playing softly underneath.
+  const zoomIn = (bar: number) => { setDetails(false); start(chart, { ...options(false), fromBar: bar, toBar: bar, repeats: 4, speed: Math.max(MIN_BPM, bpm - 10) / chart.bpm, guide: true, zoom: bar }); };
   // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.
   useEffect(() => onCoachAction(a => {
     if (a.kind === 'next') { (onNext ?? onBack)(); return true; } // opened outside today's session: back to the Journey
+    const bar = a.kind === 'zoom' ? (a.bar && a.bar <= chart.bars ? a.bar : stickyBar.current) : undefined;
+    if (bar) { zoomIn(bar); return true; }
     const cur = progressOf(lesson).bpm;
     const want = a.bpm ?? (a.kind === 'slower' ? cur - 5 : a.kind === 'faster' ? cur + 5 : cur);
     const nb = oneTake ? bpm : Math.max(30, Math.min(step.bpm.target, Math.round(want))); // the coach may go below the start tempo when you struggle
@@ -189,6 +202,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
                 {onOpen && help.data?.id ? <button className="primary" onClick={() => onOpen(help.data!.id)}>Open it</button> : "It's on Journey."}</p>
               : <>{help?.status === 'error' && <p className="warn">{help.error}</p>}
                 <button className="link" onClick={askHelp}>Ask the coach for something different</button></>)}
+            {outcome.fixBar && !playing && <button onClick={() => zoomIn(outcome.fixBar!)}>Fix bar {outcome.fixBar}</button>}
             {!outcome.passed && !playing && <button onClick={() => play(false, bpm, true)}>Learn it slowly</button>}
           </div>
         )}

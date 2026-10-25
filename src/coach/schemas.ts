@@ -102,7 +102,8 @@ export const CoachReplySchema = z.object({
   say: z.string().min(1).max(400),
   show: z.string().max(500).optional(),
   action: z.object({
-    kind: z.enum(['again', 'slower', 'faster', 'next', 'drill']), label: z.string().min(1).max(40),
+    kind: z.enum(['again', 'slower', 'faster', 'next', 'drill', 'zoom']), label: z.string().min(1).max(40),
+    bar: z.number().int().min(1).max(64).optional(), // zoom: the bar to loop (default: the stickiest bar of the last take)
     bpm: z.number().min(30).max(300).optional(), chartId: z.string().max(80).optional(), chart: ChartSchema.optional(), now: z.boolean().optional(),
   }).optional(),
   ask: z.boolean().optional(),

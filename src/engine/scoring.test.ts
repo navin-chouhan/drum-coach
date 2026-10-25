@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { computeStats, createMatcher, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { computeStats, createMatcher, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -79,6 +79,22 @@ describe('stats', () => {
     const { results } = scoreRun(expected, hits);
     const s = computeStats(run, results, 0);
     expect(s.velocity).toEqual({ normalMean: 80, normalCv: 0, accentMean: 120, ghostMean: 30, pairDrop: 0 });
+  });
+});
+
+describe('worstBars', () => {
+  // 4-bar section played twice, a quarter note per beat: 32 notes, bar = run bar (0–7)
+  const notes = Array.from({ length: 32 }, (_, i) => ({ t: i, drum: 'snare' as const, i, bar: Math.floor(i / 4), pos: i % 4 }));
+  const run = { notes, beats: 32, beatsPerBar: 4 };
+  const hit = { judgement: 'good' as const, offset: 5, velocity: 90 }, miss = { judgement: 'miss' as const };
+  it('folds repeats and returns the stickiest bar first', () => {
+    const results = notes.map(n => (n.bar % 4 === 2 && n.pos < 3) || (n.bar === 1 && n.pos === 0) ? miss : hit);
+    expect(worstBars(run, results, 4)).toEqual([3]); // bar 2 had one miss only: not sticky
+    expect(worstBars(run, results, 4, 5)).toEqual([7]); // a section starting at chart bar 5
+  });
+  it('returns nothing for a clean take or a one-bar section', () => {
+    expect(worstBars(run, notes.map(() => hit), 4)).toEqual([]);
+    expect(worstBars(run, notes.map(() => miss), 1)).toEqual([]);
   });
 });
 
