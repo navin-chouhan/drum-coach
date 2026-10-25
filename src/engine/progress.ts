@@ -88,12 +88,13 @@ export const BADGES = [
   { id: 'streak-30', name: '30-day streak', how: 'Play 30 days in a row' },
   { id: 'notes-1k', name: '1,000 notes', how: 'Land 1,000 notes' },
   { id: 'notes-10k', name: '10,000 notes', how: 'Land 10,000 notes' },
-  { id: 'showoff', name: 'Show-off song', how: 'Play a real song at 85% or better' },
+  { id: 'showoff', name: 'Show-off song', how: 'Play 16 bars or more of a real song, every bar at 85% or better' },
   { id: 'stage-3star', name: 'Perfect stage', how: 'Every challenge of a stage at three stars' },
 ] as const;
 
 /** `stages`: each stage's checkpoint lesson ids. */
-export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: number; completedAt?: string }>, stages: string[][], now = new Date()): string[] {
+/** `readySongs`: the ids of songs that pass songReady (the caller knows each song's bar count). */
+export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: number; completedAt?: string }>, stages: string[][], now = new Date(), readySongs: string[] = []): string[] {
   const streak = dashboard(runs, now).streak;
   const landed = runs.reduce((a, r) => a + Math.round(((r.notes ?? 0) * r.accuracy) / 100), 0);
   const got: Record<(typeof BADGES)[number]['id'], boolean> = {
@@ -101,11 +102,15 @@ export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: n
     'fast-100': runs.some(r => r.bpm >= 100 && r.accuracy >= 90),
     'streak-7': streak >= 7, 'streak-30': streak >= 30,
     'notes-1k': landed >= 1000, 'notes-10k': landed >= 10000,
-    'showoff': runs.some(r => r.chartId.startsWith('yt-') && r.accuracy >= 85),
+    'showoff': readySongs.length > 0,
     'stage-3star': stages.some(ids => ids.length > 0 && ids.every(id => lessons[id]?.stars === 3)),
   };
   return BADGES.filter(b => got[b.id]).map(b => b.id);
 }
+
+/** A show-off song is a real chunk of the song: at least this many bars, every one ready. */
+export const SHOWOFF_MIN_BARS = 16;
+export const songReady = (runs: RunRow[], songId: string, totalBars: number) => totalBars >= SHOWOFF_MIN_BARS && barsReady(runs, songId, totalBars) >= totalBars;
 
 /** Song project: which of a song's bars you've played at 85% or better (in any take covering them). */
 // shortcut: a take's whole accuracy marks every bar it covered ready; upgrade to per-bar accuracy (results per bar in summary_json) when bites are 4+ bars

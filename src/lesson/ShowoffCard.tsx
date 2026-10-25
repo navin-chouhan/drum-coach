@@ -37,7 +37,7 @@ export function ShowoffCard({ stage, profile }: { stage: Milestone; profile: Pro
           {e?.status === 'error' && <p className="warn">{e.error}</p>}
           <button className="primary" onClick={() => askCoach(key, 'showoff', { stage: stage.title, canDo: stage.canDo, goals: profile.goals })}>Show me songs</button>
         </>}
-      <p className="small">When every bar is played at 85% or better it joins your show-off set on Trophies, ready for Stage mode.</p>
+      <p className="small">When 16 bars or more are in and every bar is played at 85% or better, it joins your show-off set on Trophies, ready for Stage mode.</p>
     </div>
   );
 }

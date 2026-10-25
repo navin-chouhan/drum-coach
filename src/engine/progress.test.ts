@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, forYou, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, songReady, forYou, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -51,8 +51,19 @@ describe('earnedBadges', () => {
   const now = new Date('2026-10-24T18:00:00');
   it('earns from runs and lesson progress', () => {
     const runs = [run({ startedAt: '2026-10-24T09:00:00', bpm: 104, accuracy: 92, notes: 600 }), run({ startedAt: '2026-10-24T10:00:00', chartId: 'yt-abc', accuracy: 90, notes: 600 })];
-    expect(earnedBadges(runs, { a: { stars: 3 }, b: { stars: 3 } }, [['a', 'b'], ['c']], now)).toEqual(['first-3star', 'fast-100', 'notes-1k', 'showoff', 'stage-3star']);
+    expect(earnedBadges(runs, { a: { stars: 3 }, b: { stars: 3 } }, [['a', 'b'], ['c']], now, ['yt-abc'])).toEqual(['first-3star', 'fast-100', 'notes-1k', 'showoff', 'stage-3star']);
+    expect(earnedBadges(runs, {}, [], now)).not.toContain('showoff'); // a good take isn't enough: the song must be ready
     expect(earnedBadges([], { a: { stars: 2 } }, [[]], now)).toEqual([]);
+  });
+});
+
+describe('songReady', () => {
+  it('a show-off song is 16 bars or more, every bar at 85%+', () => {
+    const two = [run({ chartId: 'yt-a', accuracy: 99, fromBar: 1, toBar: 2 })];
+    expect(songReady(two, 'yt-a', 2)).toBe(false); // a 2-bar song doesn't count
+    const sixteen = [run({ chartId: 'yt-a', accuracy: 90, fromBar: 1, toBar: 8 }), run({ chartId: 'yt-a', accuracy: 86, fromBar: 9, toBar: 16 })];
+    expect(songReady(sixteen, 'yt-a', 16)).toBe(true);
+    expect(songReady(sixteen, 'yt-a', 24)).toBe(false); // bars 17–24 not ready yet
   });
 });
 

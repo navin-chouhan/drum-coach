@@ -6,7 +6,7 @@ import { greeting } from '../engine/greeting';
 import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
-import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, SHOWOFF_MIN_BARS, songReady, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
 import { songBarCount, useYtSongs } from '../youtube/api';
@@ -58,16 +58,17 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
   useEffect(() => {
     if (!runs.length) return;
-    const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints)), fresh = earned.filter(id => !s.badges?.includes(id));
+    const ready = songs.filter(x => songReady(runs, x.id, songBarCount(x))).map(x => x.id);
+    const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, ready), fresh = earned.filter(id => !s.badges?.includes(id));
     if (!fresh.length) return;
     setSettings({ badges: [...(s.badges ?? []), ...fresh] });
     setNewBadges(fresh); flourish(false);
-  }, [runs, s.lessons, s.badges]);
+  }, [runs, s.lessons, s.badges, songs]);
 
   // The stage's song becomes a lesson once every bar is ready (so the trail and the lesson player know it).
   const pSong = songs.find(x => x.id === (s.profile.song?.stage === milestone?.level ? s.profile.song?.id : undefined));
   const pBars = pSong ? songBarCount(pSong) : 0;
-  const pReady = !!pSong && pBars > 0 && barsReady(runs, pSong.id, pBars) >= pBars;
+  const pReady = !!pSong && songReady(runs, pSong.id, pBars);
   useEffect(() => { setStitched(pReady && pSong ? stitchLesson(pSong, s.profile.song!.stage) : undefined); }, [pReady, pSong, s.profile.song]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
@@ -150,7 +151,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               <li>⏱ <b>{Math.round(dash?.minutesToday ?? 0)}</b> min today</li>
               {theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
                 : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
-              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : 'add its notes in Songs'}</li>}
+              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
             </ul>
           </div>
         </div>
