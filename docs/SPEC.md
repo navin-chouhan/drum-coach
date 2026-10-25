@@ -37,8 +37,8 @@ plan that adapts over time.
 - Match hits to expected notes per drum with windows: Perfect ±40 ms, Good ±100 ms, else miss. For fast notes Good
   shrinks to 40 % of the closest gap between two notes on one drum (Perfect to half of Good), so a 16th can't be
   "good" halfway to the next one. A stroke further off but within 30 % of a beat (at least 250 ms) of its note is that note's miss, not also an
-  extra; only strokes that belong to no note are extra hits. A repeat of the same note within 60 ms that isn't
-  louder (stick bounce, pad retrigger) is ignored at input. Hi-hat 42/46 both count as "hi-hat" unless the chart
+  extra; only strokes that belong to no note are extra hits. A repeat of the same note within 60 ms at under 70 % of
+  its velocity (stick bounce, pad retrigger) is ignored at input. Mean offset and spread include off-time strokes. Hi-hat 42/46 both count as "hi-hat" unless the chart
   asks for open.
 - Per-run stats: accuracy %, mean offset (rushing/dragging), spread (consistency), per-drum accuracy,
   velocity consistency, accents and ghost notes, a per-beat-position error heat map.

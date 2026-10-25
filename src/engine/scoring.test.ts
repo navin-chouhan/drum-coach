@@ -106,6 +106,20 @@ describe('latencySuspect', () => {
   });
 });
 
+describe('timing stats count off-time strokes', () => {
+  it('a dragging player is reported as late as they are, though off-time strokes still count against accuracy', () => {
+    const q = buildRun({ title: 'q', bpm: 60, timeSignature: [4, 4], bars: 2, notes: pattern({ snare: 'xxxxxxxx' }, 1) }, { fromBar: 1, toBar: 2, repeats: 1 });
+    const exp: Expected[] = q.notes.map(n => ({ time: 1000 + n.t * 1000, drum: n.drum }));
+    const hits = exp.map((e, k) => ({ time: e.time + (k < 4 ? 20 : 150), pad: 'snare' as const, velocity: 80 })); // 4 good, 4 off-time
+    const { results, extras } = scoreRun(exp, hits);
+    const s = computeStats(q, results, extras.length);
+    expect(s.accuracy).toBe(50);
+    expect(s.meanOffset).toBe(85); // (4×20 + 4×150) / 8, not 20
+    expect(s.spread).toBe(65);
+    expect(s.perDrum.snare?.meanOffset).toBe(85);
+  });
+});
+
 describe('windows shrink for fast notes', () => {
   it('Good is 40% of the closest same-drum gap, capped at ±100', () => {
     expect(windowsFor(1000)).toMatchObject({ good: 100, perfect: 40 });

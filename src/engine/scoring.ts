@@ -100,8 +100,8 @@ export type HeatCell = { total: number; miss: number; meanAbsOffset: number };
 export type RunStats = {
   total: number; perfect: number; good: number; miss: number; extra: number;
   accuracy: number;   // % of notes hit within the Good window
-  meanOffset: number; // ms; negative = rushing, positive = dragging
-  spread: number;     // ms standard deviation of offsets (consistency)
+  meanOffset: number; // ms; negative = rushing, positive = dragging (off-time strokes included)
+  spread: number;     // ms standard deviation of offsets (consistency, off-time strokes included)
   perDrum: Partial<Record<ChartDrum, DrumStats>>;
   velocity: { normalMean: number; normalCv: number; accentMean: number | null; ghostMean: number | null;
     pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
@@ -111,16 +111,22 @@ export type RunStats = {
 
 export function computeStats(run: Run, results: NoteResult[], extra: number): RunStats {
   const hitOffsets = results.flatMap(r => (r.offset === undefined ? [] : [r.offset]));
+  // Timing counts off-time strokes too: at fast tempos a dragging player's late strokes fall outside Good,
+  // and leaving them out would report them as nearly on time.
+  const timeOf = (r: NoteResult) => r.offset ?? r.off;
+  const timing = results.flatMap(r => (timeOf(r) === undefined ? [] : [timeOf(r)!]));
   const count = (j: Judgement) => results.filter(r => r.judgement === j).length;
   const pct = (a: number, b: number) => (b ? r1((a / b) * 100) : 0);
 
-  const perDrum: RunStats['perDrum'] = {};
+  const perDrum: RunStats['perDrum'] = {}, timed = new Map<object, number>();
   run.notes.forEach((n, i) => {
     const d = (perDrum[n.drum] ??= { total: 0, hit: 0, accuracy: 0, meanOffset: 0 });
     d.total++;
-    if (results[i].offset !== undefined) { d.hit++; d.meanOffset += results[i].offset!; }
+    if (results[i].offset !== undefined) d.hit++;
+    const t = timeOf(results[i]);
+    if (t !== undefined) { timed.set(d, (timed.get(d) ?? 0) + 1); d.meanOffset += t; }
   });
-  for (const d of Object.values(perDrum)) { d.meanOffset = d.hit ? r1(d.meanOffset / d.hit) : 0; d.accuracy = pct(d.hit, d.total); }
+  for (const d of Object.values(perDrum)) { const k = timed.get(d) ?? 0; d.meanOffset = k ? r1(d.meanOffset / k) : 0; d.accuracy = pct(d.hit, d.total); }
 
   const vel = (f: (n: Run['notes'][number]) => boolean) =>
     run.notes.flatMap((n, i) => (f(n) && results[i].velocity !== undefined ? [results[i].velocity!] : []));
@@ -149,7 +155,7 @@ export function computeStats(run: Run, results: NoteResult[], extra: number): Ru
   return {
     total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
     accuracy: pct(hitOffsets.length, results.length),
-    meanOffset: r1(mean(hitOffsets)), spread: r1(std(hitOffsets)), perDrum,
+    meanOffset: r1(mean(timing)), spread: r1(std(timing)), perDrum,
     velocity: {
       normalMean: r1(mean(normal)), normalCv: normal.length ? r1((std(normal) / mean(normal)) * 100) : 0,
       accentMean: accents.length ? r1(mean(accents)) : null, ghostMean: ghosts.length ? r1(mean(ghosts)) : null, pairDrop,
