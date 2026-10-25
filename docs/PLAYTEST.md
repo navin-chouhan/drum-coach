@@ -103,6 +103,33 @@ Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `
 | 17 | After ~15 rough takes (avg 75% landed, hits wandering ±75 ms, no lesson finished, comfortable at 40 BPM) the student read was *steady*, not *struggling*: the cut-off was accuracy < 75 and spread was ignored. The coach would write for a steady student. | Teaching | A spread wider than 40 ms (looser than any checkpoint allows) also reads as struggling (`studentRead`). On the test data the read is now *struggling*. |
 | 18 | After "Lesson complete" (M4 kept the verdict, with the coach's short line under it: verified) the big move and the kit's "yes" became the coach's "Try a slower tempo", replaying a finished lesson instead of moving on. | UX | A record, rank up or finished lesson keeps the app's own next move; the coach's button is dropped (`dropCoachAction(true)`), its words stay. |
 
+Routes walked (Beginner preset unless noted), against `docs/LEARNING.md`:
+| Route | Result |
+|---|---|
+| Two close misses → −5 BPM | ✓ 60 → 55 ("Let's take it to 55 BPM. Slower is how it sticks.") |
+| Rough take (< 60%) → −10 BPM | ✓ 55 → 45 (13/32 landed); next rough → 40 |
+| Floor 40 → "Learn it slowly" (wait mode), never a pass | ✓ after fixes 13–15: the music waits, verdict "Nice and slow…", no run saved, progress unchanged |
+| After easing off, one clean take climbs +10 | ✓ 40 → 50 |
+| "🔍 Fix bar N" and back to the full take | ✓ bar 2 ×4 at 50 instead of 60, ladder unchanged, then "Now the whole thing again at 60 BPM" (fix 16). Not offered on 1-bar charts (by design: `worstBars` needs 2+ bars). |
+| "Ask the coach for something different" | ✓ ~21 s; "Feel the & with a click on every 8th": jam → copy-me → 8-in-a-row streak, 40–50 BPM (smaller, different tools). Its "focus" said "you played 8ths perfectly at a slow tempo", which flatters a 78% take. |
+| Live tips during a take | ✓ "dragging" and "reacting" on screen (`liveTips: screen`); spoken tips not checked (sound can't be heard by the test). |
+| Coach tool switch, one take | ✓ trade via `runAction({kind:'trade'})`: one-off, free bars, ladder untouched. count / layers / listen share that path; not run separately. |
+| Student read new → struggling | ✓ after fix 17 (server read: struggling, 75%, spread 75 ms, comfortable 40 BPM) |
+| autoProbe stays off for a non-flying student | ✓ no "Find my tempo" on any untouched step |
+| M3 / M4 / M6 live | ✓ the verdict stayed with "Your coach is listening back…" under it; after "Lesson complete" the coach's line ("Lift each stick sooner, right as the click arrives") sat under the verdict |
+| Practice (Solid preset) | ✓ short coach line "Clean groove, every hit landed. Keep this steady feel.", button "Try a bit faster" |
+
+Open observations from this round (not fixed):
+- **Mixed message on a late take at level 0–1.** 32/32 landed but ~93 ms late: the live tip said "Hitting 135 ms after each
+  click. Play with the click, not after it", the verdict said "Nice! Up to 50 BPM!" (the 150 ms Good window lets it
+  pass; `checkPass`'s reaction check didn't fire). A question for the owner (docs/OVERNIGHT.md).
+- **A timing-only fail slows the tempo like missed notes.** All notes landed but dragging → −5 BPM, down to 40, where
+  keeping with the click is harder, not easier. Question for the owner.
+- **The owner's own data says "latency".** Their week: 34% landed, "landing behind the click", and the app's latency
+  hint fires. The latency test is the first thing in the M2 kit checklist.
+- The emulated kit doesn't play in wait mode (the test used keyboard strokes) or in free bars (G8).
+- After a code change the open page keeps stale modules (HMR): one "missing verdict" was that, not a bug.
+
 ### Open observations (not fixed yet)
 - **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very
   start; ~180 on-time takes later it's still the habit to work on. It should need the issue to still be present lately.
