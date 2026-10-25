@@ -212,6 +212,10 @@ export const floorLine = (notesLanded: boolean, reason?: string) => (notesLanded
   ? `All the notes are there. ${reason ?? 'One small thing left: see the tip.'}`
   : 'This one is tricky. Try "Learn it slowly": the music waits for each note.');
 
+/** Levels 0–1 pass a take well off the click (Good is ±150 ms); the verdict still says so, gently. */
+export const lateNote = (level: number, meanOffsetMs: number) => (level > 1 || Math.abs(meanOffsetMs) <= 50 ? ''
+  : meanOffsetMs > 0 ? ' A touch late: lean into the click.' : ' A touch early: let the click come to you.');
+
 export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'atFloor' | 'layerUp' | 'stepDone' | 'lessonDone';
 /** The lanes the student plays now: the current layer, else the step's own `activeLanes`. */
 export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.layers[Math.min(p.layer ?? 0, s.layers.length - 1)] : s.activeLanes);
@@ -222,11 +226,13 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
  * ROUGH_ACCURACY % landed) → −10 at once; FAILS_BEFORE_SLOWDOWN close ones → −5. Never below MIN_BPM ('atFloor').
  * A `jam` step counts any take as clean. A `layers` step adds a layer per clean take (tempo stays) before the ladder;
  * a fail never takes a layer away. A `strong` take (★★★ quality) and a streak challenge's pass count as both clean takes.
+ * `notesLanded`: the fail was timing or volume only, every note there: slower doesn't fix that, the tempo holds.
  */
-export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false): { next: LessonProgress; event: LadderEvent } {
+export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false, notesLanded = false): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
   if (step.jam || step.rest || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
+  if (!passed && notesLanded) return { next: { ...p, clean: 0, fails: 0 }, event: 'hold' };
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
     if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };

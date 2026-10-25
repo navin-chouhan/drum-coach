@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, floorLine, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, floorLine, lateNote, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -72,6 +72,9 @@ describe('tempo ladder', () => {
     expect(ladderStep({ ...p0, bpm: 60 }, lesson, false, D, 40)).toMatchObject({ event: 'slowDown', next: { bpm: 50 } });
     expect(ladderStep({ ...p0, bpm: 45 }, lesson, false, D, 40)).toMatchObject({ next: { bpm: 40 } });
     expect(ladderStep({ ...p0, bpm: 40 }, lesson, false, D, 40)).toMatchObject({ event: 'atFloor', next: { bpm: 40 } });
+    // every note landed, only the timing (or volume) failed: slower doesn't help, the tempo holds
+    expect(ladderStep({ ...p0, bpm: 60, fails: 1 }, lesson, false, D, 100, false, true)).toMatchObject({ event: 'hold', next: { bpm: 60 } });
+    expect(ladderStep({ ...p0, bpm: 40, fails: 5 }, lesson, false, D, 100, false, true)).toMatchObject({ event: 'hold', next: { bpm: 40 } });
   });
   it('after easing off, one clean take climbs +10 back toward the target', () => {
     expect(ladderStep({ ...p0, bpm: 45 }, lesson, true, D)).toMatchObject({ event: 'up', next: { bpm: 55 } });
@@ -265,5 +268,14 @@ describe('checkPass: grace notes (R2)', () => {
     expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 4, ratio: 0.4 })).reason).toMatch(/land together/);
     expect(checkPass(g({ notes: 10, played: 5, pct: 50, gapMs: 25, ratio: 0.4 }), { minGracePct: 40 }).ok).toBe(true);
     expect(checkPass(stats()).ok).toBe(true); // no graces: nothing to check
+  });
+});
+
+describe('lateNote', () => {
+  it('a passing take far off the click at levels 0-1 gets a gentle word, nothing otherwise', () => {
+    expect(lateNote(0, 93)).toBe(' A touch late: lean into the click.');
+    expect(lateNote(1, -60)).toBe(' A touch early: let the click come to you.');
+    expect(lateNote(1, 30)).toBe('');
+    expect(lateNote(2, 93)).toBe(''); // from level 2 the Good window is tight enough to say it
   });
 });

@@ -62,11 +62,11 @@ Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1
 `~/.claude/plans/plan-all-the-change-purrfect-flamingo.md`.
 
 ## Questions for the owner
-1. **A take where every note landed but the timing failed slows the tempo (−5, down to 40).** Slower makes staying
+1. ✅ *Answered: hold the tempo (done).* **A take where every note landed but the timing failed slows the tempo (−5, down to 40).** Slower makes staying
    with the click harder, not easier. Should a timing-only fail *hold* the tempo instead (and give the timing tip)?
    *I'd recommend: hold the tempo for timing-only fails, slow down only for missed notes.* Waiting: a small ladder
    change in `src/engine/lesson.ts` (`ladderStep`) plus `docs/LEARNING.md`.
-2. **Level 0–1 lets a take ~90 ms late pass** (Good is ±150 ms) while the live tip says "play with the click, not after
+2. ✅ *Answered: pass + gentle note (done).* **Level 0–1 lets a take ~90 ms late pass** (Good is ±150 ms) while the live tip says "play with the click, not after
    it". Mixed message. Keep the generous window and soften the tip at levels 0–1, or make the verdict mention it?
    *I'd recommend: keep the window, and say "Nice! A touch late: lean into the click" in the verdict when the mean
    offset is over 50 ms.* Waiting: one line in `LessonPlayer.tsx`.

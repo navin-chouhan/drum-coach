@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
-import { afterReview, autoProbe, floorLine, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, autoProbe, floorLine, lateNote, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
@@ -178,7 +178,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     } else {
       // Your own bars count however you fill them, but they have to be filled: a silent answer isn't a take.
       const emptyBars = !!fs && !fs.stats.hits;
-      const { next, event } = emptyBars ? { next: p, event: 'hold' as const } : ladderStep(p, lesson, check.ok, today(), st.accuracy, check.ok && starsFor(st) === 3);
+      // Every note landed and only the timing (or volume) failed: slower won't fix it, so the tempo holds.
+      const notesLanded = st.accuracy >= Math.min(passFor(lesson.level).accuracy, step.pass?.accuracy ?? 100);
+      const { next, event } = emptyBars ? { next: p, event: 'hold' as const } : ladderStep(p, lesson, check.ok, today(), st.accuracy, check.ok && starsFor(st) === 3, notesLanded);
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
       // The checkpoint this lesson proves (itself, or the one a coach lesson stands in for) was it already passed?
       const provedBefore = !!getSettings().lessons[lesson.checkpoint ?? lesson.id]?.completedAt;
@@ -190,10 +192,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       // Rank up: this was the last open checkpoint of its stage (a coach lesson for an already passed checkpoint isn't).
       const stage = MILESTONES.find(m => m.checkpoints.includes(cp ? cp.id : lesson.id)), s = getSettings();
       const rankUp = event === 'lessonDone' && !provedBefore && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
-      const notesLanded = st.accuracy >= Math.min(passFor(lesson.level).accuracy, step.pass?.accuracy ?? 100);
       const ok = !emptyBars && (check.ok || !!step.jam || (free.length > 0 && !step.pass));
       const msg: Record<LadderEvent, string> = {
-        hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${cleanNeeded(step)}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
+        hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${cleanNeeded(step)}). Once more at ${next.bpm} BPM.` : notesLanded ? floorLine(true, check.reason) : 'Same tempo, once more. You are close.',
         up: `Up to ${next.bpm} BPM!`,
         slowDown: `Let's take it to ${next.bpm} BPM. Slower is how it sticks.`,
         layerUp: `Now add the ${(lanesNow(step, next) ?? []).filter(d => !(lanesNow(step, p) ?? []).includes(d)).map(laneName).join(' and ')}.`,
@@ -204,7 +205,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       // Keep time alone: say how the tempo held once the click went quiet (in words, no numbers).
       const drift = step.fadeClick ? takeDrift(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed) }) : undefined;
       const held = drift === undefined || drift === null ? '' : Math.abs(drift) >= 20 ? ` You ${drift < 0 ? 'sped up' : 'slowed down'} a little once the click went quiet.` : ' Tempo held on your own. That\'s the hard part.';
-      o = { passed: ok, event, slowly: event === 'atFloor' && !notesLanded, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
+      o = { passed: ok, event, slowly: event === 'atFloor' && !notesLanded, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}${ok ? lateNote(lesson.level, st.meanOffset) : ''}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
     // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting,
