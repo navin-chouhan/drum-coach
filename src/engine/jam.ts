@@ -43,6 +43,12 @@ export function scoreJam(hits: JamHit[], grid: BeatGrid, stepsPerBeat = 2, rate 
   };
 }
 
+/** Is this beat of a take (0 = the take's first beat) in one of its free bars? Bars are 1-based chart bars of the looped section. */
+export const inFreeBar = (beat: number, beatsPerBar: number, fromBar: number, sectionBars: number, freeBars: readonly number[]) => {
+  const b = Math.floor(beat / beatsPerBar + 1e-9);
+  return b >= 0 && freeBars.includes((b % sectionBars) + fromBar);
+};
+
 /**
  * Free bars (yours to fill, no chart notes): the hits in them, scored on the 8th-note grid of the take.
  * Bars are 1-based chart bars; `fromBar`/`sectionBars` describe the looped section. `extras` = how many of the take's
@@ -51,7 +57,7 @@ export function scoreJam(hits: JamHit[], grid: BeatGrid, stepsPerBeat = 2, rate 
 export function freeBarStats(hits: PlayedHit[], extras: PlayedHit[], take: { zero: number; beatMs: number; beatsPerBar: number; fromBar: number; sectionBars: number }, freeBars: number[]) {
   if (!freeBars.length) return null;
   const { zero, beatMs, beatsPerBar, fromBar, sectionBars } = take;
-  const inFree = (h: PlayedHit) => { const b = Math.floor((h.time - zero) / beatMs / beatsPerBar); return b >= 0 && freeBars.includes((b % sectionBars) + fromBar); };
+  const inFree = (h: PlayedHit) => inFreeBar((h.time - zero) / beatMs, beatsPerBar, fromBar, sectionBars, freeBars);
   const jam = hits.filter(inFree).map(h => ({ songSec: (h.time - zero) / 1000, pad: h.pad ?? 'snare', velocity: h.velocity }));
   return { stats: scoreJam(jam, { bpm: 60000 / beatMs, offsetSec: 0 }), extras: extras.filter(inFree).length };
 }

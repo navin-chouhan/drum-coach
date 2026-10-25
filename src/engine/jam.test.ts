@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeBarStats } from './jam';
+import { freeBarStats, inFreeBar } from './jam';
 
 describe('freeBarStats', () => {
   // 60 BPM (1000 ms a beat), 4/4, a 2-bar section looped twice; bar 2 is free. Zero at 5000 ms.
@@ -13,4 +13,13 @@ describe('freeBarStats', () => {
     expect(r.extras).toBe(1);
   });
   it('is null without free bars', () => expect(freeBarStats([at(0)], [], take, [])).toBeNull());
+});
+
+describe('inFreeBar', () => {
+  it('finds free bars across repeats of the section', () => {
+    expect(inFreeBar(4.5, 4, 1, 2, [2])).toBe(true);
+    expect(inFreeBar(3.9, 4, 1, 2, [2])).toBe(false);
+    expect(inFreeBar(12.5, 4, 1, 2, [2])).toBe(true); // second time round
+    expect(inFreeBar(-0.5, 4, 1, 2, [2])).toBe(false); // count-in
+  });
 });

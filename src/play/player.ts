@@ -1,5 +1,6 @@
 import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '../engine/chart';
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
+import { inFreeBar } from '../engine/jam';
 import { computeStats, createMatcher, minGapBeats, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
@@ -23,6 +24,7 @@ export type PlayOptions = RunOptions & {
   gapBars?: number;          // the click is silent on every n-th bar
   hints?: boolean;           // the sheet shows the count and who plays each note under the staff
   countAloud?: string[][];   // words the voice says per bar, one per slot ('' = silent): engine/lesson.ts countPlan
+  freeBars?: number[];       // 1-based chart bars that are yours (free / trade bars): strokes there aren't extras
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
@@ -175,6 +177,8 @@ export function start(chart: Chart, options: PlayOptions) {
       player.feedback.push({ lane: laneOf(run.notes[i].drum), judgement: m.judgement, time: h.time });
     } else if (h.pad && auto.some(n => padMatches(n.drum, h.pad!))) {
       // playing along on a lane the app is playing: neither scored nor an extra
+    } else if (options.freeBars && inFreeBar((hit.time - player.zero) / beatMs, bpb, options.fromBar, options.toBar - options.fromBar + 1, options.freeBars)) {
+      // your own bar: no ✕, no "extra" flash, no "only the notes shown" tip
     } else {
       extras.push(hit);
       player.extraBeats.push((hit.time - player.zero) / beatMs);

@@ -85,7 +85,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     const p0 = progressOf(lesson);
     // A step's extra limits (flams, timing) are for the full groove, not its first layers.
     const fs = freeBarStats(f.hits, f.extras, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: beatsPerBar(f.chart), fromBar: f.options.fromBar, sectionBars: f.options.toBar - f.options.fromBar + 1 }, free);
-    const st = fs ? { ...f.stats, extra: f.stats.extra - fs.extras } : f.stats; // strokes in your own bars aren't extras
+    const st = f.stats; // strokes in your own bars never became extras (the player knows the free bars)
     const check = checkPass(st, recordStreak ? { ...step.pass, streak: recordStreak } : step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level);
     // A zoom loop is practice for the next real take: no ladder, not saved.
     if (f.options.zoom) {
@@ -167,7 +167,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     fromBar: 1, toBar: chart.bars, repeats: Math.max(1, Math.ceil((step.copy || step.trade || step.jam || (stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target) ? 8 : 4) / chart.bars)),
     speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
     countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud),
-    activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false,
+    activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false, freeBars: free.length ? free : undefined,
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
   });
   // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).
