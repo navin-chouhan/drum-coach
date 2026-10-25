@@ -17,4 +17,10 @@ describe('CoachReplySchema', () => {
     for (const kind of ['trade', 'count', 'layers', 'listen'])
       expect(CoachReplySchema.safeParse({ say: 'Trade bars with me', action: { kind, label: 'Go' } }).success).toBe(true);
   });
+  it('drops an overlong "show" (the screen falls back to "say") instead of failing the reply', () => {
+    expect(CoachReplySchema.parse({ say: 'Nice.', show: 'Lift the kick foot a hair sooner.' }).show).toBe('Lift the kick foot a hair sooner.');
+    const long = CoachReplySchema.parse({ say: 'Nice.', show: 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen' });
+    expect(long.show).toBeUndefined();
+    expect(long.say).toBe('Nice.');
+  });
 });

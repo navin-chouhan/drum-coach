@@ -24,12 +24,13 @@ export const useCoach = () => useSyncExternalStore(fn => { listeners.add(fn); re
 export const replyFor = (s: CoachState, f: Finished | undefined, openedAt: number) =>
   s.reply && (s.take ? s.take === f : s.at > Math.max(openedAt, f ? Date.parse(f.startedAt) : 0)) ? s.reply : undefined;
 /**
- * The big coach line: the coach's answer to this take, or the app's verdict. A big moment (a record, a rank up, a
- * finished lesson) keeps the app's verdict, with the coach's words under it.
+ * The big coach line: the coach's answer to this take (its short screen line, else what it said), or the app's
+ * verdict. A big moment (a record, a rank up, a finished lesson) keeps the app's verdict, with the coach's words under it.
  */
-export function coachLine(verdict: string | undefined, reply: Pick<CoachReply, 'say'> | undefined, big: boolean): { line?: string; under?: string } {
+export function coachLine(verdict: string | undefined, reply: { say: string; show?: string } | undefined, big: boolean): { line?: string; under?: string } {
   if (!reply) return { line: verdict };
-  return big && verdict ? { line: verdict, under: reply.say } : { line: reply.say };
+  const words = reply.show ?? reply.say;
+  return big && verdict ? { line: verdict, under: words } : { line: words };
 }
 /** The coach is thinking about the take on screen. */
 export const thinkingAbout = (s: CoachState, f: Finished | undefined) => s.status === 'thinking' && !!f && (!s.thinking || s.thinking === f);

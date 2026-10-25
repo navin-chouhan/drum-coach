@@ -29,6 +29,7 @@ describe('the big coach line', () => {
   it('shows the coach\'s answer over a plain verdict', () => {
     expect(coachLine('Same tempo, once more.', { say: 'Lift the foot sooner.' }, false)).toEqual({ line: 'Lift the foot sooner.' });
     expect(coachLine('Same tempo, once more.', undefined, false)).toEqual({ line: 'Same tempo, once more.' });
+    expect(coachLine('Same tempo.', { say: 'That kick was a hair late. Lift the foot sooner.', show: 'Lift the foot sooner.' }, false)).toEqual({ line: 'Lift the foot sooner.' });
   });
   it('keeps a big moment (record, rank up, lesson done) and puts the coach under it', () => {
     expect(coachLine('🏆 NEW RECORD: 95 BPM!', { say: 'What a take.' }, true)).toEqual({ line: '🏆 NEW RECORD: 95 BPM!', under: 'What a take.' });

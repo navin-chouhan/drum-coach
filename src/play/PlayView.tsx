@@ -112,7 +112,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     : next > bpm ? { label: `🐇 Try ${next}`, run: () => playAt(next) }
     : next < bpm ? { label: `🐢 Try ${next}`, run: () => playAt(next) }
     : { label: `▶ Again at ${bpm}`, run: () => void go() };
-  const line = reply?.say ?? (f ? (next > bpm ? `Two clean takes in a row! Ready for ${next}?` : next < bpm ? `Let's take it to ${next} and lock it in.` : `${f.stats.accuracy >= 90 ? 'Nice!' : 'Good.'} Once more at ${bpm}?`)
+  const line = reply?.show ?? reply?.say ?? (f ? (next > bpm ? `Two clean takes in a row! Ready for ${next}?` : next < bpm ? `Let's take it to ${next} and lock it in.` : `${f.stats.accuracy >= 90 ? 'Nice!' : 'Good.'} Once more at ${bpm}?`)
     : last && last.accuracy < 60 ? `Last time ${Math.round(last.bpm)} BPM was tricky. Let's warm up at ${startAt}.`
     : last ? `Last time ${Math.round(last.bpm)} BPM, ${Math.round(last.accuracy)}% landed. Start there?`
     : chart.description ?? `Ready when you are: ${bpm} BPM.`);

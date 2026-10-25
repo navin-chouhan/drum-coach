@@ -101,9 +101,12 @@ export const PlanRequestSchema = z.object({
 export const SessionEventSchema = z.object({
   type: z.enum(['open', 'take', 'said']),
 }).catchall(z.unknown()).refine(e => JSON.stringify(e).length < 20_000, { message: 'event too large' });
+// The screen line is read from the throne: one thing to do, ≤ 12 words. An overlong one is dropped (the screen then
+// shows "say") instead of failing the whole reply.
+const fitsScreen = (t: string) => t.length <= 90 && t.trim().split(/\s+/).length <= 14;
 export const CoachReplySchema = z.object({
   say: z.string().min(1).max(400),
-  show: z.string().max(500).optional(),
+  show: z.string().max(500).optional().transform(t => (t && fitsScreen(t) ? t : undefined)),
   action: z.object({
     kind: z.enum(['again', 'slower', 'faster', 'next', 'drill', 'zoom', 'trade', 'count', 'layers', 'listen']), label: z.string().min(1).max(40),
     bar: z.number().int().min(1).max(64).optional(), // zoom: the bar to loop (default: the stickiest bar of the last take)
