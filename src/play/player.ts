@@ -128,8 +128,10 @@ export function start(chart: Chart, options: PlayOptions) {
   stop();
   hush();
   if (!options.demo && !options.wait) loadTips(chart, options.lesson?.goal);
-  // shortcut: an endless take is 64 bars (about 3 minutes at 90 BPM); extend the run on the fly if flows get longer
-  const run = buildRun(chart, options.endless ? { ...options, repeats: Math.ceil(64 / (options.toBar - options.fromBar + 1)) } : options);
+  // A timed take is sized from its seconds; shortcut: a flow is 64 bars (about 3 minutes at 90 BPM), extend on the fly if flows get longer
+  const secBars = options.toBar - options.fromBar + 1, secBeats = secBars * beatsPerBar(chart);
+  const endlessRepeats = options.seconds ? Math.ceil((options.seconds / 60) * chart.bpm * options.speed / secBeats) + 1 : Math.ceil(64 / secBars);
+  const run = buildRun(chart, options.endless ? { ...options, repeats: endlessRepeats } : options);
   const { scored, auto } = splitRun(run, options.demo ? [] : options.activeLanes);
   const isAuto = run.notes.map(() => false);
   auto.forEach(n => { isAuto[n.i] = true; });
@@ -241,8 +243,9 @@ export function start(chart: Chart, options: PlayOptions) {
   }, 25);
   cleanup.push(() => clearInterval(timer));
   if (options.endless) endEarly = () => {
-    const beats = Math.max(0, Math.floor(position() / bpb)) * bpb; // whole bars played
-    finish({ ...scored, notes: scored.notes.filter(n => n.t < beats), beats }, hits, extras, startedAt);
+    const beats = Math.max(0, Math.floor(position() / bpb)) * bpb, end = player.zero + beats * beatMs; // whole bars played
+    // the 4-crash stop and anything after the last whole bar isn't part of the take
+    finish({ ...scored, notes: scored.notes.filter(n => n.t < beats), beats }, hits.filter(h => h.time < end), extras.filter(h => h.time < end), startedAt);
   };
 
   if (options.backing) {

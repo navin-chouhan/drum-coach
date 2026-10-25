@@ -1,3 +1,4 @@
+import { drumName } from './liveCoach.ts';
 export type RunRow = {
   chartId: string; chartTitle: string; level?: number; startedAt: string; durationS: number;
   bpm: number; speed: number; accuracy: number; meanOffset: number; spread: number;
@@ -140,7 +141,7 @@ export function weekTheme(runs: RunRow[], now = new Date()): { cue: string; coun
     for (const id of r.tips ?? []) if (id !== 'praise') counts.set(id, (counts.get(id) ?? 0) + 1);
   const [cue, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
   if (!cue || count < 3) return null;
-  return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${cue.slice(8)}` : cue) };
+  return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${drumName(cue.slice(8))}` : cue) };
 }
 
 /** ISO week key ("2026-W43"), for "once a week" things like the Monday recap. */

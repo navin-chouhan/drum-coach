@@ -34,13 +34,13 @@ export type Step = {
   freeBars?: number[]; // 1-based chart bars that are yours: no notes to miss, scored on the beat grid only
   trade?: boolean;      // trade bars: the app plays a bar, you answer with anything (copy + every echo bar free)
   bite?: { songId: string; fromBar: number; toBar: number; title?: string }; // bars of a saved song (chart cut from its notes)
-  countAloud?: 'quarters' | '8ths';
+  countAloud?: 'quarters' | '8ths'; // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
   fadeClick?: number;   // keep time alone: the click fades to silence over this many bars
   clickOn?: 'quarters' | '8ths' | '2and4'; // click feel: on every beat (default), every 8th, or only 2 and 4
   variants?: Chart[];   // shuffle the phrases: each take plays one of these (same length) so you read, not memorise
   bars?: number;        // long take: this many bars per take instead of 4 (8 for the proving take)
   probe?: boolean;      // find your tempo: 1-bar takes from bpm.start, +5 per clean bar, until one falls apart
-  rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen) // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
+  rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
 };
 export type LessonKind = NonNullable<Chart['kind']>;
@@ -200,7 +200,7 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
-  if (step.jam) {
+  if (step.jam || step.rest) { // any take (or the end of a rest) finishes the step
     if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   } else {
     if (clean < CLEAN_TAKES && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };

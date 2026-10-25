@@ -11,7 +11,8 @@ export type LiveWindow = { bar: number; notes: WindowNote[]; extras: number; rea
 export type Cue = { id: string; text: string; spoken: string; priority: number };
 
 const NAME: Partial<Record<ChartDrum, string>> = { hihat: 'hi-hat', hhOpen: 'open hi-hat', hhPedal: 'hi-hat foot', tom1: 'tom 1', tom2: 'tom 2', floor: 'floor tom' };
-const name = (d: ChartDrum) => NAME[d] ?? d;
+export const drumName = (d: string) => NAME[d as ChartDrum] ?? d;
+const name = (d: ChartDrum) => drumName(d);
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const std = (xs: number[]) => { const m = mean(xs); return Math.sqrt(mean(xs.map(x => (x - m) ** 2))); };
 

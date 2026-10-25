@@ -137,7 +137,7 @@ describe('click feel, variants and rest', () => {
   });
   it('a rest step is done when the rest is over', () => {
     const rest: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], rest: 20 }, lesson.steps[1]] };
-    expect(ladderStep({ ...startProgress(rest), bpm: 65, clean: 1 }, rest, false, D).event).toBe('stepDone');
+    expect(ladderStep(startProgress(rest), rest, false, D).event).toBe('stepDone'); // fresh: one "done", no tempo ladder
   });
 });
 
