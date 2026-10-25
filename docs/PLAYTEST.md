@@ -106,6 +106,7 @@ Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `
 | 16 | "🔍 Fix bar 2" worked (bar 2 looped 4× at 50 instead of 60, the ladder didn't move), but its verdict always said "Bar 2 sounds better", even when the loop went badly. | Honesty | "sounds better" only when the loop passed, else "is getting there". |
 | 17 | After ~15 rough takes (avg 75% landed, hits wandering ±75 ms, no lesson finished, comfortable at 40 BPM) the student read was *steady*, not *struggling*: the cut-off was accuracy < 75 and spread was ignored. The coach would write for a steady student. | Teaching | A spread wider than 40 ms (looser than any checkpoint allows) also reads as struggling (`studentRead`). On the test data the read is now *struggling*. |
 | 18 | After "Lesson complete" (M4 kept the verdict, with the coach's short line under it: verified) the big move and the kit's "yes" became the coach's "Try a slower tempo", replaying a finished lesson instead of moving on. | UX | A record, rank up or finished lesson keeps the app's own next move; the coach's button is dropped (`dropCoachAction(true)`), its words stay. |
+| 19 | Saving the goals screen (onboarding, or "Goals … (change)") rebuilt the profile from goals and minutes only, so the stage's song pick (`profile.song`) was lost. | Bug | The profile keeps its other fields. (M14 commit) |
 
 Routes walked (Beginner preset unless noted), against `docs/LEARNING.md`:
 | Route | Result |

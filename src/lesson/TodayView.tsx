@@ -14,17 +14,20 @@ import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, setStitched, stitchLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
+import { PadWizard } from '../ui/Calibrate';
+import { LatencyCard } from '../ui/LatencyCard';
 import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean; arcade?: boolean };
 
-export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => void; openLessonId?: string }) {
+export function TodayView({ openLessonId, device }: { openLessonId?: string; device?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
   const lessons = useLessons();
   const [open, setOpen] = useState<Open | undefined>(openLessonId ? { lessonId: openLessonId } : undefined);
   const [editing, setEditing] = useState(false);
+  const [kitStep, setKitStep] = useState(false); // onboarding step 2 (or Journey's "check my kit")
   const [dash, setDash] = useState<Dashboard>();
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [songs] = useYtSongs();
@@ -72,7 +75,8 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const pReady = !!pSong && songReady(runs, pSong.id, pBars);
   useEffect(() => { setStitched(pReady && pSong ? stitchLesson(pSong, s.profile.song!.stage) : undefined); }, [pReady, pSong, s.profile.song]);
 
-  if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
+  if (!s.profile.onboarded || editing) return <Onboarding onDone={first => { setEditing(false); if (first) setKitStep(true); }} />;
+  if (kitStep) return <KitSetup device={device} onDone={() => setKitStep(false)} />;
 
   const session = currentSession();
   // A coach lesson can be deleted after today's session froze; skip it (kept in storage: AI lessons may still be loading).
@@ -140,6 +144,11 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
         <div>
           <div className="bubble" aria-live="polite">
             {recap && <p className="recap">📅 {recap}</p>}
+            {!s.setupDone && !s.setupNudged && <div className="recap">
+              <p>Before your next lesson: two minutes to check your pads and latency? It makes the timing scores fair.</p>
+              <div className="actions"><button className="primary" onClick={() => { setSettings({ setupNudged: true }); setKitStep(true); }}>Check my kit ▶</button>
+                <button onClick={() => setSettings({ setupNudged: true })}>Not now</button></div>
+            </div>}
             {newBadges.length > 0 && <p className="newBadge">🏅 New badge: <b>{newBadges.map(id => BADGES.find(b => b.id === id)?.name).join(', ')}</b>!</p>}
             <p>{line}</p>
             <div className="actions">
@@ -320,11 +329,11 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: s
 
 const GOALS: { id: Genre; label: string }[] = [{ id: 'rock', label: 'Rock / pop' }, { id: 'funk', label: 'Funk / R&B' }, { id: 'jazz', label: 'Jazz / swing' }];
 
-function Onboarding({ onCalibrate, onDone }: { onCalibrate: () => void; onDone: () => void }) {
+function Onboarding({ onDone }: { onDone: (first: boolean) => void }) {
   const profile = getSettings().profile;
   const [goals, setGoals] = useState<Genre[]>(profile.goals);
   const [minutes, setMinutes] = useState(profile.minutesPerDay);
-  const save = () => { setSettings({ profile: { goals, minutesPerDay: minutes, onboarded: true }, session: undefined }); onDone(); };
+  const save = () => { setSettings({ profile: { ...profile, goals, minutesPerDay: minutes, onboarded: true }, session: undefined }); onDone(!profile.onboarded); };
   return (
     <div className="today">
       <div className="card form onboarding">
@@ -342,9 +351,35 @@ function Onboarding({ onCalibrate, onDone }: { onCalibrate: () => void; onDone: 
             {[15, 20, 25, 30, 45].map(m => <option key={m} value={m}>{m} minutes{m === 25 ? ' (recommended)' : ''}</option>)}
           </select>
         </label>
-        {!profile.onboarded && <p className="small">Before your first lesson: check that every pad is recognised and measure the latency, under <button className="link" onClick={() => { save(); onCalibrate(); }}>Setup → Pads</button> (the gear, top right). No kit? The keyboard works too (keys are shown under the highway).</p>}
-        <div className="actions"><button className="primary big" onClick={save}>{profile.onboarded ? 'Save' : 'Let\'s start'}</button>
-          {profile.onboarded && <button onClick={onDone}>Cancel</button>}</div>
+        <div className="actions"><button className="primary big" onClick={save}>{profile.onboarded ? 'Save' : 'Next: check your kit ▶'}</button>
+          {profile.onboarded && <button onClick={() => onDone(false)}>Cancel</button>}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Onboarding step 2 (and Journey's "check my kit"): hit each pad once, then tap 8+ times for latency. Each part can be
+ * skipped ("No kit yet → use the keyboard"); `setupDone` is set once both are done, so Journey nudges only once.
+ */
+function KitSetup({ device, onDone }: { device?: string; onDone: () => void }) {
+  const [part, setPart] = useState<'pads' | 'latency'>('pads');
+  const finish = (done: boolean) => { setSettings({ setupDone: done || getSettings().setupDone, setupNudged: true }); onDone(); };
+  return (
+    <div className="today">
+      <div className="card form onboarding kitSetup">
+        <p className="steps"><span className="pill on">1 · Your goals ✓</span> <span className="pill">2 · Your kit</span></p>
+        <h2>{part === 'pads' ? 'Hit each pad once' : 'Tap with the click'}</h2>
+        <p>{part === 'pads' ? 'So I know your kit: hit the pad I name. If one is wrong you can fix it right here.'
+          : "I'm measuring how late the sound reaches you, not how well you play. Then on time is on time."}</p>
+        {!device && <p className="warn">No kit plugged in. Plug it in over USB, or use the keyboard for now.</p>}
+        {part === 'pads' ? <PadWizard device={device ?? 'keyboard'} autoStart={!!device} onSaved={() => setPart('latency')} />
+          : <LatencyCard onSaved={() => finish(true)} />}
+        <div className="actions">
+          {part === 'pads' && <button onClick={() => setPart('latency')}>Pads are fine → latency</button>}
+          <button className="link" onClick={() => finish(false)}>No kit yet → use the keyboard</button>
+          <button className="link" onClick={() => finish(false)}>Skip this for now</button>
+        </div>
       </div>
     </div>
   );

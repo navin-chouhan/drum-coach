@@ -34,7 +34,6 @@ export function App() {
   const [song, setSong] = useState<{ id: string; n: number; bars?: SongBars }>();
   const [lesson, setLesson] = useState<{ id: string; n: number }>();
   const setTab = (t: Tab) => { if (t !== tab) { stop(); dropCoachAction(); } setTabState(t); };
-  const openPads = () => { setSetup('pads'); setTab('setup'); };
   useSyncExternalStore(subscribePlayer, playerVersion);
   const focus = player.phase === 'playing' && !player.options?.demo; // hide the chrome while you play
   useEffect(() => {
@@ -101,7 +100,7 @@ export function App() {
           </nav>
         )}
       </header>
-      {tab === 'today' && <TodayView key={lesson?.n} openLessonId={lesson?.id} onCalibrate={openPads} />}
+      {tab === 'today' && <TodayView key={lesson?.n} openLessonId={lesson?.id} device={midi.device} />}
       {tab === 'setup' && setup === 'kit' && (
         <>
           <main>
