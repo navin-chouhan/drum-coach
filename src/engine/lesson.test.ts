@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, copyChart, countPlan, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, copyChart, countPlan, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -114,6 +114,14 @@ describe('beat your best', () => {
     expect(recordTarget(s, { ...p, bestStreak: 30 })).toBe(32);
     expect(recordTarget(s, { ...p, bestStreak: 32 })).toBe(32); // the whole take: Journey stops offering it
     expect(recordTarget({ ...s, pass: undefined }, p)).toBeUndefined();
+  });
+});
+
+describe('playChart', () => {
+  it('trade: calls by the app, every echo bar free and empty', () => {
+    const { chart: c, freeBars } = playChart({ chart: { ...chart, bars: 2, notes: [{ t: 0, drum: 'snare' }, { t: 4, drum: 'kick' }] }, trade: true });
+    expect(freeBars).toEqual([2, 4]);
+    expect(c.notes).toEqual([{ t: 0, drum: 'snare', auto: true }, { t: 8, drum: 'kick', auto: true }]);
   });
 });
 

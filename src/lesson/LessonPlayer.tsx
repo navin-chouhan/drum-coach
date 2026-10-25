@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats } from '../engine/jam';
-import { afterReview, checkPass, CLEAN_TAKES, copyChart, countPlan, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, checkPass, CLEAN_TAKES, countPlan, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
@@ -12,7 +12,7 @@ import type { SessionRole } from '../engine/planner';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { NotesView } from '../play/NotesView';
 import { KitView } from '../ui/KitView';
-import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
+import { afterThis, player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { LatencyHint, Results, saveRun } from '../play/Results';
 import { takeChart } from '../engine/transcribe';
 import { requestSong } from '../ui/nav';
@@ -72,11 +72,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const f = justDone ?? (playing ? undefined : lastTake.current);
   const outcome = f && outcomes.get(f);
   // Built once per step: a new chart object each render would redraw the sheet on every update.
-  const { chart, free } = useMemo(() => {
-    const base = step.copy || step.trade ? copyChart(step.chart) : step.chart;
-    const free = step.trade ? Array.from({ length: step.chart.bars }, (_, i) => 2 * i + 2) : step.freeBars ?? []; // trade: every echo bar is yours
-    return { free, chart: free.length ? { ...base, notes: base.notes.filter(n => !free.includes(Math.floor(n.t / beatsPerBar(base) + 1e-6) + 1)) } : base };
-  }, [step]);
+  const { chart, freeBars: free } = useMemo(() => playChart(step), [step]);
 
   // Judge each finished take once: pass check, tempo ladder or review, save the run.
   useEffect(() => subscribePlayer(() => {
@@ -90,6 +86,15 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     const st = f.stats; // strokes in your own bars never became extras (the player knows the free bars)
     const check = checkPass(st, recordStreak ? { ...step.pass, streak: recordStreak } : step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level);
     // A zoom loop is practice for the next real take: no ladder, not saved.
+    // A one-off take the coach asked for (trade, count along, one limb): for fun, no ladder.
+    if (f.options.oneOff) {
+      const fsx = freeBarStats(f.hits, f.extras, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: beatsPerBar(f.chart), fromBar: f.options.fromBar, sectionBars: f.options.toBar - f.options.fromBar + 1 }, f.options.freeBars ?? []);
+      const say = fsx ? `Your bars: ${fsx.stats.onGridPct}% on the beat.` : `One for fun: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed.`;
+      outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: say, say: `${say} Back to the lesson when you're ready.`,
+        nums: { landed: f.stats.total - f.stats.miss, total: f.stats.total, streak: f.stats.streak, recoveries: f.stats.recoveries, onBeat: fsx?.stats.hits ? fsx.stats.onGridPct : undefined, better: false } });
+      saveRun(f, { passed: true });
+      setVersion(v => v + 1); return;
+    }
     if (f.options.zoom) {
       const again = `Now the whole thing again at ${progressOf(lesson).bpm} BPM.`;
       outcomes.set(f, { passed: check.ok, itemDone: false, zoomed: true, text: `Bar ${f.options.zoom}, four times: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. ${again}`, say: `Bar ${f.options.zoom} sounds better. ${again}`,
@@ -192,6 +197,16 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.
   useEffect(() => onCoachAction(a => {
     if (a.kind === 'next') { (onNext ?? onBack)(); return true; } // opened outside today's session: back to the Journey
+    // The coach switches tools for one take: trade bars, count along, or one limb while the app plays the rest.
+    if (a.kind === 'trade' || a.kind === 'count' || a.kind === 'layers') {
+      const t = a.kind === 'trade' ? playChart({ chart: step.chart, trade: true }) : { chart, freeBars: free };
+      const first = step.layers?.[0] ?? [step.chart.notes[0].drum];
+      setDetails(false);
+      start(t.chart, { ...options(false), toBar: t.chart.bars, repeats: Math.max(1, Math.ceil(8 / t.chart.bars)), speed: bpm / t.chart.bpm, oneOff: true,
+        freeBars: t.freeBars.length ? t.freeBars : undefined,
+        ...(a.kind === 'count' && { countAloud: countPlan(16, beatsPerBar(chart), '8ths') }), ...(a.kind === 'layers' && { activeLanes: first }) });
+      return true;
+    }
     const bar = a.kind === 'zoom' ? (a.bar && a.bar <= chart.bars ? a.bar : stickyBar.current) : undefined;
     if (bar) { zoomIn(bar); return true; }
     const cur = progressOf(lesson).bpm;
@@ -220,7 +235,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const slower = () => (oneTake ? play(false, bpm, true) : runAction({ kind: 'slower', label: 'Slower' }));
   useEffect(() => onCoachAction(a => {
     if (a.kind === 'main') { main.run(); return true; }
-    if (a.kind === 'listen') { listen(); return true; }
+    if (a.kind === 'listen') { // the kit's tom 2 × 2 hears one thing; the coach's "listen" plays your take, then the right version
+      if (a.label !== 'listen' && f?.hits.length) { hearTake(f); afterThis(() => play(true)); } else listen();
+      return true;
+    }
     return false;
   }));
 

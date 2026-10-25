@@ -25,6 +25,7 @@ export type PlayOptions = RunOptions & {
   hints?: boolean;           // the sheet shows the count and who plays each note under the staff
   countAloud?: string[][];   // words the voice says per bar, one per slot ('' = silent): engine/lesson.ts countPlan
   freeBars?: number[];       // 1-based chart bars that are yours (free / trade bars): strokes there aren't extras
+  oneOff?: boolean;          // a take the coach asked for in another tool (lessons): for fun, no tempo ladder
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
@@ -292,4 +293,9 @@ function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: 
 export function stop() {
   cleanup.forEach(f => f()); cleanup = [];
   if (player.phase !== 'idle') { player.phase = 'idle'; notify(); }
+}
+
+/** Runs `fn` once the current take or demo has ended (back to idle). */
+export function afterThis(fn: () => void) {
+  const off = subscribePlayer(() => { if (player.phase === 'idle') { off(); fn(); } });
 }

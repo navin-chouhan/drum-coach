@@ -86,6 +86,14 @@ export function copyChart(c: Chart): Chart {
   return { ...c, bars: c.bars * 2, notes };
 }
 
+/** The chart a step plays and its free bars: copy-me / trade double the bars; trade's echo bars are yours (no notes). */
+export function playChart(s: Pick<Step, 'chart' | 'copy' | 'trade' | 'freeBars'>): { chart: Chart; freeBars: number[] } {
+  const base = s.copy || s.trade ? copyChart(s.chart) : s.chart;
+  const freeBars = s.trade ? Array.from({ length: s.chart.bars }, (_, i) => 2 * i + 2) : s.freeBars ?? [];
+  const bpb = beatsPerBar(base);
+  return { freeBars, chart: freeBars.length ? { ...base, notes: base.notes.filter(n => !freeBars.includes(Math.floor(n.t / bpb + 1e-6) + 1)) } : base };
+}
+
 export const CLEAN_TAKES = 2, FAILS_BEFORE_SLOWDOWN = 2, BPM_STEP = 5, MIN_BPM = 40, ROUGH_ACCURACY = 60;
 export const REVIEW_DAYS = [2, 5, 12, 30];
 
