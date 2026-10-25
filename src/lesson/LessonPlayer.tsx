@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
-import { afterReview, autoProbe, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, autoProbe, floorLine, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
@@ -196,7 +196,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         up: `Up to ${next.bpm} BPM!`,
         slowDown: `Let's take it to ${next.bpm} BPM. Slower is how it sticks.`,
         layerUp: `Now add the ${(lanesNow(step, next) ?? []).filter(d => !(lanesNow(step, p) ?? []).includes(d)).map(laneName).join(' and ')}.`,
-        atFloor: 'This one is tricky. Try "Learn it slowly": the music waits for each note.',
+        atFloor: floorLine(st.accuracy >= Math.min(passFor(lesson.level).accuracy, step.pass?.accuracy ?? 100), check.reason),
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
         lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
       };

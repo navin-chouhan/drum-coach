@@ -90,6 +90,14 @@ Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 clea
 | 12 | Practice → For you after the whole path: "at your level" was "Basic rock beat, 80 BPM" for a Swing Cat. With no current milestone the level fell back to 1. | Bug | Falls back to the last stage's level; now "Funk groove with ghost notes". (c5c28d9) |
 | – | Checked live: a silent take of "Your own fill" now gets "Once more, and fill your bars this time" and doesn't count (fix 3). | Verified | |
 
+### Round 6 (M1: the struggle path, Beginner preset), 2026-10-26 overnight
+Played on a copy of the owner's real data (a true beginner: 2 lessons done, 38 takes) with the emulated kit set to
+Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `claude/plan-phase1-2026-10-25`.
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 13 | At the 40 BPM floor a take with 16/16 notes landed, failed only for dragging (41 ms), got "Try Learn it slowly: the music waits for each note". Wait mode helps you find notes; it can't fix timing. | Teaching | At the floor, when the notes landed, the line names the fix instead: "All the notes are there. Dragging by 41 ms. Lock onto the click." (`floorLine`) |
+
 ### Open observations (not fixed yet)
 - **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very
   start; ~180 on-time takes later it's still the habit to work on. It should need the issue to still be present lately.

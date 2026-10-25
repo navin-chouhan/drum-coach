@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, floorLine, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -226,5 +226,13 @@ describe('nextStepInfo', () => {
   it('names the new step and its own tempos after a step is done (so the coach doesn\'t call it a slow-down)', () => {
     expect(nextStepInfo(lesson, { ...startProgress(lesson), step: 1, bpm: 70 }, 'stepDone')).toEqual({ title: 'b', startBpm: 70, targetBpm: 70 });
     expect(nextStepInfo(lesson, startProgress(lesson), 'up')).toBeUndefined();
+  });
+});
+
+describe('floorLine', () => {
+  it('at the slowest tempo, wait mode only helps when notes were missed; a timing fail gets the timing fix', () => {
+    expect(floorLine(false)).toMatch(/Learn it slowly/);
+    expect(floorLine(true, 'Dragging by 41 ms. Lock onto the click.')).toBe('All the notes are there. Dragging by 41 ms. Lock onto the click.');
+    expect(floorLine(true)).not.toMatch(/Learn it slowly/);
   });
 });

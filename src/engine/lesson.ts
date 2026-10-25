@@ -185,6 +185,14 @@ export function starsFor(s: RunStats): 1 | 2 | 3 {
   return 1;
 }
 
+/**
+ * The line at the slowest tempo. Wait mode ("Learn it slowly") helps you find the notes; when they all landed and a
+ * timing or volume limit failed, waiting can't fix that, so the line names the fix instead.
+ */
+export const floorLine = (notesLanded: boolean, reason?: string) => (notesLanded
+  ? `All the notes are there. ${reason ?? 'One small thing left: see the tip.'}`
+  : 'This one is tricky. Try "Learn it slowly": the music waits for each note.');
+
 export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'atFloor' | 'layerUp' | 'stepDone' | 'lessonDone';
 /** The lanes the student plays now: the current layer, else the step's own `activeLanes`. */
 export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.layers[Math.min(p.layer ?? 0, s.layers.length - 1)] : s.activeLanes);
