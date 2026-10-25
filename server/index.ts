@@ -340,11 +340,16 @@ app.post('/api/coach/lesson', async (req, reply) => {
   if (!input) return bad(reply, 'You have finished every milestone. Hold V or the mic button and ask the coach for new challenges.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
-    const same = existing.find(l => l.title === r.data.title && l.level === input.milestone.level);
+    const now = aiLessons(); // re-read: another request may have saved a lesson while the coach was thinking
+    const same = now.find(l => l.title === r.data.title && l.level === input.milestone.level);
     if (same) return { data: same, cached: true };
-    // Only a checkpoint of this stage can be stood in for.
-    const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) ? r.data.checkpoint : undefined;
+    // Only a checkpoint of this stage can be stood in for, and only by a lesson that ends in a drill.
+    const end = r.data.steps[r.data.steps.length - 1];
+    const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) && !end.jam && !end.copy && !end.pass?.streak ? r.data.checkpoint : undefined;
     const lesson = toLesson({ ...r.data, checkpoint: cp }, input.milestone.level);
+    // The new lesson replaces the coach's unstarted ones for this stage, so they don't pile up.
+    const progress = app.lessons ?? {};
+    for (const old of now) if (old.level === lesson.level && !progress[old.id]) db.prepare('DELETE FROM ai_lessons WHERE id = ?').run(old.id);
     db.prepare('INSERT INTO ai_lessons (id, json) VALUES (?, ?)').run(lesson.id, JSON.stringify(lesson));
     return { data: lesson, cached: r.cached };
   } catch (e) { return aiFail(reply, e); }

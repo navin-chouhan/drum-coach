@@ -59,8 +59,10 @@ export const AiLessonSchema = z.object({
       accuracy: z.number().min(50).max(100), maxExtraPct: z.number().min(0).max(100), maxAbsOffsetMs: z.number().min(5).max(100),
       maxVelocityCv: z.number().min(3).max(100), maxGhostToAccent: z.number().min(0.1).max(1),
       maxSpreadMs: z.number().min(5).max(100), maxFlamMs: z.number().min(5).max(100), maxPairDropPct: z.number().min(0).max(100),
+      streak: z.number().int().min(4).max(64),
     }).partial().optional(),
     gapBars: z.number().int().min(2).max(8).optional(),
+    jam: z.boolean().optional(), copy: z.boolean().optional(),
   }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })
     .refine(s => (s.activeLanes ?? []).every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' }))
     .min(1).max(4),

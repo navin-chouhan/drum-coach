@@ -1,6 +1,6 @@
 import { CURRICULUM, MILESTONES } from '../../src/content/curriculum.ts';
 import type { AiLesson } from '../../src/coach/schemas.ts';
-import type { Lesson, LessonProgress, Profile } from '../../src/engine/lesson.ts';
+import { passFor, type Lesson, type LessonProgress, type Profile } from '../../src/engine/lesson.ts';
 import { checkpointsOf, currentMilestone } from '../../src/engine/planner.ts';
 
 // Coach-written lessons: what the coach is told, and how its answer becomes a stored lesson.
@@ -19,6 +19,7 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle }: 
       level: m.level, title: m.title, canDo: m.canDo,
       checkpoints: checkpointsOf(m, all, profile).map(l => ({ ...brief(l), passed: !!progress[l.id]?.completedAt, steps: l.steps.map(s => ({ title: s.title, bpm: s.bpm })) })),
     },
+    passBar: passFor(m.level),
     student: { goals: profile.goals.length ? profile.goals : ['not sure yet'], minutesPerDay: profile.minutesPerDay },
     progress: all.filter(l => progress[l.id]).map(l => {
       const p = progress[l.id];
@@ -27,9 +28,11 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle }: 
     recentRuns: recent.slice(-15),
     ...(struggle ? { struggle } : {}),
     examples: CURRICULUM.filter(l => l.level === m.level && l.kind !== 'song').slice(0, 4).map(l => ({ ...brief(l), what: l.what, how: l.how, steps: steps(l) })),
-    yourEarlierLessons: aiLessons.filter(l => l.level === m.level).map(l => ({ title: l.title, passed: !!progress[l.id]?.completedAt })),
+    yourEarlierLessons: aiLessons.filter(l => l.level === m.level).map(l => ({ title: l.title, tools: l.steps.map(toolOf), passed: !!progress[l.id]?.completedAt })),
   };
 }
+
+const toolOf = (s: Lesson['steps'][number]) => (s.jam ? 'jam' : s.copy ? 'copy' : s.pass?.streak ? 'challenge' : 'drill');
 
 /** Gives a coach answer its id, level and chart ids so it plugs into the path like a built-in lesson. */
 export function toLesson(a: AiLesson, level: number, rand = Math.random().toString(36).slice(2, 7)): Lesson {
