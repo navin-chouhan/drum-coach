@@ -153,7 +153,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     }
     if (f.options.zoom) {
       const again = `Now the whole thing again at ${progressOf(lesson).bpm} BPM.`;
-      outcomes.set(f, { passed: check.ok, itemDone: false, zoomed: true, text: `Bar ${f.options.zoom}, four times: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. ${again}`, say: `Bar ${f.options.zoom} sounds better. ${again}`,
+      outcomes.set(f, { passed: check.ok, itemDone: false, zoomed: true, text: `Bar ${f.options.zoom}, four times: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. ${again}`, say: `Bar ${f.options.zoom} ${check.ok ? 'sounds better' : 'is getting there'}. ${again}`, // only praise it when it passed
         nums: { landed: f.stats.total - f.stats.miss, total: f.stats.total, streak: f.stats.streak, recoveries: f.stats.recoveries, better: false } });
       setVersion(v => v + 1); return;
     }
