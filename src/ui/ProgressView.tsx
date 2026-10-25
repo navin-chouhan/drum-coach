@@ -5,7 +5,7 @@ import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { hearFill } from '../play/fills';
-import { BADGES, barsReady, dashboard, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
 import { requestLesson, requestPlay, requestSong } from './nav';
 
 const ACCENT = '#2F6FE4';
@@ -124,6 +124,8 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
   const stars = Object.values(s.lessons).reduce((a, p) => a + (p.completedAt ? p.stars ?? 1 : 0), 0);
   // A show-off song: every bar played at 85% or better (across takes).
   const showoff = songs.filter(song => { const n = songBarCount(song); return n > 0 && barsReady(runs, song.id, n) >= n; });
+  // Journey announces new badges and stores them; the shelf also counts what the runs already earned, so it's never stale.
+  const badges = new Set([...(s.badges ?? []), ...earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints))]);
   return (
     <div className="card trophies">
       <h3>Trophy shelf</h3>
@@ -138,7 +140,7 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
         : <p className="small">Fills you make up in free bars and trade bars can be kept after the take. They land here.</p>}
       <h4>Badges</h4>
       <div className="stickers">
-        {BADGES.map(b => <div key={b.id} className={`rankSticker small ${s.badges?.includes(b.id) ? '' : 'locked'}`} title={b.how}>{s.badges?.includes(b.id) ? `🏅 ${b.name}` : b.name}</div>)}
+        {BADGES.map(b => <div key={b.id} className={`rankSticker small ${badges.has(b.id) ? '' : 'locked'}`} title={b.how}>{badges.has(b.id) ? `🏅 ${b.name}` : b.name}</div>)}
       </div>
       <h4>Show-off set</h4>
       {showoff.length ? (

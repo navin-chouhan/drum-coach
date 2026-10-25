@@ -58,9 +58,12 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   useEffect(() => () => stop(), []);
   const mine = player.chart && player.options && !player.options.lesson; // a take of Practice's, not a lesson's
   const justDone = mine && player.phase === 'done' ? player.finished : undefined;
-  useEffect(() => { fetch('/api/runs').then(r => r.json()).then(setRuns).catch(() => {}); }, [justDone]);
-  // The result stays on this screen: save the take and tell the coach once (both are idempotent).
-  useEffect(() => { if (justDone) { saveRun(justDone); coachTake(justDone); } }, [justDone]);
+  // The result stays on this screen: save the take and tell the coach once (both are idempotent); the runs are
+  // fetched after the save, so suggestions and trophies include this take.
+  useEffect(() => {
+    void (justDone ? saveRun(justDone) : Promise.resolve()).then(() => fetch('/api/runs')).then(r => r.json()).then(setRuns).catch(() => {});
+    if (justDone) coachTake(justDone);
+  }, [justDone]);
 
   const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
   const from = Math.min(section?.from ?? 1, chart.bars), to = Math.min(section?.to ?? chart.bars, chart.bars);
