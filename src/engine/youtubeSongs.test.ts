@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scoreJam } from './jam';
 import { alignPhase, fitBeatGrid, songSecAt } from './tempo';
-import { quantizeTake, replaceRange, toggleNote } from './transcribe';
+import { quantizeTake, replaceRange, takeChart, toggleNote } from './transcribe';
 import { parseYouTubeId } from './youtube';
 
 describe('parseYouTubeId', () => {
@@ -78,5 +78,14 @@ describe('transcription', () => {
     expect(replaceRange(notes, [{ t: 5, drum: 'snare' }], 4, 8).map(n => n.t)).toEqual([0, 5, 8]);
     expect(toggleNote(notes, 4, 'kick')).toHaveLength(2);
     expect(toggleNote(notes, 4.5, 'snare')).toHaveLength(4);
+  });
+});
+
+describe('takeChart', () => {
+  it('keeps real timing and extras, drops count-in and overflow, maps pads to drums', () => {
+    const take = { zero: 1000, beatMs: 500, beats: 8, beatsPerBar: 4, title: 'T', timeSignature: [4, 4] as [number, 4] };
+    const c = takeChart([{ time: 1520, pad: 'hhClosed', velocity: 120 }, { time: 900, pad: 'snare', velocity: 90 }, { time: 1260, velocity: 30 }, { time: 5100, pad: 'kick', velocity: 90 }], take);
+    expect(c).toMatchObject({ bpm: 120, bars: 2 });
+    expect(c.notes).toEqual([{ t: 0.52, drum: 'snare', ghost: true }, { t: 1.04, drum: 'hihat', accent: true }]);
   });
 });

@@ -14,6 +14,7 @@ import { NotesView } from '../play/NotesView';
 import { KitView } from '../ui/KitView';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { LatencyHint, Results, saveRun } from '../play/Results';
+import { takeChart } from '../engine/transcribe';
 import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
 import { coachTake, dropCoachAction, onCoachAction } from '../coach/session';
@@ -43,6 +44,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const [celebrated, setCelebrated] = useState<Finished>(); // the take whose celebration was closed
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
+  const lastTake = useRef<Finished>(undefined);
   const lastAccuracy = useRef<number>(undefined); // for "better than last take"
   const stickyBar = useRef<number>(undefined); // the bar most notes slipped in, last take (for the coach's "zoom")
 
@@ -54,7 +56,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
   const fresh = !getSettings().lessons[lesson.id];
   const mine = player.options?.lesson?.id === lesson.id;
   const playing = mine && player.phase === 'playing';
-  const f = mine && player.phase === 'done' ? player.finished : undefined;
+  const justDone = mine && player.phase === 'done' ? player.finished : undefined;
+  if (justDone) lastTake.current = justDone;
+  // The last take's verdict stays up while you listen to a demo or your own take.
+  const f = justDone ?? (playing ? undefined : lastTake.current);
   const outcome = f && outcomes.get(f);
   const base = step.copy || step.trade ? copyChart(step.chart) : step.chart;
   const free = step.trade ? Array.from({ length: step.chart.bars }, (_, i) => 2 * i + 2) : step.freeBars ?? []; // trade: every echo bar is yours
@@ -136,6 +141,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
   });
   const play = (demo: boolean, atBpm = bpm, wait = false) => { setDetails(false); start(chart, { ...options(demo, wait), speed: atBpm / chart.bpm }); };
+  // Listen back: your own hits, at their real times, with the click.
+  const hearTake = (t: Finished) => start(takeChart(t.hits, { zero: t.zero, beatMs: 60000 / (t.chart.bpm * t.options.speed), beats: t.run.beats, beatsPerBar: t.run.beatsPerBar, title: 'Your take', timeSignature: t.chart.timeSignature }),
+    { ...options(true), fromBar: 1, toBar: 999, repeats: 1, speed: 1, activeLanes: undefined });
   // Zoom in: loop one bar 4 times, 10 BPM slower, with the app playing softly underneath.
   const zoomIn = (bar: number) => { setDetails(false); start(chart, { ...options(false), fromBar: bar, toBar: bar, repeats: 4, speed: Math.max(MIN_BPM, bpm - 10) / chart.bpm, guide: true, zoom: bar }); };
   // The coach's suggested next step (a tap on its button, or "yes"): again / slower / faster here, next = next item.
@@ -209,6 +217,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
             <p>{outcome.text}</p>
             {outcome.reason && <p className="small">Tip: {outcome.reason}</p>}
             <LatencyHint f={f} />
+            {!playing && f.hits.length > 0 && <div className="actions"><button onClick={() => hearTake(f)}>🎧 Hear your take</button><button onClick={() => play(true)}>Hear it right</button></div>}
             {timeUp && !outcome.itemDone && <p className="small">That's your {minutes} minutes for this one. Move on, or keep going if you're in the zone.</p>}
             <button className="link" onClick={() => setDetails(true)}>Details and coach</button>
             {helpKey && (help?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson for this" />

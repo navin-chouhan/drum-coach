@@ -29,3 +29,10 @@ export function toggleNote(notes: ChartNote[], t: number, drum: ChartDrum): Char
   const i = notes.findIndex(n => Math.abs(n.t - t) < 1e-6 && n.drum === drum);
   return i >= 0 ? notes.filter((_, j) => j !== i) : [...notes, { t, drum }].sort((a, b) => a.t - b.t);
 }
+
+/** Listen back: a take's hits as an unquantised chart (their real timing, extras included) to play as a demo. */
+export function takeChart(hits: { time: number; pad?: PadId; velocity: number }[], take: { zero: number; beatMs: number; beats: number; beatsPerBar: number; title: string; timeSignature: [number, 2 | 4 | 8 | 16] }) {
+  const notes: ChartNote[] = hits.map(h => ({ t: (h.time - take.zero) / take.beatMs, drum: PAD_DRUM[h.pad ?? 'snare'], ...(h.velocity >= 110 && { accent: true }), ...(h.velocity < 40 && { ghost: true }) }))
+    .filter(n => n.t >= 0 && n.t < take.beats).sort((a, b) => a.t - b.t);
+  return { title: take.title, bpm: 60000 / take.beatMs, timeSignature: take.timeSignature, bars: Math.ceil(take.beats / take.beatsPerBar), notes };
+}
