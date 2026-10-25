@@ -10,6 +10,7 @@ export const ChartNoteSchema = z.object({
   drum: z.enum(CHART_DRUMS),
   accent: z.boolean().optional(),
   ghost: z.boolean().optional(),
+  auto: z.boolean().optional(), // played by the app, not the student (the "call" of a copy-me step)
 });
 
 export const ChartSchema = z.object({

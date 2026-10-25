@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, dueReviews, ladderStep, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, copyChart, dueReviews, ladderStep, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -12,7 +12,7 @@ const D = '2026-10-24';
 const stats = (o: Partial<RunStats> = {}): RunStats => ({
   total: 20, perfect: 18, good: 1, miss: 1, extra: 0, accuracy: 95, meanOffset: 5, spread: 10,
   perDrum: { snare: { total: 20, hit: 19, accuracy: 95, meanOffset: 5 } },
-  velocity: { normalMean: 90, normalCv: 8, accentMean: null, ghostMean: null, pairDrop: null }, flam: null, heat: [], ...o,
+  velocity: { normalMean: 90, normalCv: 8, accentMean: null, ghostMean: null, pairDrop: null }, flam: null, heat: [], streak: 10, recoveries: 1, ...o,
 });
 
 describe('checkPass', () => {
@@ -20,7 +20,7 @@ describe('checkPass', () => {
     expect(checkPass(stats()).ok).toBe(true);
     const snare = { total: 12, hit: 12, accuracy: 100, meanOffset: 0 };
     expect(checkPass(stats({ accuracy: 80, perDrum: { snare, kick: { total: 8, hit: 4, accuracy: 50, meanOffset: 30 } } })))
-      .toEqual({ ok: false, reason: expect.stringMatching(/80%.*kick.*late by 30/) });
+      .toEqual({ ok: false, reason: expect.stringMatching(/kick.*late by 30/) });
     expect(checkPass(stats({ accuracy: 50, perDrum: { snare: { ...snare, accuracy: 50, meanOffset: -25 } } })).reason)
       .toMatch(/^(?!.*weakest).*early by 25/); // one drum: no "weakest"
     expect(checkPass(stats({ extra: 5 })).ok).toBe(false);
@@ -28,6 +28,19 @@ describe('checkPass', () => {
     expect(checkPass(stats(), { maxVelocityCv: 5 }).ok).toBe(false);
     expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: null, pairDrop: null } }), { maxGhostToAccent: 0.8 }).ok).toBe(true);
     expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: 96, pairDrop: null } }), { maxGhostToAccent: 0.6 }).ok).toBe(false);
+  });
+
+  it('the bar follows the level, and a lesson may relax it but not tighten it', () => {
+    expect(checkPass(stats({ accuracy: 77 }), undefined, 0).ok).toBe(true);
+    expect(checkPass(stats({ accuracy: 77 }), { accuracy: 90 }, 0).ok).toBe(true);
+    expect(checkPass(stats({ accuracy: 70 }), { accuracy: 65 }, 0).ok).toBe(true);
+    expect(checkPass(stats({ accuracy: 77 }), undefined, 2).ok).toBe(false);
+    expect(checkPass(stats({ accuracy: 88 }), undefined, 6).ok).toBe(false);
+    expect(checkPass(stats({ extra: 6 }), undefined, 0).ok).toBe(true); // 30% extra: ignored at level 0
+  });
+  it('a streak challenge replaces the accuracy bar', () => {
+    expect(checkPass(stats({ accuracy: 60, streak: 8 }), { streak: 8 }, 0).ok).toBe(true);
+    expect(checkPass(stats({ accuracy: 99, streak: 5 }), { streak: 8 }, 0).reason).toMatch(/5 in a row, aiming for 8/);
   });
 
   it('spread, flam and weak doubles fail with one plain reason', () => {
@@ -53,15 +66,34 @@ describe('tempo ladder', () => {
   it('a fail in between resets the clean count', () => {
     expect(play([true, false, true]).p).toMatchObject({ bpm: 60, clean: 1 });
   });
-  it('three fails → −5 BPM, never below the start', () => {
-    expect(play([false, false, false]).events).toEqual(['hold', 'hold', 'hold']);
-    const r = ladderStep({ ...p0, bpm: 65, fails: 2 }, lesson, false, D);
-    expect(r).toMatchObject({ event: 'slowDown', next: { bpm: 60, fails: 0 } });
+  it('two close misses → −5 BPM; a rough take → −10 at once; below the start tempo is fine down to 40', () => {
+    expect(play([false]).events).toEqual(['hold']);
+    expect(ladderStep({ ...p0, bpm: 60, fails: 1 }, lesson, false, D, 70)).toMatchObject({ event: 'slowDown', next: { bpm: 55, fails: 0 } });
+    expect(ladderStep({ ...p0, bpm: 60 }, lesson, false, D, 40)).toMatchObject({ event: 'slowDown', next: { bpm: 50 } });
+    expect(ladderStep({ ...p0, bpm: 45 }, lesson, false, D, 40)).toMatchObject({ next: { bpm: 40 } });
+    expect(ladderStep({ ...p0, bpm: 40 }, lesson, false, D, 40)).toMatchObject({ event: 'atFloor', next: { bpm: 40 } });
+  });
+  it('after easing off, one clean take climbs +10 back toward the target', () => {
+    expect(ladderStep({ ...p0, bpm: 45 }, lesson, true, D)).toMatchObject({ event: 'up', next: { bpm: 55 } });
+    expect(ladderStep({ ...p0, bpm: 55 }, lesson, true, D)).toMatchObject({ event: 'up', next: { bpm: 65 } });
+  });
+  it('a jam step counts any take and moves on', () => {
+    const jam: Lesson = { ...lesson, steps: lesson.steps.map(s => ({ ...s, jam: true })) };
+    expect(ladderStep(startProgress(jam), jam, false, D, 20)).toMatchObject({ event: 'stepDone', next: { step: 1, bpm: 70 } });
+    expect(ladderStep({ ...startProgress(jam), step: 1, bpm: 70 }, jam, false, D).event).toBe('lessonDone');
   });
   it('finishing the last step completes the lesson and schedules a review', () => {
     const r = play([true, true, true, true, true, true]);
     expect(r.events.at(-1)).toBe('lessonDone');
     expect(r.p).toMatchObject({ completedAt: D, reviewDue: '2026-10-26', reviewStage: 0, bestBpm: 70 });
+  });
+});
+
+describe('copyChart', () => {
+  it('turns each bar into a call (played by the app) and an echo', () => {
+    const c = copyChart({ ...chart, bars: 2, notes: [{ t: 0, drum: 'snare' }, { t: 4, drum: 'kick' }] });
+    expect(c.bars).toBe(4);
+    expect(c.notes).toEqual([{ t: 0, drum: 'snare', auto: true }, { t: 4, drum: 'snare' }, { t: 8, drum: 'kick', auto: true }, { t: 12, drum: 'kick' }]);
   });
 });
 

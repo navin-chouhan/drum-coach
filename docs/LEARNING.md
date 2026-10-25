@@ -34,8 +34,10 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Layered groove building | A lesson step lists its `activeLanes`. The app plays the other lanes, so you learn hi-hat alone, then add kick, then snare. |
 | Demo first | Every step has **Hear it**: the app plays the whole pattern at your tempo. |
 | Count out loud | A one-bar count-in, and big beat numbers on the highway for the counting lessons. |
-| Tempo ladder | Two clean takes (≥ 90%) → +5 BPM until the step's target. Three misses in a row → −5 BPM, never below the start tempo. |
-| Specific feedback, one fix | After each take, one line: pass or the main reason it failed. The AI coach is one click away. |
+| Tempo ladder | Two clean takes → +5 BPM until the step's target. A rough take (< 60% landed) → −10 BPM at once; two close misses → −5. The floor is 40 BPM, below the step's start if needed; after easing off, one clean take climbs +10. At the floor: "Learn it slowly" (wait mode). |
+| Sweet spot, not an exam | The pass bar grows with the stage (`passFor`): 75% at levels 0–1, 80% at 2–3, 85% at 4–5, 90% at 6; stray strokes barely count early on, and the Good window is 150 ms at levels 0–1. Takes are 4 bars (8 for the proving take). Feedback leads with what went right: notes landed, best run in a row, comebacks after a miss, better than last take. |
+| Coach toolbox | A step is a drill (default), a `jam` (any take counts), a `copy` (call and response: notes marked `auto` are played by the app) or a challenge (`pass.streak`, N in a row). The coach mixes them and switches tool when you struggle. |
+| Specific feedback, one fix | After each take, one friendly line and at most one tip. The AI coach is one click away. |
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |
 | Interleaving | A day's session is warm-up, review, one new skill and one groove or song. It isn't 30 minutes of one thing. |
@@ -55,8 +57,9 @@ against the stage), its last step reaches the checkpoint's tempo, and finishing 
 
 The lessons *between* checkpoints are chosen per student. The AI coach (`POST /api/coach/lesson`,
 prompt in `server/prompts/lesson.md`) reads your recent takes, your progress and the milestone, and
-writes the next lesson aimed at your weakest skill, with a one-line "why this, for you". After a
-failed take you can ask it for a lesson that fixes exactly that. Coach lessons are validated with
+writes the next lesson aimed at your weakest skill, with a one-line "why this, for you", mixing its tools
+(jam, copy, challenge, drill). After a rough take you can ask it for something different: smaller and easier,
+with a different tool. A new coach lesson replaces its unstarted ones for that stage, so they don't pile up. Coach lessons are validated with
 zod, stored in SQLite and preferred by the daily planner. The built-in lessons are the offline
 fallback and the examples the coach is shown.
 
@@ -96,12 +99,12 @@ Real songs come in through the Songs tab: search YouTube, set the tempo, learn t
 and sheet music), jam along or play it scored with the drumless version. MIDI + audio import is still there too.
 
 ## Rules of thumb in the code
-- Pass criteria default to 90% accuracy with at most 15% extra hits. A step can add a timing limit
+- Pass criteria come from the lesson's level (`passFor`: 75–90% accuracy, 40–15% extra hits); a step can relax them but not tighten them. A step can add a timing limit
   (|mean offset|), a consistency limit (spread, std dev of offsets), a hand–foot flam limit, a velocity-evenness
   limit (CV %), a weak-second-double limit or a ghost-to-accent volume ratio. Every checkpoint's last step limits
   spread (40 ms at levels 0–2, 30 at 3–4, 25 at 5–6): averaging on time isn't enough, each hit has to be.
-- A take is 8 bars; the proving take (last step at its target tempo) is 16.
-- Good is ±100 ms (Perfect ±40), shrunk to 40% of the closest gap between notes on one drum, so fast 16ths are judged
+- A take is 4 bars; the proving take (last step at its target tempo) and copy-me takes are 8.
+- Good is ±100 ms (±150 at levels 0–1; Perfect ±40), shrunk to 40% of the closest gap between notes on one drum, so fast 16ths are judged
   tighter.
 - Keyboard timing is 10–30 ms late, so expect *Good* rather than *Perfect*. Never calibrate latency
   from the keyboard. Ghost-note checks need the real kit.

@@ -38,6 +38,7 @@ const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 
 export type Dashboard = {
   streak: number; minutesToday: number; minutesWeek: number; totalRuns: number;
+  landedWeek: number | null; landedLastWeek: number | null; // mean % of notes landed in the last 7 days / the 7 before
   days: { date: string; minutes: number }[]; // last 14 days, oldest first
   charts: { chartId: string; title: string; runs: number; lastAccuracy: number; best90Bpm: number | null; points: { date: string; accuracy: number; bpm: number }[] }[];
 };
@@ -65,8 +66,10 @@ export function dashboard(runs: RunRow[], now = new Date()): Dashboard {
     };
   }).sort((a, b) => Date.parse(b.points[b.points.length - 1].date) - Date.parse(a.points[a.points.length - 1].date));
 
+  const DAY = 86_400_000, ago = (r: RunRow) => (now.getTime() - Date.parse(r.startedAt)) / DAY;
+  const landed = (from: number, to: number) => { const rs = runs.filter(r => ago(r) >= from && ago(r) < to); return rs.length ? Math.round(rs.reduce((a, r) => a + r.accuracy, 0) / rs.length) : null; };
   return {
-    streak, totalRuns: runs.length,
+    streak, totalRuns: runs.length, landedWeek: landed(0, 7), landedLastWeek: landed(7, 14),
     minutesToday: r1(minutesByDay.get(back(0)) ?? 0),
     minutesWeek: r1(Array.from({ length: 7 }, (_, i) => minutesByDay.get(back(i)) ?? 0).reduce((a, b) => a + b, 0)),
     days, charts,

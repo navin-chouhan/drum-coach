@@ -21,6 +21,7 @@ export type PlayOptions = RunOptions & {
   demo?: boolean;            // the app plays every note and nothing is scored
   guide?: boolean;           // practice-along: the app plays every note softly under you, you're still scored, no live tips
   gapBars?: number;          // the click is silent on every n-th bar
+  goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
   lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach
 };
@@ -159,7 +160,7 @@ export function start(chart: Chart, options: PlayOptions) {
     return;
   }
 
-  const match = createMatcher(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(scored.notes) * beatMs));
+  const match = createMatcher(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(scored.notes) * beatMs, options.goodMs));
   if (!options.demo) cleanup.push(onHit(h => {
     const hit = { time: h.time - latency - drift, pad: h.pad, velocity: h.velocity };
     const m = match(hit);
@@ -239,7 +240,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
-  const match = createMatcher(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(run.notes) * beatMs));
+  const match = createMatcher(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(run.notes) * beatMs, options.goodMs));
   cleanup.push(onHit(h => {
     const hit = { time: ext.position(h.time - latency) * beatMs, pad: h.pad, velocity: h.velocity };
     const m = match(hit);

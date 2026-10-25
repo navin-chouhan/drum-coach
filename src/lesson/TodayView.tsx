@@ -4,7 +4,7 @@ import { PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
 import type { Genre, Lesson } from '../engine/lesson';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
-import { dashboard, type RunRow } from '../engine/progress';
+import { dashboard, type Dashboard, type RunRow } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
@@ -19,18 +19,20 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const lessons = useLessons();
   const [open, setOpen] = useState<Open | undefined>(openLessonId ? { lessonId: openLessonId } : undefined);
   const [editing, setEditing] = useState(false);
-  const [streak, setStreak] = useState<number>();
+  const [dash, setDash] = useState<Dashboard>();
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
-  useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => setStreak(dashboard(runs).streak)).catch(() => {}); }, [open]);
+  useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => setDash(dashboard(runs))).catch(() => {}); }, [open]);
 
   const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
   const coach = useCoachEntry<Lesson>(coachKey);
   const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
-  // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone.
+  // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone,
+  // once you've played something (with no takes yet, the built-in first lessons are the right start).
+  const played = !!dash?.totalRuns;
   useEffect(() => {
-    if (s.liveCoach && s.profile.onboarded && milestone && aiLessonsLoaded() && !coachOpen.length) requestCoachLesson(coachKey);
-  }, [s.liveCoach, s.profile.onboarded, milestone, coachOpen.length, coachKey, lessons]);
+    if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length) requestCoachLesson(coachKey);
+  }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons]);
 
   if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
 
@@ -41,7 +43,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const done = (id: string) => !!s.lessons[id]?.completedAt;
   const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
   const rank = passed.length ? passed[passed.length - 1].rank : 'New drummer';
-  // Next up: the coach's lesson for you if one is waiting, otherwise today's session.
+  // One "next": today's first open item. The coach's lessons reach you through the session (the planner puts them first).
   const openItem = (i: number) => { startSession(); setOpen({ lessonId: session.items[i].lessonId, item: i }); };
 
   if (open) {
@@ -56,6 +58,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const visible = visibleLessons(lessons, s.profile);
   const path = MILESTONES.filter(m => checkpointsOf(m, lessons, s.profile).length); // stages for these goals (e.g. no Swing for rock only)
   const total = session.items.reduce((a, it, i) => a + (playable(i) ? it.minutes : 0), 0);
+  const streak = dash?.streak;
   return (
     <div className="today">
       <div className="card todayHead">
@@ -63,16 +66,15 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
           <p className="small">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}{streak ? ` · ${streak}-day streak 🔥` : ''}</p>
           <div className="rankSticker small">{rank}</div>
           {milestone && <p>Stage {path.indexOf(milestone) + 1} of {path.length}: <b>{milestone.title}</b>, on the way to <b>{milestone.rank}</b></p>}
+          {dash?.landedWeek != null && <p className="small">This week {dash.landedWeek}% of your notes landed{dash.landedLastWeek != null
+            ? (dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}% 📈` : ` (last week ${dash.landedLastWeek}%)`) : ''} · {Math.round(dash.minutesWeek)} min played</p>}
         </div>
         <div className="nextUp">
-          {coachOpen.length > 0 ? <>
-            <p className="small">Next up, picked by your coach</p>
-            <button className="primary big" autoFocus onClick={() => setOpen({ lessonId: coachOpen[0].id })}>{coachOpen[0].title} →</button>
-            {coachOpen[0].focus && <p className="small">{coachOpen[0].focus}</p>}
-          </> : firstUndone >= 0 ? <>
-            <p className="small">Next up: {ROLE[session.items[firstUndone].role].toLowerCase()} · {total} min today</p>
+          {firstUndone >= 0 ? <>
+            <p className="small">Next up · {ROLE[session.items[firstUndone].role].toLowerCase()}</p>
             <button className="primary big" autoFocus onClick={() => openItem(firstUndone)}>{lessonById(session.items[firstUndone].lessonId)?.title ?? 'Start'} →</button>
-          </> : <p className="doneMsg">Session done. Nice work! Play anything from your path, or try Practice.</p>}
+            {lessonById(session.items[firstUndone].lessonId)?.focus && <p className="small">{lessonById(session.items[firstUndone].lessonId)!.focus}</p>}
+          </> : <p className="doneMsg">Session done. Nice work! Jam on anything below, or try Songs.</p>}
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
         </div>
       </div>
@@ -80,7 +82,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
       {passed.length > 0 && <ShowoffCard stage={passed[passed.length - 1]} profile={s.profile} />}
 
       <div className="card">
-        <h3>Today's session</h3>
+        <h3>Today's mix · {total} min</h3>
         {session.items.length === 0 && <p className="small">You've finished the whole path. Reviews will keep coming back; hold V or the mic button to ask the coach for new exercises.</p>}
         <ol className="session">
           {session.items.map((it, i) => {
@@ -88,7 +90,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
             if (!l) return null;
             return (
               <li key={i} className={done ? 'done' : i === firstUndone ? 'on' : ''}>
-                <span className="role">{ROLE[it.role]}</span>
+                <span className="role">{done ? '✓ ' : ''}{ROLE[it.role]}</span>
                 <span className="title">{l.title}{l.source === 'ai' && <span className="badge">by your coach</span>}</span>
                 <span className="small">{it.minutes} min</span>
                 <button onClick={() => openItem(i)}>{done ? 'Again' : 'Open'}</button>
@@ -96,64 +98,65 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
             );
           })}
         </ol>
-        <div className="actions">
-          <button className="link" onClick={() => { if (!session.done.length || confirm('Plan today again from your current progress?')) rebuildToday(); }}>Rebuild today's plan</button>
-          <button className="link" onClick={() => setEditing(true)}>Goals: {s.profile.goals.length ? s.profile.goals.join(', ') : 'all styles'} · {s.profile.minutesPerDay} min/day (change)</button>
-        </div>
       </div>
-
-      {milestone && (
-        <div className="card">
-          <h3>Your coach</h3>
-          {coach?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson from your recent playing" />
-            : <>
-              {coach?.status === 'error' && <p className="warn">{coach.error}</p>}
-              {coachOpen.length > 0
-                ? <p>Lessons written for you: {coachOpen.map(l => <button key={l.id} className="lessonChip next" onClick={() => setOpen({ lessonId: l.id })}>{l.title}</button>)}</p>
-                : <p className="small">The coach looks at your recent takes and writes the next lesson for this milestone. Without it, the built-in lessons below are used.</p>}
-              <button onClick={() => { requestCoachLesson(coachKey.replace(/-\d+$/, `-${asks + 1}`)); setAsks(asks + 1); }}>Ask the coach for a new lesson</button>
-            </>}
-        </div>
-      )}
 
       <details className="planFold">
-        <summary>Weekly plan from your coach</summary>
-        <PlanCard />
+        <summary>More: your path, coach lessons, weekly plan, settings</summary>
+        {milestone && (
+          <div className="card">
+            <h3>Your coach</h3>
+            {coach?.status === 'thinking' ? <Thinking what="Your coach is writing a lesson from your recent playing" />
+              : <>
+                {coach?.status === 'error' && <p className="warn">{coach.error}</p>}
+                {coachOpen.length > 0
+                  ? <p>Lessons written for you: {coachOpen.map(l => <button key={l.id} className="lessonChip next" onClick={() => setOpen({ lessonId: l.id })}>{l.title}</button>)}</p>
+                  : <p className="small">The coach looks at your recent takes and writes the next lesson for this stage: a jam, an echo game, a challenge or a drill.</p>}
+                <button onClick={() => { requestCoachLesson(coachKey.replace(/-\d+$/, `-${asks + 1}`)); setAsks(asks + 1); }}>Ask the coach for a new lesson</button>
+              </>}
+          </div>
+        )}
+
+        <div className="card">
+          <h3>Weekly plan from your coach</h3>
+          <PlanCard />
+        </div>
+
+        <div className="card">
+          <h3>Your path</h3>
+          {MILESTONES.map(m => {
+            const checks = checkpointsOf(m, lessons, s.profile);
+            if (!checks.length) return null;
+            const passed = checks.every(l => s.lessons[l.id]?.completedAt);
+            const extra = visible.filter(l => l.level === m.level && !m.checkpoints.includes(l.id));
+            const chip = (l: Lesson, cls = '') => {
+              const p = s.lessons[l.id];
+              const state = p?.completedAt ? 'done' : p ? 'started' : '';
+              return <button key={l.id} className={`lessonChip ${state} ${cls}`} onClick={() => setOpen({ lessonId: l.id })}
+                title={p?.completedAt ? `Done · ${p.stars ?? 1} of 3 stars · best ${p.bestBpm} BPM` : p ? `Step ${p.step + 1} · ${p.bpm} BPM` : 'Not started'}>
+                {l.title}{p?.completedAt && <span className="stars" aria-label={`${p.stars ?? 1} of 3 stars`}>{'★'.repeat(p.stars ?? 1)}{'☆'.repeat(3 - (p.stars ?? 1))}</span>}</button>;
+            };
+            return (
+              <div key={m.level} className={`milestone ${passed ? 'passed' : m === milestone ? 'current' : 'later'}`}>
+                <div>
+                  <b>{passed ? '✓ ' : ''}{m.level + 1}. {m.title}</b>
+                  {m === milestone && <ul className="canDo">{m.canDo.map(c => <li key={c}>{c}</li>)}</ul>}
+                </div>
+                <div className="chips">
+                  <span className="small">Challenges:</span>{checks.map(l => chip(l, 'checkpoint'))}
+                  {extra.length > 0 && <><span className="small">Lessons:</span>{extra.map(l => chip(l, l.source === 'ai' ? 'ai' : ''))}</>}
+                </div>
+              </div>
+            );
+          })}
+          <p className="small">Pass a stage's challenges to move on. You can open any lesson; today's mix sticks to your current stage.</p>
+        </div>
+
+        <div className="actions">
+          <button className="link" onClick={() => { if (!session.done.length || confirm('Plan today again from your current progress?')) rebuildToday(); }}>Rebuild today's mix</button>
+          <button className="link" onClick={() => setEditing(true)}>Goals: {s.profile.goals.length ? s.profile.goals.join(', ') : 'all styles'} · {s.profile.minutesPerDay} min/day (change)</button>
+          <button className="link danger" onClick={() => { if (confirm('Reset all lesson progress and redo the setup questions? Your run history in Trophies is kept.')) resetAllLessons(); }}>Reset all lesson progress</button>
+        </div>
       </details>
-
-      <div className="card">
-        <h3>Your path</h3>
-        {MILESTONES.map(m => {
-          const checks = checkpointsOf(m, lessons, s.profile);
-          if (!checks.length) return null;
-          const passed = checks.every(l => s.lessons[l.id]?.completedAt);
-          const extra = visible.filter(l => l.level === m.level && !m.checkpoints.includes(l.id));
-          const chip = (l: Lesson, cls = '') => {
-            const p = s.lessons[l.id];
-            const state = p?.completedAt ? 'done' : p ? 'started' : '';
-            return <button key={l.id} className={`lessonChip ${state} ${cls}`} onClick={() => setOpen({ lessonId: l.id })}
-              title={p?.completedAt ? `Done · ${p.stars ?? 1} of 3 stars · best ${p.bestBpm} BPM` : p ? `Step ${p.step + 1} · ${p.bpm} BPM` : 'Not started'}>
-              {l.title}{p?.completedAt && <span className="stars" aria-label={`${p.stars ?? 1} of 3 stars`}>{'★'.repeat(p.stars ?? 1)}{'☆'.repeat(3 - (p.stars ?? 1))}</span>}</button>;
-          };
-          return (
-            <div key={m.level} className={`milestone ${passed ? 'passed' : m === milestone ? 'current' : 'later'}`}>
-              <div>
-                <b>{passed ? '✓ ' : ''}{m.level + 1}. {m.title}</b>
-                {m === milestone && <ul className="canDo">{m.canDo.map(c => <li key={c}>{c}</li>)}</ul>}
-              </div>
-              <div className="chips">
-                <span className="small">Checkpoints:</span>{checks.map(l => chip(l, 'checkpoint'))}
-                {extra.length > 0 && <><span className="small">Lessons:</span>{extra.map(l => chip(l, l.source === 'ai' ? 'ai' : ''))}</>}
-              </div>
-            </div>
-          );
-        })}
-        <p className="small">Pass a milestone's checkpoints to move on. You can open any lesson; the session planner sticks to your current milestone.</p>
-      </div>
-
-      <div className="actions">
-        <button className="link danger" onClick={() => { if (confirm('Reset all lesson progress and redo the setup questions? Your run history in Trophies is kept.')) resetAllLessons(); }}>Reset all lesson progress</button>
-      </div>
     </div>
   );
 }
