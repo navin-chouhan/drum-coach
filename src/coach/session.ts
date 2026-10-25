@@ -52,7 +52,7 @@ export async function runAction(a: Act) {
 }
 
 /** A pad command between takes: "yes" takes the coach's suggestion (or plays again); only on a screen that can carry it out. */
-export function padAction(cmd: 'yes' | 'again' | 'slower' | 'faster' | 'next' | 'listen') {
+export function padAction(cmd: 'yes' | 'slower' | 'faster' | 'next' | 'listen') {
   if (!handlers.length) return; // e.g. hitting pads on the calibration screen
   void runAction(cmd === 'yes' ? state.reply?.action ?? { kind: 'main', label: 'Yes' } : { kind: cmd, label: cmd });
 }

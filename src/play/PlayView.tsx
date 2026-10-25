@@ -90,8 +90,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const atBpm = (b: number) => Math.max(0.5, Math.min(MAX_SPEED, b / chart.bpm));
   const playAt = (b: number) => { const speed = atBpm(b); set({ speed }); void go(speed); };
   const listen = () => (f && f.hits.length
-    ? start(takeChart(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beats: f.run.beats, beatsPerBar: f.run.beatsPerBar, title: 'Your take', timeSignature: f.chart.timeSignature }), { ...o, fromBar: 1, toBar: 999, repeats: 1, speed: 1, demo: true })
-    : void go(o.speed, { demo: true }));
+    ? start(takeChart(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beats: f.run.beats, beatsPerBar: f.run.beatsPerBar, title: 'Your take', timeSignature: f.chart.timeSignature }), { ...o, fromBar: 1, toBar: 999, repeats: 1, speed: 1, demo: true, wait: false })
+    : void go(o.speed, { demo: true, wait: false })); // a demo never waits for hits, even with "Learn it slowly" on
   const nextChart = () => { const n = charts[charts.findIndex(c => c.id === chart.id) + 1] ?? charts[0]; set({ chartId: n.id }); setSection(null); };
 
   // What next: the coach's suggestion when it answered this take, otherwise the rule (two clean → +5, rough → −10).
@@ -114,9 +114,9 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     : last ? `Last time ${Math.round(last.bpm)} BPM, ${Math.round(last.accuracy)}% landed. Start there?`
     : chart.description ?? `Ready when you are: ${bpm} BPM.`);
 
-  // From the kit: yes = the main move, snare × 2 = again, floor / tom 1 = 5 BPM slower / faster and play, ride = next.
+  // From the kit: yes = the main move, floor / tom 1 = 5 BPM slower / faster and play, ride = next.
   useEffect(() => onCoachAction(a => {
-    if (picking) return false;
+    if (picking || intro) return false; // the intro slides have the kit's taps
     if (a.kind === 'main') { main.run(); return true; }
     if (a.kind === 'listen') { listen(); return true; }
     if (a.kind === 'next') { nextChart(); return true; }
@@ -159,7 +159,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
         <div className="moves five">
           <Move go label={main.label} onClick={main.run} />
           <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
-          {f && !main.label.startsWith('▶ Again') ? <Move alt label={`▶ Again at ${bpm}`} gesture="snare × 2" onClick={() => void go()} />
+          {f && !main.label.startsWith('▶ Again') ? <Move alt label={`▶ Again at ${bpm}`} onClick={() => void go()} />
             : <Move alt label="🐇 +5 BPM" gesture="tom 1 × 2" onClick={() => playAt(bpm + 5)} />}
           <Move alt label="🐢 −5 BPM" gesture="floor × 2" onClick={() => playAt(bpm - 5)} />
           <Move alt label="⏭ Next one" gesture="ride × 2" onClick={nextChart} />
@@ -192,7 +192,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
             {f.cues.length > 0 && <p className="tip">💡 {f.cues[f.cues.length - 1].text}</p>}
             <LatencyHint f={f} />
             <p className="small">{mineRuns.some(r => r.accuracy >= 90) ? `Best here: ${Math.max(...mineRuns.filter(r => r.accuracy >= 90).map(r => Math.round(r.bpm)))} BPM at 90%+ · ` : ''}
-              <button className="link" onClick={() => setDetails(true)}>details and history</button> · <button className="link" onClick={() => void go(o.speed, { demo: true })}>👂 hear it right</button></p>
+              <button className="link" onClick={() => setDetails(true)}>details and history</button> · <button className="link" onClick={() => void go(o.speed, { demo: true, wait: false })}>👂 hear it right</button></p>
           </div> : chart.description && <div className="card"><p>{chart.description}</p></div>}
           <div className="card toggles">
             <h3>How it plays</h3>
