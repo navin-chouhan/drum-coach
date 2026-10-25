@@ -350,9 +350,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const dots = step.layers && !oneTake ? step.layers.map((_, i) => (i < layer! ? 'done' : i === layer ? 'on' : ''))
     : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
   const toTarget = Math.max(0, Math.min(1, (bpm - step.bpm.start) / Math.max(1, step.bpm.target - step.bpm.start)));
-  const line = fresh2?.say ?? (thinkingAbout(coach, f) ? '…' : outcome?.say ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
+  // The verdict never turns into "…" while the coach thinks: the thinking shows as a small line under it.
+  const line = fresh2?.say ?? outcome?.say ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
     : canProbe ? "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard."
-    : flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text));
+    : flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text);
   const howHint = lesson.how.split(/(?<=\.)\s/)[0];
 
   return (
@@ -374,7 +375,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} /></div>
         <RestCountdown key={stepIdx} seconds={step.rest!} />
       </> : playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
-        <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} />
+        <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} thinking={!fresh2 && thinkingAbout(coach, f)} />
         <div className="moves">
           <Move go label={main.label} onClick={main.run} />
           <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
