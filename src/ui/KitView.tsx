@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { PAD_INFO, type DrumId, type PadId } from '../engine/kit';
 import { emitPad, onHit } from '../input/hits';
-import { onCue, player } from '../play/player';
 import { DRUMS, DRUM_BY_ID, type DrumGfx } from './drums';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -138,15 +137,6 @@ export function KitView() {
       hhPedal.current?.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(.6)' }, { transform: 'scaleY(1)' }], { duration: 200 });
     }
     animate(drum, h.velocity, h.pad);
-  }), []);
-
-  // Wrong-note hint: when the live coach says a drum dropped out, that drum blinks for about two bars.
-  useEffect(() => onCue(c => {
-    if (!c.id.startsWith('missing-')) return;
-    const d = c.id.slice(8), id = (d.startsWith('hh') ? 'hihat' : d) as DrumId, body = els.current[id]?.body;
-    if (!body) return;
-    body.classList.add('blink');
-    setTimeout(() => body.classList.remove('blink'), Math.min(4000, player.beatMs * 8));
   }), []);
 
   const reg = (id: DrumId, key: keyof PadEls) => (el: SVGElement | null) => {

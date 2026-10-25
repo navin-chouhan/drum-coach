@@ -39,7 +39,8 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
 }
 
 /** A coach lesson may stand in for a checkpoint only if it ends by playing written notes (not improvising or a streak). */
-export const canStandIn = (end: Pick<Step, 'jam' | 'copy' | 'trade' | 'freeBars' | 'pass' | 'layers' | 'bite'>) => ['drill', 'layers', 'bite'].includes(toolOf(end as Step));
+export const canStandIn = (end: Pick<Step, 'jam' | 'copy' | 'trade' | 'freeBars' | 'pass' | 'layers' | 'bite' | 'rest' | 'probe'>) =>
+  !end.rest && !end.probe && ['drill', 'layers', 'bite'].includes(toolOf(end as Step));
 
 /** Song bites: each bite step's chart becomes those bars of the saved song; a bite naming no usable song is dropped. */
 export function applyBites(a: AiLesson, song: (id: string) => YtSong | undefined): AiLesson {

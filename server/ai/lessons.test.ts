@@ -48,6 +48,14 @@ describe('coach lessons', () => {
   });
   it('only a lesson that ends by playing written notes can stand in for a checkpoint', () => {
     expect([{}, { layers: [['hihat' as const]] }, { bite: { songId: 'x', fromBar: 1, toBar: 2 } }].map(canStandIn)).toEqual([true, true, true]);
-    expect([{ jam: true }, { copy: true }, { trade: true }, { freeBars: [4] }, { pass: { streak: 8 } }].map(canStandIn)).toEqual([false, false, false, false, false]);
+    expect([{ jam: true }, { copy: true }, { trade: true }, { freeBars: [4] }, { pass: { streak: 8 } }, { rest: 20 }, { probe: true }].map(canStandIn)).toEqual([false, false, false, false, false, false, false]);
+  });
+  it('rejects a lesson that ends on a rest or a probe, and a single variant', () => {
+    const l = CURRICULUM.find(x => x.id === 'money-8ths')!, s = { ...l.steps[0], chart: { ...l.steps[0].chart, id: undefined } };
+    const ok = (steps: object[]) => AiLessonSchema.safeParse({ ...l, focus: '', steps }).success;
+    expect(ok([s, { ...s, rest: 20 }])).toBe(false);
+    expect(ok([{ ...s, probe: true }])).toBe(false);
+    expect(ok([{ ...s, rest: 20 }, s])).toBe(true);
+    expect(ok([{ ...s, variants: [s.chart] }])).toBe(false);
   });
 });

@@ -52,7 +52,7 @@ export async function runAction(a: Act) {
 }
 
 /** A pad command between takes: "yes" takes the coach's suggestion (or plays again); only on a screen that can carry it out. */
-export function padAction(cmd: 'yes' | 'again' | 'slower' | 'faster' | 'next' | 'listen') {
+export function padAction(cmd: 'yes' | 'slower' | 'faster' | 'next' | 'listen') {
   if (!handlers.length) return; // e.g. hitting pads on the calibration screen
   void runAction(cmd === 'yes' ? state.reply?.action ?? { kind: 'main', label: 'Yes' } : { kind: cmd, label: cmd });
 }
@@ -114,7 +114,8 @@ export function say(text: string) {
   const playing = player.phase === 'playing', played = player.chart && player.options ? Math.round(player.chart.bpm * player.options.speed) : undefined;
   return coachEvent({ type: 'said', text, doing: playing ? 'playing right now' : 'between takes',
     exercise: playing || !lastOpen.title ? player.chart?.title : lastOpen.title, bpm: playing || !lastOpen.title ? played : lastOpen.bpm,
-    proposed: state.reply?.action, lastTakeAccuracyPct: f?.stats.accuracy });
+    proposed: state.reply?.action, lastTakeAccuracyPct: f?.stats.accuracy,
+    lesson: player.options?.lesson?.title ?? (lastOpen.id.startsWith('lesson/') ? lastOpen.title : undefined) }); // the coach's tool switches need a lesson
 }
 
 const toldTakes = new WeakSet<Finished>();

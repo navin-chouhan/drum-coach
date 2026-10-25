@@ -32,11 +32,11 @@ export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, 
     const offAction = onCoachAction(a => { if (a.kind === 'main') nav.current.next(); return true; }); // swallow the rest
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') nav.current.onClose();
-      else if (e.key === 'ArrowRight' || e.key === 'Enter') nav.current.next();
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); nav.current.next(); } // not the focused button behind
       else if (e.key === 'ArrowLeft') nav.current.back();
     };
-    window.addEventListener('keydown', onKey);
-    return () => { offHit(); offAction(); window.removeEventListener('keydown', onKey); };
+    window.addEventListener('keydown', onKey, true); // capture: before the screen behind sees it
+    return () => { offHit(); offAction(); window.removeEventListener('keydown', onKey, true); };
   }, []);
 
   const plan = limbPlan(notes, beatsPerBar);

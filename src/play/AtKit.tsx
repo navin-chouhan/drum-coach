@@ -41,5 +41,6 @@ export function FlowMeter() {
   const run = player.run, pos = position(), bpb = run?.beatsPerBar ?? 4;
   const mine = run ? run.notes.flatMap((_, i) => (player.auto[i] ? [] : [i])) : []; // your notes, not the app's
   const pct = run && pos > bpb ? recentAccuracy(mine.map(i => player.results[i]), { ...run, notes: mine.map(i => run.notes[i]) }, Math.max(0, pos - 4 * bpb), pos - 0.5) : null;
-  return <div className="liveHint on">🌊 {Math.max(0, Math.floor(pos / bpb))} bars in the flow{pct !== null ? ` · last 4 bars: ${pct}% landed` : ''}</div>;
+  const left = player.options?.seconds ? Math.max(0, Math.ceil(player.options.seconds - (performance.now() - player.zero) / 1000)) : undefined;
+  return <div className="liveHint on">{left !== undefined ? `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left · ` : '🌊 '}{Math.max(0, Math.floor(pos / bpb))} bars{left === undefined ? ' in the flow' : ''}{pct !== null ? ` · last 4 bars: ${pct}% landed` : ''}</div>;
 }

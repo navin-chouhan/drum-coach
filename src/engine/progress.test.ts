@@ -83,6 +83,7 @@ describe('weekTheme', () => {
     expect(weekTheme(runs, now)).toEqual({ cue: 'rushing', count: 3, words: 'rushing ahead of the click' });
     expect(weekTheme(runs.slice(1), now)).toBeNull();
     expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-snare', 'missing-snare', 'missing-snare'] })], now)?.words).toBe('the snare');
+    expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-hhOpen', 'missing-hhOpen', 'missing-hhOpen'] })], now)?.words).toBe('the open hi-hat');
   });
 });
 

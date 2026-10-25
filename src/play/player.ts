@@ -31,6 +31,7 @@ export type PlayOptions = RunOptions & {
   endless?: boolean;         // flow: loops until Stop (Esc / 4 crashes), which keeps the take instead of dropping it
   fadeClick?: number;        // the click fades to silence over this many bars
   clickOn?: 'quarters' | '8ths' | '2and4'; // click feel (engine/lesson.ts clickOnBeat)
+  then?: () => void;         // a demo that plays to its end runs this next (not when stopped or replaced)
   oneOff?: boolean;          // a take the coach asked for in another tool (lessons): for fun, no tempo ladder
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
@@ -128,8 +129,10 @@ export function start(chart: Chart, options: PlayOptions) {
   stop();
   hush();
   if (!options.demo && !options.wait) loadTips(chart, options.lesson?.goal);
-  // shortcut: an endless take is 64 bars (about 3 minutes at 90 BPM); extend the run on the fly if flows get longer
-  const run = buildRun(chart, options.endless ? { ...options, repeats: Math.ceil(64 / (options.toBar - options.fromBar + 1)) } : options);
+  // A timed take is sized from its seconds; shortcut: a flow is 64 bars (about 3 minutes at 90 BPM), extend on the fly if flows get longer
+  const secBars = options.toBar - options.fromBar + 1, secBeats = secBars * beatsPerBar(chart);
+  const endlessRepeats = options.seconds ? Math.ceil((options.seconds / 60) * chart.bpm * options.speed / secBeats) + 1 : Math.ceil(64 / secBars);
+  const run = buildRun(chart, options.endless ? { ...options, repeats: endlessRepeats } : options);
   const { scored, auto } = splitRun(run, options.demo ? [] : options.activeLanes);
   const isAuto = run.notes.map(() => false);
   auto.forEach(n => { isAuto[n.i] = true; });
@@ -241,8 +244,9 @@ export function start(chart: Chart, options: PlayOptions) {
   }, 25);
   cleanup.push(() => clearInterval(timer));
   if (options.endless) endEarly = () => {
-    const beats = Math.max(0, Math.floor(position() / bpb)) * bpb; // whole bars played
-    finish({ ...scored, notes: scored.notes.filter(n => n.t < beats), beats }, hits, extras, startedAt);
+    const beats = Math.max(0, Math.floor(position() / bpb)) * bpb, end = player.zero + beats * beatMs; // whole bars played
+    // the 4-crash stop and anything after the last whole bar isn't part of the take
+    finish({ ...scored, notes: scored.notes.filter(n => n.t < beats), beats }, hits.filter(h => h.time < end), extras.filter(h => h.time < end), startedAt);
   };
 
   if (options.backing) {
@@ -298,7 +302,7 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
 function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: string) {
   endEarly = undefined;
   const { chart, options } = player;
-  if (options!.demo) { stop(); return; }
+  if (options!.demo) { stop(); options!.then?.(); return; }
   cleanup.forEach(f => f()); cleanup = [];
   const results = scored.notes.map(n => player.results[n.i]);
   const stats = { ...computeStats(scored, results, extras.length), reaction: options!.wait ? null : reactingToClick(scored.notes.map(n => ({ time: player.zero + n.t * player.beatMs, drum: n.drum })), hits) };
@@ -312,9 +316,4 @@ export function stop() {
   endEarly = undefined;
   cleanup.forEach(f => f()); cleanup = [];
   if (player.phase !== 'idle') { player.phase = 'idle'; notify(); }
-}
-
-/** Runs `fn` once the current take or demo has ended (back to idle). */
-export function afterThis(fn: () => void) {
-  const off = subscribePlayer(() => { if (player.phase === 'idle') { off(); fn(); } });
 }
