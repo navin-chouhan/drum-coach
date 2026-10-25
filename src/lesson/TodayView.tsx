@@ -6,8 +6,9 @@ import { greeting } from '../engine/greeting';
 import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
-import { BADGES, barsReady, dashboard, earnedBadges, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
+import { say } from '../voice/voice';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
@@ -28,6 +29,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [songs] = useYtSongs();
   const [newBadges, setNewBadges] = useState<string[]>([]);
+  const [recap, setRecap] = useState<string>();
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
   useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => { setRuns(runs); setDash(dashboard(runs)); }).catch(() => {}); }, [open]);
@@ -43,6 +45,15 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   useEffect(() => {
     if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length) requestCoachLesson(coachKey);
   }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons]);
+
+  // The Monday recap: on the first visit of a week (with some playing behind you), once, spoken if the voice is on.
+  useEffect(() => {
+    const wk = isoWeek(new Date());
+    if (!dash?.totalRuns || getSettings().lastRecapWeek === wk) return;
+    const text = weekRecap(dash, BADGES.find(b => b.id === getSettings().badges?.at(-1))?.name);
+    setSettings({ lastRecapWeek: wk }); setRecap(text);
+    if (getSettings().voice) void say(text);
+  }, [dash]);
 
   // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
   useEffect(() => {
@@ -115,6 +126,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
         <div className="avatar" aria-hidden>🥁</div>
         <div>
           <div className="bubble" aria-live="polite">
+            {recap && <p className="recap">📅 {recap}</p>}
             {newBadges.length > 0 && <p className="newBadge">🏅 New badge: <b>{newBadges.map(id => BADGES.find(b => b.id === id)?.name).join(', ')}</b>!</p>}
             <p>{line}</p>
             <div className="actions">

@@ -492,3 +492,4 @@
   .slideNav i{font-style:normal;background:var(--pop);color:var(--line);border-radius:999px;padding:1px 10px;margin-left:8px;font-size:16px}
   .restCountdown{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:360px;font:800 160px/1 var(--display);text-align:center}
   .restCountdown p{font:700 28px system-ui;margin:16px 0 0}
+  .recap{background:var(--panel2);border:2px solid var(--line);padding:6px 12px;font-size:16px}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, forYou, suggestNext, weekTheme, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, forYou, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -83,5 +83,17 @@ describe('weekTheme', () => {
     expect(weekTheme(runs, now)).toEqual({ cue: 'rushing', count: 3, words: 'rushing ahead of the click' });
     expect(weekTheme(runs.slice(1), now)).toBeNull();
     expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-snare', 'missing-snare', 'missing-snare'] })], now)?.words).toBe('the snare');
+  });
+});
+
+describe('weekly recap', () => {
+  it('names the ISO week (the Thursday decides the year)', () => {
+    expect(isoWeek(new Date('2026-10-26T10:00:00'))).toBe('2026-W44');
+    expect(isoWeek(new Date('2027-01-01T10:00:00'))).toBe('2026-W53');
+  });
+  it('is three plain sentences', () => {
+    expect(weekRecap({ minutesWeek: 42.4, landedWeek: 81, landedLastWeek: 74 }, '7-day streak'))
+      .toBe('Last week you played 42 minutes. Your notes landed 81% of the time, up from 74%. New on your shelf: 7-day streak.');
+    expect(weekRecap({ minutesWeek: 0, landedWeek: null, landedLastWeek: null })).toMatch(/^Last week was a quiet one/);
   });
 });

@@ -57,6 +57,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Find your tempo | A `probe` step plays 1-bar takes from `bpm.start`, 5 BPM faster after each clean bar, until one falls apart; the working tempo is 10 below it (`probeTempo`). |
 | 2-minute challenge | Journey offers a finished groove for 2 minutes at your best tempo (`seconds` on an endless take); the score is clean bars (no miss, no extra: `cleanBars`), best kept per lesson (`Settings.arcade`). |
 | Autopilot | Setup → Coach: after each verdict the main move starts by itself in 5 seconds; any pad hit waits. Off by default. |
+| Monday recap | On the first Journey visit of an ISO week, the coach says and shows three plain sentences about the last 7 days (`weekRecap`: minutes, notes landed against the week before, the newest badge). |
 | Specific feedback, one fix | After each take, one friendly line and at most one tip. The AI coach is one click away. |
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |

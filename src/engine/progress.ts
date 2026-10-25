@@ -142,3 +142,23 @@ export function weekTheme(runs: RunRow[], now = new Date()): { cue: string; coun
   if (!cue || count < 3) return null;
   return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${cue.slice(8)}` : cue) };
 }
+
+/** ISO week key ("2026-W43"), for "once a week" things like the Monday recap. */
+export function isoWeek(d: Date): string {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day); // the week's Thursday decides its year
+  const week = Math.ceil(((t.getTime() - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86_400_000 + 1) / 7);
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+/** The Monday recap: three plain sentences about the last 7 days (whole numbers only). `newBadge`: a badge name earned lately. */
+export function weekRecap(d: Pick<Dashboard, 'minutesWeek' | 'landedWeek' | 'landedLastWeek'>, newBadge?: string): string {
+  const mins = Math.round(d.minutesWeek);
+  const first = mins ? `Last week you played ${mins} minute${mins === 1 ? '' : 's'}.` : "Last week was a quiet one, and that's fine.";
+  const second = d.landedWeek === null ? 'Every take you play shows here.'
+    : d.landedLastWeek !== null && d.landedWeek > d.landedLastWeek ? `Your notes landed ${d.landedWeek}% of the time, up from ${d.landedLastWeek}%.`
+    : `Your notes landed ${d.landedWeek}% of the time.`;
+  const third = newBadge ? `New on your shelf: ${newBadge}.` : 'This week, one small thing at a time.';
+  return `${first} ${second} ${third}`;
+}
