@@ -106,8 +106,8 @@ app.get('/api/charts/:id/audio', async (req, reply) => {
 const runRows = (limit = 5000): RunRow[] => (db.prepare(`
   SELECT * FROM (SELECT chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
     bpm, speed, accuracy, mean_offset AS meanOffset, spread, json_extract(summary_json, '$.notes') AS notes,
-    json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
-  .map(r => ({ ...r, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined }));
+    json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar, json_extract(summary_json, '$.tipIds') AS tips FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
+  .map(r => ({ ...r, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined, tips: r.tips ? JSON.parse(r.tips as unknown as string) : undefined }));
 
 app.post('/api/runs', async (req, reply) => {
   const b = RunRecordSchema.safeParse(req.body);

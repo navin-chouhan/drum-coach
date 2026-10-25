@@ -6,7 +6,7 @@ import { greeting } from '../engine/greeting';
 import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
-import { BADGES, barsReady, dashboard, earnedBadges, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
@@ -35,6 +35,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
   const coach = useCoachEntry<Lesson>(coachKey);
+  const themeKey = `theme-${new Date().toDateString()}`, themeEntry = useCoachEntry<Lesson>(themeKey);
   const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
   // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone,
   // once you've played something (with no takes yet, the built-in first lessons are the right start).
@@ -90,6 +91,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const line = greeting({ hour: new Date().getHours(), streak: dash?.streak ?? 0, runs: dash?.totalRuns ?? 0, landedWeek: dash?.landedWeek ?? null, landedLastWeek: dash?.landedLastWeek ?? null,
     next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus } });
   const trailDone = trail.filter(l => done(l.id)).length;
+  const theme = weekTheme(runs);
   const project = s.profile.song?.stage === milestone?.level ? s.profile.song : undefined;
   const projectSong = songs.find(x => x.id === project?.id);
   const songBars = projectSong ? songBarCount(projectSong) : 0;
@@ -125,6 +127,8 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               <li>🔥 <b>{dash?.streak ?? 0}-day</b> streak</li>
               {dash?.landedWeek != null && <li>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</li>}
               <li>⏱ <b>{Math.round(dash?.minutesToday ?? 0)}</b> min today</li>
+              {theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
+                : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
               {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : 'add its notes in Songs'}</li>}
             </ul>
           </div>

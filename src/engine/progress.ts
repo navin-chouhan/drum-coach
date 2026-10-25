@@ -3,6 +3,7 @@ export type RunRow = {
   bpm: number; speed: number; accuracy: number; meanOffset: number; spread: number;
   notes?: number; // notes in the take (older rows may lack it)
   fromBar?: number; toBar?: number; // the bars the take covered
+  tips?: string[]; // ids of the live tips given during the take (engine/liveCoach.ts)
 };
 export type CatalogItem = { id: string; title: string; bpm: number; level?: number; kind?: string };
 export type Suggestion = { chartId: string; bpm: number; reason: string };
@@ -125,4 +126,19 @@ export function forYou<C extends { id: string; kind?: string; level?: number; so
   charts.filter(c => c.level === level).forEach(c => add(c, 'at your level'));
   charts.filter(c => c.level === level + 1).forEach(c => add(c, 'a step up'));
   return out;
+}
+
+const THEME_WORDS: Record<string, string> = {
+  rushing: 'rushing ahead of the click', dragging: 'landing behind the click', unsteady: 'keeping the click steady',
+  reacting: 'playing with the click, not after it', 'missing-kick': 'the kick', extras: 'playing only the notes shown',
+  'hh-open': 'keeping the hi-hat pedal down', accents: 'louder accents', ghosts: 'softer ghost notes', even: 'even strokes',
+};
+/** This week's thing: the live tip given most in the last 7 days (3+ times, praise aside), in plain words. */
+export function weekTheme(runs: RunRow[], now = new Date()): { cue: string; count: number; words: string } | null {
+  const counts = new Map<string, number>();
+  for (const r of runs) if ((now.getTime() - Date.parse(r.startedAt)) / 86_400_000 < 7)
+    for (const id of r.tips ?? []) if (id !== 'praise') counts.set(id, (counts.get(id) ?? 0) + 1);
+  const [cue, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+  if (!cue || count < 3) return null;
+  return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${cue.slice(8)}` : cue) };
 }

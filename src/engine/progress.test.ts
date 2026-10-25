@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, forYou, suggestNext, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, forYou, suggestNext, weekTheme, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -72,5 +72,16 @@ describe('forYou', () => {
     expect(picks.map(p => `${p.chart.id}:${p.why}`)).toEqual(['a:played lately', 'n:played lately', 'ai1:from your coach', 'r:good warm-up', 'x:at your level']);
     expect(forYou(charts, [], 1).map(p => `${p.chart.id}:${p.why}`)).toEqual(['ai1:from your coach', 'r:good warm-up', 'a:at your level', 'n:a step up', 'x:a step up']);
     expect(forYou(charts, [], 2, 2)).toHaveLength(2);
+  });
+});
+
+describe('weekTheme', () => {
+  const now = new Date('2026-10-24T18:00:00');
+  it('picks the tip given most this week, 3+ times, praise aside', () => {
+    const runs = [run({ startedAt: '2026-10-23T09:00:00', tips: ['rushing', 'praise', 'praise', 'praise', 'praise'] }), run({ startedAt: '2026-10-24T09:00:00', tips: ['rushing', 'rushing', 'dragging'] }),
+      run({ startedAt: '2026-10-10T09:00:00', tips: ['dragging', 'dragging', 'dragging'] })];
+    expect(weekTheme(runs, now)).toEqual({ cue: 'rushing', count: 3, words: 'rushing ahead of the click' });
+    expect(weekTheme(runs.slice(1), now)).toBeNull();
+    expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-snare', 'missing-snare', 'missing-snare'] })], now)?.words).toBe('the snare');
   });
 });
