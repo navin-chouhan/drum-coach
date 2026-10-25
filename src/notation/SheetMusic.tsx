@@ -86,7 +86,8 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
     const time = { numBeats: ts[0], beatValue: ts[1] };
     const vh = new Voice(time).setMode(Voice.Mode.SOFT).addTickables(hands.notes);
     const vf = new Voice(time).setMode(Voice.Mode.SOFT).addTickables(feet.notes);
-    new Formatter().joinVoices([vh, vf]).formatToStave([vh, vf], stave);
+    // Full width, not formatToStave: its end padding plus the last note's own slot read as an extra beat before the barline.
+    new Formatter().joinVoices([vh, vf]).format([vh, vf], stave.getNoteEndX() - stave.getNoteStartX() - Stave.rightPadding);
     vh.draw(ctx, stave); vf.draw(ctx, stave);
     [...hands.beams, ...feet.beams].forEach(b => b.setContext(ctx).draw());
     [...hands.tuplets, ...feet.tuplets].forEach(t => t.setContext(ctx).draw());
@@ -101,6 +102,11 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
     points.push({ beat: barStart + bpb, x: x + w - 4 });
     points.sort((a, b) => a.beat - b.beat || a.x - b.x);
     boxes.push({ index: m.index, x0: x * k, x1: (x + w) * k, y: y * k, points: points.map(q => ({ beat: q.beat, x: q.x * k })) });
+  });
+  // On a row, the cursor glides on to the next bar's downbeat note: stopping at the barline made it snap forward there.
+  boxes.forEach((b, i) => {
+    const n = boxes[i + 1];
+    if (n?.y === b.y) b.points[b.points.length - 1].x = Math.max(...n.points.filter(p => p.beat === n.points[0].beat).map(p => p.x));
   });
   return { measures: boxes, groups, height: height * k };
 }
