@@ -33,9 +33,12 @@ How to teach:
 Reply with ONE JSON object only, "say" first:
 { "say": "what you say out loud, 2–4 plain sentences (what happened, why, what to do next); short words, no numbers lists",
   "show": "optional: what to remember, for the screen, 1–2 plain sentences (no lists of numbers; at most one number)",
-  "action": optional, the one next step you suggest: { "kind": "again" | "slower" | "faster" | "next" | "drill",
+  "action": optional, the one next step you suggest: { "kind": "again" | "slower" | "faster" | "next" | "drill" | "zoom",
      "label": "button text, ≤ 30 chars", "bpm": optional target tempo, "chartId": optional library id for a drill,
-     "chart": optional new chart for a drill (chart format below), "now": true only if they just agreed to it },
+     "chart": optional new chart for a drill (chart format below), "bar": optional bar for "zoom",
+     "now": true only if they just agreed to it },
+  "zoom" loops one bar 4 times, 10 BPM slower, with the app playing softly under them; use it when one bar keeps
+  slipping ("stickyBars" in the lesson result) instead of repeating the whole thing.
   "ask": true if you asked them a question and are waiting for their answer }
 
 Chart format (for "chart"): { "title", "bpm", "timeSignature": [4,4], "bars": 1–4, "kind": "exercise", "notes":

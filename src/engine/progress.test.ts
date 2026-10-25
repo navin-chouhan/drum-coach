@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboard, suggestNext, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, suggestNext, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -44,5 +44,23 @@ describe('dashboard', () => {
     expect(d.minutesToday).toBe(15);
     expect(d.days[13]).toEqual({ date: '2026-10-24', minutes: 15 });
     expect(d.charts[0]).toMatchObject({ chartId: 'a', runs: 2, best90Bpm: 85, lastAccuracy: 70 });
+  });
+});
+
+describe('earnedBadges', () => {
+  const now = new Date('2026-10-24T18:00:00');
+  it('earns from runs and lesson progress', () => {
+    const runs = [run({ startedAt: '2026-10-24T09:00:00', bpm: 104, accuracy: 92, notes: 600 }), run({ startedAt: '2026-10-24T10:00:00', chartId: 'yt-abc', accuracy: 90, notes: 600 })];
+    expect(earnedBadges(runs, { a: { stars: 3 }, b: { stars: 3 } }, [['a', 'b'], ['c']], now)).toEqual(['first-3star', 'fast-100', 'notes-1k', 'showoff', 'stage-3star']);
+    expect(earnedBadges([], { a: { stars: 2 } }, [[]], now)).toEqual([]);
+  });
+});
+
+describe('barsReady', () => {
+  it('counts bars covered by 85%+ takes of that song, overlaps once', () => {
+    const runs = [run({ chartId: 'yt-a', accuracy: 90, fromBar: 1, toBar: 4 }), run({ chartId: 'yt-a', accuracy: 88, fromBar: 3, toBar: 6 }),
+      run({ chartId: 'yt-a', accuracy: 70, fromBar: 7, toBar: 9 }), run({ chartId: 'yt-b', accuracy: 99, fromBar: 7, toBar: 9 }), run({ chartId: 'yt-a', accuracy: 99 })];
+    expect(barsReady(runs, 'yt-a', 24)).toBe(6);
+    expect(barsReady(runs, 'yt-a', 5)).toBe(5);
   });
 });

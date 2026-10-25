@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, copyChart, dueReviews, ladderStep, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, copyChart, countPlan, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -77,6 +77,22 @@ describe('tempo ladder', () => {
     expect(ladderStep({ ...p0, bpm: 45 }, lesson, true, D)).toMatchObject({ event: 'up', next: { bpm: 55 } });
     expect(ladderStep({ ...p0, bpm: 55 }, lesson, true, D)).toMatchObject({ event: 'up', next: { bpm: 65 } });
   });
+  it('layers: each clean take adds a limb at the same tempo, a fail keeps the layer, then the ladder', () => {
+    const lay: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], layers: [['hihat'], ['hihat', 'kick'], ['hihat', 'kick', 'snare']] }, lesson.steps[1]] };
+    const p = startProgress(lay);
+    expect(ladderStep(p, lay, true, D)).toMatchObject({ event: 'layerUp', next: { layer: 1, bpm: 60 } });
+    expect(ladderStep({ ...p, layer: 1 }, lay, false, D, 40)).toMatchObject({ next: { layer: 1, bpm: 50 } });
+    expect(ladderStep({ ...p, layer: 2 }, lay, true, D).event).toBe('hold'); // last layer: the usual ladder
+    expect(ladderStep({ ...p, layer: 2, bpm: 65, clean: 1 }, lay, true, D)).toMatchObject({ event: 'stepDone', next: { step: 1, layer: 0 } });
+    expect(lanesNow(lay.steps[0], { ...p, layer: 1 })).toEqual(['hihat', 'kick']);
+    expect(lanesNow(lesson.steps[0], p)).toBeUndefined();
+  });
+  it('free bars and trade count any take, unless the step sets a pass bar', () => {
+    const free: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], freeBars: [2] }, lesson.steps[1]] };
+    expect(ladderStep(startProgress(free), free, false, D, 30).event).toBe('hold'); // first clean take of two
+    const strict: Lesson = { ...lesson, steps: [{ ...lesson.steps[0], trade: true, pass: { accuracy: 80 } }, lesson.steps[1]] };
+    expect(ladderStep(startProgress(strict), strict, false, D, 30).event).toBe('slowDown');
+  });
   it('a jam step counts any take and moves on', () => {
     const jam: Lesson = { ...lesson, steps: lesson.steps.map(s => ({ ...s, jam: true })) };
     expect(ladderStep(startProgress(jam), jam, false, D, 20)).toMatchObject({ event: 'stepDone', next: { step: 1, bpm: 70 } });
@@ -86,6 +102,15 @@ describe('tempo ladder', () => {
     const r = play([true, true, true, true, true, true]);
     expect(r.events.at(-1)).toBe('lessonDone');
     expect(r.p).toMatchObject({ completedAt: D, reviewDue: '2026-10-26', reviewStage: 0, bestBpm: 70 });
+  });
+});
+
+describe('countPlan', () => {
+  it('counts every bar for 4 bars, then only "one"', () => {
+    const p = countPlan(6, 4, '8ths');
+    expect(p[0]).toEqual(['one', 'and', 'two', 'and', 'three', 'and', 'four', 'and']);
+    expect(p[4]).toEqual(['one', '', '', '', '', '', '', '']);
+    expect(countPlan(1, 3, 'quarters')).toEqual([['one', 'two', 'three']]);
   });
 });
 

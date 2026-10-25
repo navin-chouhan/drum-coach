@@ -136,6 +136,18 @@ export type RunStats = {
   reaction?: number | null; // ms a player who hits after each click is behind (set by the player at the end of a take)
 };
 
+/**
+ * The 1–2 bars where most notes were missed (1-based chart bars, repeats folded together), worst first; empty for a
+ * one-bar section or a clean take. `fromBar` is the section's first chart bar, `sectionBars` its length.
+ */
+export function worstBars(run: Run, results: NoteResult[], sectionBars: number, fromBar = 1): number[] {
+  if (sectionBars < 2) return [];
+  const miss = new Array(sectionBars).fill(0), total = new Array(sectionBars).fill(0);
+  run.notes.forEach((n, i) => { const b = n.bar % sectionBars; total[b]++; if (results[i].offset === undefined) miss[b]++; });
+  return miss.map((m, b) => ({ b, m, rate: total[b] ? m / total[b] : 0 }))
+    .filter(x => x.m >= 2 && x.rate >= 0.2).sort((x, y) => y.rate - x.rate || y.m - x.m).slice(0, 2).map(x => x.b + fromBar);
+}
+
 function streaks(results: NoteResult[]) {
   let streak = 0, run = 0, recoveries = 0;
   results.forEach((r, i) => {

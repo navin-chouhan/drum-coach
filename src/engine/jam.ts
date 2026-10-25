@@ -1,4 +1,5 @@
 import type { PadId } from './kit.ts';
+import type { PlayedHit } from './scoring.ts';
 import { WINDOWS } from './scoring.ts';
 import { beatAt, songSecAt, type BeatGrid } from './tempo.ts';
 
@@ -40,4 +41,17 @@ export function scoreJam(hits: JamHit[], grid: BeatGrid, stepsPerBeat = 2, rate 
     // a few ms of jitter over a short jam would extrapolate to a big per-minute number
     driftMsPerMin: n && (hits[n - 1].songSec - hits[0].songSec) / rate >= 20 ? r1(slope * 60 * rate) : null,
   };
+}
+
+/**
+ * Free bars (yours to fill, no chart notes): the hits in them, scored on the 8th-note grid of the take.
+ * Bars are 1-based chart bars; `fromBar`/`sectionBars` describe the looped section. `extras` = how many of the take's
+ * extra hits fell in free bars (they aren't mistakes there). Null when the take had no free bars.
+ */
+export function freeBarStats(hits: PlayedHit[], extras: PlayedHit[], take: { zero: number; beatMs: number; beatsPerBar: number; fromBar: number; sectionBars: number }, freeBars: number[]) {
+  if (!freeBars.length) return null;
+  const { zero, beatMs, beatsPerBar, fromBar, sectionBars } = take;
+  const inFree = (h: PlayedHit) => { const b = Math.floor((h.time - zero) / beatMs / beatsPerBar); return b >= 0 && freeBars.includes((b % sectionBars) + fromBar); };
+  const jam = hits.filter(inFree).map(h => ({ songSec: (h.time - zero) / 1000, pad: h.pad ?? 'snare', velocity: h.velocity }));
+  return { stats: scoreJam(jam, { bpm: 60000 / beatMs, offsetSec: 0 }), extras: extras.filter(inFree).length };
 }

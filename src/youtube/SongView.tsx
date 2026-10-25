@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { SongBars } from '../ui/nav';
 import { findVersions, patchSong } from './api';
 import { JamMode } from './JamMode';
 import { LearnMode } from './LearnMode';
@@ -15,7 +16,7 @@ type Version = 'originalId' | 'drumlessId' | 'coverId';
 const VERSION_NAMES: Record<Version, string> = { originalId: 'Original', drumlessId: 'Drumless', coverId: 'Drum cover' };
 const MODES = { tempo: '1 · Set tempo', learn: '2 · Learn by ear', jam: '3 · Jam', play: '4 · Play (scored)', sheet: '5 · Sheet music' } as const;
 type Mode = keyof typeof MODES;
-export type ModeProps = { song: YtSong; videoId: string; yt: YtPlayer; rate: number; tab?: TabAudio | null };
+export type ModeProps = { song: YtSong; videoId: string; yt: YtPlayer; rate: number; tab?: TabAudio | null; bars?: SongBars };
 
 /** Re-render when the player changes state (play/pause/error). */
 export function useYt(yt: YtPlayer | null) {
@@ -23,10 +24,10 @@ export function useYt(yt: YtPlayer | null) {
   useEffect(() => yt?.onChange(() => force(x => x + 1)), [yt]);
 }
 
-export function SongView({ song, onBack }: { song: YtSong; onBack: () => void }) {
+export function SongView({ song, onBack, bars }: { song: YtSong; onBack: () => void; bars?: SongBars }) {
   const [version, setVersion] = useState<Version>('originalId');
   const videoId = song[version] ?? song.originalId;
-  const [mode, setMode] = useState<Mode>(song.grids[song.originalId] ? 'learn' : 'tempo');
+  const [mode, setMode] = useState<Mode>(!song.grids[song.originalId] ? 'tempo' : bars ? 'play' : 'learn');
   const [rate, setRate] = useState(1);
   const [yt, setYt] = useState<YtPlayer | null>(null);
   const [link, setLink] = useState<{ on: boolean; waiting: boolean; reduce: boolean; strength: number; delayMs: number; error: string }>({ on: false, waiting: false, reduce: true, strength: 0.7, delayMs: 80, error: '' });
@@ -157,7 +158,7 @@ export function SongView({ song, onBack }: { song: YtSong; onBack: () => void })
           {yt && (mode === 'tempo' || !grid) && <TempoMode song={song} videoId={videoId} yt={yt} rate={rate} />}
           {yt && grid && mode === 'learn' && <LearnMode song={song} videoId={videoId} yt={yt} rate={rate} tab={tab} />}
           {yt && grid && mode === 'jam' && <JamMode song={song} videoId={videoId} yt={yt} rate={rate} />}
-          {yt && grid && mode === 'play' && <PlayMode song={song} videoId={videoId} yt={yt} rate={rate} />}
+          {yt && grid && mode === 'play' && <PlayMode song={song} videoId={videoId} yt={yt} rate={rate} bars={bars} />}
           {grid && mode === 'sheet' && <SongSheet song={song} bpm={grid.bpm} />}
         </div>
       </div>

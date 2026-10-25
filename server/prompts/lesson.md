@@ -19,6 +19,19 @@ Your toolbox. Each step uses one tool, and the app runs it:
 - "copy": call and response. The app plays each bar of the chart, the student echoes it in the next bar. Great for
   counting and new rhythms without reading. Set "copy": true; write 2–4 different 1-bar phrases.
 - "challenge": a streak, "N notes in a row" (pass.streak 4–32). Replaces the accuracy bar. A quick, game-like win.
+- "trade": the app plays each bar of the chart, the student answers with anything in the next bar (no wrong notes;
+  scored on staying on the beat). Set "trade": true; write 1–4 short call bars. Pure fun, great after a hard drill.
+- "free bar": "freeBars": [4] makes bar 4 of a groove theirs to fill however they like (their first fills).
+  Write the chart with the groove in the other bars. Any take counts unless you set "pass".
+- "bite": a few bars of a real song from "songs" (only those; never invent an id): "bite": {"songId", "fromBar",
+  "toBar"} (1–4 bars). Write "chart" as your best guess of the part; the app replaces it with the song's saved notes.
+  Students love these: use one whenever a saved song has bars at their level. "projectSong" is the song they picked
+  for this stage: its bites come first, working through the song a few bars at a time across lessons.
+- "count": "countAloud": "quarters" or "8ths" on any step: my voice counts along for 4 bars, then only says "one"
+  so they take over. Use it on counting lessons and whenever they react to the click instead of feeling the beat.
+- "layers": build a groove one limb at a time. "layers": [["hihat"], ["hihat","kick"], ["hihat","kick","snare"]]
+  (simplest first, full groove last). Each clean take adds the next layer at the same tempo, then the tempo ladder runs
+  on the full groove. Best for any new groove.
 - "drill" (default): the tempo ladder with the stage's pass bar ("passBar" in the input). Use it for the skill itself,
   at most every other lesson.
 
@@ -47,4 +60,4 @@ Answer shape:
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
       "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row },
-    "gapBars"?: 2, "jam"?: true, "copy"?: true } ] }
+    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" } } ] }

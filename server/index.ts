@@ -8,7 +8,7 @@ import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import { suggestNext, type RunRow } from '../src/engine/progress.ts';
 import { ask, getProvider } from './ai/coach.ts';
-import { lessonInput, toLesson } from './ai/lessons.ts';
+import { applyBites, lessonInput, toLesson } from './ai/lessons.ts';
 import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
@@ -105,8 +105,9 @@ app.get('/api/charts/:id/audio', async (req, reply) => {
 // ---------- runs & settings ----------
 const runRows = (limit = 5000): RunRow[] => (db.prepare(`
   SELECT * FROM (SELECT chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
-    bpm, speed, accuracy, mean_offset AS meanOffset, spread FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
-  .map(r => ({ ...r, level: r.level ?? undefined }));
+    bpm, speed, accuracy, mean_offset AS meanOffset, spread, json_extract(summary_json, '$.notes') AS notes,
+    json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
+  .map(r => ({ ...r, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined }));
 
 app.post('/api/runs', async (req, reply) => {
   const b = RunRecordSchema.safeParse(req.body);
@@ -336,7 +337,8 @@ app.post('/api/coach/lesson', async (req, reply) => {
     { chart_title: string; started_at: string; bpm: number; accuracy: number; summary_json: string }[]).reverse()
     .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
   const existing = aiLessons();
-  const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle });
+  const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle,
+    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong) });
   if (!input) return bad(reply, 'You have finished every milestone. Hold V or the mic button and ask the coach for new challenges.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
@@ -346,7 +348,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
     // Only a checkpoint of this stage can be stood in for, and only by a lesson that ends in a drill.
     const end = r.data.steps[r.data.steps.length - 1];
     const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) && !end.jam && !end.copy && !end.pass?.streak ? r.data.checkpoint : undefined;
-    const lesson = toLesson({ ...r.data, checkpoint: cp }, input.milestone.level);
+    const lesson = toLesson(applyBites({ ...r.data, checkpoint: cp }, id => { const row = ytById(id); return row && ytSong(row); }), input.milestone.level);
     // The new lesson replaces the coach's unstarted ones for this stage, so they don't pile up.
     const progress = app.lessons ?? {};
     for (const old of now) if (old.level === lesson.level && !progress[old.id]) db.prepare('DELETE FROM ai_lessons WHERE id = ?').run(old.id);

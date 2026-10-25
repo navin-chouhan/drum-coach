@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AiLessonSchema, RunRecordSchema } from '../../src/coach/schemas';
 import { CURRICULUM } from '../../src/content/curriculum';
 import { startProgress } from '../../src/engine/lesson';
-import { lessonInput, toLesson } from './lessons';
+import { applyBites, lessonInput, toLesson } from './lessons';
 
 const profile = { goals: [], minutesPerDay: 25, onboarded: true };
 const done = () => ({ ...startProgress(CURRICULUM[0]), completedAt: '2026-10-01' });
@@ -37,5 +37,13 @@ describe('coach lessons', () => {
     const c = out.steps[0].chart;
     expect(RunRecordSchema.safeParse({ chartId: c.id, chartTitle: c.title, level: out.level, startedAt: '2026-10-24T20:00:00.000Z',
       durationS: 20, bpm: 60, speed: 1, accuracy: 90, meanOffset: 0, spread: 10, summary: {} }).success).toBe(true);
+  });
+  it('a song bite gets the song bars as its chart; an unknown song drops the bite', () => {
+    const l = CURRICULUM.find(x => x.id === 'money-8ths')!, step = { ...l.steps[0], bite: { songId: 'yt1', fromBar: 2, toBar: 2 } };
+    const song = { id: 'yt1', title: 'Song', originalId: 'a', drumlessId: null, coverId: null, timeSignature: [4, 4] as [number, 4], grids: {},
+      notes: [{ t: 0, drum: 'kick' as const }, { t: 4, drum: 'snare' as const }, { t: 5.5, drum: 'hihat' as const }] };
+    const out = applyBites({ ...l, focus: '', steps: [step] }, id => (id === 'yt1' ? song : undefined));
+    expect(out.steps[0]).toMatchObject({ bite: { title: 'Song' }, chart: { bars: 1, notes: [{ t: 0, drum: 'snare' }, { t: 1.5, drum: 'hihat' }] } });
+    expect(applyBites({ ...l, focus: '', steps: [step] }, () => undefined).steps[0].bite).toBeUndefined();
   });
 });

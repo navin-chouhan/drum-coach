@@ -1,3 +1,4 @@
+import { beatsPerBar } from '../engine/chart';
 import { useEffect, useState } from 'react';
 import type { Grid, YtResult, YtSong } from './schemas';
 
@@ -45,3 +46,6 @@ export function useYtSongs(): [YtSong[], string] {
   }, []);
   return [songs, error];
 }
+
+/** How many bars a saved song's notes span (0 without notes). */
+export const songBarCount = (s: YtSong) => (s.notes.length ? Math.floor(s.notes[s.notes.length - 1].t / beatsPerBar(s)) + 1 : 0);

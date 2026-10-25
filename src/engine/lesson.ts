@@ -30,6 +30,11 @@ export type Step = {
   gapBars?: number;
   jam?: boolean;  // play along for fun: any full take counts, the tempo stays put
   copy?: boolean; // call and response: the app plays each bar, you echo it (see copyChart)
+  freeBars?: number[]; // 1-based chart bars that are yours: no notes to miss, scored on the beat grid only
+  trade?: boolean;      // trade bars: the app plays a bar, you answer with anything (copy + every echo bar free)
+  bite?: { songId: string; fromBar: number; toBar: number; title?: string }; // bars of a saved song (chart cut from its notes)
+  countAloud?: 'quarters' | '8ths'; // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
+  layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
 };
 export type LessonKind = NonNullable<Chart['kind']>;
 export type Lesson = {
@@ -41,16 +46,25 @@ export type Lesson = {
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
 export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[] }; // rank: your title once it's passed
-export type Profile = { goals: Genre[]; minutesPerDay: number; onboarded: boolean };
+export type Profile = { goals: Genre[]; minutesPerDay: number; onboarded: boolean; song?: { id: string; title: string; stage: number } }; // song: this stage's song project
 export type LessonProgress = {
   step: number; bpm: number; clean: number; fails: number; bestBpm: number;
   completedAt?: string; reviewStage: number; reviewDue?: string; // dates are local YYYY-MM-DD
   stars?: number; // best 1–3 earned when the lesson completes (older saves: none)
+  layer?: number; // index into the step's `layers` (older saves: none = 0)
+  bestStreak?: number; // best "in a row" on a streak challenge's record take
 };
 
-export type Tool = 'jam' | 'copy' | 'challenge' | 'drill';
+export type Tool = 'jam' | 'copy' | 'trade' | 'free' | 'challenge' | 'layers' | 'bite' | 'drill';
 /** Which coach tool a step uses (server/prompts/lesson.md). */
-export const toolOf = (s: Step): Tool => (s.jam ? 'jam' : s.copy ? 'copy' : s.pass?.streak ? 'challenge' : 'drill');
+export const toolOf = (s: Step): Tool => (s.bite ? 'bite' : s.jam ? 'jam' : s.trade ? 'trade' : s.copy ? 'copy' : s.freeBars?.length ? 'free' : s.pass?.streak ? 'challenge' : s.layers?.length ? 'layers' : 'drill');
+
+const COUNT = ['one', 'two', 'three', 'four', 'five', 'six', 'seven'];
+/** What the voice says per bar: one word per slot ('' = silent), full count for 4 bars, then only "one" so you take over. */
+export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | '8ths'): string[][] {
+  const full = COUNT.slice(0, beatsPerBar).flatMap(n => (mode === '8ths' ? [n, 'and'] : [n]));
+  return Array.from({ length: bars }, (_, b) => (b < 4 ? full : full.map((w, i) => (i ? '' : w))));
+}
 
 /** Call and response: each bar is played by the app (call), then by you (echo). A 2-bar chart becomes 4 bars. */
 export function copyChart(c: Chart): Chart {
@@ -122,18 +136,21 @@ export function starsFor(s: RunStats): 1 | 2 | 3 {
   return 1;
 }
 
-export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'atFloor' | 'stepDone' | 'lessonDone';
+export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'atFloor' | 'layerUp' | 'stepDone' | 'lessonDone';
+/** The lanes the student plays now: the current layer, else the step's own `activeLanes`. */
+export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.layers[Math.min(p.layer ?? 0, s.layers.length - 1)] : s.activeLanes);
 
 /**
  * Tempo ladder that keeps you in the sweet spot. Pass: CLEAN_TAKES clean takes → +5 BPM up to the target, then the
  * next step; below the step's start tempo (you eased off) one clean take climbs +10. Fail: a rough take (under
  * ROUGH_ACCURACY % landed) → −10 at once; FAILS_BEFORE_SLOWDOWN close ones → −5. Never below MIN_BPM ('atFloor').
- * A `jam` step counts any take as clean.
+ * A `jam` step counts any take as clean. A `layers` step adds a layer per clean take (tempo stays) before the ladder;
+ * a fail never takes a layer away.
  */
 export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam) passed = true;
+  if (step.jam || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
     if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };
@@ -141,14 +158,15 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
     return { next: { ...p, clean: 0, fails: 0, bpm: Math.max(MIN_BPM, p.bpm - (rough ? 2 * BPM_STEP : BPM_STEP)) }, event: 'slowDown' };
   }
   const eased = p.bpm < step.bpm.start;
+  if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
   if (step.jam) {
-    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm }, event: 'stepDone' };
+    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   } else {
     if (clean < CLEAN_TAKES && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
     if (p.bpm < step.bpm.target) return { next: { ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + (eased ? 2 : 1) * BPM_STEP) }, event: 'up' };
-    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm }, event: 'stepDone' };
+    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   }
   const done = p.completedAt ? {} : { completedAt: today, reviewStage: 0, reviewDue: addDays(today, REVIEW_DAYS[0]) };
   return { next: { ...p, clean: 0, fails: 0, bestBpm, ...done }, event: 'lessonDone' };
