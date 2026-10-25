@@ -97,6 +97,8 @@ Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `
 | # | Finding | Kind | Fix |
 |---|---|---|---|
 | 13 | At the 40 BPM floor a take with 16/16 notes landed, failed only for dragging (41 ms), got "Try Learn it slowly: the music waits for each note". Wait mode helps you find notes; it can't fix timing. | Teaching | At the floor, when the notes landed, the line names the fix instead: "All the notes are there. Dragging by 41 ms. Lock onto the click." (`floorLine`) |
+| 14 | At the 40 BPM floor, "🐢 Learn it slowly" (and floor × 2) didn't start wait mode: it ran "slower", a scored take at 35 BPM (below the floor), which passed and climbed: "Nice! Up to 45 BPM!", best 35. The label promised wait mode; the take counted. | Bug | At the floor the move is wait mode, as labelled. Checked live: the music waits, the verdict is "Nice and slow…", nothing is saved and the tempo stays. |
+| 15 | After a floor fail with missed notes the line said "Try Learn it slowly" but the big move (hi-hat pedal × 3 / "yes") was "▶ Again". | UX | The main move becomes "🐢 Learn it slowly" in that case. |
 
 ### Open observations (not fixed yet)
 - **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very

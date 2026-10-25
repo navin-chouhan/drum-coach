@@ -30,7 +30,7 @@ import { progressOf, resetLesson, saveProgress, today } from './state';
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 // text: the full verdict (spoken, sent to the coach); say: the short line for the screen; nums: the result card.
 type Nums = { landed: number; total: number; streak: number; recoveries: number; onBeat?: number; better: boolean };
-type Outcome = { passed: boolean; text: string; say?: string; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
+type Outcome = { passed: boolean; text: string; say?: string; slowly?: boolean; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 let probeExplained = false; // the probe's sentence once per session; afterwards just the number
 /** Clean takes a step needs at one tempo: a streak challenge is done on its first pass. */
@@ -190,20 +190,21 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       // Rank up: this was the last open checkpoint of its stage (a coach lesson for an already passed checkpoint isn't).
       const stage = MILESTONES.find(m => m.checkpoints.includes(cp ? cp.id : lesson.id)), s = getSettings();
       const rankUp = event === 'lessonDone' && !provedBefore && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
+      const notesLanded = st.accuracy >= Math.min(passFor(lesson.level).accuracy, step.pass?.accuracy ?? 100);
       const ok = !emptyBars && (check.ok || !!step.jam || (free.length > 0 && !step.pass));
       const msg: Record<LadderEvent, string> = {
         hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${cleanNeeded(step)}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
         up: `Up to ${next.bpm} BPM!`,
         slowDown: `Let's take it to ${next.bpm} BPM. Slower is how it sticks.`,
         layerUp: `Now add the ${(lanesNow(step, next) ?? []).filter(d => !(lanesNow(step, p) ?? []).includes(d)).map(laneName).join(' and ')}.`,
-        atFloor: floorLine(st.accuracy >= Math.min(passFor(lesson.level).accuracy, step.pass?.accuracy ?? 100), check.reason),
+        atFloor: floorLine(notesLanded, check.reason),
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
         lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
       };
       // Keep time alone: say how the tempo held once the click went quiet (in words, no numbers).
       const drift = step.fadeClick ? takeDrift(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed) }) : undefined;
       const held = drift === undefined || drift === null ? '' : Math.abs(drift) >= 20 ? ` You ${drift < 0 ? 'sped up' : 'slowed down'} a little once the click went quiet.` : ' Tempo held on your own. That\'s the hard part.';
-      o = { passed: ok, event, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
+      o = { passed: ok, event, slowly: event === 'atFloor' && !notesLanded, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
     // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting,
@@ -311,6 +312,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : flow ? { label: '🌊 Flow ▶', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, fadeClick: 8 }); } }
     : coachAct && canRunAction(coachAct) ? { label: coachAct.label, run: () => void runAction(coachAct) }
     : outcome?.fixBar && !outcome.zoomed ? { label: `🔍 Fix bar ${outcome.fixBar}`, run: () => zoomIn(outcome.fixBar!) }
+    : outcome?.slowly ? { label: '🐢 Learn it slowly', run: () => play(false, bpm, true) }
     : itemDone && (oneTake || outcome?.event === 'lessonDone') ? { label: onNext ? 'Next ▶' : '← Journey', run: goNext }
     : { label: outcome ? '▶ Again' : '▶ Play', run: () => play(false) };
   const listen = () => (f && f.hits.length ? hearTake(f) : play(true));
@@ -327,7 +329,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     const t = setInterval(() => { left--; if (left > 0) setAutoIn(left); else { clearInterval(t); setAutoIn(undefined); mainRef.current.run(); } }, 1000);
     return () => { clearTimeout(arm); clearInterval(t); off(); setAutoIn(undefined); };
   }, [f, !!outcome, playing]); // eslint-disable-line react-hooks/exhaustive-deps -- once per verdict
-  const slower = () => (oneTake ? play(false, bpm, true) : runAction({ kind: 'slower', label: 'Slower' }));
+  // At the slowest tempo the move is wait mode, as its label says (it used to play a scored take below the floor).
+  const atFloor = oneTake || p.bpm <= MIN_BPM;
+  const slower = () => (atFloor ? play(false, bpm, true) : runAction({ kind: 'slower', label: 'Slower' }));
   useEffect(() => onCoachAction(a => {
     if (intro) return false;
     if (a.kind === 'main') { main.run(); return true; }
@@ -393,7 +397,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         <div className="moves">
           <Move go label={main.label} onClick={main.run} />
           <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
-          <Move alt label={`🐢 ${oneTake || p.bpm <= MIN_BPM ? 'Learn it slowly' : 'Slower'}`} gesture="floor × 2" onClick={slower} />
+          <Move alt label={`🐢 ${atFloor ? 'Learn it slowly' : 'Slower'}`} gesture="floor × 2" onClick={slower} />
           <Move alt label={`⏭ ${onNext ? 'Skip to next' : 'Journey'}`} gesture="ride × 2" onClick={() => { stop(); goNext(); }} />
         </div>
       </>}
