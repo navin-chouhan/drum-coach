@@ -32,6 +32,11 @@ const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review',
 type Nums = { landed: number; total: number; streak: number; recoveries: number; onBeat?: number; better: boolean };
 type Outcome = { passed: boolean; text: string; say?: string; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
+let probeExplained = false; // the probe's sentence once per session; afterwards just the number
+/** Clean takes a step needs at one tempo: a streak challenge is done on its first pass. */
+const cleanNeeded = (s: { pass?: { streak?: number } }) => (s.pass?.streak ? 1 : CLEAN_TAKES);
+const cleanCount = (clean: number, need: number, bpm: number) =>
+  `${clean} of ${need} clean take${need === 1 ? '' : 's'} at ${bpm} BPM${need > 1 ? ' (one ★★★ take counts as both)' : ''}`;
 
 /**
  * One lesson: what/why/how, then each step with Hear it → Play → one-line verdict → tempo ladder.
@@ -123,7 +128,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         // The probe's tempo jump isn't a reason to show slides already seen (a first-time step still gets them).
         const key = `${stepIdx}/${p0.layer ?? 0}`;
         if (introShown.current.has(key)) introShown.current.set(key, working);
-        const say = `Your tempo today: ${working} BPM. That's where we practise.`;
+        const say = probeExplained ? `Your tempo: ${working} BPM.` : `Your tempo today: ${working} BPM. That's where we practise.`;
+        probeExplained = true;
         outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: say, say });
       }
       setVersion(v => v + 1); return;
@@ -186,7 +192,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       const rankUp = event === 'lessonDone' && !provedBefore && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
       const ok = !emptyBars && (check.ok || !!step.jam || (free.length > 0 && !step.pass));
       const msg: Record<LadderEvent, string> = {
-        hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${CLEAN_TAKES}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
+        hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${cleanNeeded(step)}). Once more at ${next.bpm} BPM.` : 'Same tempo, once more. You are close.',
         up: `Up to ${next.bpm} BPM!`,
         slowDown: `Let's take it to ${next.bpm} BPM. Slower is how it sticks.`,
         layerUp: `Now add the ${(lanesNow(step, next) ?? []).filter(d => !(lanesNow(step, p) ?? []).includes(d)).map(laneName).join(' and ')}.`,
@@ -358,7 +364,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const big = !!outcome && (outcome.event === 'lessonDone' || !!outcome.rankUp || (role === 'record' && outcome.passed));
   const said = coachLine(outcome?.say, fresh2, big);
   const line = said.line ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
-    : canProbe ? "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard."
+    : canProbe ? (probeExplained ? `Find your tempo from ${step.bpm.start} BPM.` : "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard.")
     : flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text);
   const howHint = lesson.how.split(/(?<=\.)\s/)[0];
 
@@ -405,7 +411,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
               {outcome.nums.total > 0 && <div><b>{outcome.nums.recoveries}</b><span>comebacks</span></div>}
             </div>
             {outcome.reason && <p className="tip">💡 {outcome.reason}</p>}
-            <p className="small">{outcome.nums.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && !outcome.itemDone && (layer === undefined || layer === step.layers!.length - 1) ? `${p.clean} of ${CLEAN_TAKES} clean takes at ${p.bpm} BPM` : ''}</p>
+            <p className="small">{outcome.nums.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && !outcome.itemDone && (layer === undefined || layer === step.layers!.length - 1) ? cleanCount(p.clean, cleanNeeded(step), p.bpm) : ''}</p>
             {f && <LatencyHint f={f} />}
             {yourFills.length > 0 && <div className="actions">{yourFills.map((fl, k) => kept.has(`${f!.startedAt}/${fl.bar}`)
               ? <span key={fl.bar} className="small">✓ fill {k + 1} kept</span>
