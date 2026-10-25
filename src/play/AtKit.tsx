@@ -7,11 +7,11 @@ import { player, playerVersion, position, subscribePlayer } from './player';
 // (engine/padCommands.ts). Each move shows its gesture, so you learn them by looking.
 
 /** The coach's one line, big. While the coach thinks, the verdict stays and a small line under it says so. */
-export function CoachLine({ line, thinking }: { line: string; thinking?: boolean }) {
+export function CoachLine({ line, under, thinking }: { line: string; under?: string; thinking?: boolean }) {
   return (
     <div className="say">
       <div className="avatar" aria-hidden>🥁</div>
-      <div className="bubble" aria-live="polite">{line}{thinking && <Thinking what="Your coach is listening back" />}</div>
+      <div className="bubble" aria-live="polite">{line}{under && <p className="under">{under}</p>}{thinking && <Thinking what="Your coach is listening back" />}</div>
     </div>
   );
 }

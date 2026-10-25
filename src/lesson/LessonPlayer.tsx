@@ -20,7 +20,7 @@ import { requestSong } from '../ui/nav';
 import { SheetMusic } from '../notation';
 import { hush, say, voiceEngine } from '../voice/voice';
 import { onHit } from '../input/hits';
-import { canRunAction, coachTake, dropCoachAction, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
+import { canRunAction, coachLine, coachTake, dropCoachAction, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
 import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
@@ -351,7 +351,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
   const toTarget = Math.max(0, Math.min(1, (bpm - step.bpm.start) / Math.max(1, step.bpm.target - step.bpm.start)));
   // The verdict never turns into "…" while the coach thinks: the thinking shows as a small line under it.
-  const line = fresh2?.say ?? outcome?.say ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
+  // A record, a rank up or a finished lesson keeps the app's verdict; the coach's words go under it.
+  const big = !!outcome && (outcome.event === 'lessonDone' || !!outcome.rankUp || (role === 'record' && outcome.passed));
+  const said = coachLine(outcome?.say, fresh2, big);
+  const line = said.line ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
     : canProbe ? "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard."
     : flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text);
   const howHint = lesson.how.split(/(?<=\.)\s/)[0];
@@ -375,7 +378,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} /></div>
         <RestCountdown key={stepIdx} seconds={step.rest!} />
       </> : playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
-        <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} thinking={!fresh2 && thinkingAbout(coach, f)} />
+        <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} under={said.under} thinking={!fresh2 && thinkingAbout(coach, f)} />
         <div className="moves">
           <Move go label={main.label} onClick={main.run} />
           <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
