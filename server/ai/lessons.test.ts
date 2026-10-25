@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AiLessonSchema, RunRecordSchema } from '../../src/coach/schemas';
 import { CURRICULUM } from '../../src/content/curriculum';
 import { startProgress } from '../../src/engine/lesson';
-import { applyBites, canStandIn, lessonInput, toLesson } from './lessons';
+import { applyBites, canStandIn, lessonInput, standsInFor, toLesson } from './lessons';
 
 const profile = { goals: [], minutesPerDay: 25, onboarded: true };
 const done = () => ({ ...startProgress(CURRICULUM[0]), completedAt: '2026-10-01' });
@@ -24,6 +24,19 @@ describe('coach lessons', () => {
     expect(input.milestone.checkpoints.map(c => c.id)).toEqual(['singles', 'hh-8ths', 'hands-feet']);
     expect(input.examples.every(e => CURRICULUM.find(l => l.id === e.id)!.level === 1)).toBe(true);
     expect(input.recentRuns).toHaveLength(1);
+  });
+  it('input reads the student from the evidence', () => {
+    const star3 = { ...done(), stars: 3 as const };
+    const fly = lessonInput({ profile, progress: { posture: star3, 'first-jam': star3 }, aiLessons: [], recent: [1, 2, 3, 4].map(() => ({ chart: 'x', at: '2026-10-24', bpm: 80, accuracy: 100, summary: { spreadMs: 8 } })) })!;
+    expect(fly.student.read).toMatchObject({ pace: 'flying', comfortableBpm: 80 });
+    expect(lessonInput({ profile, progress: {}, aiLessons: [], recent: [] })!.student.read.pace).toBe('new');
+  });
+  it('a stand-in has to play the checkpoint: its tempo and at least its notes per bar on each drum', () => {
+    const rests = CURRICULUM.find(x => x.id === 'rests')!, last = rests.steps[1]; // 8ths with rests on 2 and 4, 60 → 80
+    expect(standsInFor(last, rests)).toBe(true);
+    expect(standsInFor({ ...last, bpm: { start: 60, target: 70 } }, rests)).toBe(false);
+    expect(standsInFor({ ...last, chart: { ...last.chart, notes: [{ t: 0, drum: 'snare' }, { t: 2, drum: 'snare' }] } }, rests)).toBe(false); // the easier version that passed it
+    expect(standsInFor({ ...last, chart: { ...last.chart, bars: 2, notes: [...last.chart.notes, ...last.chart.notes.map(n => ({ ...n, t: n.t + 4 }))] } }, rests)).toBe(true);
   });
   it('stored lessons get an ai- id, the milestone level and chart ids', () => {
     const l = CURRICULUM.find(x => x.id === 'money-8ths')!;

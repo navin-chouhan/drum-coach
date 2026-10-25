@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { startProgress, type Lesson, type LessonKind, type LessonProgress, type Milestone } from './lesson';
-import { buildSession, candidates, currentMilestone } from './planner';
+import { buildSession, candidates, currentMilestone, studentRead } from './planner';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
 const L = (id: string, level: number, kind: LessonKind, o: Partial<Lesson> = {}): Lesson =>
@@ -47,5 +47,31 @@ describe('milestones and planner', () => {
     const s = buildSession(milestones, lessons, p, profile, D);
     expect(s.map(i => [i.role, i.lessonId])).toEqual([['warmup', 'singles'], ['review', 'rests'], ['skill', 'doubles'], ['groove', 'money']]);
     expect(buildSession(milestones, lessons, p, { ...profile, minutesPerDay: 15 }, D).map(i => i.role)).toEqual(['skill', 'groove']);
+  });
+
+  it('a flying student goes straight to the next checkpoint, ahead of coach and practice lessons', () => {
+    const star3 = (...xs: string[]) => Object.fromEntries(Object.entries(done(...xs)).map(([k, v]) => [k, { ...v, stars: 3 }]));
+    const ai = L('ai-1', 0, 'exercise', { source: 'ai' }), extra = L('echo', 0, 'exercise');
+    const all = [extra, ...lessons, ai];
+    expect(candidates(milestones, all, star3('count', 'echo'), profile).map(l => l.id)).toEqual(['rests', 'ai-1']);
+    expect(candidates(milestones, all, done('count', 'echo'), profile).map(l => l.id)).toEqual(['ai-1', 'rests']); // 1 star: the usual order
+  });
+});
+
+describe('student read', () => {
+  const run = (accuracy: number, spread = 10, bpm = 80) => ({ accuracy, spread, bpm });
+  const stars = (...n: number[]) => Object.fromEntries(n.map((s, i) => [`l${i}`, { ...startProgress(lessons[0]), completedAt: `2026-10-0${i + 1}`, stars: s }]));
+  it('no history: new', () => expect(studentRead({}, []).pace).toBe('new'));
+  it('★★★ lessons and near-perfect tight takes: flying, with the tempo they own', () => {
+    expect(studentRead(stars(3, 3, 3), [run(100), run(98), run(100, 12, 90), run(99)])).toMatchObject({ pace: 'flying', comfortableBpm: 80 });
+    expect(studentRead(stars(3, 3), []).pace).toBe('flying'); // the planner only has progress
+    const sameDay = Object.fromEntries([3, 3, 3, 3, 3, 3, 1].map((n, i) => [`d${i}`, { ...startProgress(lessons[0]), completedAt: '2026-10-05', stars: n }]));
+    expect(studentRead(sameDay, []).recentStars).toHaveLength(7); // one day's lessons all count, not 4 picked at random
+  });
+  it('low accuracy or 1-star lessons: struggling; in between: steady', () => {
+    expect(studentRead(stars(3, 3), [run(60), run(70), run(65), run(72)]).pace).toBe('struggling');
+    expect(studentRead(stars(1, 1, 2), []).pace).toBe('struggling');
+    expect(studentRead(stars(2, 3), [run(90), run(88), run(92), run(85)]).pace).toBe('steady');
+    expect(studentRead(stars(3, 3), [run(99, 30), run(99, 30), run(99, 30), run(99, 30)]).pace).toBe('steady'); // landing, but loose
   });
 });

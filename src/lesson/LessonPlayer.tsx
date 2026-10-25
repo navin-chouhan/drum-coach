@@ -5,7 +5,7 @@ import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
 import { afterReview, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
-import { checkpointsOf } from '../engine/planner';
+import { checkpointsOf, studentRead } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
 import type { SessionRole } from '../engine/planner';
@@ -194,8 +194,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       o = { passed: ok, event, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
-    // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting).
-    if (o.event === 'lessonDone' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
+    // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting,
+    // or you're flying through the stage: then its checkpoints are next, no lessons in between).
+    if (o.event === 'lessonDone' && studentRead(getSettings().lessons).pace !== 'flying' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
       requestCoachLesson(`after-${lesson.id}-${f.startedAt}`);
     // Between takes of a step the verdict stays on screen; the coach speaks once the step or lesson is done.
     if (o.itemDone && getSettings().voice) void say(o.text);

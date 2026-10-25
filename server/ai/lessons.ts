@@ -4,7 +4,7 @@ import { cutBars } from '../../src/engine/transcribe.ts';
 import type { YtSong } from '../../src/youtube/schemas.ts';
 import type { AiLesson } from '../../src/coach/schemas.ts';
 import { passFor, toolOf, type Lesson, type LessonProgress, type Profile, type Step } from '../../src/engine/lesson.ts';
-import { checkpointsOf, currentMilestone } from '../../src/engine/planner.ts';
+import { checkpointsOf, currentMilestone, studentRead } from '../../src/engine/planner.ts';
 
 // Coach-written lessons: what the coach is told, and how its answer becomes a stored lesson.
 export type RecentRun = { chart: string; at: string; bpm: number; accuracy: number; summary: Record<string, unknown> };
@@ -23,7 +23,8 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
       checkpoints: checkpointsOf(m, all, profile).map(l => ({ ...brief(l), passed: !!progress[l.id]?.completedAt, steps: l.steps.map(s => ({ title: s.title, bpm: s.bpm })) })),
     },
     passBar: passFor(m.level),
-    student: { goals: profile.goals.length ? profile.goals : ['not sure yet'], minutesPerDay: profile.minutesPerDay },
+    student: { goals: profile.goals.length ? profile.goals : ['not sure yet'], minutesPerDay: profile.minutesPerDay,
+      read: studentRead(progress, recent.map(r => ({ accuracy: r.accuracy, bpm: r.bpm, spread: typeof r.summary.spreadMs === 'number' ? r.summary.spreadMs : undefined }))) },
     progress: all.filter(l => progress[l.id]).map(l => {
       const p = progress[l.id];
       return { ...brief(l), level: l.level, byCoach: l.source === 'ai', step: p.step + 1, of: l.steps.length, bpm: p.bpm, passed: !!p.completedAt, bestBpm: p.bestBpm || undefined, stars: p.stars };
@@ -41,6 +42,13 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
 /** A coach lesson may stand in for a checkpoint only if it ends by playing written notes (not improvising or a streak). */
 export const canStandIn = (end: Pick<Step, 'jam' | 'copy' | 'trade' | 'freeBars' | 'pass' | 'layers' | 'bite' | 'rest' | 'probe'>) =>
   !end.rest && !end.probe && ['drill', 'layers', 'bite'].includes(toolOf(end as Step));
+
+/** A stand-in proves the checkpoint only if its last step plays it: the checkpoint's target tempo, and per bar at least as many notes on each of its drums. */
+export function standsInFor(end: Pick<Step, 'bpm' | 'chart'>, cp: Lesson) {
+  const want = cp.steps[cp.steps.length - 1];
+  const perBar = (s: Pick<Step, 'chart'>, drum: string) => s.chart.notes.filter(n => n.drum === drum).length / s.chart.bars;
+  return end.bpm.target >= want.bpm.target && [...new Set(want.chart.notes.map(n => n.drum))].every(d => perBar(end, d) >= perBar(want, d));
+}
 
 /** Song bites: each bite step's chart becomes those bars of the saved song; a bite naming no usable song is dropped. */
 export function applyBites(a: AiLesson, song: (id: string) => YtSong | undefined): AiLesson {

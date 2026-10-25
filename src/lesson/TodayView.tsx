@@ -5,7 +5,7 @@ import { MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
 import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
-import { checkpointsOf, currentMilestone, visibleLessons, type SessionRole } from '../engine/planner';
+import { checkpointsOf, currentMilestone, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
@@ -43,8 +43,8 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   // once you've played something (with no takes yet, the built-in first lessons are the right start).
   const played = !!dash?.totalRuns;
   useEffect(() => {
-    if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length) requestCoachLesson(coachKey);
-  }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons]);
+    if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length && studentRead(s.lessons, runs).pace !== 'flying') requestCoachLesson(coachKey);
+  }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons, runs]);
 
   // The Monday recap: on the first visit of a week (with some playing behind you), once, spoken if the voice is on.
   useEffect(() => {

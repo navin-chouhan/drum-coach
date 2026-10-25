@@ -84,6 +84,14 @@ with a different tool. A new coach lesson replaces its unstarted ones for that s
 zod, stored in SQLite and preferred by the daily planner. The built-in lessons are the offline
 fallback and the examples the coach is shown.
 
+**The coach teaches the student the evidence shows.** `studentRead` (`src/engine/planner.ts`) sums up the last 4
+finished lessons' stars and the last 12 takes as a pace: *new*, *struggling* (takes under 75% or mostly 1 star),
+*steady*, or *flying* (★★★ lessons, takes 95%+ with spread ≤ 20 ms), plus the tempo they own (`comfortableBpm`). Both
+the lesson writer and the live coach get it; "adult beginner" is only the assumption while there's no data. A flying
+student gets no lessons in between: the stage's checkpoints come first in the plan and the coach isn't asked for filler.
+A coach lesson stands in for a checkpoint only if its last step plays it (`standsInFor`): the checkpoint's target
+tempo and at least its notes per bar on each of its drums.
+
 ## Accomplishment: stars, ranks and show-off songs
 
 Learning should feel like a journey with a win at every step, and the best win for a beginner is playing a real
