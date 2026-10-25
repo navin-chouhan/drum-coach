@@ -36,3 +36,9 @@ export function takeChart(hits: { time: number; pad?: PadId; velocity: number }[
     .filter(n => n.t >= 0 && n.t < take.beats).sort((a, b) => a.t - b.t);
   return { title: take.title, bpm: 60000 / take.beatMs, timeSignature: take.timeSignature, bars: Math.ceil(take.beats / take.beatsPerBar), notes };
 }
+
+/** Song bite: bars fromBar–toBar (1-based, inclusive) of a song's notes, moved to start at beat 0. */
+export const cutBars = (notes: ChartNote[], beatsPerBar: number, fromBar: number, toBar: number): ChartNote[] => {
+  const a = (fromBar - 1) * beatsPerBar, b = toBar * beatsPerBar;
+  return notes.filter(n => n.t >= a - 1e-6 && n.t < b - 1e-6).map(n => ({ ...n, t: n.t - a }));
+};

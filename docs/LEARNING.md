@@ -42,6 +42,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Free bars and trade bars | `freeBars` makes some bars yours (no notes, any fill); `trade` is call and response where every answer bar is free. Free bars are scored on the 8th-note grid (`freeBarStats`, "on the beat %"), their strokes aren't extras, and any take counts unless the step sets `pass`. |
 | Listen back | "Hear your take" plays your own hits at their real times (`takeChart`, extras included) with the click, then "Hear it right" plays the chart. Hearing the difference, not only seeing it. |
 | Count with me | `countAloud` makes the coach's voice count during the take ("1 2 3 4" or "1 & 2 &"), fading to only "one" after 4 bars (`countPlan`) so the student takes over. Needs the Piper voice (the words are pre-rendered). |
+| Song bite | A step's `bite` names 1–8 bars of a saved song (`yt_songs` with notes); the server cuts the chart from the song's notes (`applyBites`), so it practises offline on the app's drums. "Play it with the song" opens Songs → Play on those bars. |
 | Specific feedback, one fix | After each take, one friendly line and at most one tip. The AI coach is one click away. |
 | Gap click | Later steps silence the click every other bar, so you keep time on your own. |
 | Spaced review | A finished lesson comes back after 2, 5, 12 and 30 days. Failing a review resets it to 1 day. |

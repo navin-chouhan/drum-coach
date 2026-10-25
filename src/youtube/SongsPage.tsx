@@ -3,11 +3,12 @@ import { SongsView as ImportFiles } from '../content/SongsView';
 import { parseYouTubeId } from '../engine/youtube';
 import { addSong, deleteSong, searchYt, useYtSongs } from './api';
 import type { YtResult } from './schemas';
+import type { SongBars } from '../ui/nav';
 import { SongView } from './SongView';
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function SongsPage({ openId: initial }: { openId?: string }) {
+export function SongsPage({ openId: initial, bars }: { openId?: string; bars?: SongBars }) {
   const [songs, loadError] = useYtSongs();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<YtResult[] | null>(null);
@@ -36,7 +37,7 @@ export function SongsPage({ openId: initial }: { openId?: string }) {
     try { const s = await addSong(r.title, r.id); setOpenId(s.id); setResults(null); } catch (err) { setError((err as Error).message); }
   }
 
-  if (open) return <SongView key={open.id} song={open} onBack={() => setOpenId(null)} />;
+  if (open) return <SongView key={open.id} song={open} bars={open.id === initial ? bars : undefined} onBack={() => setOpenId(null)} />;
 
   return (
     <div className="ytPage">

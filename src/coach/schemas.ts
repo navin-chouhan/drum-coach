@@ -64,6 +64,8 @@ export const AiLessonSchema = z.object({
     gapBars: z.number().int().min(2).max(8).optional(),
     jam: z.boolean().optional(), copy: z.boolean().optional(),
     countAloud: z.enum(['quarters', '8ths']).optional(),
+    bite: z.object({ songId: z.string().max(80), title: z.string().max(200).optional(), fromBar: z.number().int().min(1).max(999), toBar: z.number().int().min(1).max(999) })
+      .refine(b => b.fromBar <= b.toBar && b.toBar - b.fromBar < 8, { message: 'a bite is 1–8 bars' }).optional(),
     freeBars: z.array(z.number().int().min(1).max(16)).min(1).max(8).optional(), trade: z.boolean().optional(),
     layers: z.array(z.array(z.enum(CHART_DRUMS)).min(1)).min(2).max(5).optional(),
   }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })

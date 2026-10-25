@@ -15,6 +15,7 @@ import { KitView } from '../ui/KitView';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { LatencyHint, Results, saveRun } from '../play/Results';
 import { takeChart } from '../engine/transcribe';
+import { requestSong } from '../ui/nav';
 import { SheetMusic } from '../notation';
 import { say } from '../voice/voice';
 import { coachTake, dropCoachAction, onCoachAction } from '../coach/session';
@@ -205,6 +206,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen }:
           </p>
           {step.jam && <p className="small">Jam: just play along and enjoy. Every take counts.</p>}
           {step.copy && <p className="small">Copy me: the app plays a bar, you play it back. Then the next one.</p>}
+          {step.bite && <p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b>. <button className="link" onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Play it with the song →</button></p>}
           {step.trade && <p className="small">Trade bars: the app plays a bar, you answer with anything you like. No wrong notes, just stay on the beat.</p>}
           {!step.trade && free.length > 0 && <p className="small">Bar {free.join(' and ')} is yours: play any fill you like. No wrong notes, just stay on the beat.</p>}
           {step.pass?.streak && <p className="small">Challenge: {step.pass.streak} notes in a row. Missed one? Keep going, the count starts again.</p>}

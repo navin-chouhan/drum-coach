@@ -10,14 +10,14 @@ import { flourish } from '../lesson/Celebration';
 import type { ModeProps } from './SongView';
 
 /** Your transcription on the note highway, synced to the video (drumless version recommended), scored like any exercise. */
-export function PlayMode({ song, videoId, yt, rate }: ModeProps) {
+export function PlayMode({ song, videoId, yt, rate, bars }: ModeProps) {
   useSyncExternalStore(subscribePlayer, playerVersion);
   const grid = song.grids[videoId];
   const bpb = beatsPerBar(song);
   const notes = song.notes.filter(n => n.t >= 0);
   const lastBar = notes.length ? Math.floor(notes[notes.length - 1].t / bpb) + 1 : 1;
   const firstBar = notes.length ? Math.floor(notes[0].t / bpb) + 1 : 1;
-  const [range, setRange] = useState({ from: firstBar, to: lastBar });
+  const [range, setRange] = useState(bars ?? { from: firstBar, to: lastBar });
   const [stage, setStage] = useState(false); // Stage mode: for playing in front of friends
   const encore = stage && player.phase === 'done' ? player.finished : undefined;
   useEffect(() => { if (encore) { saveRun(encore); coachTake(encore); flourish(true); } }, [encore]); // the coach must hear this take, or it answers an older one

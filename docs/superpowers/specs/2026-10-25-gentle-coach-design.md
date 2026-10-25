@@ -29,5 +29,5 @@ The owner said this makes them lose motivation. Goal: they enjoy the drums while
    against last week). The coach's lesson list, weekly plan, full path and reset move under one "More" fold.
 
 ## Not doing (yet)
-Song bites as a separate tool (song lessons and the Songs tab already exist), music backing beyond the app's drums,
+music backing beyond the app's drums,
 an "OK" judgement tier separate from Good.

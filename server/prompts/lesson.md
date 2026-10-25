@@ -23,6 +23,9 @@ Your toolbox. Each step uses one tool, and the app runs it:
   scored on staying on the beat). Set "trade": true; write 1–4 short call bars. Pure fun, great after a hard drill.
 - "free bar": "freeBars": [4] makes bar 4 of a groove theirs to fill however they like (their first fills).
   Write the chart with the groove in the other bars. Any take counts unless you set "pass".
+- "bite": a few bars of a real song from "songs" (only those; never invent an id): "bite": {"songId", "fromBar",
+  "toBar"} (1–4 bars). Write "chart" as your best guess of the part; the app replaces it with the song's saved notes.
+  Students love these: use one whenever a saved song has bars at their level.
 - "count": "countAloud": "quarters" or "8ths" on any step: my voice counts along for 4 bars, then only says "one"
   so they take over. Use it on counting lessons and whenever they react to the click instead of feeling the beat.
 - "layers": build a groove one limb at a time. "layers": [["hihat"], ["hihat","kick"], ["hihat","kick","snare"]]
@@ -56,4 +59,4 @@ Answer shape:
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
       "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row },
-    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths" } ] }
+    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" } } ] }

@@ -19,6 +19,7 @@ export function greeting(g: GreetingInput): string {
   const what = focus && focus.length <= 140 ? `Next: ${title}. ${focus}`
     : tool === 'jam' ? `Today we start with a jam, "${title}". Just play along and enjoy.`
     : tool === 'copy' ? `Today: "${title}". I play a little rhythm, you copy it.`
+    : tool === 'bite' ? `Today: "${title}", a few bars of a real song.`
     : tool === 'trade' ? `Today: "${title}". I play a bar, you answer with anything you like.`
     : tool === 'free' ? `Today: "${title}", with a bar that's all yours.`
     : tool === 'challenge' ? `Today: a mini challenge, "${title}".`

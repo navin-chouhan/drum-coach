@@ -1,14 +1,17 @@
 import { CURRICULUM, MILESTONES } from '../../src/content/curriculum.ts';
+import { beatsPerBar } from '../../src/engine/chart.ts';
+import { cutBars } from '../../src/engine/transcribe.ts';
+import type { YtSong } from '../../src/youtube/schemas.ts';
 import type { AiLesson } from '../../src/coach/schemas.ts';
 import { passFor, toolOf, type Lesson, type LessonProgress, type Profile } from '../../src/engine/lesson.ts';
 import { checkpointsOf, currentMilestone } from '../../src/engine/planner.ts';
 
 // Coach-written lessons: what the coach is told, and how its answer becomes a stored lesson.
 export type RecentRun = { chart: string; at: string; bpm: number; accuracy: number; summary: Record<string, unknown> };
-type State = { profile: Profile; progress: Record<string, LessonProgress>; aiLessons: Lesson[]; recent: RecentRun[]; struggle?: unknown };
+type State = { profile: Profile; progress: Record<string, LessonProgress>; aiLessons: Lesson[]; recent: RecentRun[]; struggle?: unknown; songs?: YtSong[] };
 
 /** Compact model input for the current milestone; null when the path is finished. */
-export function lessonInput({ profile, progress, aiLessons, recent, struggle }: State) {
+export function lessonInput({ profile, progress, aiLessons, recent, struggle, songs = [] }: State) {
   const all = [...CURRICULUM, ...aiLessons];
   const m = currentMilestone(MILESTONES, all, progress, profile);
   if (!m) return null;
@@ -26,10 +29,22 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle }: 
       return { ...brief(l), level: l.level, byCoach: l.source === 'ai', step: p.step + 1, of: l.steps.length, bpm: p.bpm, passed: !!p.completedAt, bestBpm: p.bestBpm || undefined, stars: p.stars };
     }),
     recentRuns: recent.slice(-15),
+    // Songs they saved with notes: the only ones a song bite may name.
+    songs: songs.filter(s => s.notes.length).map(s => ({ id: s.id, title: s.title, bars: Math.floor(s.notes[s.notes.length - 1].t / beatsPerBar(s)) + 1 })),
     ...(struggle ? { struggle } : {}),
     examples: CURRICULUM.filter(l => l.level === m.level && l.kind !== 'song').slice(0, 4).map(l => ({ ...brief(l), what: l.what, how: l.how, steps: steps(l) })),
     yourEarlierLessons: aiLessons.filter(l => l.level === m.level).map(l => ({ title: l.title, tools: l.steps.map(toolOf), passed: !!progress[l.id]?.completedAt })),
   };
+}
+
+/** Song bites: each bite step's chart becomes those bars of the saved song; a bite naming no usable song is dropped. */
+export function applyBites(a: AiLesson, song: (id: string) => YtSong | undefined): AiLesson {
+  return { ...a, steps: a.steps.map(st => {
+    if (!st.bite) return st;
+    const s = song(st.bite.songId), notes = s ? cutBars(s.notes, beatsPerBar(s), st.bite.fromBar, st.bite.toBar) : [];
+    if (!s || !notes.length) { const { bite: _, ...rest } = st; return rest; }
+    return { ...st, bite: { ...st.bite, title: s.title }, chart: { ...st.chart, timeSignature: s.timeSignature, bars: st.bite.toBar - st.bite.fromBar + 1, notes } };
+  }) };
 }
 
 /** Gives a coach answer its id, level and chart ids so it plugs into the path like a built-in lesson. */
