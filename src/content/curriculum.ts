@@ -26,12 +26,12 @@ const crashOn = (notes: ChartNote[], beats: number[]) => [
   ...beats.map(t => ({ t, drum: 'crash' as const })),
 ].sort((a, b) => a.t - b.t);
 
-type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean; layers?: ChartDrum[][]; trade?: boolean; freeBars?: number[] };
+type StepOpts = { lanes?: ChartDrum[]; pass?: Partial<Pass>; gap?: number; ts?: TS; jam?: boolean; copy?: boolean; layers?: ChartDrum[][]; trade?: boolean; freeBars?: number[]; countAloud?: 'quarters' | '8ths' };
 function step(title: string, text: string, notes: ChartNote[], bpm: [number, number], o: StepOpts = {}): Step {
   const ts = o.ts ?? [4, 4], bpb = beatsPerBar({ timeSignature: ts });
   const bars = Math.floor(Math.max(...notes.map(n => n.t)) / bpb + 1e-6) + 1;
   const chart: Chart = { title, bpm: bpm[1], timeSignature: ts, bars, notes };
-  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy, layers: o.layers, trade: o.trade, freeBars: o.freeBars };
+  return { title, text, chart, bpm: { start: bpm[0], target: bpm[1] }, activeLanes: o.lanes, pass: o.pass, gapBars: o.gap, jam: o.jam, copy: o.copy, layers: o.layers, trade: o.trade, freeBars: o.freeBars, countAloud: o.countAloud };
 }
 const lesson = (level: number, id: string, kind: LessonKind, title: string, what: string, why: string, how: string, steps: Step[], tags?: Genre[]): Lesson =>
   ({ id, level, kind, title, what, why, how, tags, steps: steps.map((s, i) => ({ ...s, chart: { ...s.chart, id: `lesson/${id}/${i + 1}`, title: `${title} · ${s.title}` } })) });
@@ -71,7 +71,7 @@ export const CURRICULUM: Lesson[] = [
     'Playing in time with the click while counting "1 2 3 4" out loud.',
     'Drummers keep the band in time. Counting out loud links your hands to the beat; every pro still does it when learning something new.',
     'Listen to the count-in, then say the numbers out loud as you play. The high click is beat 1 of each bar. Don\'t chase the click: feel where the next one will land and meet it.',
-    [step('Snare on every beat', 'Say "1 2 3 4" out loud with each hit.', P(1, { snare: 'xxxx' }), [60, 80])]),
+    [step('Snare on every beat', 'Say "1 2 3 4" out loud with each hit. I count with you for the first bars.', P(1, { snare: 'xxxx' }), [60, 80], { countAloud: 'quarters' })]),
   lesson(0, 'eight-in-a-row', 'exercise', 'Eight in a row',
     'A mini challenge: eight snare hits in a row, right on the click.',
     'Small streaks build steady time. Miss one and the count simply starts again.',
@@ -82,7 +82,7 @@ export const CURRICULUM: Lesson[] = [
     'Two even notes per beat, counted "1 & 2 & 3 & 4 &".',
     'Most rock and pop grooves are built on 8th notes. If you can count them, you can read most beginner grooves.',
     'Numbers land on the click, "&" lands exactly halfway between. Alternate hands R L R L. Keep the strokes small and relaxed.',
-    [step('8ths on the snare', 'Count "1 & 2 & 3 & 4 &" out loud.', P(2, { snare: 'xxxxxxxx' }), [60, 80])]),
+    [step('8ths on the snare', 'Count "1 & 2 & 3 & 4 &" out loud. I count with you for the first bars.', P(2, { snare: 'xxxxxxxx' }), [60, 80], { countAloud: '8ths' })]),
   lesson(0, 'rests', 'exercise', 'Rests are notes too',
     'Leaving a beat silent on purpose, while still counting it.',
     'Grooves are as much about the gaps as the hits. Counting through a rest keeps you from rushing into the next note.',

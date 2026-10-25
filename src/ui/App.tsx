@@ -56,7 +56,7 @@ export function App() {
   useEffect(() => onSongRequest(id => { stop(); setSong(o => ({ id, n: (o?.n ?? 0) + 1 })); setTabState('songs'); }), []);
   useEffect(() => onLessonRequest(id => { stop(); setLesson(o => ({ id, n: (o?.n ?? 0) + 1 })); setTabState('today'); }), []);
   // The coach's voice: prepare the count-in and tips, speak tips when asked to.
-  useEffect(() => { void prepare([...NUMBERS.slice(0, 8), ...SPOKEN_CUES]); }, []);
+  useEffect(() => { void prepare([...NUMBERS.slice(0, 8), 'and', ...SPOKEN_CUES]); }, []);
   useEffect(() => onCue(c => { if (getSettings().liveTips === 'voice') void say(c.spoken, true); }), []);
 
   const status =

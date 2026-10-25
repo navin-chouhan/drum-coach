@@ -21,6 +21,7 @@ export type PlayOptions = RunOptions & {
   demo?: boolean;            // the app plays every note and nothing is scored
   guide?: boolean;           // practice-along: the app plays every note softly under you, you're still scored, no live tips
   gapBars?: number;          // the click is silent on every n-th bar
+  countAloud?: string[][];   // words the voice says per bar, one per slot ('' = silent): engine/lesson.ts countPlan
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
@@ -190,6 +191,9 @@ export function start(chart: Chart, options: PlayOptions) {
   const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
   let a = 0;
   let k = -countIn * sub;
+  const plan = options.countAloud, perBar = plan?.[0]?.length ?? 1, slots = plan ? Math.min(plan.length, Math.ceil(run.beats / bpb)) * perBar : 0; // never past the take's end
+  const slotAt = (w: number) => zeroAudio + ((w * bpb) / perBar) * beatMs / 1000;
+  let w = 0;
   const lastK = options.metronome ? run.beats * sub : 0; // metronome off → count-in only
   const timeOf = (k: number) => t0 + ((k / sub + countIn) * beatMs) / 1000;
   const timer = setInterval(() => {
@@ -207,6 +211,10 @@ export function start(chart: Chart, options: PlayOptions) {
       const n = sounding[a];
       if (autoAt(n) < late) continue;
       playDrum(DRUM_PAD[n.drum][0], (n.accent ? 110 : n.ghost ? 40 : 80) * (options.guide ? 0.5 : 1), autoAt(n));
+    }
+    for (; w < slots && slotAt(w) < c.currentTime + 0.2; w++) {
+      const word = plan![Math.floor(w / perBar)][w % perBar];
+      if (word && slotAt(w) >= late) sayAt(word, slotAt(w));
     }
     const d = audioToPerf(zeroAudio) - player.zero;
     if (Math.abs(d) < 50) drift += (d - drift) * 0.1; // smoothed; a bigger jump is a stale timestamp, not drift

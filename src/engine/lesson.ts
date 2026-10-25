@@ -32,6 +32,7 @@ export type Step = {
   copy?: boolean; // call and response: the app plays each bar, you echo it (see copyChart)
   freeBars?: number[]; // 1-based chart bars that are yours: no notes to miss, scored on the beat grid only
   trade?: boolean;      // trade bars: the app plays a bar, you answer with anything (copy + every echo bar free)
+  countAloud?: 'quarters' | '8ths'; // the coach's voice counts along, fading to just "one" after 4 bars (countPlan)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
 };
 export type LessonKind = NonNullable<Chart['kind']>;
@@ -55,6 +56,13 @@ export type LessonProgress = {
 export type Tool = 'jam' | 'copy' | 'trade' | 'free' | 'challenge' | 'layers' | 'drill';
 /** Which coach tool a step uses (server/prompts/lesson.md). */
 export const toolOf = (s: Step): Tool => (s.jam ? 'jam' : s.trade ? 'trade' : s.copy ? 'copy' : s.freeBars?.length ? 'free' : s.pass?.streak ? 'challenge' : s.layers?.length ? 'layers' : 'drill');
+
+const COUNT = ['one', 'two', 'three', 'four', 'five', 'six', 'seven'];
+/** What the voice says per bar: one word per slot ('' = silent), full count for 4 bars, then only "one" so you take over. */
+export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | '8ths'): string[][] {
+  const full = COUNT.slice(0, beatsPerBar).flatMap(n => (mode === '8ths' ? [n, 'and'] : [n]));
+  return Array.from({ length: bars }, (_, b) => (b < 4 ? full : full.map((w, i) => (i ? '' : w))));
+}
 
 /** Call and response: each bar is played by the app (call), then by you (echo). A 2-bar chart becomes 4 bars. */
 export function copyChart(c: Chart): Chart {

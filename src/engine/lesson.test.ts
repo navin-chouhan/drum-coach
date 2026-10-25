@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, checkPass, copyChart, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, checkPass, copyChart, countPlan, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -102,6 +102,15 @@ describe('tempo ladder', () => {
     const r = play([true, true, true, true, true, true]);
     expect(r.events.at(-1)).toBe('lessonDone');
     expect(r.p).toMatchObject({ completedAt: D, reviewDue: '2026-10-26', reviewStage: 0, bestBpm: 70 });
+  });
+});
+
+describe('countPlan', () => {
+  it('counts every bar for 4 bars, then only "one"', () => {
+    const p = countPlan(6, 4, '8ths');
+    expect(p[0]).toEqual(['one', 'and', 'two', 'and', 'three', 'and', 'four', 'and']);
+    expect(p[4]).toEqual(['one', '', '', '', '', '', '', '']);
+    expect(countPlan(1, 3, 'quarters')).toEqual([['one', 'two', 'three']]);
   });
 });
 
