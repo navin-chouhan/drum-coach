@@ -28,6 +28,7 @@ export function Celebration({ lesson, stars, milestone, rankUp, next, done, tota
           <div className="rankSticker">{milestone.rank}</div>
           <p className="small">You can:</p>
           <ul className="canDo">{milestone.canDo.map(c => <li key={c}>{c}</li>)}</ul>
+          <p className="small">Earned today. Play its challenges again on another day for the <b>✓ proven</b> mark.</p>
           {next && <p>Next stage: <b>{next.title}</b>, on the way to <b>{next.rank}</b>.</p>}
           <p className="unlock">🎸 Unlocked: a <b>show-off song</b> to play for your friends. Pick it on Journey.</p>
         </> : <h2>{lesson.title}</h2>}

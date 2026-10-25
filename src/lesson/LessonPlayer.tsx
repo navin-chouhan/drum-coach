@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
-import { afterReview, autoProbe, floorLine, lateNote, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, autoProbe, floorLine, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
@@ -168,10 +168,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       + (!fs ? '' : fs.stats.hits ? ` Your bars: ${fs.stats.onGridPct}% on the beat${fs.stats.spread <= 35 ? ', nice and even' : ''}.` : ' Your bars were empty: play anything you like in them.');
     const nums: Nums = { landed: st.total - st.miss, total: st.total, streak: st.streak, recoveries: st.recoveries, onBeat: fs?.stats.hits ? fs.stats.onGridPct : undefined, better: prev !== undefined && st.accuracy > prev + 2 };
     let o: Outcome;
+    // Ranks are proven on another day: a finished lesson passed again at its target, on a later day (R7).
+    const atTarget = check.ok && stepIdx === lesson.steps.length - 1 && f.chart.bpm * f.options.speed >= step.bpm.target - 0.5;
+    const prove = (x: LessonProgress) => proveOnAnotherDay(x, atTarget, today());
     if (oneTake) {
-      if (role === 'review') saveProgress(lesson.id, afterReview(p, check.ok, today()));
+      if (role === 'review') saveProgress(lesson.id, prove(afterReview(p, check.ok, today())));
       if (role === 'record') {
-        if (check.ok) { saveProgress(lesson.id, recordStreak ? { ...p, bestStreak: recordStreak } : { ...p, bestBpm: bpm }); flourish(false); }
+        if (check.ok) { saveProgress(lesson.id, prove(recordStreak ? { ...p, bestStreak: recordStreak } : { ...p, bestBpm: bpm })); flourish(false); }
         const say = check.ok ? `🏆 NEW RECORD: ${recordStreak ? `${recordStreak} in a row` : `${bpm} BPM`}!` : 'Not this time. Your record stays, try again any day.';
         o = { passed: check.ok, itemDone: true, nums, say, text: `${say} ${landed}` };
       } else { const say = check.ok ? 'Still solid.' : "We'll come back to this one tomorrow."; o = { passed: check.ok, itemDone: true, nums, say, text: `${landed} ${say}` }; }
@@ -184,7 +187,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
       // The checkpoint this lesson proves (itself, or the one a coach lesson stands in for) was it already passed?
       const provedBefore = !!getSettings().lessons[lesson.checkpoint ?? lesson.id]?.completedAt;
-      saveProgress(lesson.id, stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next);
+      saveProgress(lesson.id, prove(stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next));
       // A coach lesson standing in for a checkpoint passes it; the checkpoint itself comes back for review.
       const cp = lesson.checkpoint && LESSON_BY_ID[lesson.checkpoint];
       if (event === 'lessonDone' && cp && !getSettings().lessons[cp.id]?.completedAt)

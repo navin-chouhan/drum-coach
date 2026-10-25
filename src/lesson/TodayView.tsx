@@ -3,9 +3,9 @@ import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
 import { MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
-import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
+import { isProven, recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
-import { checkpointsOf, currentMilestone, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
+import { checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, SHOWOFF_MIN_BARS, songReady, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
@@ -85,6 +85,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const done = (id: string) => !!s.lessons[id]?.completedAt;
   const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
   const rank = passed.length ? passed[passed.length - 1].rank : 'New drummer';
+  const rankNow = passed.length ? rankState(passed[passed.length - 1], lessons, s.lessons, s.profile) : undefined; // ✓ once proven on another day
   // One "next": today's first open item. The coach's lessons reach you through the session (the planner puts them first).
   const openItem = (i: number) => { startSession(); setOpen({ lessonId: session.items[i].lessonId, item: i }); };
 
@@ -165,7 +166,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
             <div>Stage {path.indexOf(milestone) + 1}<br />{trailDone}/{trail.length}</div>
           </div>}
           <div>
-            <div className="rankSticker small">{rank}</div>
+            <div className="rankSticker small">{rank}{rankNow?.state === 'proven' && ' ✓'}</div>
+            {rankNow?.state === 'earned' && <p className="small">Prove it on another day ({rankNow.proven} of {rankNow.total})</p>}
             <ul className="youStats">
               <li>🔥 <b>{dash?.streak ?? 0}-day</b> streak</li>
               {dash?.landedWeek != null && <li>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</li>}
@@ -188,7 +190,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               <button key={i} className={`setTile ${isDone ? 'done' : i === firstUndone ? 'cur' : ''}`} onClick={() => openItem(i)}>
                 {i === firstUndone && <span className="tag">Up next</span>}
                 <span className="ic" aria-hidden>{iconOf(l)}</span>
-                <b>{isDone ? '✓ ' : ''}{l.title}</b>
+                <b>{isDone ? '✓ ' : ''}{it.role === 'review' && MILESTONES.some(m => m.checkpoints.includes(l.id)) && !isProven(s.lessons[l.id]) ? 'Prove it: ' : ''}{l.title}</b>
                 <span className="small">{TOOL_LABEL[toolOf(l.steps[0])]} · {it.minutes} min</span>
               </button>
             );

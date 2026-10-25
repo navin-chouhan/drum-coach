@@ -104,6 +104,9 @@ song for friends.
 - **Ranks**: each milestone has a title (`rank` in `MILESTONES`), earned when its checkpoints pass:
   Stick Rookie, Limb Wrangler, Groove Keeper, Fill Maker, Dynamics Boss, Triplet Traveller, Swing Cat.
   Ranks stay on the built-in checkpoints so they work offline (a coach stand-in marks the built-in checkpoint passed).
+  A rank is *earned* the day its checkpoints pass (it never blocks the next stage) and gets a **✓ proven** mark when
+  every checkpoint passes again at its target on a later day (a review, Beat your best or a replay; `proveOnAnotherDay`).
+  Once proven it stays. Review tiles of unproven checkpoints say "Prove it".
 - **Show-off song**: each rank unlocks real songs the coach picks for the stage's skills (`/api/coach/showoff`).
   You learn one in Songs; played scored at 85%+ it joins your show-off set, playable in Stage mode.
 - **The coach builds the path** inside the fixed stages: after every finished lesson it writes the next one in
