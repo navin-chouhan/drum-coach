@@ -159,9 +159,9 @@ export function start(chart: Chart, options: PlayOptions) {
   const match = createMatcher(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(scored.notes) * beatMs));
   if (!options.demo) cleanup.push(onHit(h => {
     const hit = { time: h.time - latency - drift, pad: h.pad, velocity: h.velocity };
-    if (hit.time < player.zero - 1000) return; // count-in noodling isn't scored
-    hits.push(hit);
     const m = match(hit);
+    if (!m && hit.time < player.zero) return; // count-in noodling isn't scored (an early first note still matches)
+    hits.push(hit);
     if (m) {
       const i = scored.notes[m.index].i;
       player.results[i] = toResult(m, h.velocity, h.pad);
@@ -239,9 +239,9 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   const match = createMatcher(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })), windowsFor(beatMs, minGapBeats(run.notes) * beatMs));
   cleanup.push(onHit(h => {
     const hit = { time: ext.position(h.time - latency) * beatMs, pad: h.pad, velocity: h.velocity };
-    if (hit.time < -beatMs * run.beatsPerBar) return; // pre-roll noodling
-    hits.push(hit);
     const m = match(hit);
+    if (!m && hit.time < 0) return; // pre-roll noodling isn't scored (an early first note still matches)
+    hits.push(hit);
     if (m) {
       player.results[m.index] = toResult(m, h.velocity, h.pad);
       player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });

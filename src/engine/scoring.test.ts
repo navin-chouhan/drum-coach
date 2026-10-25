@@ -147,3 +147,29 @@ describe('flam and pair drop', () => {
     expect(computeStats(singles, missed, 0).velocity.pairDrop).toBe(30);
   });
 });
+
+describe('a late stroke belongs to the note before it', () => {
+  // snare 8ths at 120 BPM: notes 250 ms apart, Good ±100, Near 250
+  const q: Expected[] = Array.from({ length: 8 }, (_, i) => ({ time: 1000 + i * 250, drum: 'snare' }));
+  const w = windowsFor(500, 250);
+  it('dragging by more than half a gap is reported as dragging, and the next on-time stroke is not an extra', () => {
+    const m = createMatcher(q, w);
+    expect(m({ time: 1130, pad: 'snare', velocity: 80 })).toMatchObject({ index: 0, offset: 130, judgement: 'miss' });
+    expect(m({ time: 1250, pad: 'snare', velocity: 80 })).toMatchObject({ index: 1, judgement: 'perfect' });
+  });
+  it('a whole take dragged by 130 ms (uncorrected latency) reads as late, not early', () => {
+    const { results, extras } = scoreRun(q, q.map(e => ({ time: e.time + 130, pad: 'snare' as const, velocity: 80 })));
+    expect(results.every(r => r.judgement === 'miss' && r.off === 130)).toBe(true);
+    expect(extras).toHaveLength(0);
+    expect(latencySuspect(results)).toBe(130);
+  });
+  it('a repeat stroke right after a played note is still an extra, and an early stroke still claims the next note', () => {
+    const m = createMatcher(q, w);
+    expect(m({ time: 1000, pad: 'snare', velocity: 80 })).toMatchObject({ index: 0, judgement: 'perfect' });
+    expect(m({ time: 1060, pad: 'snare', velocity: 80 })).toBeNull(); // bounce-like repeat, nearest note already played
+    expect(m({ time: 1380, pad: 'snare', velocity: 80 })).toMatchObject({ index: 1, offset: 130, judgement: 'miss' }); // note 1 is still open behind it: late for note 1
+    expect(m({ time: 1630, pad: 'snare', velocity: 80 })).toMatchObject({ index: 2, offset: 130, judgement: 'miss' });
+    const early = createMatcher(q, w);
+    expect(early({ time: 890, pad: 'snare', velocity: 80 })).toMatchObject({ index: 0, offset: -110, judgement: 'miss' }); // nothing behind it: early for note 0
+  });
+});
