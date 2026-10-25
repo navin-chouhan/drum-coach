@@ -61,6 +61,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   useEffect(() => { void voiceEngine().then(setEngine); }, []);
   const lastAccuracy = useRef<number>(undefined); // for "better than last take"
   const stickyBar = useRef<number>(undefined); // the bar most notes slipped in, last take (for the coach's "zoom")
+  const introShown = useRef(new Map<string, number>()); // step/layer → the tempo its intro slides were shown at
 
   const p = progressOf(lesson);
   const oneTake = role === 'warmup' || role === 'review' || role === 'record';
@@ -119,6 +120,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         const working = probeTempo(pr.accs, step.bpm.start, pass, step.bpm.target);
         probing.current = undefined; probed.current = stepIdx;
         saveProgress(lesson.id, { ...progressOf(lesson), bpm: working, clean: 0, fails: 0 });
+        // The probe's tempo jump isn't a reason to show slides already seen (a first-time step still gets them).
+        const key = `${stepIdx}/${p0.layer ?? 0}`;
+        if (introShown.current.has(key)) introShown.current.set(key, working);
         const say = `Your tempo today: ${working} BPM. That's where we practise.`;
         outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: say, say });
       }
@@ -234,7 +238,6 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   });
   // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).
   const [intro, setIntro] = useState<{ run: () => void }>();
-  const introShown = useRef(new Map<string, number>());
   const play = (demo: boolean, atBpm = bpm, wait = false) => {
     setDetails(false);
     const next = !demo && !wait && step.variants?.length ? chartFor(takeNo + 1).chart : chart;
