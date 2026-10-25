@@ -17,6 +17,7 @@ describe('greeting', () => {
   it("uses the coach's focus sentence, and offers a jam when the set is done", () => {
     expect(greeting({ ...base, runs: 1, next: { title: 'Say "and"', tool: 'copy', minutes: 8, focus: 'Your quarters are solid.' } }))
       .toMatch(/Next: Say "and"\. Your quarters are solid\. Ready\?$/);
+    expect(greeting({ ...base, runs: 1, next: { title: 'T', tool: 'copy', minutes: 8, focus: 'x'.repeat(200) } })).toMatch(/you copy it/);
     expect(greeting({ ...base, hour: 14, runs: 5 })).toBe("Hey! That's today's set done. Want to jam a bit more?");
   });
 });

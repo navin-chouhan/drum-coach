@@ -61,7 +61,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const path = MILESTONES.filter(m => checkpointsOf(m, lessons, s.profile).length); // stages for these goals (e.g. no Swing for rock only)
   const total = session.items.reduce((a, it, i) => a + (playable(i) ? it.minutes : 0), 0);
   // The trail: this stage's lessons in path order (the coach's after the built-ins), checkpoints as the challenges.
-  const trail = milestone ? visible.filter(l => l.level === milestone.level && (l.source !== 'ai' || l.id in s.lessons || coachOpen.includes(l)))
+  const trail = milestone ? visible.filter(l => l.level === milestone.level && (l.source !== 'ai' || l.id in s.lessons || l === coachOpen[coachOpen.length - 1]))
     .sort((a, b) => Number(milestone.checkpoints.includes(a.id)) - Number(milestone.checkpoints.includes(b.id)) || Number(a.source === 'ai') - Number(b.source === 'ai')) : [];
   const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
   // "Something else": another open lesson of this stage, a different kind of activity first.
@@ -87,19 +87,21 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
             </div>
           </div>
-          <div className="statChips">
-            {!!dash?.streak && <span>🔥 <b>{dash.streak}-day</b> streak</span>}
-            {dash?.landedWeek != null && <span>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</span>}
-            {!!dash?.minutesToday && <span>⏱ <b>{Math.round(dash.minutesToday)}</b> min today</span>}
-          </div>
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
         </div>
-        {milestone && <div className="stageRing">
-          <div className="ring" style={{ '--p': `${trail.length ? (trailDone / trail.length) * 100 : 0}%` } as React.CSSProperties}>
+        <div className="card youCard">
+          {milestone && <div className="ring" style={{ '--p': `${trail.length ? (trailDone / trail.length) * 100 : 0}%` } as React.CSSProperties}>
             <div>Stage {path.indexOf(milestone) + 1}<br />{trailDone}/{trail.length}</div>
+          </div>}
+          <div>
+            <div className="rankSticker small">{rank}</div>
+            <ul className="youStats">
+              <li>🔥 <b>{dash?.streak ?? 0}-day</b> streak</li>
+              {dash?.landedWeek != null && <li>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</li>}
+              <li>⏱ <b>{Math.round(dash?.minutesToday ?? 0)}</b> min today</li>
+            </ul>
           </div>
-          <div className="rankSticker small">{rank}</div>
-        </div>}
+        </div>
       </div>
 
       {session.items.length > 0 && <div className="card">
@@ -193,27 +195,38 @@ const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fi
 const TOOL_ICON: Record<Tool, string> = { jam: '🎸', copy: '🔁', challenge: '🔥', drill: '' };
 const iconOf = (l: Lesson) => TOOL_ICON[toolOf(l.steps[0])] || KIND_ICON[l.kind] || '🎯';
 
-/** This stage as a winding trail of stops: done ones green, the next one big, the challenges as stars, a song at the end. */
+/**
+ * This stage as a winding trail of stops: done ones green, the next one big, the challenges as stars, a song at the end.
+ * Kept to about ten stops: older finished lessons fold into one "done" stop, later ones into "+N more" (all are in Full path).
+ */
 function Trail({ lessons, current, done, isChallenge, onOpen }: { lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
-  const n = lessons.length + 1; // + the song at the end
-  const pos = (i: number) => ({ x: 5 + (i * 90) / Math.max(1, n - 1), y: 50 + 26 * Math.sin(i * 1.3) });
-  const pts = Array.from({ length: n }, (_, i) => pos(i));
+  const c = Math.max(0, current ? lessons.indexOf(current) : lessons.findIndex(l => !done(l.id)));
+  const before = lessons.slice(0, c), after = lessons.slice(c + 1);
+  const folded = before.length > 2 ? before.slice(0, -1) : [];
+  const upcoming = after.filter(l => !isChallenge(l)), later = upcoming.slice(4);
+  type Stop = { l?: Lesson; icon: string; name: string; cls: string };
+  const stop = (l: Lesson): Stop => ({ l, name: l.title, icon: done(l.id) ? '✓' : isChallenge(l) ? '★' : iconOf(l),
+    cls: l === current ? 'now' : done(l.id) ? 'done' : isChallenge(l) ? 'boss' : '' });
+  const stops: Stop[] = [
+    ...(folded.length ? [{ icon: '✓', name: `${folded.length} done`, cls: 'done' }] : []),
+    ...before.slice(folded.length).map(stop), ...(lessons[c] ? [stop(lessons[c])] : []),
+    ...after.filter(l => !later.includes(l) && !isChallenge(l)).map(stop),
+    ...(later.length ? [{ icon: `+${later.length}`, name: 'more', cls: 'more' }] : []),
+    ...after.filter(isChallenge).map(stop),
+    { icon: '🎵', name: 'Unlock a real song', cls: 'song' },
+  ];
+  const pts = stops.map((_, i) => ({ x: 5 + (i * 90) / Math.max(1, stops.length - 1), y: 50 + 22 * Math.sin(i * 1.3) }));
   return (
     <div className="trail">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden><polyline points={pts.map(p => `${p.x},${p.y}`).join(' ')} /></svg>
-      {lessons.map((l, i) => {
-        const p = pts[i], cls = l === current ? 'now' : done(l.id) ? 'done' : isChallenge(l) ? 'boss' : '';
-        return (
-          <button key={l.id} className={`stop ${cls}`} style={{ left: `${p.x}%`, top: `${p.y}%` }} onClick={() => onOpen(l.id)}
-            title={l.title} aria-label={`${l.title}${done(l.id) ? ', done' : ''}${isChallenge(l) ? ', stage challenge' : ''}`}>
-            <span className="dot" aria-hidden>{done(l.id) ? '✓' : isChallenge(l) ? '★' : iconOf(l)}</span>
-            <span className="name">{l.title}</span>
-          </button>
-        );
+      {stops.map((st, i) => {
+        const style = { left: `${pts[i].x}%`, top: `${pts[i].y}%` }, cls = `stop ${st.cls} ${pts[i].y < 50 ? 'up' : ''}`;
+        const inner = <><span className="dot" aria-hidden>{st.icon}</span><span className="name">{st.name}</span></>;
+        return st.l
+          ? <button key={st.l.id} className={cls} style={style} onClick={() => onOpen(st.l!.id)} title={st.l.title}
+            aria-label={`${st.l.title}${done(st.l.id) ? ', done' : ''}${isChallenge(st.l) ? ', stage challenge' : ''}`}>{inner}</button>
+          : <div key={st.name} className={cls} style={style}>{inner}</div>;
       })}
-      <div className="stop song" style={{ left: `${pts[n - 1].x}%`, top: `${pts[n - 1].y}%` }}>
-        <span className="dot" aria-hidden>🎵</span><span className="name">Unlock a real song</span>
-      </div>
     </div>
   );
 }
