@@ -83,7 +83,26 @@ Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 clea
 | 10 | Ghost notes (full groove) failed for a ±8 ms player: 129/136, hits "wandering" ±47 ms. A ghost snare fires the MPS-150 hi-hat ~10 ms later (measured on the owner's kit); that echo claimed the next hi-hat note as a miss and the real stroke became an extra. Known as open item F10, never filtered. On the real kit every ghost-note and funk groove would punish the student for the hardware. | Bug | A hi-hat hit within 15 ms after a snare ≤ 44 velocity and no louder than it is dropped as crosstalk (`src/input/hits.ts`); real hi-hat strokes and backbeats are kept. After: 68/68. (a420eac) |
 | 9 | The emulated kit could never pass an accent check: accents 115, every other stroke 92 (ratio 0.8 > 0.7). The app was right; the test player accented weakly. | Test tool | In an accented pattern its other strokes are taps (70). (d1f8873) |
 
+### Round 5 (sweep, trophies, extras)
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 11 | Finishing a leftover Stage 2 coach lesson at Swing Cat showed "RANK UP! You're now a Limb Wrangler" again: the check asked whether the stage's checkpoints are all passed now, not whether this lesson completed the stage. | Bug | Rank up only when the checkpoint this lesson proves wasn't passed before (`LessonPlayer.tsx`). Not re-checked live: it needs a fresh coach lesson for a passed checkpoint. (7155595) |
+| 12 | Practice → For you after the whole path: "at your level" was "Basic rock beat, 80 BPM" for a Swing Cat. With no current milestone the level fell back to 1. | Bug | Falls back to the last stage's level; now "Funk groove with ghost notes". (c5c28d9) |
+| – | Checked live: a silent take of "Your own fill" now gets "Once more, and fill your bars this time" and doesn't count (fix 3). | Verified | |
+
 ### Open observations (not fixed yet)
+- **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very
+  start; ~180 on-time takes later it's still the habit to work on. It should need the issue to still be present lately.
+- **Trophies can be stale right after a take.** The 10,000-notes badge only lit after leaving and reopening Trophies.
+- **Flow after the path opens Stage 1's jam** ("Your first jam") for a Swing Cat; it should use the latest stage.
+- **The coach invents next steps.** After "Beat your best" its button said "Next posture step", which doesn't exist.
+- **Coach text replaces the big moment.** "🏆 NEW RECORD" was replaced by the coach's paragraph.
+- **The coach's groove for a real song can be wrong.** Billie Jean: it suggested a kick on the & of 2 and ghost
+  snares; the real part is 8th hi-hat, kick 1 and 3, snare 2 and 4. It says "verify by ear", but a beginner can't.
+- **A show-off song can be very short.** The set counts any saved bars of a song at 85%+, even 2 bars, with a grid the
+  student tapped; the app can't tell whether the part matches the record.
+- **The Practice library is thin at the top.** 12 charts, one at level 6, none for swing or shuffle.
+- **Song audio (tab capture) wasn't tested:** it needs Chrome's share-a-tab prompt, which the test can't click.
 - The tempo probe never tries the target itself when +5 overshoots it (90 → 95 > 92 stops at 90).
 - After a probe's tempo jump (> 10 BPM) the intro slides show again for the exercise just played.
 - Even when flying, the coach (Haiku, low effort) still opens with an echo warm-up step the prompt tells it to skip.
@@ -217,6 +236,24 @@ the depth of the path than about the student.
 6. A weekly plan from the coach and a running student profile beyond pace.
 7. The UX items above: vary the probe line, skip slides after a probe, keep the verdict visible, shorter on-screen
    coach text.
+
+## Trophies at the end of the run
+| Trophy | Status |
+|---|---|
+| All 7 ranks (Stick Rookie → Swing Cat) | ✓ |
+| Stars | 88 from the path, every lesson ★★★ (Trade bars 1★ from the silent take before fix 3) |
+| First ★★★, Clean at 100, 1,000 notes, 10,000 notes, Perfect stage | ✓ |
+| Show-off song + Show-off set | ✓ Billie Jean, bars 1–8, 104/104 along the YouTube video; Stage mode played it with "ENCORE! 100% on time" |
+| Your fills | ✓ one fill kept from "Your own fill" |
+| 2-minute challenge | ✓ 50 clean bars on the money beat at 100 BPM (600/600) |
+| Beat your best | ✓ new record on "Sit, hold, strike" |
+| **7-day and 30-day streak** | ✗ **Blocked:** they need 7 and 30 real days of play. Not faked (no clock or data changes). |
+
+Every lesson on the path is finished: 30 on the first pass, the 19 skipped practice lessons in the sweep (49 visible
+lessons, all ★★★). About 69 minutes of playing, 188 takes saved.
+
+Not tested: real-kit calibration and the latency test (keyboard/emulated kit only), voice talk-back (microphone),
+song audio capture (tab share prompt), drumless/cover search, the mistake paths (rough take, Fix bar, slower).
 
 ## Stage log
 | Stage | Rank | Lessons played | Notes |
