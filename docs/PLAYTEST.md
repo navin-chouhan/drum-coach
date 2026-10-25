@@ -84,6 +84,8 @@ Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 clea
 | 9 | The emulated kit could never pass an accent check: accents 115, every other stroke 92 (ratio 0.8 > 0.7). The app was right; the test player accented weakly. | Test tool | In an accented pattern its other strokes are taps (70). (d1f8873) |
 
 ### Open observations (not fixed yet)
+- The tempo probe never tries the target itself when +5 overshoots it (90 → 95 > 92 stops at 90).
+- After a probe's tempo jump (> 10 BPM) the intro slides show again for the exercise just played.
 - Even when flying, the coach (Haiku, low effort) still opens with an echo warm-up step the prompt tells it to skip.
 - When today's set is done, Journey's big button is "Jam ▶". A student who wants more has to use "Something else" or
   the path to get to the next checkpoint.
@@ -92,9 +94,136 @@ Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 clea
 - The live coach misreads a new step's start tempo as being slowed down ("The app slowed you to 60").
 
 
+## Instructor's review: the whole app, as a critical drum teacher sees it
+
+Written after playing the full path (Stick Rookie → Swing Cat) as a strong student. What I could not see: Chrome
+screenshots failed all session, so UI remarks come from the page text, structure and code, not from looking at the
+screen. Mistake paths (rough takes, slowing down, "Fix bar N", "something different") were not exercised, because
+the player never failed for musical reasons.
+
+### Verdict in one paragraph
+As a **time-keeping and coordination trainer for an adult beginner** the app is genuinely good: scoring is honest
+(it caught weak accents and kit crosstalk that a human teacher would hear too), the tempo ladder, layers, intro slides
+and kit gestures are thoughtful, and the coach's words after a take are warm and specific. It is **not yet a
+holistic drum teacher**. Technique beyond timing and volume is not taught or checked, the curriculum ends at early
+intermediate, music is mostly a click, and the two halves of the app (the Journey and Songs/YouTube) don't meet in
+the middle. A strong student can finish all seven ranks in about **50 minutes of playing**, which says more about
+the depth of the path than about the student.
+
+### What works (keep it)
+- **Honest, measurable feedback.** Accuracy, spread, flams, accent ratio and velocity evenness are the right things
+  to measure, and the pass bars rise with the level. Every checkpoint ends with an 8-bar proving take with a spread
+  limit: averaging on time isn't enough. That's exactly what a teacher listens for.
+- **Pedagogy built in.** One limb at a time (layers), call and response, trade bars, gap click, fading click, the
+  2-and-4 click, spaced review. These are real teaching methods, used in the right places.
+- **Built for the throne.** Kit gestures (hi-hat pedal ×3 = go), one big coach line, and the keyboard fallback
+  everywhere. Starting a lesson never needs the mouse.
+- **The live coach's voice.** After a step it says what landed, what drifted, and one physical thing to try ("your
+  foot is trailing your hand a touch, lift your foot a little sooner"). That is good teaching.
+- **Rewards.** Stars, a celebration after each lesson, rank-ups with "You can: …" lists, badges. The "You can" list
+  after a rank-up is the best moment in the app: it names the skill, not the score.
+
+### What's missing (biggest gaps first)
+1. **Technique is not taught, only implied.** Grip, fulcrum, rebound, heel-up vs heel-down, Moeller and
+   hi-hat foot control appear as text. There are no demonstration videos or animations, and nothing on screen
+   shows *how* the body moves. "Sit, hold, strike" is a snare drill with a velocity check; it can't see posture. A
+   teacher spends the first month here. At minimum: a short looping demo clip or animation per technique, and a
+   self-check ("film yourself and compare").
+2. **The rudiment set stops at four.** Singles, doubles, paradiddle, accents (plus triplets). LEARNING.md promises
+   flams, drags and the buzz roll ("about eight cover a beginner"); none exist as lessons. Flams and drags are core
+   for fills and for left-hand control.
+3. **The path ends at early intermediate, then stops.** After Swing Cat the coach says "You have finished every
+   milestone… ask the coach for new challenges". There is no level 7+: no linear fills across the bar line, 16th-note
+   kick independence, odd time beyond 6/8, ghost-note funk at real tempos, double-kick, brush/jazz comping depth, or
+   soloing. "Expert" is not reachable inside the app's structure.
+4. **Almost no music in lessons.** Lessons are drums plus a click (the app plays the other drum lanes in a synth).
+   No bass line, no chords, no loop under a groove. Grooves feel like exercises, not songs. A simple backing loop per
+   style (rock, funk, shuffle, swing) would change the excitement level more than any badge.
+5. **The Journey and real songs live apart.** The show-off song needs YouTube search, notes made by ear or by tab
+   capture, then scored play on the Songs tab. For a beginner that is a big jump from "Next ▶". The built-in "in the
+   style of" songs (Steady Eight, Garage Eight, Roadhouse Shuffle, Medium Swing) are the right idea but sound like a
+   drum machine with no band.
+6. **Feel and musicality aren't judged.** Shuffle and swing are scored on a triplet grid; nobody checks the swing
+   ratio, the push or lay-back of a groove, dynamics over a phrase (verse soft, chorus loud), or fills that build.
+   Mean offset is shown, but "behind the beat on purpose" isn't a skill the app knows.
+7. **Reading is a side effect.** The sheet music is good, but there are no reading lessons: no counting from the
+   page, no rhythm cards, no sight-reading take (`variants` exist but few steps use them).
+8. **Listening and ear training are thin.** Echo game and trade bars only. Missing: "what did you hear?" quizzes,
+   naming a groove from a song, hearing rushing vs dragging in someone else's take.
+9. **Stamina and consistency over days.** A checkpoint passes on one good take. Spaced review helps, but there's no
+   "play it clean on 3 different days" for ranks, and no long-form stamina (5-minute groove).
+
+### UI and UX
+- **Repetitive lines for a strong student.** With the tempo probe, every lesson opens with "Let's find your
+  tempo…" then "Your tempo today: N BPM. That's where we practise." Fine once, flat by the tenth lesson. Vary it, or
+  skip the sentence and just show the number.
+- **Intro slides come back after every big tempo jump.** After a probe jumps 60 → 100, the same three slides
+  (what, who plays what, count it) show again for an exercise just played. For the probe's jump they should be
+  skipped.
+- **"…" hides the verdict.** While the coach thinks (about 5 s), the coach line shows "…" instead of "Step done!
+  Next: …". Show the verdict and put the thinking state elsewhere.
+- **The clean-takes counter misleads with the fast track.** "0 of 2 clean takes at 80 BPM" when one ★★★ take is
+  enough. Say "1 great take or 2 clean ones".
+- **When today's set is done, the big button is "Jam ▶".** A motivated student has to find "Something else" or the
+  path to keep going. For a student on a roll, offer the next lesson.
+- **Long coach paragraphs at the kit.** Debriefs are 3–4 sentences with milliseconds ("about 7 milliseconds
+  late"). From 1–2 m away that's too much text and the wrong unit for a beginner. One sentence on screen ("A hair
+  late on the kick: lift the foot sooner"), the rest spoken.
+- **Setup is easy to skip and silent about it.** Onboarding says to check pads and latency under Setup, then
+  "Let's start" goes straight to a lesson. A first-run check ("hit each pad once", "tap 8 times for latency") as
+  step 2 of onboarding would prevent wrong-note frustration.
+- Fixed during the run: the sound-locked chip, "Midi Through" shown as the kit, the stale coach line.
+
+### AI coach and personalisation
+- **Before the fixes:** the coach treated everyone as a struggling beginner. It wrote review lessons after ★★★,
+  restarted at 60 BPM, and let an easier lesson pass a checkpoint. **After:** it reads the evidence, aims at the next
+  checkpoint and starts at the student's tempo (round 2).
+- **Still weak:** Haiku on low effort follows the prompt only partly (it still adds warm-up echo steps for a
+  flying student). For lesson writing, a stronger model or effort is worth the wait, since lessons are written in
+  the background anyway.
+- **Personalisation is about pace, not the person.** Goals (rock/funk/jazz) only filter tagged lessons. The coach
+  doesn't know favourite songs, which hand or foot is weaker over time, or what the student enjoys (jam vs drill).
+  The live tips' "This week's thing" ("landing behind the click") is a good start: build on it with a running
+  "student profile" the coach updates.
+- **The coach doesn't plan the week.** It reacts to the last lesson. A teacher plans "this week: hi-hat foot and
+  ghost notes", then checks in. The `/api/coach/plan` endpoint exists; the Journey doesn't lead with it.
+
+### Lessons and curation
+- Individual lessons are well made: clear what/why/how, sensible tempos, the right tools.
+- Curation now adapts by pace (round 2–3). Non-checkpoint lessons are skipped for a flying student; a teacher would
+  still assign one "fun" lesson per stage (a jam or a song bite) so the journey isn't only tests.
+- Coach lessons duplicate built-ins (a coach "Rests are notes too" beside the built-in one, same title). The coach
+  should never reuse a built-in title.
+
+### Journey, learning, excitement, ease
+- **Journey:** clear stages, ranks, and "You can" lists. But the student sees a list of lesson tiles, not a map with
+  a destination song. Show the stage's song at the end of the trail from day one (the code has it as "Unlock a real
+  song").
+- **Learning:** strong for time and coordination, weak for technique, reading, musicality and vocabulary (fills,
+  styles).
+- **Excitement:** high in the first stage (celebrations, badges). It fades for a fast student because every lesson
+  feels the same (probe, take, stars) and there's no band. Backing loops, a real song per stage and a weekly
+  challenge would keep it.
+- **Ease:** excellent at the kit, with one-tap next steps, gestures and the keyboard fallback. Weak points were the
+  silent sound lock (fixed) and setup checks that are easy to skip.
+
+### Recommendations, in order of impact
+1. Backing loops (bass + chords) under lesson grooves and the built-in songs.
+2. Technique demos (short looping videos or animations) for grip, rebound, kick and hi-hat foot, plus flams, drags
+   and buzz rolls as rudiment lessons.
+3. Levels 7–9: linear fills, 16th-kick independence, odd time, funk at tempo, a solo/fill-vocabulary stage.
+4. Put the stage's real song at the centre of each stage (one tap from Journey), with bites in the lessons.
+5. Judge feel: swing ratio, phrase dynamics, behind/ahead on purpose.
+6. A weekly plan from the coach and a running student profile beyond pace.
+7. The UX items above: vary the probe line, skip slides after a probe, keep the verdict visible, shorter on-screen
+   coach text.
+
 ## Stage log
 | Stage | Rank | Lessons played | Notes |
 |---|---|---|---|
+| 7 · Swing | Swing Cat ✓ | Jazz ride pattern ✓cp (4), Snare comping ✓cp (2), Song: Medium Swing ✓cp (2, 168/168 at 130) | The whole path took about 50 minutes of playing. |
+| 6 · Triplet feels | Triplet Traveller ✓ | Triplets ✓cp (4), The shuffle ✓cp (4), Half-time feel ✓cp (2), Song: Roadhouse Shuffle ✓cp (3, 288/288) | The song's probe stopped at 90 because 95 > 92 and never tried the target itself: one extra 24-bar take. |
+| 5 · 16ths and dynamics | Dynamics Boss ✓ | The paradiddle ✓cp (4), 16th-note hi-hat ✓cp (4), Ghost notes ✓cp (3, after the crosstalk fix), Ride groove ✓cp (3) | Found fix 9 (emulated accents) and fix 10 (crosstalk). |
 | 4 · Variations and first fills | Fill Maker ✓ | Kick on the & of 3 ✓cp (4 takes), Your first fill ✓cp, Song: Garage Eight ✓cp (2: probe + one 24-bar take, 310/310) | With the probe, each checkpoint is a probe plus a proving take. |
 | 3 · The money beat | Groove Keeper ✓ | The money beat ✓cp (6), Song: Steady Eight ✓cp (2: probe + one 16-bar take, 192/192) | The probe on a song only plays bar 1, but the full song still has to pass. |
 | 2 · Every limb on its own | Limb Wrangler ✓ | Single strokes ✓cp (14 takes), Hi-hat 8th notes ✓cp (16), Hand and foot together ✓cp (7) | Flying: checkpoints only, all ★★★. The practice lessons (hi-hat quarters, kick, accents, the coach's singles lesson) were skipped by the new planner and are left for the end-of-run sweep. Most takes went to climbing from 60 BPM. |
