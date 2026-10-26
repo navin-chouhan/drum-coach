@@ -28,7 +28,10 @@ export function skillsOf(l: Lesson): SkillId[] {
   if (l.kind === 'song' || l.steps.some(s => s.bite)) out.add('songs');
   if (l.kind === 'rudiment') out.add('hands');
   for (const s of l.steps) {
-    const c = s.chart, bpb = beatsPerBar(c), pos = (t: number) => t - Math.floor(t / bpb) * bpb;
+    // Only the notes the student plays: the app plays the other lanes (activeLanes, or the last layer) (D5).
+    const lanes = s.layers?.at(-1) ?? s.activeLanes;
+    const c = lanes ? { ...s.chart, notes: s.chart.notes.filter(n => lanes.includes(n.drum)) } : s.chart;
+    const bpb = beatsPerBar(c), pos = (t: number) => t - Math.floor(t / bpb) * bpb;
     const on = (t: number, k: number) => Math.abs(pos(t) * k - Math.round(pos(t) * k)) < 1e-3;
     if (c.notes.some(n => n.grace || n.buzz) || /paradiddle|doubles|flam|drag|buzz/.test(l.id)) out.add('rudiments');
     if (c.notes.some(n => n.ghost || n.accent) || s.pass?.minDynamicsR !== undefined || c.dyn) out.add('dynamics');
