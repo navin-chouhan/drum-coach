@@ -57,6 +57,16 @@ describe('earnedBadges', () => {
   });
 });
 
+describe('streak badges (fake dates)', () => {
+  it('7 days in a row earn the 7-day streak, a gap breaks it', () => {
+    const now = new Date('2026-10-26T20:00:00');
+    const days = (n: number, skip = -1) => Array.from({ length: n }, (_, i) => i).filter(i => i !== skip).map(i => run({ startedAt: new Date(now.getTime() - i * 86_400_000).toISOString(), notes: 10 }));
+    expect(earnedBadges(days(7), {}, [], now)).toContain('streak-7');
+    expect(earnedBadges(days(7, 3), {}, [], now)).not.toContain('streak-7');
+    expect(earnedBadges(days(30), {}, [], now)).toContain('streak-30');
+  });
+});
+
 describe('songReady', () => {
   it('a show-off song is 16 bars or more, every bar at 85%+', () => {
     const two = [run({ chartId: 'yt-a', accuracy: 99, fromBar: 1, toBar: 2 })];

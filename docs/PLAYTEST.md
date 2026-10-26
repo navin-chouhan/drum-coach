@@ -13,6 +13,9 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
 - **Browser:** Claude in Chrome. Its screenshot, click and find tools time out on every page here (even a plain JSON
   page), so the app is driven by page scripts: clicks on the buttons the user would press, hi-hat taps for the intro
   slides, and one real key press per page load to allow sound.
+- **Tooling (G8):** Setup → Pads → Emulated kit has Beginner and Solid presets and now fills free bars with 8ths. The
+  page driver is `scripts/playtest/helpers.js`: `await import('/scripts/playtest/helpers.js?' + Date.now())`, then
+  `T.player({…})`, `T.nav.requestLesson(id)`, `await T.go()` (one take, then the verdict, side card and progress).
 - **Onboarding:** all three styles picked (rock, funk, jazz) so every tagged lesson is on the path; 25 minutes a day.
 
 ## Lessons learned about testing this app
