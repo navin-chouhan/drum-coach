@@ -104,3 +104,22 @@ Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1
 | 04:00 | R4 feel.ts | done | e38efe6 | 241 | – |
 | 04:10 | R1 band.ts | done | abdc06d | 248 | – |
 | 04:15 | final run | 248/248, tsc clean | – | – | servers stopped, tab closed |
+
+## Day session, 2026-10-26 (owner approved all mockups; "How it moves" redone as v2 and approved)
+Owner: "complete all the changes … keep a beginner drummer as the user and find him the best experience via AI coach
+personalised curation". Built in my recommended order, each item checked in Chrome on a data copy (5180 / 8790).
+
+| Item | Commit | Checked |
+|---|---|---|
+| Owner decisions: timing-only fails hold the tempo; late passes get a gentle note | 0f0e040 | unit tests |
+| How it moves v2 mockup (approved) | b5cadcf | geometry checked by script |
+| M11 Journey after the set / after the path | 4d08eae | ✓ incl. one coach challenge |
+| M14 onboarding kit step + one nudge (also: goals save dropped the stage song) | bb1ce7a | ✓ |
+| R7 proven ranks on screen | 890f6a2 | ✓ |
+| R1 backing band | 6a1cc46 | ✓ oscillators during a take |
+| R6 student profile + weekly plan | 8fab4b4 | ✓ coach planned "Play right with the click, not behind" |
+| R2 flam/drag lessons, notation, keyboard + emulated graces | 5908ff1 | ✓ 16/16 flams scored |
+| R5 How it moves + camera self-check + look steps | cc5c2b9 | ✓ (camera permission not granted by me) |
+| R8 a song at the centre of every stage (+ server import fix) | 91d7270 | ✓ |
+| R4 feel judging | 44fe8fd | ✓ straight take 49.8% swing |
+| R3 levels 7–9 | a66545e | ✓ 7/8 take |
