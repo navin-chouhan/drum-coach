@@ -195,7 +195,7 @@ export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number, free?:
     if (!t.ok) return { ok: false, reason: t.offset < c.offsetTarget.ms ? 'Sit a little behind the click: let it land just after.' : 'A touch too far behind: bring it closer to the click.' };
   }
   if (c.maxAbsOffsetMs !== undefined && Math.abs(s.meanOffset) > c.maxAbsOffsetMs)
-    return { ok: false, reason: `${s.meanOffset < 0 ? 'Rushing' : 'Dragging'} by ${Math.abs(s.meanOffset)} ms. Lock onto the click.` };
+    return { ok: false, reason: offsetWords(s.meanOffset) };
   if (c.maxVelocityCv !== undefined && s.velocity.normalCv > c.maxVelocityCv)
     return { ok: false, reason: `Volume varies by ${s.velocity.normalCv}%. Aim for every stroke the same height.` };
   if (c.maxGhostToAccent !== undefined) {
@@ -203,7 +203,7 @@ export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number, free?:
     if (loud && soft / loud > c.maxGhostToAccent) return { ok: false, reason: 'Make the accents louder and the other notes softer.' };
   }
   if (c.maxSpreadMs !== undefined && s.spread > c.maxSpreadMs)
-    return { ok: false, reason: `Your hits wander ±${s.spread} ms. Keep each one the same distance from the click.` };
+    return { ok: false, reason: `Your hits wander ±${Math.round(s.spread)} ms. Keep each one the same distance from the click.` };
   if (c.maxFlamMs !== undefined && s.flam !== null && s.flam > c.maxFlamMs)
     return { ok: false, reason: `Hands and feet split by ${s.flam} ms. Make them land as one sound.` };
   if (c.maxPairDropPct !== undefined && s.velocity.pairDrop !== null && s.velocity.pairDrop > c.maxPairDropPct)
@@ -216,7 +216,7 @@ function worstDrum(s: RunStats) {
   if (!worst || worst[1].accuracy >= 90) return '';
   const name = worst[0] === 'hhOpen' ? 'open hi-hat' : worst[0] === 'hhPedal' ? 'hi-hat foot' : worst[0] === 'hihat' ? 'hi-hat' : worst[0];
   const t = worst[1].meanOffset;
-  const when = Math.abs(t) >= 15 ? `${t < 0 ? 'early' : 'late'} by ${Math.abs(t)} ms` : '';
+  const when = Math.abs(t) >= 15 ? `${t < 0 ? 'early' : 'late'} by ${Math.round(Math.abs(t))} ms` : '';
   // One drum only: "weakest" means nothing, the timing hint is the useful part.
   if (Object.keys(s.perDrum).length === 1) return when ? `On average you were ${when}.` : '';
   return `The ${name} was weakest${when ? ` (${when})` : ''}.`;
@@ -244,6 +244,12 @@ export const floorLine = (notesLanded: boolean, reason?: string) => (notesLanded
   ? `All the notes are there. ${reason ?? 'One small thing left: see the tip.'}`
   : 'This one is tricky. Try "Learn it slowly": the music waits for each note.');
 
+/** A beginner's words for a steady timing fault, the number second and whole (D8). */
+export function offsetWords(meanOffsetMs: number) {
+  const ms = Math.round(Math.abs(meanOffsetMs)), how = ms < 35 ? 'a little ' : ms > 80 ? 'well ' : '';
+  return meanOffsetMs < 0 ? `You're ${how}ahead of the click (about ${ms} ms). Let it come to you.` : `You're ${how}behind the click (about ${ms} ms). Lock onto it.`;
+}
+
 /** When the same step keeps failing, a teacher changes the approach instead of saying "again" (D2). */
 export type StuckMove = 'latency' | 'count' | 'listen' | 'coach';
 /**
@@ -253,8 +259,8 @@ export type StuckMove = 'latency' | 'count' | 'listen' | 'coach';
  */
 export function stuckMove(stuck: number, reason: string | undefined, latencyChecked: boolean): StuckMove | undefined {
   if (stuck < 3) return undefined;
-  const timing = /^(Rushing|Dragging)|behind the click|wander/.test(reason ?? '');
-  if (timing && !latencyChecked && /^(Rushing|Dragging)/.test(reason ?? '')) return 'latency';
+  const steady = /(behind|ahead of) the click/.test(reason ?? ''), timing = steady || /wander/.test(reason ?? '');
+  if (steady && !latencyChecked) return 'latency';
   if (stuck >= 5) return 'coach';
   return timing ? 'count' : 'listen';
 }

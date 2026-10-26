@@ -9,7 +9,7 @@ import { HIGHWAY_LANES } from './Highway';
 import type { Finished } from './player';
 
 const laneOf = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
-const timingText = (ms: number) => (Math.abs(ms) < 5 ? 'Right on the grid' : ms < 0 ? `Rushing by ${-ms} ms` : `Dragging by ${ms} ms`);
+const timingText = (ms: number) => (Math.abs(ms) < 5 ? 'Right on the grid' : ms < 0 ? `Rushing by ${Math.round(-ms)} ms` : `Dragging by ${Math.round(ms)} ms`);
 
 const saved = new WeakMap<Finished, Promise<void>>();
 const [saveOk, saveFail] = [() => {}, () => console.warn('Run not saved: is the server running?')];
@@ -68,7 +68,7 @@ export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => vo
           <div className="card">
             <h3>Timing</h3>
             <div className="big">{timingText(s.meanOffset)}</div>
-            <p className="small">Consistency: ±{s.spread} ms (lower is steadier)</p>
+            <p className="small">Consistency: ±{Math.round(s.spread)} ms (lower is steadier)</p>
             <LatencyHint f={f} />
           </div>
         )}

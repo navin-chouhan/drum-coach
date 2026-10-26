@@ -24,7 +24,8 @@ describe('checkPass', () => {
     expect(checkPass(stats({ accuracy: 50, perDrum: { snare: { ...snare, accuracy: 50, meanOffset: -25 } } })).reason)
       .toMatch(/^(?!.*weakest).*early by 25/); // one drum: no "weakest"
     expect(checkPass(stats({ extra: 5 })).ok).toBe(false);
-    expect(checkPass(stats({ meanOffset: -40 }), { maxAbsOffsetMs: 30 }).reason).toMatch(/Rushing by 40/);
+    expect(checkPass(stats({ meanOffset: -40.4 }), { maxAbsOffsetMs: 30 }).reason).toBe("You're ahead of the click (about 40 ms). Let it come to you."); // D8: words first, whole ms
+    expect(checkPass(stats({ meanOffset: 95 }), { maxAbsOffsetMs: 30 }).reason).toMatch(/well behind the click/);
     expect(checkPass(stats(), { maxVelocityCv: 5 }).ok).toBe(false);
     expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: null, pairDrop: null } }), { maxGhostToAccent: 0.8 }).ok).toBe(true);
     expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: 96, pairDrop: null } }), { maxGhostToAccent: 0.6 }).ok).toBe(false);
@@ -72,12 +73,12 @@ describe('a student stuck on one step (D2)', () => {
     expect(ladderStep({ ...p, stuck: 2 }, lesson, false, '2026-10-26', 40).next.stuck).toBe(3); // a rough take counts too
   });
   it('after 3 the big move changes: latency first for a steady timing fault, then a tool, then the coach', () => {
-    expect(stuckMove(2, 'Dragging by 45 ms. Lock onto the click.', false)).toBeUndefined();
-    expect(stuckMove(3, 'Dragging by 45 ms. Lock onto the click.', false)).toBe('latency');
-    expect(stuckMove(3, 'Dragging by 45 ms. Lock onto the click.', true)).toBe('count');
+    expect(stuckMove(2, "You're behind the click (about 45 ms). Lock onto it.", false)).toBeUndefined();
+    expect(stuckMove(3, "You're behind the click (about 45 ms). Lock onto it.", false)).toBe('latency');
+    expect(stuckMove(3, "You're behind the click (about 45 ms). Lock onto it.", true)).toBe('count');
     expect(stuckMove(3, 'Volume varies by 30%. Aim for every stroke the same height.', true)).toBe('listen');
     expect(stuckMove(5, 'Volume varies by 30%. Aim for every stroke the same height.', true)).toBe('coach');
-    expect(stuckMove(6, 'Rushing by 40 ms. Lock onto the click.', false)).toBe('latency'); // a setup problem first, however long
+    expect(stuckMove(6, "You're ahead of the click (about 40 ms). Let it come to you.", false)).toBe('latency'); // a setup problem first, however long
   });
   it('names the cause in plain words', () => {
     expect(stuckLine('latency')).toMatch(/setup, not you/);
