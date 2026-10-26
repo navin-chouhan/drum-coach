@@ -31,3 +31,7 @@ export function greeting(g: GreetingInput): string {
     : `Today: "${title}", about ${minutes} minutes.`;
   return `${hello} ${praise} ${what} Ready?`;
 }
+
+const PRAISE = ['Nice!', 'Lovely.', "That's it!", 'Solid.', 'Good one.', 'Yes!'];
+/** A word of praise that changes from take to take (the same `n` gives the same word), so it doesn't feel canned. */
+export const praise = (n: number) => PRAISE[((n % PRAISE.length) + PRAISE.length) % PRAISE.length];

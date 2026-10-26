@@ -215,7 +215,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
           </button>}
           {arcade && <button className="setTile record" onClick={() => setOpen({ lessonId: arcade.id, arcade: true })}>
             <span className="ic" aria-hidden>⏱</span><b>2-minute challenge</b>
-            <span className="small">{arcade.title} · {s.arcade?.[arcade.id] ? `best ${s.arcade[arcade.id]} clean bars` : 'how many clean bars?'}</span>
+            <span className="small">{arcade.title} · {s.arcade?.[arcade.id] ? `this week: beat ${s.arcade[arcade.id] + 2} clean bars (best ${s.arcade[arcade.id]})` : 'how many clean bars?'}</span>
           </button>}
           {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}>
             <span className="ic" aria-hidden>🏆</span><b>Beat your best</b>

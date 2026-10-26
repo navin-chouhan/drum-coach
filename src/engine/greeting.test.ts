@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { greeting } from './greeting';
+import { greeting, praise } from './greeting';
 
 const base = { hour: 9, streak: 0, runs: 0, landedWeek: null, landedLastWeek: null };
 
@@ -23,5 +23,12 @@ describe('greeting', () => {
     expect(greeting({ ...base, hour: 14, runs: 5, setDone: true, next: { title: 'Hi-hat 8th notes', tool: 'drill', minutes: 8 } }))
       .toBe('Hey! That\'s today\'s set done. On a roll? Next on your path: "Hi-hat 8th notes", about 8 minutes.');
     expect(greeting({ ...base, hour: 14, runs: 5, pathDone: true })).toMatch(/^Hey! All stages done\./);
+  });
+});
+
+describe('praise', () => {
+  it('varies from take to take', () => {
+    expect(new Set([0, 1, 2, 3, 4, 5].map(praise)).size).toBe(6);
+    expect(praise(7)).toBe(praise(1));
   });
 });
