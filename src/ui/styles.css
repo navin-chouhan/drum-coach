@@ -520,3 +520,5 @@
   .selfSide .selfLook{font:800 24px var(--display);color:var(--pop);margin:12px 0 4px}.selfSide li{font-size:19px;margin-bottom:6px}
   @media (max-width:900px){.selfCheck{grid-template-columns:1fr}}
   .stop.songStop .dot{background:conic-gradient(var(--good) 0 var(--p), var(--cyan) var(--p) 100%)}
+  .earQuiz .quizQ{font:800 30px var(--display);margin:6px 0 14px}.earQuiz .quizOptions{display:grid;gap:12px;margin-bottom:12px}
+  .earQuiz .quizSaid{font:800 26px var(--display);color:var(--bad)}.earQuiz .quizSaid.ok{color:var(--good)}

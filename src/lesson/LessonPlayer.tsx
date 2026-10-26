@@ -26,6 +26,7 @@ import { stepIcon, TOOL_LABEL } from './tools';
 import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
 import { SelfCheck } from '../ui/SelfCheck';
+import { EarQuiz } from './EarQuiz';
 import { TechniqueDemo } from '../ui/TechniqueDemo';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
@@ -322,7 +323,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const coachAct = big ? undefined : screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
   useEffect(() => { if (big && fresh2?.action) dropCoachAction(true); }, [big, fresh2]); // the kit's "yes" moves on too
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
-  const resting = (!!step.rest || !!step.look) && !oneTake; // a look step ends like a rest: "done" moves on
+  const resting = (!!step.rest || !!step.look || !!step.quiz) && !oneTake; // a look or quiz step ends like a rest: "done" moves on
   const demo = step.demo ?? lesson.demo; // how the body moves (R5)
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
   const arcadeBpm = p.bestBpm || step.bpm.target;
@@ -415,8 +416,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       {checking && demo && <SelfCheck demo={demo} bpm={bpm} onClose={() => setChecking(false)} />}
       {resting ? <>
         <CoachLine line={step.text} />
-        <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} />{demo && <Move alt label="📷 Check yourself" gesture="key C" onClick={() => setChecking(true)} />}</div>
-        {step.look && demo ? <div className="card lookStep"><TechniqueDemo id={demo} bpm={bpm} /></div> : <RestCountdown key={stepIdx} seconds={step.rest!} />}
+        {!step.quiz && <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} />{demo && <Move alt label="📷 Check yourself" gesture="key C" onClick={() => setChecking(true)} />}</div>}
+        {step.quiz ? <EarQuiz key={stepIdx} kind={step.quiz} chart={chart} onDone={finishRest}
+          play={(c, then) => start(c, { ...options(true), fromBar: 1, toBar: c.bars, repeats: 1, speed: bpm / c.bpm, activeLanes: undefined, band: undefined, then })} />
+          : step.look && demo ? <div className="card lookStep"><TechniqueDemo id={demo} bpm={bpm} /></div> : <RestCountdown key={stepIdx} seconds={step.rest!} />}
       </> : playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
         <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} under={said.under} thinking={!fresh2 && thinkingAbout(coach, f)} />
         <div className="moves">

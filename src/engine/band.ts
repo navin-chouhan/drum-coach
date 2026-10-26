@@ -80,8 +80,8 @@ export const DEFAULT_CHORDS: Record<BandStyle, string> = {
  * The band for a lesson step: on for grooves, songs and fills; off where the click is the point (counting, rudiments,
  * find-your-tempo, rests). Chords from the lesson, else the style's default line.
  */
-export function bandFor(lesson: Pick<Lesson, 'kind' | 'band'>, step: Pick<Step, 'chart' | 'probe' | 'rest' | 'look'>): BandSpec | undefined {
-  if (!['groove', 'song', 'fill'].includes(lesson.kind) || step.probe || step.rest || step.look) return undefined;
+export function bandFor(lesson: Pick<Lesson, 'kind' | 'band'>, step: Pick<Step, 'chart' | 'probe' | 'rest' | 'look' | 'quiz'>): BandSpec | undefined {
+  if (!['groove', 'song', 'fill'].includes(lesson.kind) || step.probe || step.rest || step.look || step.quiz) return undefined;
   const style = bandStyle(step.chart);
   return { style, chords: lesson.band?.chords ?? DEFAULT_CHORDS[style] };
 }

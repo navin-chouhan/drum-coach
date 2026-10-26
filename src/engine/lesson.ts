@@ -54,6 +54,7 @@ export type Step = {
   rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
   demo?: DemoId;        // how the body moves (content/demos.ts DEMO_IDS): the lesson card, the 4th intro slide, the self-check
+  quiz?: 'steady' | 'kick'; // an ear-training step (lesson/EarQuiz.tsx): listen and answer, no playing
   read?: boolean;       // a reading step: the sheet only, no count or hand hints (use `variants` so it's read, not memorised)
   look?: boolean;       // a "look" step: watch the movement (and yourself in the mirror), no playing; done moves on
 };
@@ -255,7 +256,7 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
 export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false, notesLanded = false): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam || step.rest || step.look || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
+  if (step.jam || step.rest || step.look || step.quiz || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
   if (!passed && notesLanded) return { next: { ...p, clean: 0, fails: 0 }, event: 'hold' };
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
@@ -267,7 +268,7 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
-  if (step.jam || step.rest || step.look) { // any take (or the end of a rest or a look) finishes the step
+  if (step.jam || step.rest || step.look || step.quiz) { // any take (or the end of a rest or a look) finishes the step
     if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   } else {
     if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
