@@ -373,7 +373,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : outcome?.slowly ? { label: '🐢 Learn it slowly', run: () => play(false, bpm, true) } // at the floor a zoom can't go slower
     : outcome?.fixBar && !outcome.zoomed ? { label: `🔍 Fix bar ${outcome.fixBar}`, run: () => zoomIn(outcome.fixBar!) }
     : itemDone && (oneTake || outcome?.event === 'lessonDone') ? { label: onNext ? 'Next ▶' : '← Journey', run: goNext }
-    : { label: outcome ? '▶ Again' : '▶ Play', run: () => play(false) };
+    : { label: outcome?.event === 'stepDone' ? '▶ Next step' : outcome ? '▶ Again' : '▶ Play', run: () => play(false) }; // F4: a new step isn't "again"
   const listen = () => (f && f.hits.length ? hearTake(f) : play(true));
   // Autopilot: after a verdict the main move starts by itself in 5 s; any pad hit (or the keyboard kit) waits.
   const mainRef = useRef(main); mainRef.current = main;

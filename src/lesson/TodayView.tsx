@@ -68,7 +68,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   // The Monday recap: on the first visit of a week (with some playing behind you), once, spoken if the voice is on.
   useEffect(() => {
     const wk = isoWeek(new Date());
-    if (!dash?.totalRuns || getSettings().lastRecapWeek === wk) return;
+    // F2: only with playing from before this week, or "last week" means today
+    if (!dash?.totalRuns || getSettings().lastRecapWeek === wk || !runs.some(r => isoWeek(new Date(r.startedAt)) !== wk)) return;
     const text = weekRecap(dash, newBadges.length ? BADGES.find(b => b.id === newBadges[newBadges.length - 1])?.name : undefined); // only a badge earned just now
     setSettings({ lastRecapWeek: wk }); setRecap(text);
     if (getSettings().voice) void say(text);

@@ -405,7 +405,8 @@ app.post('/api/coach/lesson', async (req, reply) => {
   if (!input) return bad(reply, 'No stage fits your goals yet. Change them under Journey → Goals.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
-    r.data = { ...r.data, title: uniqueTitle(r.data.title, r.data.focus, Object.values(LESSON_BY_ID).map(l => l.title)) };
+    // Never a built-in's title, nor a coach lesson's from another stage (F8; the same stage's twin is caught below).
+    r.data = { ...r.data, title: uniqueTitle(r.data.title, r.data.focus, [...Object.values(LESSON_BY_ID), ...existing.filter(l => l.level !== input.milestone.level)].map(l => l.title)) };
     const now = aiLessons(); // re-read: another request may have saved a lesson while the coach was thinking
     const same = now.find(l => l.title === r.data.title && l.level === input.milestone.level);
     if (same) return { data: same, cached: true };

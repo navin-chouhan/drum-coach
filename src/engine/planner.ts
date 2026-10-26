@@ -45,7 +45,8 @@ const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
  * lessons. `comfortableBpm`: the median tempo of their clean takes.
  */
 const STRUGGLE_SPREAD_MS = 40; // the loosest checkpoint spread limit (levels 0–2)
-export function studentRead(progress: Progress, runs: { accuracy: number; spread?: number; bpm: number }[] = []) {
+const STRUGGLE_TAKES = 12; // takes per finished lesson above which it reads as struggling (F6)
+export function studentRead(progress: Progress, runs: { accuracy: number; spread?: number; bpm: number; chartId?: string }[] = []) {
   // completedAt is a day: lessons finished on the same day as the 4th newest all count (no arbitrary pick among them)
   const finished = Object.values(progress).filter(p => p.completedAt && p.stars).sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
   const stars = finished.filter(p => p.completedAt! >= (finished[3] ?? finished.at(-1))?.completedAt!).map(p => p.stars!);
@@ -54,11 +55,14 @@ export function studentRead(progress: Progress, runs: { accuracy: number; spread
   const spread = spreads.length ? Math.round(avg(spreads)) : undefined;
   const meanStars = stars.length ? avg(stars) : undefined;
   const clean = recent.filter(r => r.accuracy >= 90).map(r => r.bpm).sort((a, b) => a - b);
+  // What finished lessons cost: many takes each means it's hard even when the notes land (F6).
+  const costs = Object.entries(progress).filter(([, p]) => p.completedAt).map(([id]) => runs.filter(r => r.chartId?.startsWith(`lesson/${id}/`)).length).filter(n => n > 0);
+  const takesPerLesson = costs.length ? avg(costs) : undefined;
   const pace: Pace = !stars.length && recent.length < 4 ? 'new'
-    : (accuracy !== undefined && accuracy < 75) || (spread !== undefined && spread > STRUGGLE_SPREAD_MS) || (meanStars !== undefined && meanStars < 1.5) ? 'struggling'
+    : (takesPerLesson !== undefined && takesPerLesson > STRUGGLE_TAKES) || (accuracy !== undefined && accuracy < 75) || (spread !== undefined && spread > STRUGGLE_SPREAD_MS) || (meanStars !== undefined && meanStars < 1.5) ? 'struggling'
     : stars.length >= 2 && meanStars! >= 2.75 && (accuracy ?? 100) >= 95 && (spread ?? 0) <= 20 ? 'flying'
     : 'steady';
-  return { pace, recentStars: stars, accuracyPct: accuracy, spreadMs: spread, comfortableBpm: clean.length ? Math.round(clean[clean.length >> 1]) : undefined,
+  return { pace, takesPerLesson: takesPerLesson && Math.round(takesPerLesson), recentStars: stars, accuracyPct: accuracy, spreadMs: spread, comfortableBpm: clean.length ? Math.round(clean[clean.length >> 1]) : undefined,
     lessonsDone: Object.values(progress).filter(p => p.completedAt).length };
 }
 

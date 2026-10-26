@@ -62,6 +62,12 @@ describe('student read', () => {
   const run = (accuracy: number, spread = 10, bpm = 80) => ({ accuracy, spread, bpm });
   const stars = (...n: number[]) => Object.fromEntries(n.map((s, i) => [`l${i}`, { ...startProgress(lessons[0]), completedAt: `2026-10-0${i + 1}`, stars: s }]));
   it('no history: new', () => expect(studentRead({}, []).pace).toBe('new'));
+  it('finished lessons that each took many takes read as struggling, even when the notes land (F6)', () => {
+    const many = Array.from({ length: 15 }, () => ({ ...run(100, 20, 70), chartId: 'lesson/l0/1' }));
+    const more = Array.from({ length: 15 }, () => ({ ...run(100, 20, 70), chartId: 'lesson/l1/1' }));
+    expect(studentRead(stars(2, 2), [...many, ...more]).pace).toBe('struggling');
+    expect(studentRead(stars(2, 2), [...many.slice(0, 4), ...more.slice(0, 4)]).pace).toBe('steady');
+  });
   it('★★★ lessons and near-perfect tight takes: flying, with the tempo they own', () => {
     expect(studentRead(stars(3, 3, 3), [run(100), run(98), run(100, 12, 90), run(99)])).toMatchObject({ pace: 'flying', comfortableBpm: 80 });
     expect(studentRead(stars(3, 3), []).pace).toBe('flying'); // the planner only has progress
