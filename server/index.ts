@@ -111,9 +111,9 @@ const runRows = (limit = 5000): RunRow[] => (db.prepare(`
   SELECT * FROM (SELECT chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
     bpm, speed, accuracy, mean_offset AS meanOffset, spread, json_extract(summary_json, '$.notes') AS notes,
     json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar, json_extract(summary_json, '$.tipIds') AS tips,
-    json_extract(summary_json, '$.perDrum') AS perDrum, json_extract(summary_json, '$.lesson.tool') AS tool FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
+    json_extract(summary_json, '$.perDrum') AS perDrum, json_extract(summary_json, '$.lesson.tool') AS tool, json_extract(summary_json, '$.lesson.bite') AS bite FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
   .map(r => ({ ...r, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined, tips: r.tips ? JSON.parse(r.tips as unknown as string) : undefined,
-    perDrum: r.perDrum ? JSON.parse(r.perDrum as unknown as string) : undefined, tool: r.tool ?? undefined }));
+    perDrum: r.perDrum ? JSON.parse(r.perDrum as unknown as string) : undefined, tool: r.tool ?? undefined, bite: r.bite ? JSON.parse(r.bite as unknown as string) : undefined }));
 const appSettings = () => { const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined; return row ? JSON.parse(row.value) : {}; };
 const latestPlan = () => {
   const row = db.prepare('SELECT * FROM plans ORDER BY id DESC LIMIT 1').get() as { id: number; json: string; checks_json: string } | undefined;

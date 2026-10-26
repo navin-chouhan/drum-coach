@@ -1,4 +1,5 @@
-import type { DemoId } from './demos';
+import { biteLesson } from '../engine/stageSong.ts';
+import type { DemoId } from './demos.ts';
 import { beatsPerBar, pattern, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
 import type { Genre, Lesson, LessonKind, Milestone, Pass, Step } from '../engine/lesson.ts';
 
@@ -90,6 +91,11 @@ export const CURRICULUM: Lesson[] = [
     'Keep counting every number out loud, including the silent one. Move your stick in the air on the rest if it helps.',
     [step('Rest on 3', 'Hit on 1, 2 and 4. Say "3" but don\'t play it.', P(1, { snare: 'xx.x' }), [60, 80]),
       step('Rest on 2 and 4', 'Skip the numbers 2 and 4 but play their &s: "1 & (2) & 3 & (4) &".', P(2, { snare: 'xx.xxx.x' }), [60, 80])]),
+  lesson(0, 'song-first', 'song', 'Song: First Steps',
+    'Your first song: 8 bars on the snare with the band. Four bars of quarter notes, then four bars of 8ths.',
+    'Playing with a band is the fun part of drumming. Even one drum, in time, makes the song move.',
+    'Count out loud the whole way. At bar 5 the 8ths start: "1 & 2 & 3 & 4 &". If you get lost, wait for "1" and join back in.',
+    [step('Whole song', 'Four bars of quarters, four bars of 8ths, with the band.', cat([P(1, { snare: "xxxx" }, 4), P(2, { snare: "xxxxxxxx" }, 4)]), [55, 75])]),
 
   // ───────── Level 1: one limb at a time ─────────
   lesson(1, 'hh-quarters', 'exercise', 'Hi-hat with the pedal down',
@@ -125,6 +131,11 @@ export const CURRICULUM: Lesson[] = [
     'Your first taste of coordination. Flams between hand and foot are the most common beginner timing problem.',
     'Aim to hear one sound, not two. If they split, slow down and think "foot leads".',
     [step('Together on every beat', 'Hi-hat and kick together on 1 2 3 4.', P(1, { hihat: 'xxxx', kick: 'xxxx' }), [60, 90], { pass: { maxFlamMs: 25 } })]),
+  lesson(1, 'song-hats', 'song', 'Song: Hats and Feet',
+    'A 16-bar song for hi-hat and kick: 8ths on the hi-hat, the kick on 1 and 3, then on every beat in the second half.',
+    'Two limbs keeping a band going is already a groove. The snare joins in the next stage.',
+    'Right hand on the hi-hat, pedal down. From bar 9 the kick plays every beat: keep it light so the hi-hat stays even.',
+    [step('Whole song', 'Hi-hat 8ths, kick on 1 and 3; from bar 9 on every beat.', cat([P(2, { hihat: 'xxxxxxxx', kick: 'x...x...' }, 8), P(2, { hihat: 'xxxxxxxx', kick: 'x.x.x.x.' }, 8)]), [60, 85])]),
 
   // ───────── Level 2: the money beat ─────────
   lesson(2, 'money-quarters', 'groove', 'Your first beat',
@@ -270,6 +281,15 @@ export const CURRICULUM: Lesson[] = [
     'Lead with the right hand on each new drum. Move early: the arm travels, the timing doesn\'t change.',
     [step('Around the kit', 'Four notes on each drum.', P(4, { snare: 'xxxx............', tom1: '....xxxx........', tom2: '........xxxx....', floor: '............xxxx' }), [60, 90])]),
 
+  lesson(4, 'song-sixteen', 'song', 'Song: Sixteen Street',
+    'A 16-bar pop groove: 16th notes on the hi-hat, a kick on the "a" of 2, and a snare fill in bars 8 and 16.',
+    'Puts the 16th-note hi-hat in a real song, with fills that lead into the next part.',
+    'Keep the hi-hat light and even. The fill in bar 8 is 16ths on the snare: count "1 e & a" and come back with the crash on 1.',
+    [step('Whole song', 'Groove for 7 bars, a snare fill, then again.', cat([
+      P(4, { hihat: 'xxxxxxxxxxxxxxxx', kick: 'x......xx.......', snare: '....x.......x...' }, 7), P(4, { snare: 'xxxxxxxxxxxxxxxx', kick: 'x...............' }),
+      crashOn(P(4, { hihat: 'xxxxxxxxxxxxxxxx', kick: 'x......xx.......', snare: '....x.......x...' }, 7), [0]), P(4, { snare: 'xxxxxxxxxxxxxxxx', kick: 'x...............' }),
+    ]), [60, 85])]),
+
   // ───────── Level 5: triplets, shuffle, half-time, funk, 6/8 ─────────
   lesson(5, 'triplets', 'rudiment', 'Triplets',
     'Three even notes per beat: "1 trip let 2 trip let".',
@@ -343,7 +363,7 @@ export const CURRICULUM: Lesson[] = [
 
 // The backing band's chords for the built-in songs (one per bar, wrapping; engine/band.ts).
 const SONG_CHORDS: Record<string, string> = {
-  'song-steady': 'G G C D', 'song-garage': 'E E A B',
+  'song-first': 'C C F G', 'song-hats': 'D D G A', 'song-steady': 'G G C D', 'song-garage': 'E E A B', 'song-sixteen': 'Em C G D',
   'song-shuffle': 'A A A A D D A A E D A E', // a 12-bar blues
   'song-swing': 'C Am Dm G7 C Am Dm G7 F F7 C A7 Dm G7 C G7',
 };
@@ -354,6 +374,8 @@ const LESSON_DEMOS: Record<string, DemoId> = {
   'kick-quarters': 'kick', paradiddle: 'accent-tap', 'ghost-notes': 'accent-tap', flam: 'flam', 'flam-tap': 'flam', drag: 'drag',
 };
 for (const l of CURRICULUM) if (LESSON_DEMOS[l.id]) l.demo = LESSON_DEMOS[l.id];
+// Long songs get a "learn it in bites" lesson just before them (R8).
+for (const song of CURRICULUM.filter(l => l.kind === 'song')) { const b = biteLesson(song); if (b) CURRICULUM.splice(CURRICULUM.indexOf(song), 0, b); }
 
 export const LESSON_BY_ID = Object.fromEntries(CURRICULUM.map(l => [l.id, l])) as Record<string, Lesson>;
 

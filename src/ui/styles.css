@@ -519,3 +519,4 @@
   .selfKeys{margin-top:10px;font:700 16px system-ui}.selfKeys i{font-style:normal;background:var(--pop);color:var(--line);border-radius:999px;padding:2px 10px}
   .selfSide .selfLook{font:800 24px var(--display);color:var(--pop);margin:12px 0 4px}.selfSide li{font-size:19px;margin-bottom:6px}
   @media (max-width:900px){.selfCheck{grid-template-columns:1fr}}
+  .stop.songStop .dot{background:conic-gradient(var(--good) 0 var(--p), var(--cyan) var(--p) 100%)}

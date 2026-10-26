@@ -104,3 +104,14 @@ describe('personal input (R6)', () => {
     expect(lessonInput({ profile, progress: {}, aiLessons: [], recent: [] })!.weekFocus).toBeUndefined();
   });
 });
+
+describe('bites of a built-in stage song (R8)', () => {
+  it('a coach bite may name the built-in song; its bars are cut from the song', () => {
+    const l = CURRICULUM.find(x => x.id === 'money-8ths')!;
+    const step = { ...l.steps[0], chart: { ...l.steps[0].chart, id: undefined }, bite: { songId: 'song-steady', fromBar: 1, toBar: 4 } };
+    const out = applyBites({ ...l, focus: '', steps: [step] }, () => undefined);
+    expect(out.steps[0].bite?.title).toBe('Steady Eight');
+    expect(out.steps[0].chart.bars).toBe(4);
+    expect(lessonInput({ profile, progress: { 'count-8ths': done(), rests: done() }, aiLessons: [], recent: [] })!.stageSong?.id).toBe('song-hats');
+  });
+});

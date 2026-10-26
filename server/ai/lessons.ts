@@ -5,6 +5,7 @@ import type { YtSong } from '../../src/youtube/schemas.ts';
 import type { AiLesson } from '../../src/coach/schemas.ts';
 import { passFor, toolOf, type Lesson, type LessonProgress, type Profile, type Step } from '../../src/engine/lesson.ts';
 import { checkpointsOf, currentMilestone, studentRead } from '../../src/engine/planner.ts';
+import { stageSong } from '../../src/engine/stageSong.ts';
 import type { StudentProfile } from '../../src/engine/profile.ts';
 
 // Coach-written lessons: what the coach is told, and how its answer becomes a stored lesson.
@@ -38,6 +39,7 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
     recentRuns: recent.slice(-15),
     // This stage's song project (bites from it come first) and the songs saved with notes (the only ones a bite may name).
     projectSong: profile.song?.stage === m.level ? profile.song : undefined,
+    stageSong: (s => s && { id: s.id, title: s.title, bars: s.steps[s.steps.length - 1].chart.bars })(stageSong(m.level, CURRICULUM)), // built in, bites allowed
     songs: songs.filter(s => s.notes.length).map(s => ({ id: s.id, title: s.title, bars: Math.floor(s.notes[s.notes.length - 1].t / beatsPerBar(s)) + 1 })),
     ...(struggle ? { struggle } : {}),
     ...(!current && { postPath: true }),
@@ -60,10 +62,15 @@ export function standsInFor(end: Pick<Step, 'bpm' | 'chart'>, cp: Lesson) {
 }
 
 /** Song bites: each bite step's chart becomes those bars of the saved song; a bite naming no usable song is dropped. */
+/** A built-in stage song (R8) as a song to cut bites from. */
+const builtinSong = (id: string) => {
+  const l = CURRICULUM.find(x => x.id === id && x.kind === 'song'), c = l?.steps[l.steps.length - 1].chart;
+  return l && c && { title: l.title.replace(/^Song: /, ''), notes: c.notes, timeSignature: c.timeSignature };
+};
 export function applyBites(a: AiLesson, song: (id: string) => YtSong | undefined): AiLesson {
   return { ...a, steps: a.steps.map(st => {
     if (!st.bite) return st;
-    const s = song(st.bite.songId), notes = s ? cutBars(s.notes, beatsPerBar(s), st.bite.fromBar, st.bite.toBar) : [];
+    const s = song(st.bite.songId) ?? builtinSong(st.bite.songId), notes = s ? cutBars(s.notes, beatsPerBar(s), st.bite.fromBar, st.bite.toBar) : [];
     if (!s || !notes.length) { const { bite: _, ...rest } = st; return rest; }
     return { ...st, bite: { ...st.bite, title: s.title }, chart: { ...st.chart, timeSignature: s.timeSignature, bars: st.bite.toBar - st.bite.fromBar + 1, notes } };
   }) };

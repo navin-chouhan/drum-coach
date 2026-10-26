@@ -11,6 +11,8 @@ The input has:
 - "profile" (if present): their last 28 days: per drum accuracy and offset with a trend, the tips given most, minutes per
   tool (what they enjoy), their songs, the weakest drum. "weekFocus": the coach's plan for this week. Aim the lesson at the
   focus when it fits this milestone, and lean on the tools they play most.
+- "stageSong": the built-in song of this stage. A step's "bite" may name it ({ "songId": its id, "fromBar", "toBar" }) like a
+  saved song: a few bars of the stage song are the most motivating practice for a beginner.
 - "postPath": true when the student has passed every stage. Then write a review or stretch lesson at this last level, aimed
   at the weakest skill in "recentRuns" (a faster tempo, a variation, a longer take); never a new topic beyond this level.
 

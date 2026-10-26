@@ -6,6 +6,7 @@ export type RunRow = {
   fromBar?: number; toBar?: number; // the bars the take covered
   tips?: string[]; // ids of the live tips given during the take (engine/liveCoach.ts)
   perDrum?: Record<string, { notes: number; accuracyPct: number; meanOffsetMs: number }>; // from the take's summary
+  bite?: { songId: string; fromBar: number; toBar: number }; // a take of a song bite: which bars of which song
   tool?: string; // the lesson tool (jam, drill, copy…), or flow / arcade; none for Practice and songs
 };
 export type CatalogItem = { id: string; title: string; bpm: number; level?: number; kind?: string };
@@ -118,8 +119,13 @@ export const songReady = (runs: RunRow[], songId: string, totalBars: number) => 
 // shortcut: a take's whole accuracy marks every bar it covered ready; upgrade to per-bar accuracy (results per bar in summary_json) when bites are 4+ bars
 export function barsReady(runs: RunRow[], songId: string, totalBars: number): number {
   const ok = new Set<number>();
-  for (const r of runs) if (r.chartId === songId && r.accuracy >= 85 && r.fromBar && r.toBar)
-    for (let b = r.fromBar; b <= Math.min(r.toBar, totalBars); b++) ok.add(b);
+  for (const r of runs) {
+    if (r.accuracy < 85) continue;
+    // the song itself (a YouTube song's id, or a built-in song lesson's chart), or a bite of it
+    const range = r.bite?.songId === songId ? [r.bite.fromBar, r.bite.toBar]
+      : (r.chartId === songId || r.chartId.startsWith(`lesson/${songId}/`)) && r.fromBar && r.toBar ? [r.fromBar, r.toBar] : undefined;
+    if (range) for (let b = range[0]; b <= Math.min(range[1], totalBars); b++) ok.add(b);
+  }
   return ok.size;
 }
 

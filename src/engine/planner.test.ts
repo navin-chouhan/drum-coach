@@ -102,3 +102,20 @@ describe('buildSession follows the weekly focus (R6)', () => {
     expect(s.find(i => i.role === 'review')?.lessonId).toBe('rests');
   });
 });
+
+describe('buildSession: songs and after the path (R8)', () => {
+  const today = '2026-10-26';
+  it('the groove slot prefers the stage song\'s open bite lesson', () => {
+    const withBite = [...lessons, L('bite-song-x', 1, 'song')];
+    const s = buildSession(milestones, withBite, done('count', 'rests'), profile, today);
+    expect(s.map(i => i.lessonId)).toContain('bite-song-x');
+  });
+  it('after the whole path the set is never empty: warm-up, a "prove it" review, and a show-off song', () => {
+    const all = [...lessons, L('song-end', 2, 'song')];
+    const progress = { ...done('count', 'rests', 'singles', 'hands-feet', 'money', 'jazz-only', 'doubles', 'song-end') };
+    const s = buildSession(milestones, all, progress, { ...profile, minutesPerDay: 30 }, today);
+    expect(s.length).toBeGreaterThanOrEqual(2);
+    expect(s.some(i => i.role === 'review')).toBe(true);
+    expect(s.map(i => i.lessonId)).toContain('song-end');
+  });
+});

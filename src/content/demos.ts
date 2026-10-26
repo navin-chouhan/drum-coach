@@ -1,4 +1,4 @@
-import { sample, type ArmPose, type Key, type LegPose, type Pt } from '../engine/demoPose';
+import { sample, type ArmPose, type Key, type LegPose, type Pt } from '../engine/demoPose.ts';
 
 // "How it moves" (R5): techniques as pose keyframes per beat (engine/demoPose.ts draws and eases them). Each has the
 // right way and the usual beginner mistake ("wrong"), plus the words that go with it. Drawn, offline, no video.

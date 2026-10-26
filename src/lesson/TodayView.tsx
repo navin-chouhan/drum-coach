@@ -6,6 +6,7 @@ import { greeting } from '../engine/greeting';
 import { isProven, recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
+import { stageSong } from '../engine/stageSong';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, SHOWOFF_MIN_BARS, songReady, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
@@ -106,7 +107,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const path = MILESTONES.filter(m => checkpointsOf(m, lessons, s.profile).length); // stages for these goals (e.g. no Swing for rock only)
   const total = session.items.reduce((a, it, i) => a + (playable(i) ? it.minutes : 0), 0);
   // The trail: this stage's lessons in path order (the coach's after the built-ins), checkpoints as the challenges.
-  const trail = milestone ? visible.filter(l => l.level === milestone.level && (l.source !== 'ai' || l.id in s.lessons || l === coachOpen[coachOpen.length - 1]))
+  const builtinSong = milestone && stageSong(milestone.level, visible); // the stage's song: the end of the trail (R8)
+  const trail = milestone ? visible.filter(l => l.level === milestone.level && l !== builtinSong && (l.source !== 'ai' || l.id in s.lessons || l === coachOpen[coachOpen.length - 1]))
     .sort((a, b) => Number(milestone.checkpoints.includes(a.id)) - Number(milestone.checkpoints.includes(b.id)) || Number(a.source === 'ai') - Number(b.source === 'ai')) : [];
   const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
   // "Something else": another open lesson of this stage, a different kind of activity first.
@@ -142,6 +144,10 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   const showoff = songs.filter(x => songReady(runs, x.id, songBarCount(x)));
+  // The trail ends at the stage's song: your real song if you picked one, else the built-in one, with how much is ready.
+  const builtinBars = builtinSong ? builtinSong.steps[builtinSong.steps.length - 1].chart.bars : 0;
+  const songStop = project ? { title: project.title, ready: songBars ? barsReady(runs, project.id, songBars) / songBars : 0, onOpen: () => requestSong(project.id) }
+    : builtinSong ? { title: builtinSong.title.replace(/^Song: /, ''), ready: done(builtinSong.id) ? 1 : barsReady(runs, builtinSong.id, builtinBars) / builtinBars, onOpen: () => setOpen({ lessonId: builtinSong.id }) } : undefined;
   return (
     <div className="today home">
       <div className="homeHero">
@@ -214,7 +220,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
         </div>
       </div>}
 
-      {milestone && !project && <ShowoffCard stage={milestone} profile={s.profile} />}
+      {milestone && !project && <ShowoffCard stage={milestone} profile={s.profile} builtin={builtinSong && { title: builtinSong.title.replace(/^Song: /, ''), open: () => setOpen({ lessonId: builtinSong.id }) }} />}
 
       {pathDone && <div className="card">
         <h3>All stages done</h3>
@@ -227,13 +233,14 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
           {arcade && <button className="setTile record" onClick={() => setOpen({ lessonId: arcade.id, arcade: true })}><span className="ic" aria-hidden>⏱</span><b>2-minute challenge</b>
             <span className="small">{arcade.title}{s.arcade?.[arcade.id] ? ` · best ${s.arcade[arcade.id]} clean bars` : ''}</span></button>}
           {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}><span className="ic" aria-hidden>🏆</span><b>Beat your best</b><span className="small">{record.title}</span></button>}
+          <button className="setTile" onClick={() => requestSong('')}><span className="ic" aria-hidden>🎵</span><b>Learn a new song</b><span className="small">from YouTube, a few bars at a time</span></button>
           {showoff.map(x => <button key={x.id} className="setTile" onClick={() => requestSong(x.id)}><span className="ic" aria-hidden>🎤</span><b>Show-off: {x.title}</b><span className="small">Stage mode is under Play</span></button>)}
         </div>
       </div>}
 
       {milestone && <div className="card">
         <h3>Stage {path.indexOf(milestone) + 1} · {milestone.title}</h3>
-        <Trail song={project?.title} lessons={trail} current={hero} done={done} isChallenge={l => milestone.checkpoints.includes(l.checkpoint ?? l.id)} onOpen={id => setOpen({ lessonId: id })} />
+        <Trail song={songStop} lessons={trail} current={hero} done={done} isChallenge={l => milestone.checkpoints.includes(l.checkpoint ?? l.id)} onOpen={id => setOpen({ lessonId: id })} />
       </div>}
 
       <details className="planFold">
@@ -302,7 +309,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
  * This stage as a winding trail of stops: done ones green, the next one big, the challenges as stars, a song at the end.
  * Kept to about ten stops: older finished lessons fold into one "done" stop, later ones into "+N more" (all are in Full path).
  */
-function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: string; lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
+function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: { title: string; ready: number; onOpen: () => void }; lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
   const c = Math.max(0, current ? lessons.indexOf(current) : lessons.findIndex(l => !done(l.id)));
   const before = lessons.slice(0, c), after = lessons.slice(c + 1);
   const folded = before.length > 2 ? before.slice(0, -1) : [];
@@ -316,7 +323,7 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: s
     ...after.filter(l => !later.includes(l) && !isChallenge(l)).map(stop),
     ...(later.length ? [{ icon: `+${later.length}`, name: 'more', cls: 'more' }] : []),
     ...after.filter(isChallenge).map(stop),
-    { icon: '🎵', name: song ?? 'Unlock a real song', cls: 'song' },
+    { icon: '🎵', name: song?.title ?? 'Unlock a real song', cls: 'song' },
   ];
   const pts = stops.map((_, i) => ({ x: 5 + (i * 90) / Math.max(1, stops.length - 1), y: 50 + 22 * Math.sin(i * 1.3) }));
   return (
@@ -325,6 +332,9 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: s
       {stops.map((st, i) => {
         const style = { left: `${pts[i].x}%`, top: `${pts[i].y}%` }, cls = `stop ${st.cls} ${pts[i].y < 50 ? 'up' : ''}`;
         const inner = <><span className="dot" aria-hidden>{st.icon}</span><span className="name">{st.name}</span></>;
+        if (st.cls === 'song' && song) return ( // the stage song: a button with a ring of bars ready
+          <button key="song" className={`${cls} songStop`} style={{ ...style, '--p': `${Math.round(song.ready * 100)}%` } as React.CSSProperties} onClick={song.onOpen}
+            aria-label={`${song.title}, ${Math.round(song.ready * 100)}% ready`} title={`${Math.round(song.ready * 100)}% of the bars ready`}>{inner}</button>);
         return st.l
           ? <button key={st.l.id} className={cls} style={style} onClick={() => onOpen(st.l!.id)} title={st.l.title}
             aria-label={`${st.l.title}${done(st.l.id) ? ', done' : ''}${isChallenge(st.l) ? ', stage challenge' : ''}`}>{inner}</button>

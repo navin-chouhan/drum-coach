@@ -256,7 +256,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
     countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud),
     activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false, freeBars: free.length ? free : undefined, fadeClick: demo ? undefined : step.fadeClick, clickOn: step.clickOn,
-    lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text, tool: flow ? 'flow' : arcade ? 'arcade' : toolOf(step) },
+    lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text, tool: flow ? 'flow' : arcade ? 'arcade' : toolOf(step),
+      ...(step.bite && { bite: { songId: step.bite.songId, fromBar: step.bite.fromBar, toBar: step.bite.toBar } }) }, // bars of a song: count towards it
     band: getSettings().band !== false ? bandSpec : undefined,
   });
   // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).
@@ -449,7 +450,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
             {hints && <p className="hintcard">💡 <b>Hint:</b> {howHint}</p>}
             <details open={fresh}><summary>Why and how</summary><p>{lesson.why}</p><p>{lesson.how}</p></details>
           </div>}
-          {step.bite && <div className="card"><p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b></p><button onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Play it with the song →</button></div>}
+          {step.bite && <div className="card"><p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b></p>{step.bite.songId.startsWith('yt-') && <button onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Play it with the song →</button>}</div>}
           {(step.trade || free.length > 0 || step.pass?.streak || step.gapBars || step.countAloud || step.probe || step.fadeClick || step.clickOn || step.variants?.length || (lanes && step.chart.notes.some(n => !lanes.includes(n.drum)))) && <div className="card small">
             {step.probe && <p>Find your tempo: one bar at a time from {step.bpm.start} BPM, faster after each clean bar. Then we practise just below where it got hard.</p>}
             {step.fadeClick && <p>The click fades away over {step.fadeClick} bars. Keep the tempo on your own.</p>}
