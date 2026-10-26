@@ -35,6 +35,20 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
   old run's badges this way; the owner's real app on 5173 isn't affected.)
 - The Chrome tool's JavaScript call times out after 45 s, so long runs go in the background inside the page and
   report through `fetch('/api/autopilot-…')`, which shows up in the server log.
+- Editing `.playtest-helpers.js` reloads the app page: Vite treats it as an imported module. Edit it between runs, then
+  press a key (sound) and import it again.
+- In the server log the request URL comes before `"msg":"incoming request"` on the same line; a log filter that
+  expects the opposite order sees nothing.
+- `ping()` must cut its message by characters, not UTF-16 units: half an emoji makes `encodeURIComponent` throw and
+  kills the background run.
+- The Chrome tool sometimes blocks a result as "cookie/query string data" (long page text with `?`, `=`, `&`, `%`).
+  Strip those characters before returning text.
+- The Beginner preset is a fixed weak hand (60%) and a fixed 45 ms lag. It doesn't improve, so a step whose only
+  check is evenness or timing can loop forever; cap takes per lesson (30) and log the give-ups.
+- A Solid run needs its own empty data folder: one 2★ lesson in the history keeps the read off *flying*, which turns
+  off checkpoints-first and the probe.
+- When the implementer's session is still around, ports 5180/8790 may be taken by it. Use the next pair (5181/8791)
+  rather than sharing one API and data folder.
 
 ## Findings and fixes
 
@@ -133,6 +147,31 @@ Open observations from this round (not fixed):
   hint fires. The latency test is the first thing in the M2 kit checklist.
 - The emulated kit doesn't play in wait mode (the test used keyboard strokes) or in free bars (G8).
 - After a code change the open page keeps stale modules (HMR): one "missing verdict" was that, not a bug.
+
+### Round 7 (test of the plan branch), 2026-10-26
+Branch `claude/plan-phase1-2026-10-25` at d445bda, tested on `claude/test-2026-10-26`; ports 5181/8791 (5182/8792 for
+the real-data copy). Full report: `docs/TEST-REPORT-2026-10-26.md`. Beginner run on an empty profile, Solid run on a
+second empty profile, then a copy of the owner's data.
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 19 (F3) | After "Step done" the coach's `next` became the big move and left the lesson (to Journey or the set's next lesson) with steps unplayed; the kit's "yes" too. | Bug | After `stepDone` a coach `next` is dropped like on big moments; ▶ starts the next step (dbdc523). |
+| 20 (F7) | At 40 BPM the verdict said "Try Learn it slowly" but on 2+ bar charts the big move was "Fix bar N" (looping at 40, no slower). | Bug | `slowly` before `fixBar` (abb2ed7). Round 6 fix 15 now holds on any chart. |
+| 21 (F9) | The owner's Journey trail showed "✓ 5 done" for five lessons never played (every lesson before a coach-lesson hero was folded). | Bug | Fold only finished lessons (9f4d62f). |
+| 22 (F10) | Practice → For you was a lone warm-up for a Swing Cat: M19 left no level-6 chart (fix 12 regressed). | Bug | "At your level" falls back to the highest library level below (2b4652e, with a test). |
+| – (F1, F5) | A beginner whose only fault is volume (weak hand) or a steady ~45 ms lag is slowed to 40 BPM and loops: "Single strokes" ★cp and two coach timing lessons never passed in 30 takes. | Teaching | Owner decision: hold the tempo for timing/volume-only fails, switch tool after ~5 fails. |
+| – (F6) | The student read stayed *steady* for ~19 takes per lesson (notes land in the 150 ms window, spread 23 ms). | Teaching | Owner decision: count takes per lesson. |
+
+Stage log (Beginner, profile A):
+| Stage | Result | Lessons (takes) |
+|---|---|---|
+| 1 · Ready to play | Stick Rookie ✓ | Sit hold strike (21), Your first jam, coach "Say it and play it" (~10), coach "Silent beat 3" (9), Echo game (6), Trade bars (2), Counting quarters (10), Eight in a row (2), Counting 8ths ✓cp (10), Rests ✓cp (20). Coach "Land on the click" given up after 30. |
+| 2 · Every limb | 1 of 3 checkpoints | Hi-hat pedal down (18), Kick drum (18), Accents (24, 1★), Hi-hat 8ths ✓cp (~32). Given up after 30: **Single strokes ★cp** (volume, at 40 BPM), **Hand and foot together ★cp** (55–75 ping-pong), coach "Hit with the click" ×2 (same title, F8). |
+
+Solid (profile A2): all 7 ranks, every lesson ★★★, ~70 takes, Stage 1 in 3 lessons (checkpoints first, one coach
+stand-in), most checkpoints 2–4 takes with the probe; Roadhouse Shuffle in 2 (round 5: 3). Weekly theme from 3 late
+takes disappeared after the path (M12). After the path: a review, the 2-minute challenge and Beat your best ("🏆 NEW
+RECORD: 85 BPM!" kept, coach line under it).
 
 ### Open observations (not fixed yet)
 - **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very
