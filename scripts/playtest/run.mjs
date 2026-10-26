@@ -103,7 +103,7 @@ const TAKE = `(async () => {
 })()`;
 
 const report = [];
-const scenarios = FULL
+const scenarios = process.env.PLAYTEST_ONLY === 'placement' ? [] : FULL
   ? [['Beginner', BEGINNER, null, 10], ['Solid', SOLID, null, 10]]
   : QUICK;
 const allCheckpoints = await evaluate(`import('/src/content/curriculum.ts').then(c => c.MILESTONES.flatMap(m => m.checkpoints))`);
@@ -130,8 +130,10 @@ await evaluate(`import('/src/input/emulatedKit.ts').then(k => k.setEmulatedKit({
 const placed = await evaluate(`(async () => {
   const sleep = ms => new Promise(r => setTimeout(r, ms)), player = await import('/src/play/player.ts');
   const btn = re => [...document.querySelectorAll('button')].find(b => re.test(b.innerText));
+  [...document.querySelectorAll('nav button, header button')].find(b => b.innerText.trim() === 'Journey')?.click(); await sleep(800);
+  document.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(300); // it sits in the plan fold
   btn(/Find my level/)?.click(); await sleep(800);
-  if (!btn(/Play it/)) return 'no placement screen';
+  if (!btn(/Play it/)) return 'no placement screen; on screen: ' + document.body.innerText.replace(/\\s+/g, ' ').slice(150, 700);
   btn(/Play it/).click(); await sleep(1500);
   for (const t0 = Date.now(); player.player.phase === 'playing' && Date.now() - t0 < 60000;) await sleep(300);
   await sleep(1000);

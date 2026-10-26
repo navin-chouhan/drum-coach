@@ -326,7 +326,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
         <div className="actions">
           <button className="link" onClick={() => { if (!session.done.length || confirm('Plan today again from your current progress?')) rebuildToday(); }}>Rebuild today's mix</button>
           <button className="link" onClick={() => setPlacing(true)}>Find my level (a short placement test)</button>
-          <button className="link" onClick={() => setEditing(true)}>Goals: {s.profile.goals.length ? s.profile.goals.join(', ') : 'all styles'} · {s.profile.minutesPerDay} min/day (change)</button>
+          <button className="link" onClick={() => setEditing(true)}>Goals: {s.profile.goals.length ? s.profile.goals.join(', ') : 'not sure yet'} · {s.profile.minutesPerDay} min/day (change)</button>
           <button className="link danger" onClick={() => { if (confirm('Reset all lesson progress and redo the setup questions? Your run history in Trophies is kept.')) resetAllLessons(); }}>Reset all lesson progress</button>
         </div>
       </details>
