@@ -66,6 +66,7 @@ export type Lesson = {
   source?: 'ai'; focus?: string; // AI-curated for this student; `focus` says why
   checkpoint?: string; // a coach lesson that stands in for this checkpoint: finishing it passes the checkpoint
   demo?: DemoId; // how the body moves for the whole lesson (a step's own `demo` wins)
+  routine?: boolean; // a daily routine (the stretch), not part of the path
   needsLatency?: boolean; // judged in milliseconds (laying back): needs a saved latency test
   band?: { chords?: string }; // the backing band's chord line, one symbol per bar (engine/band.ts); default by style
 };

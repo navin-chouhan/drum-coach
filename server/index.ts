@@ -8,6 +8,8 @@ import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import type { RunRow } from '../src/engine/progress.ts';
 import { studentProfile } from '../src/engine/profile.ts';
+import { soreActive } from '../src/engine/health.ts';
+import { dayKey } from '../src/engine/lesson.ts';
 import type { Plan } from '../src/coach/schemas.ts';
 import { ask, getProvider, lessonModel } from './ai/coach.ts';
 import { applyBites, canStandIn, lessonInput, standsInFor, toLesson, uniqueTitle } from './ai/lessons.ts';
@@ -179,7 +181,7 @@ app.post('/api/coach/plan', async (req, reply) => {
     const songs = (db.prepare('SELECT id, title FROM yt_songs').all() as { id: string; title: string }[]); // so play-along items can link to them
     const r = await ask('plan', PlanSchema, {
       ...b.data, goals: b.data.goals ?? (profile.goals.length ? profile.goals.join(', ') : 'not sure yet'), minutesPerDay: b.data.minutesPerDay ?? profile.minutesPerDay,
-      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()) },
+      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()), ...(soreActive(s.soreUntil, dayKey(new Date())) && { sore: true }) },
       stage: m && { level, title: m.title, canDo: m.canDo },
       lessons: pickable.map(l => ({ id: l.id, title: l.title, level: l.level, kind: l.kind, checkpoint: !!m?.checkpoints.includes(l.id), done: !!progress[l.id]?.completedAt, stars: progress[l.id]?.stars })),
       lastWeek: last && { focus: last.focus, notes: last.notes, week: last.week },
@@ -214,6 +216,7 @@ app.post('/api/coach/session', async (req, reply) => {
     event.student = studentRead(row ? JSON.parse(row.value).lessons ?? {} : {}, runRows(12));
     const focus = weekFocus();
     if (focus) event.weekFocus = focus; // this week's plan, so the coach's tips point the same way
+    if (soreActive(appSettings().soreUntil, dayKey(new Date()))) event.sore = true; // N10: go easy
   }
   reply.hijack();
   const res = reply.raw;
@@ -355,7 +358,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
     .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
   const existing = aiLessons();
   const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle,
-    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus() });
+    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus(), sore: soreActive(app.soreUntil, dayKey(new Date())) });
   if (!input) return bad(reply, 'No stage fits your goals yet. Change them under Journey → Goals.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);

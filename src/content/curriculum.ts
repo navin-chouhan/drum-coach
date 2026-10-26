@@ -55,6 +55,14 @@ const readCards = (title: string, text: string, spb: number, cards: string[], bp
 const fillBar = (fill: ChartNote[]) => crashOn(cat([P(2, MONEY8), fill]), [0]);
 
 export const CURRICULUM: Lesson[] = [
+  // The daily stretch (N10): opens every day's set, never on the path.
+  { ...lesson(0, 'stretch', 'exercise', 'Two-minute stretch',
+    'Loosen wrists, forearms and shoulders before you play.',
+    'Warm, loose muscles play more evenly and are much less likely to get sore. Every drummer warms up.',
+    'Slow and easy, nothing should hurt. Breathe out as you stretch.',
+    [{ ...step('Wrists', 'Circle your wrists 10 times each way, then shake your hands loose.', P(1, { snare: 'x' }), [60, 60]), rest: 30 },
+      { ...step('Fingers and forearms', 'Spread your fingers wide, then make a soft fist, 10 times. Then gently pull each hand\'s fingers back for 10 seconds.', P(1, { snare: 'x' }), [60, 60]), rest: 30 },
+      { ...step('Shoulders and neck', 'Roll your shoulders back 10 times. Let your head drop slowly to each side. Sit tall.', P(1, { snare: 'x' }), [60, 60]), rest: 30 }]), routine: true },
   // ───────── Level 0: setup and counting ─────────
   lesson(0, 'posture', 'exercise', 'Sit, hold, strike',
     'How to sit at the kit, hold the sticks and let them bounce.',

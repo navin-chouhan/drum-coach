@@ -20,9 +20,11 @@ import { TechniqueView } from '../ui/TechniqueView';
 import { PadWizard } from '../ui/Calibrate';
 import { LatencyCard } from '../ui/LatencyCard';
 import { ShowoffCard } from './ShowoffCard';
-import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
+import { currentSession, markDone, rebuildToday, resetAllLessons, startSession, today } from './state';
+import { dayAdvice, soreActive } from '../engine/health';
+import { addDays } from '../engine/lesson';
 
-const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
+const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean; arcade?: boolean };
 
 export function TodayView({ openLessonId, device }: { openLessonId?: string; device?: string }) {
@@ -45,6 +47,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
   useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => { setRuns(runs); setDash(dashboard(runs)); }).catch(() => {}); }, [open]);
+  useEffect(() => { if (dash?.totalRuns && getSettings().hearingTipWeek !== isoWeek(new Date())) { const w = isoWeek(new Date()); const t = setTimeout(() => setSettings({ hearingTipWeek: w }), 60_000); return () => clearTimeout(t); } }, [dash]); // the ear tip shows for a minute, once a week
 
   const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
@@ -150,6 +153,12 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   const showoff = songs.filter(x => songReady(runs, x.id, songBarCount(x)));
+  // Health (N10): lighter days after "a bit sore", practice-length advice, the weekly ear and wrist check-ins.
+  const daysPlayed = new Set(runs.map(r => r.startedAt.slice(0, 10))).size, wk = isoWeek(new Date());
+  const healthLine = soreActive(s.soreUntil, today()) ? `Easy days until ${s.soreUntil}: shorter sets, lighter playing. If something hurts, stop; if it lasts, see a doctor.`
+    : dayAdvice(Math.round(dash?.minutesToday ?? 0), daysPlayed)
+    ?? (played && s.hearingTipWeek !== wk ? 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.' : undefined);
+  const askSore = played && daysPlayed >= 3 && s.soreAskedWeek !== wk && !soreActive(s.soreUntil, today());
   // The trail ends at the stage's song: your real song if you picked one, else the built-in one, with how much is ready.
   const builtinBars = builtinSong ? builtinSong.steps[builtinSong.steps.length - 1].chart.bars : 0;
   const songStop = project ? { title: project.title, ready: songBars ? barsReady(runs, project.id, songBars) / songBars : 0, onOpen: () => requestSong(project.id) }
@@ -161,6 +170,12 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
         <div>
           <div className="bubble" aria-live="polite">
             {recap && <p className="recap">📅 {recap}</p>}
+            {healthLine && <p className="recap">🌱 {healthLine}</p>}
+            {askSore && <div className="recap">
+              <p>Quick check: anything sore after drumming (wrists, forearms, back)?</p>
+              <div className="actions"><button onClick={() => setSettings({ soreAskedWeek: isoWeek(new Date()) })}>All good</button>
+                <button onClick={() => setSettings({ soreAskedWeek: isoWeek(new Date()), soreUntil: addDays(today(), 3) })}>A bit sore</button></div>
+            </div>}
             {!s.setupDone && !s.setupNudged && <div className="recap">
               <p>Before your next lesson: two minutes to check your pads and latency? It makes the timing scores fair.</p>
               <div className="actions"><button className="primary" onClick={() => { setSettings({ setupNudged: true }); setKitStep(true); }}>Check my kit ▶</button>

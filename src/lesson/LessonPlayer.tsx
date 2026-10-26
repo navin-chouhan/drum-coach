@@ -7,6 +7,7 @@ import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
 import { afterReview, autoProbe, floorLine, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
 import { praise } from '../engine/greeting';
+import { breakDue } from '../engine/health';
 import { bandFor } from '../engine/band';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { Celebration, flourish } from './Celebration';
@@ -33,12 +34,13 @@ import { demoFor } from '../content/demos';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
-const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
+const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 // text: the full verdict (spoken, sent to the coach); say: the short line for the screen; nums: the result card.
 type Nums = { landed: number; total: number; streak: number; recoveries: number; onBeat?: number; better: boolean };
 type Outcome = { passed: boolean; text: string; say?: string; slowly?: boolean; again?: boolean; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
 // again: a finished lesson played through again (no second celebration)
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
+const sitting = { playedS: 0 }; // seconds played since the last break, this page load (N10)
 let probeExplained = false; // the probe's sentence once per session; afterwards just the number
 /** Clean takes a step needs at one tempo: a streak challenge is done on its first pass. */
 const cleanNeeded = (s: { pass?: { streak?: number } }) => (s.pass?.streak ? 1 : CLEAN_TAKES);
@@ -78,7 +80,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
 
   const p = progressOf(lesson);
   const oneTake = role === 'warmup' || role === 'review' || role === 'record';
-  const stepIdx = oneTake ? lesson.steps.length - 1 : Math.min(p.step, lesson.steps.length - 1);
+  const [routineStep, setRoutineStep] = useState(0); // the daily stretch runs from its first step every day (N10)
+  const stepIdx = role === 'stretch' ? Math.min(routineStep, lesson.steps.length - 1) : oneTake ? lesson.steps.length - 1 : Math.min(p.step, lesson.steps.length - 1);
   const step = lesson.steps[stepIdx];
   // Beat your best: a streak challenge asks for 4 more in a row than your best, anything else 5 BPM above it.
   const recordStreak = role === 'record' ? recordTarget(step, p) : undefined;
@@ -230,6 +233,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     if (o.itemDone) onItemDone?.();
     saveRun(f, { passed: o.passed });
     setSecs(s => s + f.durationS);
+    sitting.playedS += f.durationS; // for the break reminder (N10)
     setVersion(v => v + 1);
   }), [lesson, step, oneTake, role, onItemDone]);
   useEffect(() => () => { stop(); dropCoachAction(); clearTimeout(probeTimer.current); }, []);
@@ -331,9 +335,16 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const demo = demoFor(lesson, step); // how the body moves (R5): every lesson has one
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
   const arcadeBpm = p.bestBpm || step.bpm.target;
-  const finishRest = () => { saveProgress(lesson.id, ladderStep(progressOf(lesson), lesson, true, today()).next); setVersion(v => v + 1); };
+  const finishRest = () => {
+    if (role === 'stretch') { if (routineStep < lesson.steps.length - 1) setRoutineStep(routineStep + 1); else { onItemDone?.(); (onNext ?? onBack)(); } return; }
+    saveProgress(lesson.id, ladderStep(progressOf(lesson), lesson, true, today()).next); setVersion(v => v + 1);
+  };
+  // A break after about 22 minutes of playing in one sitting (N10): the main move offers it once the take is judged.
+  const [onBreak, setOnBreak] = useState(false);
+  const breakNow = !!f && !!outcome && !playing && !resting && !arcade && !flow && breakDue(sitting.playedS);
   const main: { label: string; run: () => void } =
-    arcade ? { label: outcome ? '⏱ Again, 2 minutes' : '⏱ Start the 2 minutes', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, seconds: 120, speed: arcadeBpm / chart.bpm }); } }
+    breakNow ? { label: '☕ 2-minute break', run: () => setOnBreak(true) }
+    : arcade ? { label: outcome ? '⏱ Again, 2 minutes' : '⏱ Start the 2 minutes', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, seconds: 120, speed: arcadeBpm / chart.bpm }); } }
     : canProbe ? { label: '🔍 Find my tempo', run: () => {
       const go = () => { probing.current = { tempo: step.bpm.start, accs: [] }; probeBar(); };
       // A first-time step gets its slides before the probe, not after it (the probe's finish then marks them seen).
@@ -400,7 +411,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
   const toTarget = Math.max(0, Math.min(1, (bpm - step.bpm.start) / Math.max(1, step.bpm.target - step.bpm.start)));
   // The verdict never turns into "…" while the coach thinks: the thinking shows as a small line under it.
-  const said = coachLine(outcome?.say, fresh2, big);
+  const said = breakNow ? { line: `${outcome?.say ?? ''} You've played over 20 minutes: time for a 2-minute break.`, under: undefined } : coachLine(outcome?.say, fresh2, big);
   const line = said.line ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
     : canProbe ? (probeExplained ? `Find your tempo from ${step.bpm.start} BPM.` : "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard.")
     : flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text);
@@ -423,7 +434,11 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       </div>
 
       {checking && demo && <SelfCheck demo={demo} bpm={bpm} onClose={() => setChecking(false)} />}
-      {resting ? <>
+      {onBreak ? <>
+        <CoachLine line="Break time. Stand up, shake out your hands and shoulders, sip some water. Your hands keep learning while you rest." />
+        <div className="moves"><Move go label="✓ Back to playing" onClick={() => { sitting.playedS = 0; setOnBreak(false); }} /></div>
+        <RestCountdown seconds={120} />
+      </> : resting ? <>
         <CoachLine line={step.text} />
         {!step.quiz && <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} />{demo && <Move alt label="📷 Check yourself" gesture="key C" onClick={() => setChecking(true)} />}</div>}
         {step.quiz ? <EarQuiz key={stepIdx} kind={step.quiz} chart={chart} onDone={finishRest}

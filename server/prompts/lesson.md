@@ -13,6 +13,8 @@ The input has:
   focus when it fits this milestone, and lean on the tools they play most.
 - "stageSong": the built-in song of this stage. A step's "bite" may name it ({ "songId": its id, "fromBar", "toBar" }) like a
   saved song: a few bars of the stage song are the most motivating practice for a beginner.
+- "sore": true when the student said they are a bit sore this week: write a short, light lesson (small strokes, slow
+  tempos, no stamina or speed work), and say in "focus" to stop if anything hurts.
 - "postPath": true when the student has passed every stage. Then write a review or stretch lesson at this last level, aimed
   at the weakest skill in "recentRuns" (a faster tempo, a variation, a longer take); never a new topic beyond this level.
 

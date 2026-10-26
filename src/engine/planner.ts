@@ -1,6 +1,7 @@
+import { lighten, STRETCH_ID } from './health.ts';
 import { dueReviews, isProven, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson.ts';
 
-export type SessionRole = 'warmup' | 'review' | 'skill' | 'groove' | 'record'; // record: one take to beat your best
+export type SessionRole = 'stretch' | 'warmup' | 'review' | 'skill' | 'groove' | 'record'; // record: one take to beat your best; stretch: the daily routine (N10)
 export type SessionItem = { role: SessionRole; lessonId: string; minutes: number };
 
 const SKILL: LessonKind[] = ['exercise', 'rudiment'];
@@ -9,7 +10,7 @@ const done = (p: Progress, id: string) => !!p[id]?.completedAt;
 
 /** Tagged lessons show only for matching goals; no goals ("not sure yet") shows everything. */
 export const visibleLessons = (lessons: Lesson[], profile: Profile) =>
-  lessons.filter(l => !l.tags || !profile.goals.length || l.tags.some(t => profile.goals.includes(t)));
+  lessons.filter(l => !l.routine && (!l.tags || !profile.goals.length || l.tags.some(t => profile.goals.includes(t))));
 
 /** Checkpoints of a milestone that this student has to pass (others are hidden by their goals). */
 export const checkpointsOf = (m: Milestone, lessons: Lesson[], profile: Profile) =>
@@ -84,7 +85,13 @@ export function candidates(milestones: Milestone[], lessons: Lesson[], progress:
  * `focusIds`: this week's lessons from the coach's plan (R6). An open one at or below the current stage leads the set;
  * a finished one comes back as the review. Unknown ids and lessons ahead of the student are ignored.
  */
-export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = []): SessionItem[] {
+export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = [], opts: { sore?: boolean } = {}): SessionItem[] {
+  const items = buildSet(milestones, lessons, progress, profile, today, focusIds);
+  // every day opens with the 2-minute stretch (N10); a sore week gets lighter days
+  const stretch = lessons.some(l => l.id === STRETCH_ID) ? [{ role: 'stretch' as const, lessonId: STRETCH_ID, minutes: 2 }] : [];
+  return opts.sore ? lighten([...stretch, ...items]) : [...stretch, ...items];
+}
+function buildSet(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[]): SessionItem[] {
   const short = profile.minutesPerDay < 20;
   const level = currentMilestone(milestones, lessons, progress, profile)?.level ?? Infinity;
   const focus = focusIds.map(id => visibleLessons(lessons, profile).find(l => l.id === id)).filter(l => l !== undefined && l.level <= level) as Lesson[];

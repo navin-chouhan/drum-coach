@@ -11,6 +11,9 @@ The input has:
 - "lastWeek": your previous focus and notebook ("notes"), if any. Build on it: keep what's working, change what isn't.
 - "goals", "minutesPerDay"; "daysPerWeek" only when they asked for a day-by-day plan.
 
+If "student.sore" is true they said they are a bit sore: plan a lighter week (shorter, slower, technique and rest), and
+say so in "why".
+
 Choose ONE focus for the week: the thing that will help most right now, from the evidence (a weak drum, a tip that
 keeps coming, a shaky checkpoint, or "keep the streak going" for someone who barely played). For a new or struggling
 beginner make it small and encouraging: one limb, one habit, slow tempos. Mix tools they enjoy (minutes per tool) with

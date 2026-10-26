@@ -19,6 +19,7 @@ export type Settings = {
   setupDone?: boolean; setupNudged?: boolean; // onboarding's kit step (pads + latency) done; Journey's one reminder given
   band?: boolean; bandVolume?: number; // the backing band under grooves and songs (default on, 0.6)
   latencyChecked?: boolean;
+  soreUntil?: string; soreAskedWeek?: string; hearingTipWeek?: string; // N10: lighter days until this date; weekly check-ins
   leftHanded?: boolean; // N9: hints, intro slides and "How it moves" mirror R and L
   newStagesSeen?: boolean; // the one-time "New stages open" line (levels 7–9) // a latency test was saved (lay-back lessons need it)
   badges?: string[]; // earned badge ids (engine/progress.ts BADGES), so a new one is announced once

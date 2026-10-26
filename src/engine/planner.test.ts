@@ -119,3 +119,18 @@ describe('buildSession: songs and after the path (R8)', () => {
     expect(s.map(i => i.lessonId)).toContain('song-end');
   });
 });
+
+describe('buildSession: health (N10)', () => {
+  const today = '2026-10-26';
+  const withStretch = [...lessons, L('stretch', 0, 'exercise', { routine: true })];
+  it('every day opens with the stretch; it is never on the path', () => {
+    const s = buildSession(milestones, withStretch, done('count'), profile, today);
+    expect(s[0]).toEqual({ role: 'stretch', lessonId: 'stretch', minutes: 2 });
+    expect(candidates(milestones, withStretch, {}, profile).map(l => l.id)).not.toContain('stretch');
+  });
+  it('a sore week: a lighter set', () => {
+    const s = buildSession(milestones, withStretch, done('count'), { ...profile, minutesPerDay: 30 }, today, [], { sore: true });
+    expect(s.reduce((a, i) => a + i.minutes, 0)).toBeLessThanOrEqual(12);
+    expect(s.filter(i => i.role === 'skill' || i.role === 'groove')).toHaveLength(1);
+  });
+});
