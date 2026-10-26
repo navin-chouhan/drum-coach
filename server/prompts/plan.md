@@ -8,6 +8,7 @@ The input has:
   per tool (jam, drill, copy, flow, song…), their songs, and "weakest" (the drum landing least often).
 - "stage": where they are on the path; "lessons": the lessons you may pick (id, title, level, kind, checkpoint, done,
   stars). Finished lessons with 1–2 stars are worth strengthening.
+- "student.teacherNotes": what their human teacher said lately; build the week around it when it applies.
 - "lastWeek": your previous focus and notebook ("notes"), if any. Build on it: keep what's working, change what isn't.
 - "goals", "minutesPerDay"; "daysPerWeek" only when they asked for a day-by-day plan.
 

@@ -31,6 +31,8 @@ import { SelfCheck } from '../ui/SelfCheck';
 import { EarQuiz } from './EarQuiz';
 import { TechniqueDemo } from '../ui/TechniqueDemo';
 import { demoFor } from '../content/demos';
+import { takeToMidi } from '../engine/exportMidi';
+import { saveFile, stamp } from '../ui/download';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -512,6 +514,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
           <div className="actions small">
             {timeUp && !outcome?.itemDone && <span>That's your {minutes} minutes for this one.</span>}
             {f && <button className="link" onClick={() => setDetails(true)}>Details and history</button>}
+            {f && f.hits.length > 0 && <button className="link" onClick={() => saveFile(`${lesson.title} ${stamp()}.mid`, new Blob([takeToMidi({ hits: f.hits, zero: f.zero, bpm: Math.round(f.chart.bpm * f.options.speed), title: lesson.title })], { type: 'audio/midi' }))}>💾 Save take as MIDI</button>}
             {helpKey && (help?.status === 'thinking' ? <Thinking what="Your coach is writing something different" />
               : help?.status === 'done' ? <>Your coach wrote "{help.data?.title}". {onOpen && help.data?.id && <button className="link" onClick={() => onOpen(help.data!.id)}>Open it</button>}</>
               : <>{help?.status === 'error' && <span className="warn">{help.error}</span>}<button className="link" onClick={askHelp}>Ask the coach for something different</button></>)}

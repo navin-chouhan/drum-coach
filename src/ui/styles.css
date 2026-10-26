@@ -527,3 +527,4 @@
   .techniqueView .demos{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .techniqueView .demos button{font:800 15px var(--display);padding:8px 14px;border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line)}
   .techniqueView .demos button.on{background:var(--pop)}
+  @media print { header, nav, .noPrint, .talk { display:none !important } body { background:#fff } .teacherSheet { box-shadow:none; border:0 } }

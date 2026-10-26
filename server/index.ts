@@ -122,6 +122,8 @@ const latestPlan = () => {
   return row ? { id: row.id, plan: JSON.parse(row.json) as Plan, checks: JSON.parse(row.checks_json) } : null;
 };
 /** This week's focus from the coach's plan, for the lesson writer and the live coach (R6). */
+/** The latest notes from the student's human teacher (N2), for the coach. */
+const teacherNotes = (): { date: string; text: string }[] => { const v = (db.prepare("SELECT value FROM settings WHERE key = 'teacherNotes'").get() as { value: string } | undefined)?.value; try { return v ? JSON.parse(v).slice(-3) : []; } catch { return []; } };
 const weekFocus = () => { const p = latestPlan()?.plan; return p?.focus ? { focus: p.focus, why: p.why, drums: p.drums } : undefined; };
 app.get('/api/profile', async () => studentProfile(runRows()));
 
@@ -181,7 +183,7 @@ app.post('/api/coach/plan', async (req, reply) => {
     const songs = (db.prepare('SELECT id, title FROM yt_songs').all() as { id: string; title: string }[]); // so play-along items can link to them
     const r = await ask('plan', PlanSchema, {
       ...b.data, goals: b.data.goals ?? (profile.goals.length ? profile.goals.join(', ') : 'not sure yet'), minutesPerDay: b.data.minutesPerDay ?? profile.minutesPerDay,
-      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()), ...(soreActive(s.soreUntil, dayKey(new Date())) && { sore: true }) },
+      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()), ...(soreActive(s.soreUntil, dayKey(new Date())) && { sore: true }), teacherNotes: teacherNotes() },
       stage: m && { level, title: m.title, canDo: m.canDo },
       lessons: pickable.map(l => ({ id: l.id, title: l.title, level: l.level, kind: l.kind, checkpoint: !!m?.checkpoints.includes(l.id), done: !!progress[l.id]?.completedAt, stars: progress[l.id]?.stars })),
       lastWeek: last && { focus: last.focus, notes: last.notes, week: last.week },
@@ -217,6 +219,8 @@ app.post('/api/coach/session', async (req, reply) => {
     const focus = weekFocus();
     if (focus) event.weekFocus = focus; // this week's plan, so the coach's tips point the same way
     if (soreActive(appSettings().soreUntil, dayKey(new Date()))) event.sore = true; // N10: go easy
+    const notes = teacherNotes();
+    if (notes.length) event.teacherNotes = notes.map(n => ({ date: n.date, text: n.text.slice(0, 300) })); // N2: what their teacher said (trimmed: it goes with every take)
   }
   reply.hijack();
   const res = reply.raw;
@@ -358,7 +362,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
     .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
   const existing = aiLessons();
   const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle,
-    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus(), sore: soreActive(app.soreUntil, dayKey(new Date())) });
+    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus(), sore: soreActive(app.soreUntil, dayKey(new Date())), teacherNotes: teacherNotes() });
   if (!input) return bad(reply, 'No stage fits your goals yet. Change them under Journey → Goals.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);

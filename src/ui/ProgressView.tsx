@@ -7,10 +7,12 @@ import { songBarCount, useYtSongs } from '../youtube/api';
 import { hearFill } from '../play/fills';
 import { BADGES, dashboard, earnedBadges, songReady, type Dashboard, type RunRow } from '../engine/progress';
 import { requestLesson, requestPlay, requestSong } from './nav';
+import { TeacherView } from './TeacherView';
 
 const ACCENT = '#2F6FE4';
 
 export function ProgressView() {
+  const [teacher, setTeacher] = useState(false); // N2: the page for a human teacher
   const [d, setD] = useState<Dashboard | null>(null);
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [error, setError] = useState('');
@@ -22,8 +24,10 @@ export function ProgressView() {
   if (error) return <div className="progress"><TrophyShelf runs={runs} /><p className="warn">{error}</p></div>;
   if (!d) return <div className="progress"><TrophyShelf runs={runs} /><p className="small">Loading…</p></div>;
 
+  if (teacher) return <TeacherView onBack={() => setTeacher(false)} />;
   return (
     <div className="progress">
+      <div className="actions"><button onClick={() => setTeacher(true)}>👩‍🏫 For your teacher (summary, notes)</button></div>
       <TrophyShelf runs={runs} />
       <div className="tiles">
         <Tile label="Day streak" value={d.streak} />

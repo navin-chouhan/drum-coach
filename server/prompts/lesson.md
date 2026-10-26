@@ -15,6 +15,8 @@ The input has:
   saved song: a few bars of the stage song are the most motivating practice for a beginner.
 - "sore": true when the student said they are a bit sore this week: write a short, light lesson (small strokes, slow
   tempos, no stamina or speed work), and say in "focus" to stop if anything hurts.
+- "teacherNotes": what the student's human teacher said lately. A teacher who has watched them beats any statistic:
+  follow it (the technique point, the exercise, the tempo).
 - "postPath": true when the student has passed every stage. Then write a review or stretch lesson at this last level, aimed
   at the weakest skill in "recentRuns" (a faster tempo, a variation, a longer take); never a new topic beyond this level.
 
