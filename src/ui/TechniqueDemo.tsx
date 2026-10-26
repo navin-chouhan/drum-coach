@@ -70,7 +70,8 @@ function draw(root: SVGGElement, id: DemoId, beat: number, wrong: boolean, trail
     el('text', { x: x + 14, y: y + 5, fill: '#aaa', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = `${cm} cm`;
   }
   el('line', { x1: x - 14, y1: right.tip[1], x2: x + 14, y2: right.tip[1], stroke: '#FFE14D', 'stroke-width': 4 });
-  el('text', { x: x + 14, y: right.tip[1] - 8, fill: '#FFE14D', 'font-size': 17, 'font-weight': 800, 'font-family': 'system-ui' }).textContent = `${Math.round(Math.max(0, (PAD_Y - right.tip[1]) / PX_PER_CM))} cm`;
+  // the live height sits right of the fixed marks' labels, so "29 cm" never lands on "30 cm" (D9)
+  el('text', { x: x + 72, y: right.tip[1] + 6, fill: '#FFE14D', 'font-size': 17, 'font-weight': 800, 'font-family': 'system-ui' }).textContent = `${Math.round(Math.max(0, (PAD_Y - right.tip[1]) / PX_PER_CM))} cm`;
   if (arms.length > 1) el('text', { x: 40, y: 500, fill: '#9ec5ff', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = `blue = ${mirror ? 'right' : 'left'} hand (behind)`;
   // left-handed: the drawing is mirrored by its group; the words are flipped back so they read normally
   if (mirror) root.querySelectorAll('text').forEach(t => { const x = Number(t.getAttribute('x')); t.setAttribute('transform', `translate(${2 * x} 0) scale(-1 1)`); t.setAttribute('text-anchor', 'end'); });

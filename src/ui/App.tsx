@@ -30,6 +30,9 @@ export function App() {
   const midi = useMidi();
   const [tab, setTabState] = useState<Tab>('today');
   const [setup, setSetup] = useState<keyof typeof SETUP>('pads');
+  // D9: Chrome's MIDI permission prompt can sit unanswered; after 3 s the chip says what to do
+  const [midiSlow, setMidiSlow] = useState(false);
+  useEffect(() => { if (midi.status !== 'starting') return; const t = setTimeout(() => setMidiSlow(true), 3000); return () => clearTimeout(t); }, [midi.status]);
   const [pending, setPending] = useState<PlayRequest>();
   const [song, setSong] = useState<{ id: string; n: number; bars?: SongBars }>();
   const [lesson, setLesson] = useState<{ id: string; n: number }>();
@@ -68,7 +71,7 @@ export function App() {
   const status =
     midi.status === 'unsupported' ? { text: 'MIDI not supported — open in Google Chrome', cls: 'bad' }
     : midi.status === 'blocked' ? { text: 'MIDI blocked — allow it via the icon left of the address bar, then click here', cls: 'bad' }
-    : midi.status === 'starting' ? { text: 'Starting…', cls: '' }
+    : midi.status === 'starting' ? { text: midiSlow ? 'Allow MIDI: click the icon left of the address bar' : 'Starting…', cls: midiSlow ? 'bad' : '' }
     : midi.device ? { text: `${midi.device} connected`, cls: 'ok' }
     : { text: 'No MIDI device — plug in the kit (keyboard works)', cls: 'bad' };
 

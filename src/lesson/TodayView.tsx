@@ -165,6 +165,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
     : dayAdvice(Math.round(dash?.minutesToday ?? 0), daysPlayed)
     ?? (played && s.hearingTipWeek !== wk ? 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.' : undefined);
   const askSore = played && daysPlayed >= 3 && s.soreAskedWeek !== wk && !soreActive(s.soreUntil, today());
+  // D9: one notice above the greeting at a time (the weekly recap shows once, so it goes first; the rest wait their turn).
+  const notice = recap ? 'recap' : !s.setupDone && !s.setupNudged ? 'setup' : askSore ? 'sore' : healthLine ? 'health' : undefined;
   // The trail ends at the stage's song: your real song if you picked one, else the built-in one, with how much is ready.
   const builtinBars = builtinSong ? builtinSong.steps[builtinSong.steps.length - 1].chart.bars : 0;
   // D6: a real song without its part yet can't be played: until it has its 16 bars, the built-in song stays the goal.
@@ -176,14 +178,14 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
         <div className="avatar" aria-hidden>🥁</div>
         <div>
           <div className="bubble" aria-live="polite">
-            {recap && <p className="recap">📅 {recap}</p>}
-            {healthLine && <p className="recap">🌱 {healthLine}</p>}
-            {askSore && <div className="recap">
+            {notice === 'recap' && <p className="recap">📅 {recap}</p>}
+            {notice === 'health' && <p className="recap">🌱 {healthLine}</p>}
+            {notice === 'sore' && <div className="recap">
               <p>Quick check: anything sore after drumming (wrists, forearms, back)?</p>
               <div className="actions"><button onClick={() => setSettings({ soreAskedWeek: isoWeek(new Date()) })}>All good</button>
                 <button onClick={() => setSettings({ soreAskedWeek: isoWeek(new Date()), soreUntil: addDays(today(), 3) })}>A bit sore</button></div>
             </div>}
-            {!s.setupDone && !s.setupNudged && <div className="recap">
+            {notice === 'setup' && <div className="recap">
               <p>Before your next lesson: two minutes to check your pads and latency? It makes the timing scores fair.</p>
               <div className="actions"><button className="primary" onClick={() => { setSettings({ setupNudged: true }); setKitStep(true); }}>Check my kit ▶</button>
                 <button onClick={() => setSettings({ setupNudged: true })}>Not now</button></div>
@@ -362,7 +364,7 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: {
   ];
   const pts = stops.map((_, i) => ({ x: 5 + (i * 90) / Math.max(1, stops.length - 1), y: 50 + 22 * Math.sin(i * 1.3) }));
   return (
-    <div className="trail">
+    <div className="trail" style={{ '--gap': 90 / Math.max(1, stops.length - 1) } as React.CSSProperties}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden><polyline points={pts.map(p => `${p.x},${p.y}`).join(' ')} /></svg>
       {stops.map((st, i) => {
         const style = { left: `${pts[i].x}%`, top: `${pts[i].y}%` }, cls = `stop ${st.cls} ${pts[i].y < 50 ? 'up' : ''}`;
