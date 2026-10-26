@@ -14,20 +14,20 @@ both sessions sharing one API and data folder. Nothing else differs from `docs/P
 
 ## Summary
 **Verdict: the must-go batch works for a strong student and mostly works for a struggling one. Five bugs were found
-and fixed by the tester (F3, F7, F9, F10); none had to be reverted. For a real beginner the app is not yet "never stuck":
+and fixed by the tester (F3, F7, F9, F10, F11); none had to be reverted. For a real beginner the app is not yet "never stuck":
 two checkpoints became dead ends with the plan's own Beginner preset.** Not ready to merge without the reviewer
 looking at the four tester fixes and the owner deciding the teaching questions (F1, F5, F6).
 
 | | Count |
 |---|---|
 | Plan rows checked | 22 (section 2) |
-| Pass | 13 (M3, M4, M5 after F3, M6, M7, M8, M10, M12, M14 bug part, M15, M16, M18, R2 windows) |
-| Partly | 5 (M1, M9, M13, M19 → F10, M20) |
-| Fail | 0 left (M5 and M19 failed until tester fixes F3 and F10) |
+| Pass | 15 (M3, M4, M5 after F3, M6, M7, M8, M9 after F11, M10, M12, M13, M14 bug part, M15, M16, M18, R2 windows) |
+| Partly | 3 (M1, M19 → F10, M20) |
+| Fail | 0 left (M5, M9 and M19 failed until tester fixes F3, F11 and F10) |
 | Not testable here / not built | 4 (M2 owner at the kit, M11 waiting for its mockup, M17 no song with a beat grid, R1/R2 graces/R4/R7 unit only) |
 | Regressions (12 fixed findings + round 6) | all pass except fix 12 (Practice level), regressed by M19 and fixed (F10); round 6 fix 15 incomplete (F7, fixed) |
-| Findings | 10: 4 major fixed by tester (F3, F7, F9, F10), 2 major + 1 minor teaching for the owner (F1, F5, F6), 3 minor not fixed (F2, F4, F8) |
-| Tester fixes | 4 commits: dbdc523 (F3), abb2ed7 (F7), 9f4d62f (F9), 2b4652e (F10). Tests now 249 / 249. |
+| Findings | 11: 4 major + 1 minor fixed by tester (F3, F7, F9, F10, F11), 2 major + 1 minor teaching for the owner (F1, F5, F6), 3 minor not fixed (F2, F4, F8) |
+| Tester fixes | 5 commits: dbdc523 (F3), abb2ed7 (F7), 9f4d62f (F9), 2b4652e (F10), b1d1c40 (F11). Tests now 249 / 249. |
 
 The biggest things, in plain words:
 1. **After a step, the big button left the lesson** (F3, fixed). The coach's "next" sent you to the Journey or the
@@ -57,11 +57,11 @@ The biggest things, in plain words:
 | M6 short screen line | pass | Observed `show`: 6, 7, 9, 7 words ("Quiet on 3, lean in on 1 and 2", "Push the 'and' notes forward a little"). The spoken `say` still had no ms or % in the replies read. |
 | M7 new-step tempo | pass | Coach: "The next step starts you back at 70 for sixteenth notes"; Solid run: "Rest on 2 and 4 next, starting slower at 60". No "the app slowed you". |
 | M8 probe tries the target | pass | "Rests are notes too": probe → "Your tempo today: 80 BPM" = target. Roadhouse Shuffle (Stage 6 song) took 2 takes (round 5: 3, probe stopped at 90 < 92). |
-| M9 no slides after a probe | partly | No intro slides were seen right after a probe in the Solid run, but the autopilot clicks through slides by itself, so this isn't proven; unit-free UI change. Check by hand on one probe. |
-| M10 counters, probe copy | pass | "0 of 2 clean takes at 60 BPM (one ★★★ take counts as both)"; first probe line is the full sentence. The later short form ("Your tempo: N BPM") wasn't captured. |
+| M9 no slides after a probe | fail → fixed (F11) | Follow-up run (profile A3, flying): on 2 of 2 untouched steps no slides before "🔍 Find my tempo", then the slides right after the probe. Fixed by tester; after the fix slides come before the probe and not after (2 of 2). |
+| M10 counters, probe copy | pass | "0 of 2 clean takes at 60 BPM (one ★★★ take counts as both)"; first probe "Your tempo today: 80 BPM. That's where we practise.", the second in the session "Your tempo: 100 BPM." |
 | M11 Journey after set / path | not built | Waits for its mockup. Seen: "That's today's set done. Want to jam a bit more? Jam ▶" on both runs (for the Beginner with two open checkpoints); after the path the hero offered a paradiddle review, 2-minute challenge on "The money beat" and Beat your best "Counting 8th notes", no stage card. |
 | M12 weekly theme forgets | pass | 3 deliberately late Practice takes → "This week: landing behind the click"; after the Solid path (40+ on-time takes) no theme line. |
-| M13 trophies never stale | partly | Code: shelf = `s.badges ∪ earnedBadges(runs…)` (`ProgressView.tsx:128`), Practice refetches runs after `saveRun` resolves. Live: Journey announced "New badge: 10,000 notes!"; the shelf right after a threshold-crossing take wasn't observed (3,674 notes on the Solid profile). |
+| M13 trophies never stale | pass | Follow-up run, fresh profile A3: one ★★★ take of "Sit, hold, strike", then straight to Trophies (Journey never visited): `s.badges` was still `[]`, the shelf already showed "🏅 First ★★★" and "★ 3 stars". Code: shelf = `s.badges ∪ earnedBadges(runs…)`, Practice refetches runs after `saveRun` resolves. |
 | M14 (bug part) | pass | Fresh profile: picked rock/funk/jazz + 25 min, pressed "Setup → Pads": settings already held `goals [rock, funk, jazz]`, `minutesPerDay 25`, `onboarded true`; the welcome screen didn't come back. |
 | M15 no built-in titles | pass (built-ins) | 7 coach lessons written, none with a built-in title. Two coach lessons share one title (F8). |
 | M16 Sonnet for lessons | pass | `/api/coach/status`: "model claude-haiku-5-5, low effort; lessons and plans are written by claude-sonnet-5-5 on medium effort." |
@@ -173,6 +173,20 @@ when `outcome.event === 'stepDone'` (copy change, so left for the owner).
 - Verified: tests 248/248, tsc clean, lint unchanged. Chrome after reload: same setup at 40 BPM → main move
   "🐢 Learn it slowly"; pressing it started wait mode (keyboard strokes, 16 notes) → "Nice and slow. When it feels easy,
   play it with the click.", runs 84 → 84 (nothing saved), progress unchanged.
+
+### F11 · minor · M9 · Fixed by tester: b1d1c40
+**Intro slides still came right after a tempo probe, so M9 didn't apply in practice.**
+- Steps: profile A3, flying student (2 lessons ★★★). "Counting quarter notes" and "Hi-hat with the pedal down", both
+  untouched: main move "🔍 Find my tempo".
+- Actual: no slides before the probe; after "Your tempo today: 80 BPM." the next ▶ showed the 3 intro slides for the
+  exercise just played (2 of 2).
+- Cause: M9 (`LessonPlayer.tsx` ≈128–130) only updates `introShown` if the slides were already seen. The probe runs
+  only on untouched steps (`canProbe` ≈266), where they never were, and probe bars bypass `play()`'s slide gate.
+- Fix: "Find my tempo" goes through the same gate: unseen slides first, then the probe; the probe's finish then marks
+  them seen at the new tempo (M9's line works as written). +5/−1, one file. The plan's "a first-time step still gets
+  its slides" holds; they just come first.
+- Verified: tests 249/249, tsc clean, lint unchanged. Chrome (5183/8793, fresh profile): "Counting quarter notes" and
+  "The kick drum": slides before the probe ✓, none after ✓, lessons finished ★★★.
 
 ### F9 · major · not in the plan (step 6, real data) · Fixed by tester: 9f4d62f
 **On the owner's real data the Journey trail said "✓ 5 done" for five lessons never played.**
@@ -299,8 +313,7 @@ path takes about 25 minutes of playing, which is the curriculum's depth (R3), no
 ## Check on the laptop / at the kit (owner)
 1. The M2 checklist in `docs/PLAYTEST.md`, **latency first** (part A): this run says a steady lag is the main
    beginner trap.
-2. M9 by hand: open a lesson step that probes (a ★★★ student) and watch that no intro slides show after
-   "Your tempo today: N BPM".
+2. Glance at one probing step from the throne: the intro slides now come before "Find my tempo" (F11).
 3. Spoken tips and coach voice from the throne (Piper), and talk-back (microphone).
 4. Song audio / tab capture and "Ask again" on a song groove (M17).
 5. Hi-hat pedal × 3 / crash × 2 after "Step done" now starts the next step (F3) and at 40 BPM starts wait mode (F7).

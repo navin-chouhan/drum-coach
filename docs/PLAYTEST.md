@@ -47,6 +47,10 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
   check is evenness or timing can loop forever; cap takes per lesson (30) and log the give-ups.
 - A Solid run needs its own empty data folder: one 2★ lesson in the history keeps the read off *flying*, which turns
   off checkpoints-first and the probe.
+- Two app tabs on one origin share localStorage and each pushes its copy to the server, so the newer write wins. After
+  Chrome restarts it can restore an old test tab you can't see from the tool's tab group; a fresh profile on that
+  origin then gets the old tab's lessons. Start each fresh profile on a new port pair (5183/8793 …), and wipe the
+  data folder only while its API is stopped.
 - When the implementer's session is still around, ports 5180/8790 may be taken by it. Use the next pair (5181/8791)
   rather than sharing one API and data folder.
 
@@ -159,6 +163,7 @@ second empty profile, then a copy of the owner's data.
 | 20 (F7) | At 40 BPM the verdict said "Try Learn it slowly" but on 2+ bar charts the big move was "Fix bar N" (looping at 40, no slower). | Bug | `slowly` before `fixBar` (abb2ed7). Round 6 fix 15 now holds on any chart. |
 | 21 (F9) | The owner's Journey trail showed "✓ 5 done" for five lessons never played (every lesson before a coach-lesson hero was folded). | Bug | Fold only finished lessons (9f4d62f). |
 | 22 (F10) | Practice → For you was a lone warm-up for a Swing Cat: M19 left no level-6 chart (fix 12 regressed). | Bug | "At your level" falls back to the highest library level below (2b4652e, with a test). |
+| 23 (F11) | After "Find my tempo" on an untouched step the intro slides came right after the probe (M9 only skipped slides already seen, and probes run only on untouched steps). | Bug | Unseen slides now come before the probe (b1d1c40). |
 | – (F1, F5) | A beginner whose only fault is volume (weak hand) or a steady ~45 ms lag is slowed to 40 BPM and loops: "Single strokes" ★cp and two coach timing lessons never passed in 30 takes. | Teaching | Owner decision: hold the tempo for timing/volume-only fails, switch tool after ~5 fails. |
 | – (F6) | The student read stayed *steady* for ~19 takes per lesson (notes land in the 150 ms window, spread 23 ms). | Teaching | Owner decision: count takes per lesson. |
 
