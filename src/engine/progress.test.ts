@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, forYou, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, songReady, forYou, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -51,8 +51,29 @@ describe('earnedBadges', () => {
   const now = new Date('2026-10-24T18:00:00');
   it('earns from runs and lesson progress', () => {
     const runs = [run({ startedAt: '2026-10-24T09:00:00', bpm: 104, accuracy: 92, notes: 600 }), run({ startedAt: '2026-10-24T10:00:00', chartId: 'yt-abc', accuracy: 90, notes: 600 })];
-    expect(earnedBadges(runs, { a: { stars: 3 }, b: { stars: 3 } }, [['a', 'b'], ['c']], now)).toEqual(['first-3star', 'fast-100', 'notes-1k', 'showoff', 'stage-3star']);
+    expect(earnedBadges(runs, { a: { stars: 3 }, b: { stars: 3 } }, [['a', 'b'], ['c']], now, ['yt-abc'])).toEqual(['first-3star', 'fast-100', 'notes-1k', 'showoff', 'stage-3star']);
+    expect(earnedBadges(runs, {}, [], now)).not.toContain('showoff'); // a good take isn't enough: the song must be ready
     expect(earnedBadges([], { a: { stars: 2 } }, [[]], now)).toEqual([]);
+  });
+});
+
+describe('streak badges (fake dates)', () => {
+  it('7 days in a row earn the 7-day streak, a gap breaks it', () => {
+    const now = new Date('2026-10-26T20:00:00');
+    const days = (n: number, skip = -1) => Array.from({ length: n }, (_, i) => i).filter(i => i !== skip).map(i => run({ startedAt: new Date(now.getTime() - i * 86_400_000).toISOString(), notes: 10 }));
+    expect(earnedBadges(days(7), {}, [], now)).toContain('streak-7');
+    expect(earnedBadges(days(7, 3), {}, [], now)).not.toContain('streak-7');
+    expect(earnedBadges(days(30), {}, [], now)).toContain('streak-30');
+  });
+});
+
+describe('songReady', () => {
+  it('a show-off song is 16 bars or more, every bar at 85%+', () => {
+    const two = [run({ chartId: 'yt-a', accuracy: 99, fromBar: 1, toBar: 2 })];
+    expect(songReady(two, 'yt-a', 2)).toBe(false); // a 2-bar song doesn't count
+    const sixteen = [run({ chartId: 'yt-a', accuracy: 90, fromBar: 1, toBar: 8 }), run({ chartId: 'yt-a', accuracy: 86, fromBar: 9, toBar: 16 })];
+    expect(songReady(sixteen, 'yt-a', 16)).toBe(true);
+    expect(songReady(sixteen, 'yt-a', 24)).toBe(false); // bars 17–24 not ready yet
   });
 });
 
@@ -84,6 +105,15 @@ describe('weekTheme', () => {
     expect(weekTheme(runs.slice(1), now)).toBeNull();
     expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-snare', 'missing-snare', 'missing-snare'] })], now)?.words).toBe('the snare');
     expect(weekTheme([run({ startedAt: '2026-10-24T09:00:00', tips: ['missing-hhOpen', 'missing-hhOpen', 'missing-hhOpen'] })], now)?.words).toBe('the open hi-hat');
+  });
+  it('forgets a habit that is fixed: it has to show up in the last 5 takes too', () => {
+    const early = [1, 2, 3].map(i => run({ startedAt: `2026-10-20T09:0${i}:00`, tips: ['dragging', 'dragging'] }));
+    const clean = [1, 2, 3, 4, 5].map(i => run({ startedAt: `2026-10-23T09:0${i}:00`, tips: ['praise'] }));
+    expect(weekTheme([...early, ...clean], now)).toBeNull();
+    const rushing = [1, 2, 3].map(i => run({ startedAt: `2026-10-22T09:0${i}:00`, tips: ['rushing'] }));
+    // dragging is the most given, but only rushing is still around lately
+    expect(weekTheme([...early, ...rushing, ...clean.slice(1)], now)?.cue).toBe('rushing');
+    expect(weekTheme([...clean.slice(1), ...early.reverse()], now)?.cue).toBe('dragging'); // order of the rows doesn't matter
   });
 });
 

@@ -1,33 +1,43 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
-import { MILESTONES } from '../content/curriculum';
+import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
-import { recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
+import { isProven, recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
-import { checkpointsOf, currentMilestone, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
-import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
+import { checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
+import { stageSong } from '../engine/stageSong';
+import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, SHOWOFF_MIN_BARS, songReady, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
+import { ensureWeekPlan, refreshWeekPlan, thisWeeksPlan, useWeekPlan } from '../coach/weekPlan';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, setStitched, stitchLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
+import { PadWizard } from '../ui/Calibrate';
+import { LatencyCard } from '../ui/LatencyCard';
 import { ShowoffCard } from './ShowoffCard';
 import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
 
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean; arcade?: boolean };
 
-export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => void; openLessonId?: string }) {
+export function TodayView({ openLessonId, device }: { openLessonId?: string; device?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
   const lessons = useLessons();
   const [open, setOpen] = useState<Open | undefined>(openLessonId ? { lessonId: openLessonId } : undefined);
   const [editing, setEditing] = useState(false);
+  const [kitStep, setKitStep] = useState(false); // onboarding step 2 (or Journey's "check my kit")
+  // Finished the old path (stages 1–7)? Say once that new stages are open (R3).
+  const [newStages] = useState(() => !getSettings().newStagesSeen && ['song-swing', 'song-shuffle'].some(id => getSettings().lessons[id]?.completedAt) && !Object.keys(getSettings().lessons).some(id => LESSON_BY_ID[id]?.level >= 7));
+  useEffect(() => { if (newStages) setSettings({ newStagesSeen: true }); }, [newStages]);
   const [dash, setDash] = useState<Dashboard>();
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [songs] = useYtSongs();
+  useWeekPlan(); // the coach's weekly plan steers today's set (state.ts) and names the week's focus
+  useEffect(() => { void refreshWeekPlan(); }, []);
   const [newBadges, setNewBadges] = useState<string[]>([]);
   const [recap, setRecap] = useState<string>();
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
@@ -38,10 +48,12 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
   const coach = useCoachEntry<Lesson>(coachKey);
   const themeKey = `theme-${new Date().toDateString()}`, themeEntry = useCoachEntry<Lesson>(themeKey);
+  const challengeKey = `challenge-${new Date().toDateString()}-${asks}`, challenge = useCoachEntry<Lesson>(milestone ? null : challengeKey); // after the whole path
   const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
   // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone,
   // once you've played something (with no takes yet, the built-in first lessons are the right start).
   const played = !!dash?.totalRuns;
+  useEffect(() => { if (played && s.liveCoach && s.profile.onboarded) void ensureWeekPlan(); }, [played, s.liveCoach, s.profile.onboarded]);
   useEffect(() => {
     if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length && studentRead(s.lessons, runs).pace !== 'flying') requestCoachLesson(coachKey);
   }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons, runs]);
@@ -58,19 +70,21 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
   useEffect(() => {
     if (!runs.length) return;
-    const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints)), fresh = earned.filter(id => !s.badges?.includes(id));
+    const ready = songs.filter(x => songReady(runs, x.id, songBarCount(x))).map(x => x.id);
+    const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, ready), fresh = earned.filter(id => !s.badges?.includes(id));
     if (!fresh.length) return;
     setSettings({ badges: [...(s.badges ?? []), ...fresh] });
     setNewBadges(fresh); flourish(false);
-  }, [runs, s.lessons, s.badges]);
+  }, [runs, s.lessons, s.badges, songs]);
 
   // The stage's song becomes a lesson once every bar is ready (so the trail and the lesson player know it).
   const pSong = songs.find(x => x.id === (s.profile.song?.stage === milestone?.level ? s.profile.song?.id : undefined));
   const pBars = pSong ? songBarCount(pSong) : 0;
-  const pReady = !!pSong && pBars > 0 && barsReady(runs, pSong.id, pBars) >= pBars;
+  const pReady = !!pSong && songReady(runs, pSong.id, pBars);
   useEffect(() => { setStitched(pReady && pSong ? stitchLesson(pSong, s.profile.song!.stage) : undefined); }, [pReady, pSong, s.profile.song]);
 
-  if (!s.profile.onboarded || editing) return <Onboarding onCalibrate={onCalibrate} onDone={() => setEditing(false)} />;
+  if (!s.profile.onboarded || editing) return <Onboarding onDone={first => { setEditing(false); if (first) setKitStep(true); }} />;
+  if (kitStep) return <KitSetup device={device} onDone={() => setKitStep(false)} />;
 
   const session = currentSession();
   // A coach lesson can be deleted after today's session froze; skip it (kept in storage: AI lessons may still be loading).
@@ -79,6 +93,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const done = (id: string) => !!s.lessons[id]?.completedAt;
   const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
   const rank = passed.length ? passed[passed.length - 1].rank : 'New drummer';
+  const rankNow = passed.length ? rankState(passed[passed.length - 1], lessons, s.lessons, s.profile) : undefined; // ✓ once proven on another day
   // One "next": today's first open item. The coach's lessons reach you through the session (the planner puts them first).
   const openItem = (i: number) => { startSession(); setOpen({ lessonId: session.items[i].lessonId, item: i }); };
 
@@ -95,31 +110,47 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
   const path = MILESTONES.filter(m => checkpointsOf(m, lessons, s.profile).length); // stages for these goals (e.g. no Swing for rock only)
   const total = session.items.reduce((a, it, i) => a + (playable(i) ? it.minutes : 0), 0);
   // The trail: this stage's lessons in path order (the coach's after the built-ins), checkpoints as the challenges.
-  const trail = milestone ? visible.filter(l => l.level === milestone.level && (l.source !== 'ai' || l.id in s.lessons || l === coachOpen[coachOpen.length - 1]))
+  const builtinSong = milestone && stageSong(milestone.level, visible); // the stage's song: the end of the trail (R8)
+  const trail = milestone ? visible.filter(l => l.level === milestone.level && l !== builtinSong && (l.source !== 'ai' || l.id in s.lessons || l === coachOpen[coachOpen.length - 1]))
     .sort((a, b) => Number(milestone.checkpoints.includes(a.id)) - Number(milestone.checkpoints.includes(b.id)) || Number(a.source === 'ai') - Number(b.source === 'ai')) : [];
   const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
   // "Something else": another open lesson of this stage, a different kind of activity first.
   const others = trail.filter(l => !done(l.id) && l !== fromSet).sort((a, b) => Number(toolOf(a.steps[0]) === toolOf(fromSet?.steps[0] ?? a.steps[0])) - Number(toolOf(b.steps[0]) === toolOf(fromSet?.steps[0] ?? b.steps[0])));
-  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet;
-  const heroItem = hero === fromSet ? firstUndone : -1;
+  // After the whole path: the coach's review / stretch lessons at the last stage are what's next.
+  const pathDone = !milestone && path.length > 0, lastStage = path[path.length - 1];
+  const challenges = pathDone ? lessons.filter(l => l.source === 'ai' && l.level === lastStage.level && !done(l.id)) : [];
+  // Today's set done: the next lesson on the path leads (Jam is the second button), so a student on a roll keeps going.
+  const setDone = firstUndone < 0;
+  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0] ?? challenges[0];
+  const heroItem = hero && hero === fromSet ? firstUndone : -1;
   const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
-  const go = () => (heroItem >= 0 ? openItem(heroItem) : hero ? setOpen({ lessonId: hero.id }) : jam && setOpen({ lessonId: jam.id }));
-  const minutes = heroItem >= 0 ? session.items[heroItem].minutes : 5;
+  // Flow on the newest finished groove (the highest stage, the latest finished), not the first jam forever.
+  const flowLesson = visible.filter(l => done(l.id) && l.kind === 'groove').sort((a, b) => b.level - a.level || s.lessons[b.id].completedAt!.localeCompare(s.lessons[a.id].completedAt!))[0] ?? jam;
+  const askChallenge = () => requestCoachLesson(challengeKey);
+  const go = () => (heroItem >= 0 ? openItem(heroItem) : hero ? setOpen({ lessonId: hero.id }) : pathDone ? askChallenge() : jam && setOpen({ lessonId: jam.id }));
+  const minutes = heroItem >= 0 ? session.items[heroItem].minutes : Math.round(s.profile.minutesPerDay / 3);
   const line = greeting({ hour: new Date().getHours(), streak: dash?.streak ?? 0, runs: dash?.totalRuns ?? 0, landedWeek: dash?.landedWeek ?? null, landedLastWeek: dash?.landedLastWeek ?? null,
-    next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus } });
+    next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus }, setDone: !!hero && heroItem < 0 && setDone && !swap, pathDone: pathDone && !hero });
+  const heroLabel = hero ? (heroItem < 0 && setDone && !swap ? `Next lesson: ${hero.title} ▶` : "Yes, let's go ▶") : pathDone ? '🎯 Coach challenge ▶' : 'Jam ▶';
   const trailDone = trail.filter(l => done(l.id)).length;
-  const theme = weekTheme(runs);
+  const theme = weekTheme(runs), weekPlan = thisWeeksPlan(); // the coach's plan leads; the most-given tip is the fallback
   const project = s.profile.song?.stage === milestone?.level ? s.profile.song : undefined;
   const projectSong = songs.find(x => x.id === project?.id);
   const songBars = projectSong ? songBarCount(projectSong) : 0;
   // Beat your best: a finished lesson you haven't played for longest (improvising tools have no record to beat).
   const lastPlayed = (l: Lesson) => dash?.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
   // Beat the clock: a finished groove, the one played longest ago.
-  const arcade = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill').sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  // The 2-minute challenge and Beat your best: the highest stage first, then the one played longest ago.
+  const arcade = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill').sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   // A streak record already as long as the whole take has nothing left to beat.
   const maxedOut = (l: Lesson) => { const t = recordTarget(l.steps[l.steps.length - 1], s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
-    .sort((a, b) => lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+    .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  const showoff = songs.filter(x => songReady(runs, x.id, songBarCount(x)));
+  // The trail ends at the stage's song: your real song if you picked one, else the built-in one, with how much is ready.
+  const builtinBars = builtinSong ? builtinSong.steps[builtinSong.steps.length - 1].chart.bars : 0;
+  const songStop = project ? { title: project.title, ready: songBars ? barsReady(runs, project.id, songBars) / songBars : 0, onOpen: () => requestSong(project.id) }
+    : builtinSong ? { title: builtinSong.title.replace(/^Song: /, ''), ready: done(builtinSong.id) ? 1 : barsReady(runs, builtinSong.id, builtinBars) / builtinBars, onOpen: () => setOpen({ lessonId: builtinSong.id }) } : undefined;
   return (
     <div className="today home">
       <div className="homeHero">
@@ -127,13 +158,19 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
         <div>
           <div className="bubble" aria-live="polite">
             {recap && <p className="recap">📅 {recap}</p>}
+            {!s.setupDone && !s.setupNudged && <div className="recap">
+              <p>Before your next lesson: two minutes to check your pads and latency? It makes the timing scores fair.</p>
+              <div className="actions"><button className="primary" onClick={() => { setSettings({ setupNudged: true }); setKitStep(true); }}>Check my kit ▶</button>
+                <button onClick={() => setSettings({ setupNudged: true })}>Not now</button></div>
+            </div>}
+            {newStages && <p className="newBadge">🎉 New stages open: <b>Groove at tempo</b>, <b>Linear and odd</b> and <b>Solo voice</b>.</p>}
             {newBadges.length > 0 && <p className="newBadge">🏅 New badge: <b>{newBadges.map(id => BADGES.find(b => b.id === id)?.name).join(', ')}</b>!</p>}
             <p>{line}</p>
             <div className="actions">
-              <button className="primary big" autoFocus onClick={go}>{hero ? "Yes, let's go ▶" : 'Jam ▶'}</button>
+              <button className="primary big" autoFocus onClick={go} disabled={!hero && challenge?.status === 'thinking'}>{heroLabel}</button>
               {others.length > 0 && <button onClick={() => setSwap(swap + 1)}>Something else</button>}
               {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
-              {jam && <button onClick={() => setOpen({ lessonId: jam.id, flow: true })}>🌊 Flow</button>}
+              {flowLesson && <button onClick={() => setOpen({ lessonId: flowLesson.id, flow: true })}>🌊 Flow{flowLesson !== jam ? `: ${flowLesson.title}` : ''}</button>}
             </div>
           </div>
           {coach?.status === 'thinking' && <Thinking what="Your coach is writing your next lesson" />}
@@ -143,14 +180,16 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
             <div>Stage {path.indexOf(milestone) + 1}<br />{trailDone}/{trail.length}</div>
           </div>}
           <div>
-            <div className="rankSticker small">{rank}</div>
+            <div className="rankSticker small">{rank}{rankNow?.state === 'proven' && ' ✓'}</div>
+            {rankNow?.state === 'earned' && <p className="small">Prove it on another day ({rankNow.proven} of {rankNow.total})</p>}
             <ul className="youStats">
               <li>🔥 <b>{dash?.streak ?? 0}-day</b> streak</li>
               {dash?.landedWeek != null && <li>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</li>}
               <li>⏱ <b>{Math.round(dash?.minutesToday ?? 0)}</b> min today</li>
-              {theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
+              {weekPlan?.focus ? <li>🎯 This week: <b>{weekPlan.focus}</b>{weekPlan.why && <><br /><span className="small">{weekPlan.why}</span></>}</li>
+              : theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
                 : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
-              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : 'add its notes in Songs'}</li>}
+              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
             </ul>
           </div>
         </div>
@@ -166,7 +205,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
               <button key={i} className={`setTile ${isDone ? 'done' : i === firstUndone ? 'cur' : ''}`} onClick={() => openItem(i)}>
                 {i === firstUndone && <span className="tag">Up next</span>}
                 <span className="ic" aria-hidden>{iconOf(l)}</span>
-                <b>{isDone ? '✓ ' : ''}{l.title}</b>
+                <b>{isDone ? '✓ ' : ''}{it.role === 'review' && MILESTONES.some(m => m.checkpoints.includes(l.id)) && !isProven(s.lessons[l.id]) ? 'Prove it: ' : ''}{l.title}</b>
                 <span className="small">{TOOL_LABEL[toolOf(l.steps[0])]} · {it.minutes} min</span>
               </button>
             );
@@ -176,7 +215,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
           </button>}
           {arcade && <button className="setTile record" onClick={() => setOpen({ lessonId: arcade.id, arcade: true })}>
             <span className="ic" aria-hidden>⏱</span><b>2-minute challenge</b>
-            <span className="small">{arcade.title} · {s.arcade?.[arcade.id] ? `best ${s.arcade[arcade.id]} clean bars` : 'how many clean bars?'}</span>
+            <span className="small">{arcade.title} · {s.arcade?.[arcade.id] ? `this week: beat ${s.arcade[arcade.id] + 2} clean bars (best ${s.arcade[arcade.id]})` : 'how many clean bars?'}</span>
           </button>}
           {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}>
             <span className="ic" aria-hidden>🏆</span><b>Beat your best</b>
@@ -185,11 +224,27 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
         </div>
       </div>}
 
-      {milestone && !project && <ShowoffCard stage={milestone} profile={s.profile} />}
+      {milestone && !project && <ShowoffCard stage={milestone} profile={s.profile} builtin={builtinSong && { title: builtinSong.title.replace(/^Song: /, ''), open: () => setOpen({ lessonId: builtinSong.id }) }} />}
+
+      {pathDone && <div className="card">
+        <h3>All stages done</h3>
+        <div className="setTiles">
+          <button className="setTile cur" onClick={() => (challenges[0] ? setOpen({ lessonId: challenges[0].id }) : askChallenge())} disabled={challenge?.status === 'thinking'}>
+            <span className="ic" aria-hidden>🎯</span><b>Coach challenge</b>
+            <span className="small">{challenges[0] ? challenges[0].title : challenge?.status === 'thinking' ? 'your coach is writing it…' : challenge?.status === 'error' ? challenge.error : 'a review or stretch lesson aimed at your weakest spot'}</span>
+          </button>
+          {flowLesson && <button className="setTile" onClick={() => setOpen({ lessonId: flowLesson.id, flow: true })}><span className="ic" aria-hidden>🌊</span><b>Flow</b><span className="small">{flowLesson.title}</span></button>}
+          {arcade && <button className="setTile record" onClick={() => setOpen({ lessonId: arcade.id, arcade: true })}><span className="ic" aria-hidden>⏱</span><b>2-minute challenge</b>
+            <span className="small">{arcade.title}{s.arcade?.[arcade.id] ? ` · best ${s.arcade[arcade.id]} clean bars` : ''}</span></button>}
+          {record && <button className="setTile record" onClick={() => setOpen({ lessonId: record.id, role: 'record' })}><span className="ic" aria-hidden>🏆</span><b>Beat your best</b><span className="small">{record.title}</span></button>}
+          <button className="setTile" onClick={() => requestSong('')}><span className="ic" aria-hidden>🎵</span><b>Learn a new song</b><span className="small">from YouTube, a few bars at a time</span></button>
+          {showoff.map(x => <button key={x.id} className="setTile" onClick={() => requestSong(x.id)}><span className="ic" aria-hidden>🎤</span><b>Show-off: {x.title}</b><span className="small">Stage mode is under Play</span></button>)}
+        </div>
+      </div>}
 
       {milestone && <div className="card">
         <h3>Stage {path.indexOf(milestone) + 1} · {milestone.title}</h3>
-        <Trail song={project?.title} lessons={trail} current={hero} done={done} isChallenge={l => milestone.checkpoints.includes(l.checkpoint ?? l.id)} onOpen={id => setOpen({ lessonId: id })} />
+        <Trail song={songStop} lessons={trail} current={hero} done={done} isChallenge={l => milestone.checkpoints.includes(l.checkpoint ?? l.id)} onOpen={id => setOpen({ lessonId: id })} />
       </div>}
 
       <details className="planFold">
@@ -258,7 +313,7 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
  * This stage as a winding trail of stops: done ones green, the next one big, the challenges as stars, a song at the end.
  * Kept to about ten stops: older finished lessons fold into one "done" stop, later ones into "+N more" (all are in Full path).
  */
-function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: string; lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
+function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: { title: string; ready: number; onOpen: () => void }; lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
   const c = Math.max(0, current ? lessons.indexOf(current) : lessons.findIndex(l => !done(l.id)));
   const before = lessons.slice(0, c), after = lessons.slice(c + 1);
   const folded = before.length > 2 ? before.slice(0, -1) : [];
@@ -272,7 +327,7 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: s
     ...after.filter(l => !later.includes(l) && !isChallenge(l)).map(stop),
     ...(later.length ? [{ icon: `+${later.length}`, name: 'more', cls: 'more' }] : []),
     ...after.filter(isChallenge).map(stop),
-    { icon: '🎵', name: song ?? 'Unlock a real song', cls: 'song' },
+    { icon: '🎵', name: song?.title ?? 'Unlock a real song', cls: 'song' },
   ];
   const pts = stops.map((_, i) => ({ x: 5 + (i * 90) / Math.max(1, stops.length - 1), y: 50 + 22 * Math.sin(i * 1.3) }));
   return (
@@ -281,6 +336,9 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: s
       {stops.map((st, i) => {
         const style = { left: `${pts[i].x}%`, top: `${pts[i].y}%` }, cls = `stop ${st.cls} ${pts[i].y < 50 ? 'up' : ''}`;
         const inner = <><span className="dot" aria-hidden>{st.icon}</span><span className="name">{st.name}</span></>;
+        if (st.cls === 'song' && song) return ( // the stage song: a button with a ring of bars ready
+          <button key="song" className={`${cls} songStop`} style={{ ...style, '--p': `${Math.round(song.ready * 100)}%` } as React.CSSProperties} onClick={song.onOpen}
+            aria-label={`${song.title}, ${Math.round(song.ready * 100)}% ready`} title={`${Math.round(song.ready * 100)}% of the bars ready`}>{inner}</button>);
         return st.l
           ? <button key={st.l.id} className={cls} style={style} onClick={() => onOpen(st.l!.id)} title={st.l.title}
             aria-label={`${st.l.title}${done(st.l.id) ? ', done' : ''}${isChallenge(st.l) ? ', stage challenge' : ''}`}>{inner}</button>
@@ -292,11 +350,11 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: s
 
 const GOALS: { id: Genre; label: string }[] = [{ id: 'rock', label: 'Rock / pop' }, { id: 'funk', label: 'Funk / R&B' }, { id: 'jazz', label: 'Jazz / swing' }];
 
-function Onboarding({ onCalibrate, onDone }: { onCalibrate: () => void; onDone: () => void }) {
+function Onboarding({ onDone }: { onDone: (first: boolean) => void }) {
   const profile = getSettings().profile;
   const [goals, setGoals] = useState<Genre[]>(profile.goals);
   const [minutes, setMinutes] = useState(profile.minutesPerDay);
-  const save = () => { setSettings({ profile: { goals, minutesPerDay: minutes, onboarded: true }, session: undefined }); onDone(); };
+  const save = () => { setSettings({ profile: { ...profile, goals, minutesPerDay: minutes, onboarded: true }, session: undefined }); onDone(!profile.onboarded); };
   return (
     <div className="today">
       <div className="card form onboarding">
@@ -314,9 +372,35 @@ function Onboarding({ onCalibrate, onDone }: { onCalibrate: () => void; onDone: 
             {[15, 20, 25, 30, 45].map(m => <option key={m} value={m}>{m} minutes{m === 25 ? ' (recommended)' : ''}</option>)}
           </select>
         </label>
-        {!profile.onboarded && <p className="small">Before your first lesson: check that every pad is recognised and measure the latency, under <button className="link" onClick={onCalibrate}>Setup → Pads</button> (the gear, top right). No kit? The keyboard works too (keys are shown under the highway).</p>}
-        <div className="actions"><button className="primary big" onClick={save}>{profile.onboarded ? 'Save' : 'Let\'s start'}</button>
-          {profile.onboarded && <button onClick={onDone}>Cancel</button>}</div>
+        <div className="actions"><button className="primary big" onClick={save}>{profile.onboarded ? 'Save' : 'Next: check your kit ▶'}</button>
+          {profile.onboarded && <button onClick={() => onDone(false)}>Cancel</button>}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Onboarding step 2 (and Journey's "check my kit"): hit each pad once, then tap 8+ times for latency. Each part can be
+ * skipped ("No kit yet → use the keyboard"); `setupDone` is set once both are done, so Journey nudges only once.
+ */
+function KitSetup({ device, onDone }: { device?: string; onDone: () => void }) {
+  const [part, setPart] = useState<'pads' | 'latency'>('pads');
+  const finish = (done: boolean) => { setSettings({ setupDone: done || getSettings().setupDone, setupNudged: true }); onDone(); };
+  return (
+    <div className="today">
+      <div className="card form onboarding kitSetup">
+        <p className="steps"><span className="pill on">1 · Your goals ✓</span> <span className="pill">2 · Your kit</span></p>
+        <h2>{part === 'pads' ? 'Hit each pad once' : 'Tap with the click'}</h2>
+        <p>{part === 'pads' ? 'So I know your kit: hit the pad I name. If one is wrong you can fix it right here.'
+          : "I'm measuring how late the sound reaches you, not how well you play. Then on time is on time."}</p>
+        {!device && <p className="warn">No kit plugged in. Plug it in over USB, or use the keyboard for now.</p>}
+        {part === 'pads' ? <PadWizard device={device ?? 'keyboard'} autoStart={!!device} onSaved={() => setPart('latency')} />
+          : <LatencyCard onSaved={() => finish(true)} />}
+        <div className="actions">
+          {part === 'pads' && <button onClick={() => setPart('latency')}>Pads are fine → latency</button>}
+          <button className="link" onClick={() => finish(false)}>No kit yet → use the keyboard</button>
+          <button className="link" onClick={() => finish(false)}>Skip this for now</button>
+        </div>
       </div>
     </div>
   );

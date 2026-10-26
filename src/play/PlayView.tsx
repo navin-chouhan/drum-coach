@@ -9,10 +9,11 @@ import { takeChart } from '../engine/transcribe';
 import { audio } from './audio';
 import { NotesView } from './NotesView';
 import { KitView } from '../ui/KitView';
-import { canRunAction, coachTake, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
+import { canRunAction, coachTake, onCoachAction, replyFor, runAction, screenAction, thinkingAbout, useCoach } from '../coach/session';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from './player';
 import { LatencyHint, Results, saveRun } from './Results';
 import { CoachLine, LiveHint, Move } from './AtKit';
+import { bandStyle, DEFAULT_CHORDS } from '../engine/band';
 import { IntroSlides } from './IntroSlides';
 import { beatsPerBar } from '../engine/chart';
 
@@ -20,7 +21,7 @@ const OPTS_KEY = 'drumcoach.playOptions';
 type Saved = Omit<PlayOptions, 'fromBar' | 'toBar' | 'backing'> & { chartId: string };
 const DEFAULTS: Saved = { chartId: 'rock-8ths', speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false, repeats: 4 };
 const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
-const TABS = [['foryou', 'For you'], ['groove', 'Grooves'], ['rudiment', 'Rudiments'], ['fill', 'Fills'], ['song', 'Songs'], ['ai', 'From your coach']] as const;
+const TABS = [['foryou', 'For you'], ['groove', 'Grooves'], ['rudiment', 'Rudiments and drills'], ['fill', 'Fills'], ['song', 'Songs'], ['ai', 'From your coach']] as const;
 
 /**
  * Practice: pick anything (before you sit down), then play it from the kit. Same moves and gestures as a lesson;
@@ -58,9 +59,12 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   useEffect(() => () => stop(), []);
   const mine = player.chart && player.options && !player.options.lesson; // a take of Practice's, not a lesson's
   const justDone = mine && player.phase === 'done' ? player.finished : undefined;
-  useEffect(() => { fetch('/api/runs').then(r => r.json()).then(setRuns).catch(() => {}); }, [justDone]);
-  // The result stays on this screen: save the take and tell the coach once (both are idempotent).
-  useEffect(() => { if (justDone) { saveRun(justDone); coachTake(justDone); } }, [justDone]);
+  // The result stays on this screen: save the take and tell the coach once (both are idempotent); the runs are
+  // fetched after the save, so suggestions and trophies include this take.
+  useEffect(() => {
+    void (justDone ? saveRun(justDone) : Promise.resolve()).then(() => fetch('/api/runs')).then(r => r.json()).then(setRuns).catch(() => {});
+    if (justDone) coachTake(justDone);
+  }, [justDone]);
 
   const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
   const from = Math.min(section?.from ?? 1, chart.bars), to = Math.min(section?.to ?? chart.bars, chart.bars);
@@ -79,7 +83,9 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
       try { backing = { buffer: await loadBacking(chart.id, audio()), syncOffsetMs: chart.syncOffsetMs ?? 0 }; }
       catch { setError('Could not load the backing audio; playing without it.'); }
     }
-    const run = () => start(chart, { ...o, speed, fromBar: from, toBar: to, backing, hints, ...extra });
+    // The band under grooves and songs (not under a chart's own backing audio).
+    const style = bandStyle(chart), band = !backing && getSettings().band !== false && (chart.kind === 'groove' || chart.kind === 'song') ? { style, chords: DEFAULT_CHORDS[style] } : undefined;
+    const run = () => start(chart, { ...o, speed, fromBar: from, toBar: to, backing, hints, band, ...extra });
     // Intro slides before the first take of an exercise (or after a tempo jump of more than 10 BPM).
     const b = chart.bpm * speed, seen = introShown.current.get(chart.id);
     if (!extra?.demo && !o.wait && getSettings().intro !== false && (seen === undefined || Math.abs(seen - b) > 10)) {
@@ -103,13 +109,13 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const next = sug?.chartId === chart.id ? sug.bpm : bpm;
   // Before the first take: start where you left off, a bit slower if last time was rough.
   const startAt = last ? Math.max(40, Math.round(last.bpm) - (last.accuracy < 60 ? 10 : 0)) : bpm;
-  const main = reply?.action && canRunAction(reply.action) ? { label: reply.action.label, run: () => void runAction(reply.action!) }
+  const act = screenAction(reply?.action, '⏭ Next one');
+  const main = act && canRunAction(act) ? { label: act.label, run: () => void runAction(act) }
     : !f ? (startAt !== bpm ? { label: `▶ Play at ${startAt}`, run: () => playAt(startAt) } : { label: '▶ Play', run: () => void go() })
     : next > bpm ? { label: `🐇 Try ${next}`, run: () => playAt(next) }
     : next < bpm ? { label: `🐢 Try ${next}`, run: () => playAt(next) }
     : { label: `▶ Again at ${bpm}`, run: () => void go() };
-  const line = reply?.say ?? (thinkingAbout(coach, f) ? '…'
-    : f ? (next > bpm ? `Two clean takes in a row! Ready for ${next}?` : next < bpm ? `Let's take it to ${next} and lock it in.` : `${f.stats.accuracy >= 90 ? 'Nice!' : 'Good.'} Once more at ${bpm}?`)
+  const line = reply?.show ?? reply?.say ?? (f ? (next > bpm ? `Two clean takes in a row! Ready for ${next}?` : next < bpm ? `Let's take it to ${next} and lock it in.` : `${f.stats.accuracy >= 90 ? 'Nice!' : 'Good.'} Once more at ${bpm}?`)
     : last && last.accuracy < 60 ? `Last time ${Math.round(last.bpm)} BPM was tricky. Let's warm up at ${startAt}.`
     : last ? `Last time ${Math.round(last.bpm)} BPM, ${Math.round(last.accuracy)}% landed. Start there?`
     : chart.description ?? `Ready when you are: ${bpm} BPM.`);
@@ -156,7 +162,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
       </div>
 
       {playing ? <LiveHint /> : <>
-        <CoachLine line={line} />
+        <CoachLine line={line} thinking={!reply && thinkingAbout(coach, f)} />
         <div className="moves five">
           <Move go label={main.label} onClick={main.run} />
           <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
@@ -229,7 +235,8 @@ function Chooser({ charts, runs, level, onPick }: { charts: StoredChart[]; runs:
   const picks = useMemo(() => forYou(charts, runs, level), [charts, runs, level]);
   const list = q.trim() ? charts.filter(c => c.title.toLowerCase().includes(q.trim().toLowerCase())).map(chart => ({ chart, why: '' }))
     : tab === 'foryou' ? picks
-    : charts.filter(c => (tab === 'ai' ? c.source === 'ai' : (c.kind ?? 'exercise') === tab)).map(chart => ({ chart, why: '' }));
+    // Exercises (imported or untyped charts) live under Rudiments and drills, so every chart has a tab.
+    : charts.filter(c => (tab === 'ai' ? c.source === 'ai' : tab === 'rudiment' ? ['rudiment', 'exercise'].includes(c.kind ?? 'exercise') : c.kind === tab)).map(chart => ({ chart, why: '' }));
   const best = (id: string) => Math.max(0, ...runs.filter(r => r.chartId === id && r.accuracy >= 90).map(r => Math.round(r.bpm)));
   return (
     <div className="lessonScreen">

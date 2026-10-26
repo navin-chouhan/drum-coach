@@ -34,6 +34,10 @@ export function SoundCheckCard() {
         over your drums. Last, set the coach's voice so it's clear but not louder than the kit.</p>
       {slider('clickVolume', 'Click and music')}
       {slider('voiceVolume', 'Coach voice')}
+      <p><label className="check">Band (bass and keys under grooves){' '}
+        <input type="range" min={0} max={1.25} step={0.05} value={settings.bandVolume ?? 0.6} onChange={e => set({ bandVolume: Number(e.target.value) })} />
+        {' '}{Math.round((settings.bandVolume ?? 0.6) * 100)}%</label>{' '}
+        <label className="check"><input type="checkbox" checked={settings.band !== false} onChange={e => set({ band: e.target.checked })} /> On</label></p>
       <div className="actions">
         {clicking ? <button onClick={stopClick}>Stop click</button> : <button className="primary" onClick={() => whenRunning(startClick)}>Play click</button>}
         <button onClick={() => void say("This is my voice. If you can't hear me clearly over your drums, move the coach voice slider up.", true)}>Test coach voice</button>

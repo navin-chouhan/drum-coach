@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { startProgress, type Lesson, type LessonKind, type LessonProgress, type Milestone } from './lesson';
-import { buildSession, candidates, currentMilestone, studentRead } from './planner';
+import { buildSession, candidates, currentMilestone, rankState, studentRead } from './planner';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
 const L = (id: string, level: number, kind: LessonKind, o: Partial<Lesson> = {}): Lesson =>
@@ -73,5 +73,49 @@ describe('student read', () => {
     expect(studentRead(stars(1, 1, 2), []).pace).toBe('struggling');
     expect(studentRead(stars(2, 3), [run(90), run(88), run(92), run(85)]).pace).toBe('steady');
     expect(studentRead(stars(3, 3), [run(99, 30), run(99, 30), run(99, 30), run(99, 30)]).pace).toBe('steady'); // landing, but loose
+    // A beginner landing three in four but all over the place (wider than any checkpoint allows), nothing finished yet
+    expect(studentRead({}, [run(75, 75), run(80, 70), run(70, 80), run(76, 75)]).pace).toBe('struggling');
+  });
+});
+
+describe('rankState (R7)', () => {
+  const m = milestones[0]; // checkpoint: rests
+  const p = (o: Partial<LessonProgress>) => ({ ...startProgress(lessons[1]), ...o });
+  it('locked, earned, then proven on another day', () => {
+    expect(rankState(m, lessons, {}, profile)).toEqual({ state: 'locked', proven: 0, total: 1 });
+    expect(rankState(m, lessons, { rests: p({ completedAt: '2026-10-24' }) }, profile)).toEqual({ state: 'earned', proven: 0, total: 1 });
+    expect(rankState(m, lessons, { rests: p({ completedAt: '2026-10-24', provenAt: '2026-10-26' }) }, profile)).toEqual({ state: 'proven', proven: 1, total: 1 });
+  });
+});
+
+describe('buildSession follows the weekly focus (R6)', () => {
+  const today = '2026-10-26';
+  it('an open focus lesson at or below the current level leads the skill slot; unknown or later ids are ignored', () => {
+    const progress = done('count', 'rests'); // stage 0 done → level 1 is current
+    const focused = buildSession(milestones, lessons, progress, profile, today, ['nope', 'money', 'hands-feet']);
+    expect(focused.find(i => i.role === 'skill' || i.role === 'groove')?.lessonId).toBe('hands-feet');
+    expect(focused.map(i => i.lessonId)).not.toContain('money'); // level 2: ahead of the student
+  });
+  it('a finished focus lesson comes back as the review', () => {
+    const progress = done('count', 'rests');
+    const s = buildSession(milestones, lessons, progress, { ...profile, minutesPerDay: 30 }, today, ['rests']);
+    expect(s.find(i => i.role === 'review')?.lessonId).toBe('rests');
+  });
+});
+
+describe('buildSession: songs and after the path (R8)', () => {
+  const today = '2026-10-26';
+  it('the groove slot prefers the stage song\'s open bite lesson', () => {
+    const withBite = [...lessons, L('bite-song-x', 1, 'song')];
+    const s = buildSession(milestones, withBite, done('count', 'rests'), profile, today);
+    expect(s.map(i => i.lessonId)).toContain('bite-song-x');
+  });
+  it('after the whole path the set is never empty: warm-up, a "prove it" review, and a show-off song', () => {
+    const all = [...lessons, L('song-end', 2, 'song')];
+    const progress = { ...done('count', 'rests', 'singles', 'hands-feet', 'money', 'jazz-only', 'doubles', 'song-end') };
+    const s = buildSession(milestones, all, progress, { ...profile, minutesPerDay: 30 }, today);
+    expect(s.length).toBeGreaterThanOrEqual(2);
+    expect(s.some(i => i.role === 'review')).toBe(true);
+    expect(s.map(i => i.lessonId)).toContain('song-end');
   });
 });

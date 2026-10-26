@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { cleanBars, computeStats, createMatcher, recentAccuracy, worstBars, estimateLatency, latencySuspect, minGapBeats, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { cleanBars, computeStats, createMatcher, heatSlotName, recentAccuracy, worstBars, estimateLatency, latencySuspect, noteWindows, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -60,6 +60,78 @@ describe('matcher', () => {
   });
 });
 
+describe('per-note timing windows (R2)', () => {
+  // 120 BPM: hi-hat 8ths (250 ms apart) beside snare 16ths (125 ms apart)
+  const c = { ...chart, notes: pattern({ hihat: 'x.x.x.x.x.x.x.x.', snare: 'xxxx............' }, 4) };
+  const r = buildRun(c, { fromBar: 1, toBar: 1, repeats: 1 });
+  const exp = noteWindows(r.notes.map(n => ({ time: 1000 + n.t * 500, drum: n.drum })), 100);
+  it('each note gets 40% of the gap to its nearest same-drum neighbour, capped at Good', () => {
+    expect(exp.filter(e => e.drum === 'hihat').every(e => e.good === 100)).toBe(true);
+    expect(exp.filter(e => e.drum === 'snare').every(e => e.good === 50)).toBe(true);
+  });
+  it('8ths keep ±100 ms beside 16ths on another drum; the 16ths are judged tighter', () => {
+    const hh = exp.findIndex(e => e.drum === 'hihat' && e.time === 2000), sn = exp.findIndex(e => e.drum === 'snare' && e.time === 1000);
+    const match = createMatcher(exp, windowsFor(500, Infinity, 100));
+    expect(match({ time: 2090, pad: 'hhClosed', velocity: 80 })).toMatchObject({ index: hh, judgement: 'good' });
+    expect(match({ time: 1060, pad: 'snare', velocity: 80 })).toMatchObject({ index: sn, judgement: 'miss' }); // 60 ms on a 16th: off time
+    // one window for the whole take (the old way) would have shrunk the hi-hat to ±50 too
+    expect(createMatcher(exp.map(({ time, drum }) => ({ time, drum })), windowsFor(500, 125, 100))({ time: 2090, pad: 'hhClosed', velocity: 80 })?.judgement).toBe('miss');
+  });
+});
+
+describe('grace notes (R2): flam, drag, ruff', () => {
+  const sn = (time: number, velocity: number): PlayedHit => ({ time, pad: 'snare', velocity });
+  it('a flam: the soft grace stroke, then the main one takes the note over (offset from the main stroke)', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare', grace: 1 }], [sn(975, 35), sn(1000, 90)]);
+    expect(extras).toHaveLength(0);
+    expect(results[0]).toMatchObject({ judgement: 'perfect', offset: 0, velocity: 90, grace: { strokes: 1, gapMs: 25 } });
+    expect(results[0].grace!.ratio).toBeCloseTo(0.39, 2);
+  });
+  it('a drag: two grace strokes', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare', grace: 2 }], [sn(950, 35), sn(975, 35), sn(1000, 90)]);
+    expect(extras).toHaveLength(0);
+    expect(results[0]).toMatchObject({ offset: 0, grace: { strokes: 2, gapMs: 50 } });
+  });
+  it('a flam played as one note says so; a soft bounce after the main stroke never takes over', () => {
+    expect(scoreRun([{ time: 1000, drum: 'snare', grace: 1 }], [sn(1000, 90)]).results[0].grace).toMatchObject({ strokes: 0 });
+    const b = scoreRun([{ time: 1000, drum: 'snare', grace: 1 }], [sn(975, 35), sn(1000, 90), sn(1030, 45)]);
+    expect(b.results[0]).toMatchObject({ offset: 0, grace: { strokes: 1 } });
+    expect(b.extras).toHaveLength(1);
+  });
+  it('no grace in the chart: a second stroke 30 ms later is still an extra (regression)', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare' }], [sn(1000, 90), sn(1030, 90)]);
+    expect(results[0]).toMatchObject({ offset: 0 });
+    expect(results[0].grace).toBeUndefined();
+    expect(extras).toHaveLength(1);
+  });
+  it('the chain stops after 120 ms', () => {
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare', grace: 3 }], [sn(880, 40), sn(930, 40), sn(980, 40), sn(1030, 90)]);
+    expect(results[0].grace!.strokes).toBe(2); // the 4th stroke would make the chain 150 ms long
+    expect(extras).toHaveLength(1);
+  });
+  it('stats: how many graces came out as grace + main, their gap and volume ratio', () => {
+    const r = buildRun({ title: 'f', bpm: 60, timeSignature: [4, 4], bars: 1, notes: [0, 1, 2, 3].map(t => ({ t, drum: 'snare' as const, grace: 1 as const })) }, { fromBar: 1, toBar: 1, repeats: 1 });
+    const exp = r.notes.map(n => ({ time: 1000 + n.t * 1000, drum: n.drum, grace: n.grace }));
+    const hits = exp.flatMap((e, i) => (i === 3 ? [sn(e.time, 90)] : [sn(e.time - 20, 30), sn(e.time, 90)]));
+    const s = computeStats(r, scoreRun(exp, hits).results, 0);
+    expect(s.grace).toEqual({ notes: 4, played: 3, pct: 75, gapMs: 20, ratio: 0.33 });
+  });
+});
+
+describe('buzz notes (R2)', () => {
+  const sn = (time: number, velocity = 60): PlayedHit => ({ time, pad: 'snare', velocity });
+  it('the bounces of a buzz stroke are part of the note, not extras, until the next note', () => {
+    const exp = [{ time: 1000, drum: 'snare' as const, buzz: true }, { time: 1250, drum: 'snare' as const, buzz: true }];
+    const { results, extras } = scoreRun(exp, [sn(1000, 80), sn(1030), sn(1060), sn(1090), sn(1250, 80), sn(1280), sn(1310)]);
+    expect(extras).toHaveLength(0);
+    expect(results.map(r => r.offset)).toEqual([0, 0]);
+  });
+  it('without buzz the same strokes are extras (regression)', () => {
+    const exp = [{ time: 1000, drum: 'snare' as const }, { time: 1250, drum: 'snare' as const }];
+    expect(scoreRun(exp, [sn(1000, 80), sn(1030), sn(1060), sn(1250, 80)]).extras).toHaveLength(2);
+  });
+});
+
 describe('stats', () => {
   it('detects rushing and per-drum accuracy', () => {
     const hits = perfectHits(-20).filter(h => h.pad !== 'kick');
@@ -72,6 +144,21 @@ describe('stats', () => {
     expect(s.accuracy).toBe(83.3); // 10 of 12 notes
     expect(s.heat).toHaveLength(16);
     expect(s.heat[0]).toMatchObject({ total: 2, miss: 1 }); // hi-hat hit + kick missed on beat 1
+  });
+
+  it('weak spots of a triplet groove land on the triplet grid (12 slots per 4/4 bar)', () => {
+    const shuffle = { ...chart, notes: pattern({ hihat: 'x.xx.xx.xx.x', snare: '...x.....x..', kick: 'x.....x.....' }, 3) };
+    const r = buildRun(shuffle, { fromBar: 1, toBar: 1, repeats: 1 });
+    const exp: Expected[] = r.notes.map(n => ({ time: 1000 + n.t * 500, drum: n.drum }));
+    const letOf2 = r.notes.findIndex(n => n.drum === 'hihat' && Math.abs(n.pos - 5 / 3) < 1e-6);
+    const hits = exp.flatMap((e, i) => (i === letOf2 ? [] : [{ time: e.time, pad: PAD[e.drum as keyof typeof PAD], velocity: 90 }]));
+    const s = computeStats(r, scoreRun(exp, hits).results, 0);
+    expect(s.heat).toHaveLength(12);
+    expect(s.heat[5]).toMatchObject({ total: 1, miss: 1 }); // beat 2, "let"
+    expect(s.heat.filter(c => c.miss)).toHaveLength(1);
+    expect(heatSlotName(5, 12, 4)).toBe('beat 2 let');
+    expect(heatSlotName(6, 16, 4)).toBe('beat 2 &');
+    expect(s.heat[0]).toMatchObject({ total: 2, miss: 0 });
   });
 
   it('velocity: accent and ghost means, consistency', () => {
@@ -185,10 +272,11 @@ describe('reactingToClick', () => {
 describe('windows shrink for fast notes', () => {
   it('Good is 40% of the closest same-drum gap, capped at ±100', () => {
     expect(windowsFor(1000)).toMatchObject({ good: 100, perfect: 40 });
-    const gap = minGapBeats(pattern({ snare: 'xxxxxxxxxxxxxxxx', kick: 'x...x...x...x...' }, 4)); // snare 16ths
-    expect(gap).toBe(0.25);
-    expect(windowsFor(600, gap * 600)).toMatchObject({ good: 60, perfect: 30 }); // 16ths at 100 BPM: 150 ms apart
-    expect(minGapBeats([{ t: 0, drum: 'kick' }, { t: 0, drum: 'hihat' }])).toBe(Infinity); // different drums don't count
+    const w = noteWindows(pattern({ snare: 'xxxxxxxxxxxxxxxx', kick: 'x...x...x...x...' }, 4).sort((a, b) => a.t - b.t).map(n => ({ time: n.t * 600, drum: n.drum })));
+    expect(w.find(e => e.drum === 'snare')?.good).toBe(60); // 16ths at 100 BPM: 150 ms apart
+    expect(w.find(e => e.drum === 'kick')?.good).toBe(100);
+    expect(windowsFor(600, 150)).toMatchObject({ good: 60, perfect: 30 });
+    expect(noteWindows([{ time: 0, drum: 'kick' }, { time: 0, drum: 'hihat' }]).map(e => e.good)).toEqual([100, 100]); // different drums don't count
   });
 });
 

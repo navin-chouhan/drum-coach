@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-check camera</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .sc{position:relative;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;background:var(--night);color:var(--nightText);border:3px solid var(--line);padding:18px;box-shadow:6px 6px 0 var(--line)}
+  .cam{position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(45deg,#2a2a2a 0 14px,#232323 14px 28px);border:3px solid var(--pop);display:grid;place-items:center;font:800 22px var(--display);color:#bbb}
+  .rec{position:absolute;top:12px;left:12px;background:var(--bad);color:#fff;font:800 14px var(--display);padding:3px 10px;border-radius:999px}
+  .loop{position:absolute;bottom:12px;left:12px;right:12px;height:10px;background:#fff3;border:2px solid #fff}.loop i{display:block;height:100%;width:62%;background:var(--pop)}
+  .dia svg{width:100%;height:220px;background:#1f1f1f;border:3px solid var(--cyan)}
+  .stick{transform-origin:50px 150px;animation:drop 1.2s ease-in-out infinite}
+  @keyframes drop{0%,100%{transform:rotate(-32deg)}40%{transform:rotate(0deg)}60%{transform:rotate(-30deg)}}
+  .word{font:800 30px var(--display);fill:var(--pop)}
+  .look{font:800 26px var(--display);color:var(--pop);margin:12px 0 6px}
+  .look+p{font-size:20px;margin:0 0 10px}
+  .keys{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.keys span{background:var(--pop);color:var(--line);font:800 15px system-ui;padding:6px 12px;border-radius:999px}
+  .close{position:absolute;top:10px;right:14px;color:#fff;font:800 16px system-ui}
+  @media (max-width:900px){.sc{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · self-check (R5)</b> Your mirror, a 10-second replay loop and the diagram side by side. Nothing is saved or sent. Not built.</div>
+
+<section class="state">
+  <h2>Opened from a lesson: "📷 Check yourself" (snare × 2)</h2>
+  <div class="note">Camera opens only when you ask. The view is mirrored like a real mirror. The last 10 seconds are kept <b>in memory only</b>
+    (a rolling MediaRecorder loop) so you can watch yourself back; closing the panel throws it away. No upload, no file, no pose AI.</div>
+  <div class="sc rel new">
+    <span class="close">✕ Esc</span>
+    <div>
+      <div class="cam">your mirror (live camera)<span class="rec">● LIVE</span><span class="loop"><i></i></span></div>
+      <div class="keys"><span>hi-hat × 1 = record / stop</span><span>snare × 1 = replay the last 10 s</span><span>Esc = close</span></div>
+    </div>
+    <div class="dia">
+      <svg viewBox="0 0 300 220" aria-label="Stick drops from a fulcrum, bounces back up">
+        <line x1="20" y1="30" x2="20" y2="170" stroke="#555" stroke-width="2"/>
+        <text x="26" y="42" fill="#aaa" font-size="13">30 cm</text><text x="26" y="112" fill="#aaa" font-size="13">15 cm</text><text x="26" y="165" fill="#aaa" font-size="13">3 cm</text>
+        <circle cx="50" cy="150" r="7" fill="#FFE14D"/>
+        <g class="stick"><line x1="50" y1="150" x2="270" y2="150" stroke="#fff" stroke-width="8" stroke-linecap="round"/></g>
+        <rect x="230" y="162" width="60" height="10" fill="#2DE1C2"/>
+        <text class="word" x="150" y="40">BOUNCE</text>
+      </svg>
+      <p class="look">Look for:</p>
+      <p>Does the stick come back up <b>by itself</b>? Is your wrist loose, shoulders down?</p>
+      <p class="small">Captions change per technique: grip ("thumb on the side, gap between thumb and finger"), kick heel-down / heel-up,
+        hi-hat foot. Shown beside the same animated diagram as the lesson card, at the lesson's tempo.</p>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2>As a lesson step: "look" (like a rest step)</h2>
+  <div class="note">A <b>look</b> step shows the diagram plus your mirror; "done" (hi-hat pedal × 3) moves on, like a rest step.
+    Used for posture, singles, accents, doubles, kick and hi-hat quarters, open hats, and the new flam / drag / buzz lessons.
+    The app can't judge technique; it helps you see it. A note in Trophies suggests filming yourself monthly and, if possible,
+    one human lesson per stage.</div>
+  <div class="cols">
+    <div class="card"><h3>Look · Grip</h3><p style="font-size:20px">Hold the stick a third of the way up. Let it bounce 8 times on its own.</p>
+      <div class="moves" style="grid-template-columns:1fr"><button class="move go"><b>✓ Done, next step</b><span class="g"><i>hi-hat pedal × 3</i></span></button></div></div>
+    <div class="stub">diagram + mirror (as above)</div>
+  </div>
+</section>
+</body>
+</html>

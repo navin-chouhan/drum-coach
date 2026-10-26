@@ -1,3 +1,5 @@
+import { biteLesson } from '../engine/stageSong.ts';
+import type { DemoId } from './demos.ts';
 import { beatsPerBar, pattern, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
 import type { Genre, Lesson, LessonKind, Milestone, Pass, Step } from '../engine/lesson.ts';
 
@@ -44,6 +46,14 @@ const SHUFFLE = { hihat: 'x.xx.xx.xx.x', kick: 'x.....x.....', snare: '...x.....
 const TRIP_FILL = { snare: 'xxx.........', tom1: '...xxx......', tom2: '......xxx...', floor: '.........xxx' };
 const JAZZ = { ride: 'x..x.xx..x.x', hhPedal: '...x.....x..' };
 
+/** A reading step (G1): one rhythm card per take on the snare, shown without hints. `cards` are pattern lines. */
+const readCards = (title: string, text: string, spb: number, cards: string[], bpm: [number, number]): Step => ({
+  ...step(title, text, P(spb, { snare: cards[0] }), bpm), read: true,
+  variants: cards.slice(1).map(snare => ({ title, bpm: bpm[1], timeSignature: [4, 4] as [number, 4], bars: 1, notes: P(spb, { snare }) })),
+});
+/** A bar of the money beat, then this fill bar, crash back on 1 (fill vocabulary). */
+const fillBar = (fill: ChartNote[]) => crashOn(cat([P(2, MONEY8), fill]), [0]);
+
 export const CURRICULUM: Lesson[] = [
   // ───────── Level 0: setup and counting ─────────
   lesson(0, 'posture', 'exercise', 'Sit, hold, strike',
@@ -89,6 +99,23 @@ export const CURRICULUM: Lesson[] = [
     'Keep counting every number out loud, including the silent one. Move your stick in the air on the rest if it helps.',
     [step('Rest on 3', 'Hit on 1, 2 and 4. Say "3" but don\'t play it.', P(1, { snare: 'xx.x' }), [60, 80]),
       step('Rest on 2 and 4', 'Skip the numbers 2 and 4 but play their &s: "1 & (2) & 3 & (4) &".', P(2, { snare: 'xx.xxx.x' }), [60, 80])]),
+  lesson(0, 'read-1', 'exercise', 'Read the rhythm',
+    'Rhythm cards: one bar of quarters, 8ths and rests, a new card every take. No hints: you read it.',
+    'Reading a bar before you play it is how you learn songs faster, and how drummers talk about rhythm.',
+    'Look at the card during the count-in and say it: "1 & 2 (3) 4". A note with a flag is an 8th; a squiggle is a rest.',
+    [readCards('Quarters and rests', 'Quarter notes and quarter rests.', 1, ['xx.x', 'x.xx', 'xxx.', '.xxx'], [55, 70]),
+      readCards('With 8ths', 'Quarters, 8ths and rests mixed.', 2, ['x.xxx.x.', 'xxx.x.x.', 'x.x.xxxx', 'xx..x.xx'], [55, 70])]),
+  lesson(0, 'ear-steady', 'exercise', 'Steady or rushed?',
+    'A listening game: the app plays a bar twice, once steady and once rushing. Which was steady?',
+    'Hearing when time speeds up is the first step to not doing it yourself.',
+    'Listen to the space between the notes: in the rushed one they get closer and closer. Answer from the kit.',
+    [{ ...step('Steady or rushed?', 'Listen to A and B, answer with hi-hat (A) or snare (B).', P(2, { snare: 'xxxxxxxx' }), [70, 70]), quiz: 'steady' },
+      step('Now you play it steady', 'Even 8ths: keep every gap the same.', P(2, { snare: 'xxxxxxxx' }), [60, 75])]),
+  lesson(0, 'song-first', 'song', 'Song: First Steps',
+    'Your first song: 8 bars on the snare with the band. Four bars of quarter notes, then four bars of 8ths.',
+    'Playing with a band is the fun part of drumming. Even one drum, in time, makes the song move.',
+    'Count out loud the whole way. At bar 5 the 8ths start: "1 & 2 & 3 & 4 &". If you get lost, wait for "1" and join back in.',
+    [step('Whole song', 'Four bars of quarters, four bars of 8ths, with the band.', cat([P(1, { snare: "xxxx" }, 4), P(2, { snare: "xxxxxxxx" }, 4)]), [55, 75])]),
 
   // ───────── Level 1: one limb at a time ─────────
   lesson(1, 'hh-quarters', 'exercise', 'Hi-hat with the pedal down',
@@ -124,8 +151,19 @@ export const CURRICULUM: Lesson[] = [
     'Your first taste of coordination. Flams between hand and foot are the most common beginner timing problem.',
     'Aim to hear one sound, not two. If they split, slow down and think "foot leads".',
     [step('Together on every beat', 'Hi-hat and kick together on 1 2 3 4.', P(1, { hihat: 'xxxx', kick: 'xxxx' }), [60, 90], { pass: { maxFlamMs: 25 } })]),
+  lesson(1, 'song-hats', 'song', 'Song: Hats and Feet',
+    'A 16-bar song for hi-hat and kick: 8ths on the hi-hat, the kick on 1 and 3, then on every beat in the second half.',
+    'Two limbs keeping a band going is already a groove. The snare joins in the next stage.',
+    'Right hand on the hi-hat, pedal down. From bar 9 the kick plays every beat: keep it light so the hi-hat stays even.',
+    [step('Whole song', 'Hi-hat 8ths, kick on 1 and 3; from bar 9 on every beat.', cat([P(2, { hihat: 'xxxxxxxx', kick: 'x...x...' }, 8), P(2, { hihat: 'xxxxxxxx', kick: 'x.x.x.x.' }, 8)]), [60, 85])]),
 
   // ───────── Level 2: the money beat ─────────
+  lesson(2, 'ear-kick', 'exercise', "Where's the kick?",
+    'A listening game: the app plays a money beat with one of three kick lines. Which one?',
+    'Picking out the kick in a groove is how you learn songs by ear.',
+    'Listen low: the kick is the deep thump. Count "1 & 2 & 3 & 4 &" and notice which numbers it lands on.',
+    [{ ...step("Where's the kick?", 'Listen, then answer 1, 2 or 3.', P(2, MONEY8), [80, 80]), quiz: 'kick' },
+      step('Play the one with the & of 3', 'Now play it: kick on 1 and the & of 3.', P(2, { ...MONEY8, kick: 'x....x..' }), [60, 80], { lanes: HH_K_S })]),
   lesson(2, 'money-quarters', 'groove', 'Your first beat',
     'Hi-hat on every beat, kick on 1 and 3, snare on 2 and 4.',
     'This is the skeleton of thousands of songs. You build it one limb at a time while the app plays the rest.',
@@ -206,6 +244,13 @@ export const CURRICULUM: Lesson[] = [
       crashOn(P(2, { hihat: 'xxxxxxxx', kick: 'x.x.x.x.', snare: '..x...x.' }, 7), [0]), P(4, { hihat: 'x.x.x.x.', kick: 'x.......', snare: '....x...xxxxxxxx' }),
       crashOn(P(2, { ...MONEY8, kick: 'x...xx..' }, 7), [0]), P(2, FILL8),
     ]), [80, 100])]),
+  lesson(3, 'flam', 'rudiment', 'The flam',
+    'Two sticks, almost together: a soft grace note a hair before the main note. "Fla-am", not "flam" and not "flam-am".',
+    'Flams make a note fat and wide. They start fills and accents, and they train your weaker hand to be soft and exact.',
+    'One stick low (3 cm), one high (30 cm). Drop both at the same time: the low one lands first because it is closer. Then swap: the hand that played loud stays low for the next flam.',
+    [{ ...step('Watch it first', 'Watch how the hands trade heights. Try it slowly in the air, or check yourself with the camera. Done = hi-hat pedal × 3.', P(1, { snare: 'ffff' }), [45, 45]), look: true },
+      step('One flam per beat', 'lR, rL, lR, rL. Two heights before every flam.', P(1, { snare: 'ffff' }), [45, 70]),
+      step('Flam, tap', 'A flam on the beat, a soft tap on the &.', P(2, { snare: 'fxfxfxfx' }), [50, 75])]),
 
   // ───────── Level 4: 16ths, paradiddle, ghost notes ─────────
   lesson(4, 'paradiddle', 'rudiment', 'The paradiddle',
@@ -214,6 +259,19 @@ export const CURRICULUM: Lesson[] = [
     'Say the sticking out loud: "R L R R, L R L L". Accent only the first note. Start slow enough that you never stop.',
     [step('8th notes', 'R L R R L R L L, accent the first of each four.', P(2, { snare: 'XxxxXxxx' }), [60, 90], { pass: { maxGhostToAccent: 0.7 } }),
       step('16th notes', 'Same sticking, twice as fast.', P(4, { snare: 'XxxxXxxxXxxxXxxx' }), [60, 80], { pass: { maxGhostToAccent: 0.7 } })]),
+  lesson(4, 'flam-tap', 'rudiment', 'Flam taps',
+    'A flam, then a tap with the same hand: lR R, rL L.',
+    'The flam tap is the rudiment behind many fast fills: it keeps both hands busy without tangling them.',
+    'The main stroke drops from high and bounces once into the tap. The tap stays low, and that low stick becomes the next grace note.',
+    [step('Slow flam taps', 'lR R  rL L, in 8th notes.', P(2, { snare: 'fxfxfxfx' }), [50, 70]),
+      step('16th flam taps', 'Same, twice as fast.', P(4, { snare: 'fxfxfxfxfxfxfxfx' }), [50, 70])]),
+  lesson(4, 'drag', 'rudiment', 'The drag',
+    'Two quick soft grace notes from one hand, then the main note: "rr L".',
+    'Drags add a short roll in front of a note: the sound of marching snares, and of many rock and jazz fills.',
+    'Let the grace stick bounce twice, close to the pad (a double, but tiny), then drop the other stick for the main note.',
+    [{ ...step('Watch it first', 'Watch the low stick bounce twice, then the main note. Done = hi-hat pedal × 3.', P(1, { snare: 'dddd' }), [45, 45]), look: true },
+      step('One drag per beat', 'llR, rrL, llR, rrL.', P(1, { snare: 'dddd' }), [45, 65]),
+      step('Drag, tap', 'A drag on the beat, a tap on the &.', P(2, { snare: 'dxdxdxdx' }), [50, 70])]),
   lesson(4, 'hh-16ths', 'groove', '16th-note hi-hat',
     'One hand playing 16ths on the hi-hat over kick and snare.',
     'Busier hi-hats give ballads and pop grooves a smooth, driving feel.',
@@ -249,6 +307,21 @@ export const CURRICULUM: Lesson[] = [
     'Lead with the right hand on each new drum. Move early: the arm travels, the timing doesn\'t change.',
     [step('Around the kit', 'Four notes on each drum.', P(4, { snare: 'xxxx............', tom1: '....xxxx........', tom2: '........xxxx....', floor: '............xxxx' }), [60, 90])]),
 
+  lesson(4, 'song-sixteen', 'song', 'Song: Sixteen Street',
+    'A 16-bar pop groove: 16th notes on the hi-hat, a kick on the "a" of 2, and a snare fill in bars 8 and 16.',
+    'Puts the 16th-note hi-hat in a real song, with fills that lead into the next part.',
+    'Keep the hi-hat light and even. The fill in bar 8 is 16ths on the snare: count "1 e & a" and come back with the crash on 1.',
+    [step('Whole song', 'Groove for 7 bars, a snare fill, then again.', cat([
+      P(4, { hihat: 'xxxxxxxxxxxxxxxx', kick: 'x......xx.......', snare: '....x.......x...' }, 7), P(4, { snare: 'xxxxxxxxxxxxxxxx', kick: 'x...............' }),
+      crashOn(P(4, { hihat: 'xxxxxxxxxxxxxxxx', kick: 'x......xx.......', snare: '....x.......x...' }, 7), [0]), P(4, { snare: 'xxxxxxxxxxxxxxxx', kick: 'x...............' }),
+    ]), [60, 85])]),
+
+  lesson(4, 'read-16ths', 'exercise', 'Read 16ths',
+    'Rhythm cards with 16th notes: a new one every take, no hints.',
+    'Most fills and funk grooves are written in 16ths. Reading them makes new grooves quick to learn.',
+    'Say it first: "1 e & a". A beam with two lines is 16ths. Find the beats (1 2 3 4) before the notes in between.',
+    [readCards('16th cards', 'Read and play the card.', 4, ['x.xxx.x.x.xxx.x.', 'xxx.x.x.xxx.x.x.', 'x..xx.x.x..xx.x.', 'x.xxx...x.xxx...'], [50, 70])]),
+
   // ───────── Level 5: triplets, shuffle, half-time, funk, 6/8 ─────────
   lesson(5, 'triplets', 'rudiment', 'Triplets',
     'Three even notes per beat: "1 trip let 2 trip let".',
@@ -256,6 +329,12 @@ export const CURRICULUM: Lesson[] = [
     'Alternate hands; the lead switches every beat. Accent the first of each three in step 2.',
     [step('Even triplets', 'R L R L R L…, count "1 trip let".', P(3, { snare: 'xxxxxxxxxxxx' }), [60, 90]),
       step('Accent the beat', 'Loud on each number.', P(3, { snare: 'XxxXxxXxxXxx' }), [60, 90], { pass: { maxGhostToAccent: 0.7 } })]),
+  lesson(5, 'swing-feel', 'groove', 'Straight or swung?',
+    'The same hi-hat 8ths two ways: straight (even) and swung (long-short), with the band.',
+    'Swing is a feel, not just a pattern. Hearing and playing the difference is what makes a shuffle groove.',
+    'Straight: the & exactly halfway. Swung: say "1-trip-let" and play on "1" and "let". The app measures where your & lands.',
+    [step('Straight', 'Even 8ths on the hi-hat. The app plays kick and snare.', P(2, { hihat: 'xxxxxxxx', kick: 'x...x...', snare: '..x...x.' }), [60, 80], { lanes: ['hihat'], pass: { swingPct: [44, 56] } }),
+      step('Swung', 'Long-short: the & moves late, to the "let" of the triplet.', P(3, { hihat: 'x.xx.xx.xx.x', kick: 'x.....x.....', snare: '...x.....x..' }), [60, 80], { lanes: ['hihat'], pass: { swingPct: [58, 74] } })], ['rock']),
   lesson(5, 'shuffle', 'groove', 'The shuffle',
     'Hi-hat on the first and last note of each triplet.',
     'Blues, rock\'n\'roll and lots of classic rock swing like this.',
@@ -293,6 +372,17 @@ export const CURRICULUM: Lesson[] = [
       crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 3), [0]), P(3, TRIP_FILL),
     ]), [70, 92])]),
 
+  lesson(5, 'buzz-roll', 'rudiment', 'Buzz roll',
+    'Press each stroke into the pad so the stick buzzes, R L R L: a smooth "zzzz" instead of single notes.',
+    'The buzz (press) roll is the long soft roll of ballads and marching snares, and a building block of crescendos.',
+    'Press down a little with the fingers so the stick bounces fast on its own. Best felt on the real kit: e-drum pads catch some of the buzz.',
+    [step('Buzz 8ths', 'R L R L, each one a short buzz.', P(2, { snare: 'zzzzzzzz' }), [50, 70])]),
+  lesson(5, 'read-triplets', 'exercise', 'Read triplets',
+    'Rhythm cards with 8th-note triplets mixed with quarters, no hints.',
+    'Triplets are written with a little 3 over the notes. Reading them is the key to shuffles and swing charts.',
+    'Say "1-trip-let" for each triplet beat and just "2" for a quarter. Keep the beats even under the triplets.',
+    [readCards('Triplet cards', 'Read and play the card.', 3, ['xxxx..xxxx..', 'x..xxxx..xxx', 'xxxxxxx..x..', 'x..x..xxxxxx'], [50, 70])]),
+
   // ───────── Level 6: jazz ─────────
   lesson(6, 'jazz-ride', 'groove', 'Jazz ride pattern',
     'The "spang-a-lang" on the ride with the hi-hat foot on 2 and 4.',
@@ -318,7 +408,139 @@ export const CURRICULUM: Lesson[] = [
       crashOn(P(3, { ...JAZZ, snare: '.....x.....x' }, 4), [0]), P(3, { ...JAZZ, snare: '..x.....x...' }, 4),
       crashOn(P(3, { ...JAZZ, snare: '.....x.....x' }, 4), [0]), P(3, { ...JAZZ, snare: '..x..x..x..x' }, 4),
     ]), [100, 130])], ['jazz']),
+  // ───────── Level 7: groove at tempo (R3) ─────────
+  lesson(7, 'kick-16-indep', 'groove', '16th kicks under 8ths',
+    'The hands keep a steady 8th-note groove while the kick plays 16th-note spots that change every take.',
+    'Independence: your foot reads its own part while your hands keep time. This is where grooves start to sound like records.',
+    'Lock the hands first and say "1 e & a" quietly. The kick notes on "e" and "a" are short taps: heel up, ball of the foot.',
+    [{ ...step('Read the kick', 'A different kick line each take: read it, don\'t memorise it.', P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....x.......x...', kick: 'x......x..x.....' }), [70, 90], { lanes: HH_K_S }),
+      variants: ['x..x....x.......', 'x......xx..x....', 'x.x.......x..x..'].map(kick => ({ title: '16th kicks', bpm: 90, timeSignature: [4, 4] as [number, 4], bars: 1, notes: P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....x.......x...', kick }) })) }]),
+  lesson(7, 'ghost-16ths', 'groove', 'Ghost 16ths',
+    'Quiet ghost notes on the snare in between the hi-hat 8ths, with the backbeat loud.',
+    'Ghost 16ths are the inner motion of funk and R&B grooves: felt more than heard.',
+    'Ghosts from 3 cm, backbeat from 30 cm. The left hand does both: low, low, then lift for the backbeat.',
+    [step('Ghost 16ths', 'Backbeat loud, ghosts barely there.', P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '.g..X.g..g..X.g.', kick: 'x.......x.x.....' }), [60, 85], { lanes: HH_K_S, pass: { maxGhostToAccent: 0.6 } })]),
+  lesson(7, 'funk-at-tempo', 'groove', 'Funk at tempo',
+    'The ghost-note funk groove at a real funk tempo: 80 up to 96 BPM.',
+    'Funk lives in the pocket at speed. Getting it relaxed at 96 is a real milestone.',
+    'Keep everything small: low sticks, light foot. If it tightens up, drop 5 BPM and loosen your shoulders.',
+    [step('Funk at tempo', 'Ghosts quiet, backbeat strong, kick tight.', P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....X..g.g..X..g', kick: 'x.x....x..x.....' }), [80, 96], { lanes: HH_K_S, pass: { maxGhostToAccent: 0.6 } })]),
+  lesson(7, 'open-hat-funk', 'groove', 'Open-hat funk',
+    'A funk groove with an open hi-hat on the "&" of 2 and 4, closing on the next note.',
+    'The open-and-close hi-hat is the sound of disco and funk. It is a foot-and-hand duet.',
+    'Lift the pedal exactly as the open note plays, press it down on the next one. Think "open-close".',
+    [step('Open-hat funk', 'Open on the & of 2 and 4.', P(4, { hihat: 'x.x...x.x.x...x.', hhOpen: '....x.......x...', snare: '....X.......X...', kick: 'x..x..x...x.....' }), [70, 95], { lanes: [...HH_K_S, 'hhOpen'] })], ['funk']),
+  { ...lesson(7, 'lay-back', 'groove', 'Laying back',
+    'The money beat with the snare landing a hair behind the click, on purpose.',
+    'Playing "behind the beat" gives a groove weight: it is how slow rock and soul feel heavy. It is a choice, not dragging.',
+    'Keep the hi-hat with the click and let the snare fall late, like it is heavy. The app measures 15–30 ms behind as right.',
+    [step('Lay it back', 'Hi-hat on the click, snare just behind it.', P(2, MONEY8), [70, 80], { lanes: HH_K_S, pass: { offsetTarget: { drum: 'snare', ms: 22, tol: 10 } } })]), needsLatency: true },
+  lesson(7, 'ruff-fill', 'fill', 'Ruff fill',
+    'Three bars of groove, then a fill that starts with ruffs on the snare and ends on the toms, crash back on 1.',
+    'Ruffs add a burst of sound in front of a note: a fill with them sounds bigger than its notes.',
+    'The ruff is three soft grace strokes then the main note. Keep them close to the head so the fill stays in time.',
+    [step('Ruff fill', 'Groove, groove, groove, fill.', crashOn(cat([P(2, MONEY8, 3), P(4, { snare: 'r...r...........', tom1: '........x.x.....', floor: '............x.x.', kick: 'x.......x.......' })]), [0]), [60, 80])]),
+  lesson(7, 'stamina-groove', 'groove', 'Five-minute groove',
+    'The money beat for 32 bars, then 64 bars: long takes that build stamina and steady time.',
+    'Songs are long. Keeping a groove even for minutes, without tensing up, is what makes a drummer reliable.',
+    'Breathe out, drop the shoulders, keep the sticks low. If a hand tires, play lighter, never stop.',
+    [{ ...step('32 bars', 'Steady for 32 bars.', P(2, MONEY8), [80, 80], { lanes: HH_K_S }), bars: 32 }, { ...step('64 bars', 'Steady for 64 bars: about 3 minutes.', P(2, MONEY8), [80, 80], { lanes: HH_K_S }), bars: 64 }]),
+  lesson(7, 'song-pocket', 'song', 'Song: Pocket Sixteen',
+    'A 24-bar funk tune: a soft verse with ghost notes, a loud chorus with open hi-hats, the verse again.',
+    'Dynamics over a whole song: the band plays softer and louder, and so do you.',
+    'Verse: small and quiet, ghosts almost silent. Chorus: bigger strokes and an open hat. Crash on 1 of each section.',
+    [step('Whole song', 'Soft verse, loud chorus, soft verse.', cat([
+      crashOn(P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....X..g.g..X..g', kick: 'x.x....x..x.....' }, 8), [0]),
+      crashOn(P(4, { hihat: 'x.x...x.x.x...x.', hhOpen: '....x.......x...', snare: '....X.......X...', kick: 'x..x..x...x.....' }, 8), [0]),
+      crashOn(P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....X..g.g..X..g', kick: 'x.x....x..x.....' }, 8), [0]),
+    ]), [80, 95], { pass: { minDynamicsR: 0.3 } })]),
+
+  // ───────── Level 8: linear and odd (R3) ─────────
+  lesson(8, 'linear-basics', 'exercise', 'Linear basics',
+    'Hand, hand, foot: three limbs in a row, never two at once, in 16th notes.',
+    'Linear patterns are how modern drummers sound busy without clutter. Every limb gets its own moment.',
+    'Say "R L K" over and over. The groups of three run across the beats: the accent moves. Go slow.',
+    [step('R L K', 'Hi-hat, snare, kick, round and round.', P(4, { hihat: 'x..x..x..x..x..x', snare: '.x..x..x..x..x..', kick: '..x..x..x..x..x.' }), [55, 80])]),
+  lesson(8, 'linear-groove', 'groove', 'A linear groove',
+    'A groove where no two limbs ever play together: kick, snare and hi-hat take turns.',
+    'Linear grooves are the sound of funk and gospel drummers: clear, flowing, every note heard.',
+    'Learn it one bar at a time with the count. The hi-hat fills every gap: if two notes land together, it is not linear.',
+    [step('Linear groove', 'Kick 1, snare 2 and 4, hi-hat in every gap.', P(4, { kick: 'x.....x...x.....', snare: '....x.......x...', hihat: '.xxx.x.xxx.x.xxx' }), [60, 85])]),
+  lesson(8, 'linear-fill', 'fill', 'Linear fill',
+    'A bar of groove, then a linear fill that moves round snare, toms and kick, landing on the crash.',
+    'Linear fills sound fast and smooth because each stroke has room. They cross the bar line into the next 1.',
+    'Snare, tom, kick, floor: one limb at a time. Count 16ths and land the crash on 1 with the kick.',
+    [step('Linear fill', 'Groove, then the fill into 1.', crashOn(cat([P(4, { hihat: 'x.x.x.x.x.x.x.x.', snare: '....x.......x...', kick: 'x.......x.......' }), P(4, { snare: 'x..x....x..x....', tom1: '.x....x..x....x.', kick: '..x..x....x..x..', floor: '....x..x....x..x' })]), [0]), [60, 80])]),
+  lesson(8, 'five-four', 'groove', 'Five-four',
+    'A groove in 5/4, felt as 3 + 2: "1 2 3, 4 5".',
+    'Odd time feels strange for a week, then natural. 5/4 is the friendliest way in.',
+    'Count "1 2 3 1 2" out loud. The kick marks the start of each group, the snare the middle and the end.',
+    [step('Five-four', 'Hi-hat 8ths, kick on 1 and 4, snare on 3 and 5.', P(2, { hihat: 'xxxxxxxxxx', kick: 'x.....x...', snare: '....x...x.' }), [70, 90], { ts: [5, 4], lanes: HH_K_S })]),
+  lesson(8, 'seven-eight', 'groove', 'Seven-eight',
+    'A groove in 7/8, felt as 2 + 2 + 3. The click plays every 8th note and accents each group.',
+    'Seven-eight is common in prog rock and many folk musics. It teaches you to feel groups instead of beats.',
+    'Count "1 2, 1 2, 1 2 3". The click\'s louder notes mark each group. Kick on each group start, snare in between.',
+    [step('Seven-eight', 'Kick on the group starts, snare between, hi-hat 8ths.', P(2, { hihat: 'xxxxxxx', kick: 'x...x..', snare: '..x...x' }), [60, 80], { ts: [7, 8], lanes: HH_K_S })]),
+  lesson(8, 'song-odd', 'song', 'Song: Five Alive',
+    'A 16-bar song in 5/4 with the band, a fill in bar 8 and bar 16.',
+    'An odd-time song all the way through: the moment 5/4 stops feeling odd.',
+    'Count 3 + 2 for the first bars, then let the band carry you. Land each fill on 1 with the crash.',
+    [step('Whole song', 'Groove in 5, fills in bars 8 and 16.', cat([
+      crashOn(P(2, { hihat: 'xxxxxxxxxx', kick: 'x.....x...', snare: '....x...x.' }, 7), [0]), P(2, { snare: 'xxxxxx....', tom1: '......xx..', floor: '........xx', kick: 'x.........' }),
+      crashOn(P(2, { hihat: 'xxxxxxxxxx', kick: 'x.....x...', snare: '....x...x.' }, 7), [0]), P(2, { snare: 'xxxxxx....', tom1: '......xx..', floor: '........xx', kick: 'x.........' }),
+    ], [5, 4]), [70, 90], { ts: [5, 4] })]),
+
+  // ───────── Level 9: solo voice (R3) ─────────
+  lesson(9, 'fill-vocab', 'fill', 'Fill vocabulary',
+    'A bar of groove, then one of six fills, a different one each take: 8ths on the toms, 16ths on the snare, triplets round the toms, flam accents, a linear fill and drags.',
+    'A drummer speaks in fills. Six you can play on demand is a real vocabulary.',
+    'Read the fill bar before you start. Whatever it is, land the crash on 1 with the kick.',
+    [{ ...step('Fill vocabulary', 'Groove, then the fill on the sheet.', fillBar(P(2, FILL8)), [70, 90]), variants: [
+      fillBar(P(4, { snare: 'xxxxxxxxxxxxxxxx' })), fillBar(P(3, TRIP_FILL)), fillBar(P(2, { snare: 'FxFxFxFx' })),
+      fillBar(P(4, { snare: 'x..x....x..x....', tom1: '.x....x..x....x.', kick: '..x..x....x..x..', floor: '....x..x....x..x' })), fillBar(P(2, { snare: 'dxdxdxdx' })),
+    ].map(notes => ({ title: 'Fill', bpm: 90, timeSignature: [4, 4] as [number, 4], bars: 2, notes })) }]),
+  lesson(9, 'fills-build', 'fill', 'Fills that build',
+    'Four bars of 16ths on the snare that start soft and grow to loud.',
+    'A fill that builds lifts the band into the chorus. Control of volume is what makes it musical.',
+    'Bar 1 from 3 cm, bar 4 from 30 cm. Grow a little every bar, keep the time dead even.',
+    [{ ...step('Build it', 'p, mf, mf, f: grow every bar.', P(4, { snare: 'xxxxxxxxxxxxxxxx' }, 4), [60, 80], { pass: { minDynamicsR: 0.5 } }), chart: { ...step('', '', P(4, { snare: 'xxxxxxxxxxxxxxxx' }, 4), [60, 80]).chart, title: 'Fills that build', dyn: [1, 2, 2, 3] } }]),
+  lesson(9, 'trade-fours', 'groove', 'Trade fours',
+    'Four bars of groove with the band, then four bars that are yours to solo, then the crash on 1 again.',
+    'Trading fours is how drummers solo in a band: short, in time, and back on 1 for everyone.',
+    'Keep the pulse in your solo bars: play anything, but stay on the beat. Count the bars: "1 2 3 4" of the solo.',
+    [{ ...step('Trade fours', 'Bars 1–4 groove, 5–8 your solo, crash back on 1.', crashOn(P(2, MONEY8, 8), [0]), [80, 100], { lanes: [...HH_K_S, 'crash'], freeBars: [5, 6, 7, 8], pass: { minFreeOnBeatPct: 70 } }) }]),
+  lesson(9, 'solo-vamp', 'groove', 'Solo vamp',
+    'Two bars of groove, two bars of solo, round and round with the band. Nothing to pass: play.',
+    'Short solos over a vamp are the safest place to try ideas.',
+    'Try one idea per solo: a rhythm on one drum, then move it round the kit. Always come back on 1.',
+    [step('Solo vamp', 'Groove, solo, groove, solo.', P(2, MONEY8, 8), [80, 100], { lanes: HH_K_S, freeBars: [3, 4, 7, 8], jam: true })]),
+  lesson(9, 'song-spotlight', 'song', 'Song: Spotlight',
+    'A 32-bar song with a 4-bar drum break in the middle: the band stops, you play, the band comes back on 1.',
+    'The spotlight moment: your solo inside a real song form.',
+    'Before the break, take a breath. Keep the break in time (the app checks it is on the beat), then crash on 1 with the band.',
+    [step('Whole song', 'Groove, a 4-bar break (yours), groove to the end.', crashOn(P(2, MONEY8, 32), [0, 32, 64, 96]), [80, 100], { lanes: [...HH_K_S, 'crash'], freeBars: [13, 14, 15, 16], pass: { minFreeOnBeatPct: 70 } })]),
+
 ];
+
+// The backing band's chords for the built-in songs (one per bar, wrapping; engine/band.ts).
+const SONG_CHORDS: Record<string, string> = {
+  'song-first': 'C C F G', 'song-hats': 'D D G A', 'song-steady': 'G G C D', 'song-garage': 'E E A B', 'song-sixteen': 'Em C G D',
+  'song-shuffle': 'A A A A D D A A E D A E', // a 12-bar blues
+  'song-swing': 'C Am Dm G7 C Am Dm G7 F F7 C A7 Dm G7 C G7',
+  'song-pocket': 'Em7 Em7 A7 A7', 'song-odd': 'D D G A', 'song-spotlight': 'A A D E',
+};
+for (const l of CURRICULUM) if (SONG_CHORDS[l.id]) l.band = { chords: SONG_CHORDS[l.id] };
+// Volume marks per bar (1 p, 2 mf, 3 f) on the songs with sections: shown on the sheet (R4).
+const SONG_DYN: Record<string, number[]> = { 'song-pocket': [...Array(8).fill(1), ...Array(8).fill(3), ...Array(8).fill(1)], 'song-garage': [...Array(8).fill(2), ...Array(8).fill(3), ...Array(8).fill(2)], 'song-sixteen': [...Array(8).fill(2), ...Array(8).fill(3)] };
+for (const l of CURRICULUM) if (SONG_DYN[l.id]) l.steps.forEach(st => { if (st.chart.bars === SONG_DYN[l.id].length) st.chart.dyn = SONG_DYN[l.id]; });
+// How the body moves (content/demos.ts): shown on the lesson card, as the 4th intro slide and in the self-check.
+const LESSON_DEMOS: Record<string, DemoId> = {
+  posture: 'grip', 'count-quarters': 'rebound', singles: 'rebound', 'hh-quarters': 'rebound', accents: 'accent-tap', doubles: 'doubles',
+  'kick-quarters': 'kick', paradiddle: 'accent-tap', 'ghost-notes': 'accent-tap', flam: 'flam', 'flam-tap': 'flam', drag: 'drag',
+};
+for (const l of CURRICULUM) if (LESSON_DEMOS[l.id]) l.demo = LESSON_DEMOS[l.id];
+// Long songs get a "learn it in bites" lesson just before them (R8).
+for (const song of CURRICULUM.filter(l => l.kind === 'song')) { const b = biteLesson(song); if (b) CURRICULUM.splice(CURRICULUM.indexOf(song), 0, b); }
 
 export const LESSON_BY_ID = Object.fromEntries(CURRICULUM.map(l => [l.id, l])) as Record<string, Lesson>;
 
@@ -337,11 +559,17 @@ export const MILESTONES: Milestone[] = [
     canDo: ['Even triplets', 'A shuffle that swings', 'Half-time feel', 'A 12-bar blues'] },
   { level: 6, title: 'Swing', rank: 'Swing Cat', checkpoints: ['jazz-ride', 'comping', 'song-swing'],
     canDo: ['The jazz ride pattern with the foot on 2 and 4', 'Comping on the snare', 'A 16-bar swing tune'] },
+  { level: 7, title: 'Groove at tempo', rank: 'Pocket Pro', checkpoints: ['kick-16-indep', 'funk-at-tempo', 'song-pocket'],
+    canDo: ['Read 16th-note kicks under a steady groove', 'Funk with ghost notes at 96 BPM', 'A song with soft and loud sections'] },
+  { level: 8, title: 'Linear and odd', rank: 'Shape Shifter', checkpoints: ['linear-groove', 'linear-fill', 'five-four', 'song-odd'],
+    canDo: ['Linear grooves and fills', 'Grooves in 5/4 (and a taste of 7/8)', 'An odd-time song all the way through'] },
+  { level: 9, title: 'Solo voice', rank: 'Solo Voice', checkpoints: ['fill-vocab', 'trade-fours', 'song-spotlight'],
+    canDo: ['Six fills on demand', 'Trading fours: a solo that comes back on 1', 'A drum break inside a song'] },
 ];
 
 // Checkpoints prove steady time: their last step also limits how much your hits wander (looser for beginners).
-const SPREAD_MS = [40, 40, 40, 30, 30, 25, 25];
+export const spreadFor = (level: number) => (level <= 2 ? 40 : level <= 4 ? 30 : level <= 6 ? 25 : 20);
 for (const m of MILESTONES) for (const id of m.checkpoints) {
   const last = LESSON_BY_ID[id].steps.at(-1)!;
-  last.pass = { maxSpreadMs: SPREAD_MS[m.level], ...last.pass };
+  last.pass = { maxSpreadMs: spreadFor(m.level), ...last.pass };
 }

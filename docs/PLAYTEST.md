@@ -13,6 +13,9 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
 - **Browser:** Claude in Chrome. Its screenshot, click and find tools time out on every page here (even a plain JSON
   page), so the app is driven by page scripts: clicks on the buttons the user would press, hi-hat taps for the intro
   slides, and one real key press per page load to allow sound.
+- **Tooling (G8):** Setup → Pads → Emulated kit has Beginner and Solid presets and now fills free bars with 8ths. The
+  page driver is `scripts/playtest/helpers.js`: `await import('/scripts/playtest/helpers.js?' + Date.now())`, then
+  `T.player({…})`, `T.nav.requestLesson(id)`, `await T.go()` (one take, then the verdict, side card and progress).
 - **Onboarding:** all three styles picked (rock, funk, jazz) so every tagged lesson is on the path; 25 minutes a day.
 
 ## Lessons learned about testing this app
@@ -29,6 +32,10 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
   finished lesson's verdict (the lesson had completed and saved). Reload the page after code changes before trusting
   what it shows. The autopilot lives in a git-excluded `.playtest-helpers.js`, re-armed after a reload with one
   `await import('/.playtest-helpers.js?' + Date.now())`.
+- The browser keeps settings in localStorage per origin. A new data copy on the same test port (5180) is merged with
+  the last test's browser copy: keys the server copy lacks (e.g. `badges`) survive. Run
+  `localStorage.removeItem('drumcoach.settings')` before loading a new data copy. (Round 6's trophy shelf showed the
+  old run's badges this way; the owner's real app on 5173 isn't affected.)
 - The Chrome tool's JavaScript call times out after 45 s, so long runs go in the background inside the page and
   report through `fetch('/api/autopilot-…')`, which shows up in the server log.
 
@@ -89,6 +96,47 @@ Checked live: "The money beat" (checkpoint) probed 60 → 90 and 80 → 100 clea
 | 11 | Finishing a leftover Stage 2 coach lesson at Swing Cat showed "RANK UP! You're now a Limb Wrangler" again: the check asked whether the stage's checkpoints are all passed now, not whether this lesson completed the stage. | Bug | Rank up only when the checkpoint this lesson proves wasn't passed before (`LessonPlayer.tsx`). Not re-checked live: it needs a fresh coach lesson for a passed checkpoint. (7155595) |
 | 12 | Practice → For you after the whole path: "at your level" was "Basic rock beat, 80 BPM" for a Swing Cat. With no current milestone the level fell back to 1. | Bug | Falls back to the last stage's level; now "Funk groove with ghost notes". (c5c28d9) |
 | – | Checked live: a silent take of "Your own fill" now gets "Once more, and fill your bars this time" and doesn't count (fix 3). | Verified | |
+
+### Round 6 (M1: the struggle path, Beginner preset), 2026-10-26 overnight
+Played on a copy of the owner's real data (a true beginner: 2 lessons done, 38 takes) with the emulated kit set to
+Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `claude/plan-phase1-2026-10-25`.
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 13 | At the 40 BPM floor a take with 16/16 notes landed, failed only for dragging (41 ms), got "Try Learn it slowly: the music waits for each note". Wait mode helps you find notes; it can't fix timing. | Teaching | At the floor, when the notes landed, the line names the fix instead: "All the notes are there. Dragging by 41 ms. Lock onto the click." (`floorLine`) |
+| 14 | At the 40 BPM floor, "🐢 Learn it slowly" (and floor × 2) didn't start wait mode: it ran "slower", a scored take at 35 BPM (below the floor), which passed and climbed: "Nice! Up to 45 BPM!", best 35. The label promised wait mode; the take counted. | Bug | At the floor the move is wait mode, as labelled. Checked live: the music waits, the verdict is "Nice and slow…", nothing is saved and the tempo stays. |
+| 15 | After a floor fail with missed notes the line said "Try Learn it slowly" but the big move (hi-hat pedal × 3 / "yes") was "▶ Again". | UX | The main move becomes "🐢 Learn it slowly" in that case. |
+| 16 | "🔍 Fix bar 2" worked (bar 2 looped 4× at 50 instead of 60, the ladder didn't move), but its verdict always said "Bar 2 sounds better", even when the loop went badly. | Honesty | "sounds better" only when the loop passed, else "is getting there". |
+| 17 | After ~15 rough takes (avg 75% landed, hits wandering ±75 ms, no lesson finished, comfortable at 40 BPM) the student read was *steady*, not *struggling*: the cut-off was accuracy < 75 and spread was ignored. The coach would write for a steady student. | Teaching | A spread wider than 40 ms (looser than any checkpoint allows) also reads as struggling (`studentRead`). On the test data the read is now *struggling*. |
+| 18 | After "Lesson complete" (M4 kept the verdict, with the coach's short line under it: verified) the big move and the kit's "yes" became the coach's "Try a slower tempo", replaying a finished lesson instead of moving on. | UX | A record, rank up or finished lesson keeps the app's own next move; the coach's button is dropped (`dropCoachAction(true)`), its words stay. |
+| 19 | Saving the goals screen (onboarding, or "Goals … (change)") rebuilt the profile from goals and minutes only, so the stage's song pick (`profile.song`) was lost. | Bug | The profile keeps its other fields. (M14 commit) |
+
+Routes walked (Beginner preset unless noted), against `docs/LEARNING.md`:
+| Route | Result |
+|---|---|
+| Two close misses → −5 BPM | ✓ 60 → 55 ("Let's take it to 55 BPM. Slower is how it sticks.") |
+| Rough take (< 60%) → −10 BPM | ✓ 55 → 45 (13/32 landed); next rough → 40 |
+| Floor 40 → "Learn it slowly" (wait mode), never a pass | ✓ after fixes 13–15: the music waits, verdict "Nice and slow…", no run saved, progress unchanged |
+| After easing off, one clean take climbs +10 | ✓ 40 → 50 |
+| "🔍 Fix bar N" and back to the full take | ✓ bar 2 ×4 at 50 instead of 60, ladder unchanged, then "Now the whole thing again at 60 BPM" (fix 16). Not offered on 1-bar charts (by design: `worstBars` needs 2+ bars). |
+| "Ask the coach for something different" | ✓ ~21 s; "Feel the & with a click on every 8th": jam → copy-me → 8-in-a-row streak, 40–50 BPM (smaller, different tools). Its "focus" said "you played 8ths perfectly at a slow tempo", which flatters a 78% take. |
+| Live tips during a take | ✓ "dragging" and "reacting" on screen (`liveTips: screen`); spoken tips not checked (sound can't be heard by the test). |
+| Coach tool switch, one take | ✓ trade via `runAction({kind:'trade'})`: one-off, free bars, ladder untouched. count / layers / listen share that path; not run separately. |
+| Student read new → struggling | ✓ after fix 17 (server read: struggling, 75%, spread 75 ms, comfortable 40 BPM) |
+| autoProbe stays off for a non-flying student | ✓ no "Find my tempo" on any untouched step |
+| M3 / M4 / M6 live | ✓ the verdict stayed with "Your coach is listening back…" under it; after "Lesson complete" the coach's line ("Lift each stick sooner, right as the click arrives") sat under the verdict |
+| Practice (Solid preset) | ✓ short coach line "Clean groove, every hit landed. Keep this steady feel.", button "Try a bit faster" |
+
+Open observations from this round (not fixed):
+- **Mixed message on a late take at level 0–1.** 32/32 landed but ~93 ms late: the live tip said "Hitting 135 ms after each
+  click. Play with the click, not after it", the verdict said "Nice! Up to 50 BPM!" (the 150 ms Good window lets it
+  pass; `checkPass`'s reaction check didn't fire). A question for the owner (docs/OVERNIGHT.md).
+- **A timing-only fail slows the tempo like missed notes.** All notes landed but dragging → −5 BPM, down to 40, where
+  keeping with the click is harder, not easier. Question for the owner.
+- **The owner's own data says "latency".** Their week: 34% landed, "landing behind the click", and the app's latency
+  hint fires. The latency test is the first thing in the M2 kit checklist.
+- The emulated kit doesn't play in wait mode (the test used keyboard strokes) or in free bars (G8).
+- After a code change the open page keeps stale modules (HMR): one "missing verdict" was that, not a bug.
 
 ### Open observations (not fixed yet)
 - **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very
@@ -265,3 +313,71 @@ song audio capture (tab share prompt), drumless/cover search, the mistake paths 
 | 3 · The money beat | Groove Keeper ✓ | The money beat ✓cp (6), Song: Steady Eight ✓cp (2: probe + one 16-bar take, 192/192) | The probe on a song only plays bar 1, but the full song still has to pass. |
 | 2 · Every limb on its own | Limb Wrangler ✓ | Single strokes ✓cp (14 takes), Hi-hat 8th notes ✓cp (16), Hand and foot together ✓cp (7) | Flying: checkpoints only, all ★★★. The practice lessons (hi-hat quarters, kick, accents, the coach's singles lesson) were skipped by the new planner and are left for the end-of-run sweep. Most takes went to climbing from 60 BPM. |
 | 1 · Ready to play | Stick Rookie ✓ | Sit hold strike, Your first jam, Echo game, Trade bars (1★, silent answer before fix 3), Counting quarter notes, Eight in a row, Even quarters then counting 8ths (coach), Counting 8th notes ✓cp, Counting the & in 8th notes (coach), Rests are notes too (coach stand-in ✓cp) | All takes 100%. The built-in "rests" checkpoint was passed by an easier coach stand-in (fixed for later stages). |
+
+## M2: real-kit checklist (for the owner at the MPS-150)
+Run on the branch, your own data is fine (`npm run dev`, Chrome, kit on USB, module volume down if the app plays
+sounds). Takes ~20 minutes. Write the numbers into the table at the end; the implementer tunes from them.
+
+**Before you start**
+1. `amidi -l` shows `e-Drum MIDI 1`. The app header says the kit is connected (not "No MIDI device").
+2. ⚙ Setup → Pads → Emulated kit: **off** (it would play your takes for you).
+3. Setup → Coach → "Show live tips": on, so you can see what the app hears.
+
+**A. Latency first** (your week says "landing behind the click", and the app's latency hint keeps firing)
+1. ⚙ Setup → Pads → latency test: tap 8+ times with the click on the **snare**. Note the number and the spread.
+2. Do it again with headphones on the module vs. on the laptop. Note both.
+3. Play one take of "Counting 8th notes" at 60 BPM. Does the results page still say "Almost every stroke landed about
+   N ms late"? Write N down.
+
+**B. Calibration wizard** ("hit each pad")
+1. Setup → Pads → the calibration screen: hit each pad once when asked, in order.
+2. Check that every pad lands on the right name, and the hi-hat with the pedal **down** shows *closed*, pedal up *open*.
+3. Press the hi-hat pedal alone: it should show *pedal*, and pressing it after an open hit must not count as a hit
+   (the choke).
+4. Anything wrong → note which pad and what it showed.
+
+**C. Crosstalk and retriggers** (`src/input/hits.ts`: `CROSSTALK_MS = 15`, `CROSSTALK_SNARE_MAX = 44`, `BOUNCE_MS = 60`)
+1. Journey → path → Stage 5 "Ghost notes" (or Practice → "Funk groove with ghost notes"), full groove, 3 takes at a
+   tempo you can play.
+2. After each take open "Details and history". Note: hi-hat accuracy, extra hits, and any hi-hat **miss** right after a
+   ghost snare.
+3. Then play 2 bars of just loud hi-hat 8ths with ghost snares between: does any *real* hi-hat stroke go missing? (If
+   yes, the crosstalk filter is too eager: say so.)
+4. Play 16 hard single strokes on the snare, then on each tom. Extra hits on the results page = retriggers getting
+   through.
+
+**D. Accents and ghosts with real sticks** (velocity ~15–127)
+1. Stage 2 "Accents": one take. Does "accent ratio" pass when you play accents clearly louder?
+2. "Ghost notes": one take. Do soft ghosts register at all (not as misses)? What's the softest stroke you can play that
+   still counts?
+
+**E. Gestures at the kit**
+1. Hi-hat pedal × 3 starts the main move, crash × 2 = yes, tom 2 × 2 = listen, floor × 2 = slower, ride × 2 = next.
+2. In the intro slides: hi-hat × 1 = forward, snare × 1 = back.
+3. At 40 BPM after a rough take: floor × 2 should now start **wait mode** ("Learn it slowly"), not a scored take.
+
+**F. Flams, drags, buzz rolls** (pad retriggers are 29–56 ms, close to flam spacing)
+1. Stage 4 "The flam": one take. Does the result say the flams came out as two notes? Any "came out as one note"
+   when you clearly played two?
+2. Stage 5 "The drag" and stage 6 "Buzz roll": one take each. Note extras and misses.
+
+**G. The band and the camera**
+1. A groove lesson with 🎸 Band on: set the Band slider (Setup → Sound check) so it sits under the click and the kit.
+2. A lesson with "How it moves" (e.g. Single strokes): press C, allow the camera, record 10 s (hi-hat × 1), replay
+   (snare × 1). Nothing is saved.
+
+**Write down**
+| Check | Your number / note |
+|---|---|
+| Latency (snare, laptop audio) | ms, spread |
+| Latency (module headphones) | ms, spread |
+| Results "N ms late" after the test | |
+| Calibration: wrong pads | |
+| Ghost-note groove: hi-hat misses after a ghost / extras | |
+| A real hi-hat stroke dropped? | |
+| Retrigger extras (snare / toms) | |
+| Softest ghost that counts | |
+| Gestures that didn't work | |
+| Flams read as one note / extras | |
+| Drag, buzz: extras / misses | |
+| Band level that works | |

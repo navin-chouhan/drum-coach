@@ -32,10 +32,15 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Method | How the app does it |
 |---|---|
 | Layered groove building | A lesson step lists its `activeLanes`. The app plays the other lanes, so you learn hi-hat alone, then add kick, then snare. |
+| Backing band | Grooves, songs and fills play with a synth bass and keys (`engine/band.ts`): the bass lands on every kick, keys by style (rock pads, funk stabs on the &s, shuffle stabs on 2 and 4, swing Charleston, 6/8 dotted pads), chords per bar from the lesson (the built-in songs have their own; Roadhouse Shuffle is a 12-bar blues). Free bars get one hit, then they're yours; the band goes quiet with the gap click and fades with the click. Off for counting, rudiments, find-your-tempo and rests. 🎸 Band toggle (key B); volume under Setup → Sound check. |
+| How it moves | Technique you can see (`content/demos.ts`, drawn by `ui/TechniqueDemo.tsx`): an animated arm and hand (shoulder, elbow, wrist, the thumb-and-index fulcrum, the back fingers moving with the stick) or the leg on the kick pedal, at the lesson's tempo, with a cm ruler, the tip's path, slow motion and "✗ Wrong" showing the usual mistake (squeezing, same-height accents, two wrist strokes for a double, flat flams, a buried beater). Shown on the lesson card, as a 4th intro slide and in "look" steps (watch, then done). "📷 Check yourself" (key C) opens the camera as a mirror next to it, with a 10-second replay (hi-hat × 1 records, snare × 1 replays); nothing is saved or sent. The app can't judge technique; it helps you see it. |
+| Feel | A step can ask for a feel (`engine/feel.ts`): a swing range (where the & lands between beats: 50% straight, 67% triplet swing), volume that follows the sheet's p / mf / f marks (correlated bar by bar, each drum against its own mean), or playing behind the beat on purpose (`offsetTarget`; then the live coach says "Lay back" instead of "Dragging. Push"). The result shows the feel next to the notes landed. "Straight or swung?" (stage 6) plays the same 8ths both ways. |
+| Reading | "Read the rhythm" (stage 1), "Read 16ths" (stage 5) and "Read triplets" (stage 6): rhythm cards on the snare, a different card each take (`variants`), shown without the count and hand hints (`read` steps), so the student reads instead of copying. |
+| Ear training | Listening games answered from the kit (`lesson/EarQuiz.tsx`, `engine/earQuiz.ts`): "Steady or rushed?" (stage 1: the bar twice, one rushing) and "Where's the kick?" (stage 3: which of three kick lines). Hi-hat / snare / floor × 1 (or keys 1–3) answer, tom 2 × 1 plays it again; four rounds, then you play it yourself. |
 | Demo first | Every step has **Hear it**: the app plays the whole pattern at your tempo. |
 | Count out loud | A one-bar count-in, and big beat numbers on the highway for the counting lessons. |
-| Tempo ladder | Two clean takes → +5 BPM until the step's target (one ★★★-quality take counts as both, and a streak challenge is done on its first pass). A rough take (< 60% landed) → −10 BPM at once; two close misses → −5. The floor is 40 BPM, below the step's start if needed; after easing off, one clean take climbs +10. At the floor: "Learn it slowly" (wait mode). |
-| Sweet spot, not an exam | The pass bar grows with the stage (`passFor`): 75% at levels 0–1, 80% at 2–3, 85% at 4–5, 90% at 6; stray strokes barely count early on, and the Good window is 150 ms at levels 0–1. Takes are 4 bars (8 for the proving take). Feedback leads with what went right: notes landed, best run in a row, comebacks after a miss, better than last take. |
+| Tempo ladder | Two clean takes → +5 BPM until the step's target (one ★★★-quality take counts as both, and a streak challenge is done on its first pass). A rough take (< 60% landed) → −10 BPM at once; two close misses → −5. When every note landed and only the timing or volume failed, the tempo holds and the line names the fix (slower doesn't fix timing). The floor is 40 BPM, below the step's start if needed; after easing off, one clean take climbs +10. At the floor: "Learn it slowly" (wait mode). |
+| Sweet spot, not an exam | The pass bar grows with the stage (`passFor`): 75% at levels 0–1, 80% at 2–3, 85% at 4–5, 90% from 6; stray strokes barely count early on, and the Good window is 150 ms at levels 0–1 (a pass more than 50 ms off the click still hears "A touch late: lean into the click"). Takes are 4 bars (8 for the proving take). Feedback leads with what went right: notes landed, best run in a row, comebacks after a miss, better than last take. |
 | Coach toolbox | A step is a drill (default), a `jam` (any take counts), a `copy` (call and response: notes marked `auto` are played by the app) or a challenge (`pass.streak`, N in a row). The coach mixes them and switches tool when you struggle. |
 | Zoom in | After a missed take, "Fix bar N" loops the stickiest bar (`worstBars`) 4 times, 10 BPM slower, with the app playing softly underneath. Practice only: no ladder. The live coach can offer it (`action.kind: 'zoom'`). |
 | Layers | A step's `layers` lists lanes from one limb to the full groove; each clean take adds the next layer at the same tempo (`layerUp`), then the tempo ladder runs on the full groove. A fail never removes a layer. |
@@ -49,6 +54,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Practice at the kit | Choose before you sit down ("For you": played lately, the coach's drills, a warm-up, your level and a step up; tabs and search), then play from the kit with the same moves: yes = the next sensible step (`suggestNext`: two clean → +5 BPM, rough → −10; a rough last time starts 10 BPM lower), floor / tom 1 = 5 BPM slower / faster, ride = next exercise. The result shows on the screen; the full results page is under "details and history". |
 | Intro slides | Before the first take of an exercise, step or layer (or after a tempo jump of more than 10 BPM): what to play, who plays what (`limbPlan`: each limb, its drums and when), and the first bar counted with the limbs and one thing to focus on. One hi-hat hit goes forward, one snare hit back; forward on the last slide starts the count-in. Other gestures are ignored while they're up. Switch: Practice → How it plays. |
 | Switch tools by voice | Inside a lesson the live coach can offer one take in another tool (`trade`, `count`, `layers`, `listen`); yes or a tap runs it (`PlayOptions.oneOff`), the verdict is "one for fun" and the tempo ladder doesn't move. |
+| Weekly plan from your coach | On the first Journey visit of a week the coach writes the week's plan from a student profile (`engine/profile.ts`, last 28 days: each drum's accuracy and lateness with a trend, the tips given most, minutes per tool, songs, the weakest drum), the stage and last week's notes: one focus ("This week: …" with a why), up to 6 lessons that lead each day's set (`buildSession` focus ids: an open one leads, a finished one is the review), and a notebook it reads next week. The lesson writer and the live coach are told the focus. Falls back to "This week's thing". |
 | This week's thing | Journey names the live tip given most in the last 7 days (3+ times, `weekTheme`) as the habit to work on, with "lesson for this": the coach writes a lesson aimed at it. Runs keep their tip ids (`tipIds` in the summary). |
 | Stitch the song | When every bar of the stage's song is ready, Journey offers "Play *song* all the way through": a lesson built on the fly (`stitchLesson`, chart = `songChart`) from 75% of the song's tempo up to it, played through once per take. Finishing it offers "Now with the real song →" (Songs → Play). |
 | Your fills | After a take with free bars, each one you filled (2+ strokes) can be kept ("Keep fill N", `fillFromTake` snaps it to 16ths). Kept fills (last 20, `Settings.fills`) are on Trophies with "Hear it", and free-bar lessons offer "Hear one of your fills". |
@@ -85,7 +91,7 @@ zod, stored in SQLite and preferred by the daily planner. The built-in lessons a
 fallback and the examples the coach is shown.
 
 **The coach teaches the student the evidence shows.** `studentRead` (`src/engine/planner.ts`) sums up the last 4
-finished lessons' stars and the last 12 takes as a pace: *new*, *struggling* (takes under 75% or mostly 1 star),
+finished lessons' stars and the last 12 takes as a pace: *new*, *struggling* (takes under 75%, a spread wider than 40 ms, or mostly 1 star),
 *steady*, or *flying* (★★★ lessons, takes 95%+ with spread ≤ 20 ms), plus the tempo they own (`comfortableBpm`). Both
 the lesson writer and the live coach get it; "adult beginner" is only the assumption while there's no data. A flying
 student gets no lessons in between: the stage's checkpoints come first in the plan and the coach isn't asked for filler.
@@ -100,17 +106,22 @@ song for friends.
 - **Stars per lesson** (`starsFor` in `src/engine/lesson.ts`), from the take that completes it, best kept:
   ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra, ≥70% perfect and spread ≤15 ms.
   The coach sees stars: 1 star means shaky, so strengthening it beats a new topic.
-- **Celebration** after every finished lesson: stars, a drum fill, progress to the next rank, one Next button.
+- **Celebration** after every finished lesson: stars, a drum fill, progress to the next rank, one Next button. Playing a finished lesson
+  through again says "Still solid" instead (no second celebration).
 - **Ranks**: each milestone has a title (`rank` in `MILESTONES`), earned when its checkpoints pass:
-  Stick Rookie, Limb Wrangler, Groove Keeper, Fill Maker, Dynamics Boss, Triplet Traveller, Swing Cat.
+  Stick Rookie, Limb Wrangler, Groove Keeper, Fill Maker, Dynamics Boss, Triplet Traveller, Swing Cat, Pocket Pro, Shape
+  Shifter, Solo Voice.
   Ranks stay on the built-in checkpoints so they work offline (a coach stand-in marks the built-in checkpoint passed).
+  A rank is *earned* the day its checkpoints pass (it never blocks the next stage) and gets a **✓ proven** mark when
+  every checkpoint passes again at its target on a later day (a review, Beat your best or a replay; `proveOnAnotherDay`).
+  Once proven it stays. Review tiles of unproven checkpoints say "Prove it".
 - **Show-off song**: each rank unlocks real songs the coach picks for the stage's skills (`/api/coach/showoff`).
   You learn one in Songs; played scored at 85%+ it joins your show-off set, playable in Stage mode.
 - **The coach builds the path** inside the fixed stages: after every finished lesson it writes the next one in
   the background, and Journey's Next up offers it first.
 
 ## Curriculum shape
-Levels 0–6, one milestone each. Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
+Levels 0–9, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open). Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
 if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.
 
 | Level | Theme |
@@ -118,10 +129,13 @@ if that goal was picked during onboarding; picking none means "not sure yet" and
 | 0 | Setup, posture, counting quarters and 8ths |
 | 1 | One limb at a time; single strokes and accents |
 | 2 | The money beat, built layer by layer; double strokes; four on the floor; first song |
-| 3 | Kick variations, open hi-hat, crash phrasing, first fills, a rock song |
-| 4 | 16ths, paradiddle, ghost notes, open-hat grooves, ride groove |
+| 3 | Kick variations, open hi-hat, crash phrasing, first fills, the flam, a rock song |
+| 4 | 16ths, paradiddle, flam taps, the drag, ghost notes, open-hat grooves, ride groove |
 | 5 | Triplets, shuffle, half-time, funk, 6/8, a shuffle song |
 | 6 | Jazz ride, feathered kick, comping, a swing tune |
+| 7 | Groove at tempo: 16th kicks under 8ths, ghost 16ths, funk at 96, open-hat funk, laying back, a ruff fill, a 5-minute groove, a song with soft and loud sections |
+| 8 | Linear and odd: linear grooves and fills, 5/4, 7/8 (practice), a 5/4 song |
+| 9 | Solo voice: six fills on demand, fills that build, trading fours, a solo vamp, a song with a 4-bar drum break |
 
 Songs are written "in the style of" and played by the built-in synth. No copyrighted audio ships.
 Real songs come in through the Songs tab: search YouTube, set the tempo, learn the part by ear (with suggested notes
@@ -131,10 +145,16 @@ and sheet music), jam along or play it scored with the drumless version. MIDI + 
 - Pass criteria come from the lesson's level (`passFor`: 75–90% accuracy, 40–15% extra hits); a step can relax them but not tighten them. A step can add a timing limit
   (|mean offset|), a consistency limit (spread, std dev of offsets), a hand–foot flam limit, a velocity-evenness
   limit (CV %), a weak-second-double limit or a ghost-to-accent volume ratio. Every checkpoint's last step limits
-  spread (40 ms at levels 0–2, 30 at 3–4, 25 at 5–6): averaging on time isn't enough, each hit has to be.
+  spread (`spreadFor`: 40 ms at levels 0–2, 30 at 3–4, 25 at 5–6, 20 at 7–9): averaging on time isn't enough, each hit has to be.
 - A take is 4 bars; the proving take (last step at its target tempo) and copy-me takes are 8.
-- Good is ±100 ms (±150 at levels 0–1; Perfect ±40), shrunk to 40% of the closest gap between notes on one drum, so fast 16ths are judged
-  tighter.
+- Good is ±100 ms (±150 at levels 0–1; Perfect ±40), shrunk per note to 40% of the gap to its nearest neighbour on the same drum, so fast 16ths are
+  judged tighter while the 8ths beside them on another drum keep their window.
 - Keyboard timing is 10–30 ms late, so expect *Good* rather than *Perfect*. Never calibrate latency
   from the keyboard. Ghost-note checks need the real kit.
 - Wait mode is for learning the pattern only; it never counts as a pass.
+- Grace notes (flam, drag, ruff) are scored as one note: the grace stroke(s) first, then the main stroke takes the note
+  over (`createMatcher`). The take checks that most came out as two strokes, the grace soft (≤ 0.75 of the main) and
+  8–50 ms before it. Keyboard: Alt + key plays a flam. On the MPS-150 pad retriggers (29–56 ms) are close to flam
+  spacing: check on the real kit (M2).
+- Odd /8 meters (5/8, 7/8) click every 8th note with the group starts accented (7/8 = 2+2+3, `engine/meter.ts`), and the
+  count-in counts 8ths ("one … seven"). Solo and break bars can ask to stay on the beat (`minFreeOnBeatPct`).

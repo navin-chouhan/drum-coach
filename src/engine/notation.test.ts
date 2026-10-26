@@ -83,3 +83,11 @@ describe('limbPlan', () => {
     expect(limbPlan([0, 1, 2, 3].map(t => ({ t, drum: 'snare' })), 4).map(p => `${p.limb}:${p.when}`)).toEqual(['R:1 and 3', 'L:2 and 4']);
   });
 });
+
+describe('grace notes (R2)', () => {
+  it('heads carry their grace strokes; hints name the grace hand in small letters (lR rL, llR for a drag)', () => {
+    const [m] = layoutMeasures(pattern({ snare: 'f.f.d...' }, 2), 4);
+    expect(m.hands.filter(e => e.heads.length).map(e => e.heads[0].grace)).toEqual([1, 1, 2]);
+    expect(noteHints(pattern({ snare: 'f.f.d...' }, 2), 4).map(h => h.limbs)).toEqual(['lR', 'rL', 'llR']);
+  });
+});

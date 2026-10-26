@@ -47,3 +47,26 @@ describe('live coach gate', () => {
     expect(said).toEqual(['1:dragging', '9:dragging', '12:praise']);
   });
 });
+
+describe('a lay-back target (R4)', () => {
+  const notes = (offset: number) => Array.from({ length: 8 }, () => ({ drum: 'snare' as const, judgement: 'good' as const, offset }));
+  it('a step that asks for "behind the beat" never hears "Dragging. Push" for doing it', () => {
+    expect(candidateCues({ bar: 2, notes: notes(22), extras: 0, target: { ms: 20, tol: 10 } }, 'normal').map(c => c.id)).not.toContain('dragging');
+    expect(candidateCues({ bar: 2, notes: notes(0), extras: 0, target: { ms: 20, tol: 10 } }, 'normal').map(c => c.id)).toContain('lay-back');
+    expect(candidateCues({ bar: 2, notes: notes(22), extras: 0 }, 'normal').map(c => c.id)).toContain('dragging');
+  });
+});
+
+describe('feel cues (R4)', () => {
+  const notes = Array.from({ length: 8 }, () => ({ drum: 'hihat' as const, judgement: 'good' as const, offset: 0 }));
+  it('swing: too straight hears "Swing it", too swung hears "Straighter"', () => {
+    expect(candidateCues({ bar: 2, notes, extras: 0, swing: { now: 51, want: [58, 74] } }, 'normal').map(c => c.id)).toContain('swing-more');
+    expect(candidateCues({ bar: 2, notes, extras: 0, swing: { now: 80, want: [44, 56] } }, 'normal').map(c => c.id)).toContain('straight');
+    expect(candidateCues({ bar: 2, notes, extras: 0, swing: { now: 64, want: [58, 74] } }, 'normal').map(c => c.id)).toEqual([]);
+  });
+  it('dynamics: the marks go up but you didn\'t, or down', () => {
+    expect(candidateCues({ bar: 2, notes, extras: 0, dyn: { want: 3, prevWant: 1, got: 80, prevGot: 82 } }, 'normal').map(c => c.id)).toContain('bring-up');
+    expect(candidateCues({ bar: 2, notes, extras: 0, dyn: { want: 1, prevWant: 3, got: 100, prevGot: 98 } }, 'normal').map(c => c.id)).toContain('bring-down');
+    expect(candidateCues({ bar: 2, notes, extras: 0, dyn: { want: 3, prevWant: 1, got: 110, prevGot: 70 } }, 'normal').map(c => c.id)).toEqual([]);
+  });
+});

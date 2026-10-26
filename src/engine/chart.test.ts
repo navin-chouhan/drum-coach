@@ -7,6 +7,8 @@ describe('chart', () => {
   it('pattern builds notes with accents and ghosts', () => {
     expect(pattern({ snare: 'X.g.' }, 2)).toEqual([{ t: 0, drum: 'snare', accent: true }, { t: 1, drum: 'snare', ghost: true }]);
     expect(pattern({ kick: 'x...' }, 4, 2).map(n => n.t)).toEqual([0, 1]);
+    // grace notes: f flam, d drag, r ruff; capitals are accented
+    expect(pattern({ snare: 'fFdDr' }, 1).map(n => [n.grace, !!n.accent])).toEqual([[1, false], [1, true], [2, false], [2, true], [3, false]]);
   });
 
   it('hi-hat lane accepts open and closed, hhOpen only open', () => {

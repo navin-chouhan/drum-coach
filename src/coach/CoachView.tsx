@@ -81,7 +81,8 @@ export function PlanCard() {
       {shown && (
         <div className="plan">
           <h4>{shown.plan.title}</h4>
-          {shown.plan.days.map((d, di) => (
+          {shown.plan.focus && <p>🎯 <b>{shown.plan.focus}</b>{shown.plan.why ? ` · ${shown.plan.why}` : ''}</p>}
+          {shown.plan.days?.map((d, di) => (
             <div key={di}>
               <b>{d.day}</b>
               <ul>

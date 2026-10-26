@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { canRunAction, runAction, say, useCoach } from '../coach/session';
+import { canRunAction, runAction, say, screenAction, useCoach } from '../coach/session';
 import { recordWhileHeld, transcribe, type Recording } from './listen';
 
 /**
@@ -44,7 +44,7 @@ export function TalkToCoach() {
     : mic === 'hearing' || coach.status === 'hearing' ? 'Getting your words…'
     : coach.status === 'listening' ? 'Listening for your answer…'
     : coach.status === 'thinking' ? 'Thinking…' : '';
-  const r = coach.reply, a = r?.action;
+  const r = coach.reply, a = screenAction(r?.action, 'Next ▶');
   const show = (closedAt < coach.at || mic !== 'idle' || !!err) && (r || status || err || coach.error);
   return (
     <div className="talk" aria-live="polite">

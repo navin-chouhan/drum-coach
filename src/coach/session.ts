@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { saveChart } from '../content/charts';
+import { chartExists, saveChart } from '../content/charts';
+import { lessonById } from '../lesson/aiLessons';
 import { getSettings } from '../input/settings';
 import { player } from '../play/player';
 import { requestLesson, requestPlay } from '../ui/nav';
@@ -22,6 +23,15 @@ export const useCoach = () => useSyncExternalStore(fn => { listeners.add(fn); re
 /** The coach's answer to the take on screen `f` (a slow answer about an earlier take, e.g. the last lesson's, isn't). */
 export const replyFor = (s: CoachState, f: Finished | undefined, openedAt: number) =>
   s.reply && (s.take ? s.take === f : s.at > Math.max(openedAt, f ? Date.parse(f.startedAt) : 0)) ? s.reply : undefined;
+/**
+ * The big coach line: the coach's answer to this take (its short screen line, else what it said), or the app's
+ * verdict. A big moment (a record, a rank up, a finished lesson) keeps the app's verdict, with the coach's words under it.
+ */
+export function coachLine(verdict: string | undefined, reply: { say: string; show?: string } | undefined, big: boolean): { line?: string; under?: string } {
+  if (!reply) return { line: verdict };
+  const words = reply.show ?? reply.say;
+  return big && verdict ? { line: verdict, under: words } : { line: words };
+}
 /** The coach is thinking about the take on screen. */
 export const thinkingAbout = (s: CoachState, f: Finished | undefined) => s.status === 'thinking' && !!f && (!s.thinking || s.thinking === f);
 
@@ -39,9 +49,23 @@ export function onCoachAction(fn: ActionHandler) {
   };
 }
 
-/** Leaving the screen a suggestion was for: keep the coach's words, drop its button (a drill can start anywhere). */
-export function dropCoachAction() {
-  if (state.reply?.action && state.reply.action.kind !== 'drill') set({ reply: { ...state.reply, action: undefined } });
+/** Leaving the screen a suggestion was for: keep the coach's words, drop its button (a drill can start anywhere, unless `all`). */
+export function dropCoachAction(all = false) {
+  if (state.reply?.action && (all || state.reply.action.kind !== 'drill')) set({ reply: { ...state.reply, action: undefined } });
+}
+
+type Action = NonNullable<CoachReply['action']>;
+/** A drill's target: a lesson ("lesson/<id>") or a chart in the library or saved. */
+export const targetExists = (chartId: string) => (chartId.startsWith('lesson/') ? !!lessonById(chartId.slice(7)) : chartExists(chartId));
+/**
+ * The coach's suggestion as the screen shows it. "next" gets the screen's own label (the coach once offered a
+ * "Next posture step" that doesn't exist); a drill with no chart and no existing target is dropped (its words stay).
+ */
+export function screenAction(a: Action | undefined, nextLabel: string, exists: (chartId: string) => boolean = targetExists): Action | undefined {
+  if (!a) return undefined;
+  if (a.kind === 'next') return { ...a, label: nextLabel };
+  if (a.kind === 'drill' && !a.chart && !(a.chartId && exists(a.chartId))) return undefined;
+  return a;
 }
 
 /** Something on screen can carry this out (a drill opens its own exercise from anywhere). */
@@ -60,7 +84,7 @@ export async function runAction(a: Act) {
 /** A pad command between takes: "yes" takes the coach's suggestion (or plays again); only on a screen that can carry it out. */
 export function padAction(cmd: 'yes' | 'slower' | 'faster' | 'next' | 'listen') {
   if (!handlers.length) return; // e.g. hitting pads on the calibration screen
-  void runAction(cmd === 'yes' ? state.reply?.action ?? { kind: 'main', label: 'Yes' } : { kind: cmd, label: cmd });
+  void runAction(cmd === 'yes' ? screenAction(state.reply?.action, 'Next') ?? { kind: 'main', label: 'Yes' } : { kind: cmd, label: cmd });
 }
 
 let seq = 0;
@@ -91,7 +115,7 @@ export async function coachEvent(event: SessionEvent, take?: Finished) {
     // Only the student's own "yes" starts something; the model sometimes sets `now` after a plain take (then it's a button).
     if (reply?.action?.now && event.type !== 'said') reply = { ...reply, action: { ...reply.action, now: false } };
     set({ status: 'idle', reply, at: Date.now(), take });
-    if (reply?.action?.now) void runAction(reply.action);
+    if (reply?.action?.now && screenAction(reply.action, 'Next')) void runAction(reply.action);
     else if (reply?.ask && getSettings().handsFree && player.phase !== 'playing') void handsFree();
   } catch (e) {
     if (my === seq) set({ status: 'idle', error: (e as Error).message, at: Date.now() });

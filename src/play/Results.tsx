@@ -3,29 +3,31 @@ import type { DrumId } from '../engine/kit';
 import { CoachFeedback } from '../coach/CoachFeedback';
 import { coachTake } from '../coach/session';
 import { summarizeRun } from '../coach/summary';
-import { latencySuspect } from '../engine/scoring';
+import { heatSlotName, latencySuspect } from '../engine/scoring';
 import { DRUM_BY_ID } from '../ui/drums';
 import { HIGHWAY_LANES } from './Highway';
 import type { Finished } from './player';
 
 const laneOf = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
-const COUNT = ['1', 'e', '&', 'a'];
 const timingText = (ms: number) => (Math.abs(ms) < 5 ? 'Right on the grid' : ms < 0 ? `Rushing by ${-ms} ms` : `Dragging by ${ms} ms`);
 
-const saved = new WeakSet<Finished>();
+const saved = new WeakMap<Finished, Promise<void>>();
 const [saveOk, saveFail] = [() => {}, () => console.warn('Run not saved: is the server running?')];
 
-/** Saves a run once (wait-mode and empty runs are skipped: they'd distort progress). */
-export function saveRun(f: Finished, extra?: Record<string, unknown>) {
+/** Saves a run once (wait-mode and empty runs are skipped: they'd distort progress). Resolves when it's saved. */
+export function saveRun(f: Finished, extra?: Record<string, unknown>): Promise<void> {
   const s = f.stats;
-  if (f.options.wait || saved.has(f) || s.total === 0) return;
-  saved.add(f);
+  if (f.options.wait || s.total === 0) return Promise.resolve();
+  const was = saved.get(f);
+  if (was) return was;
   const c = f.chart as typeof f.chart & { id?: string };
-  void fetch('/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+  const p = fetch('/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
     chartId: c.id ?? c.title, chartTitle: c.title, level: c.level, startedAt: f.startedAt, durationS: f.durationS,
     bpm: c.bpm * f.options.speed, speed: f.options.speed, accuracy: s.accuracy, meanOffset: s.meanOffset, spread: s.spread,
     summary: { ...summarizeRun(f), ...extra },
   }) }).then(r => (r.ok ? saveOk() : saveFail()), saveFail);
+  saved.set(f, p);
+  return p;
 }
 
 /** Every stroke off by the same amount: point at the latency test before the student blames their hands. */
@@ -38,7 +40,7 @@ export function LatencyHint({ f }: { f: Finished }) {
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
   const s = f.stats, wait = f.options.wait;
   useEffect(() => { saveRun(f); coachTake(f); }, [f]);
-  const slotLabel = (i: number) => (i % 4 === 0 ? String(i / 4 + 1) : COUNT[i % 4]);
+  const slotLabel = (i: number) => { const [, beat, count] = heatSlotName(i, f.stats.heat.length, f.run.beatsPerBar).split(' '); return count ?? beat; }; // "2", "&", "let"
   return (
     <div className="results">
       <div className="resultsHead">

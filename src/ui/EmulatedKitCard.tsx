@@ -13,6 +13,11 @@ export function EmulatedKitCard() {
       <p className="small">For testing without the kit. It plays every take (not wait mode or songs) like a steady player on an MPS-150,
         sending the same MIDI as the real module: clock messages, pad retriggers, soft-snare → hi-hat crosstalk. Not saved.</p>
       <label className="check"><input type="checkbox" checked={k.on} onChange={e => setEmulatedKit({ on: e.target.checked })} /> Play my takes with the emulated kit</label>
+      <div className="actions">
+        <span className="small">Players:</span>
+        <button onClick={() => setEmulatedKit({ lateMs: 45, jitterMs: 40, weakHand: 0.6 })}>Beginner (late, loose, weak left)</button>
+        <button onClick={() => setEmulatedKit({ lateMs: 8, jitterMs: 8, weakHand: 0.95 })}>Solid</button>
+      </div>
       <div className="row2">
         {num('Late (ms)', k.lateMs, v => setEmulatedKit({ lateMs: v }), -200, 200)}
         {num('Jitter ± (ms)', k.jitterMs, v => setEmulatedKit({ jitterMs: v }), 0, 100)}

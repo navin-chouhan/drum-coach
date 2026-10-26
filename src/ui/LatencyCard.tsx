@@ -9,7 +9,7 @@ const BPM = 60, COUNT_IN = 4, CLICKS = 16; // one per second: easy to count alon
 const MAX_SPREAD = 50, MIN_TAPS = 10; // fewer or more scattered taps measure the player, not the latency
 
 /** Tap any pad along with 16 clicks; the median offset becomes the latency correction used in scoring. */
-export function LatencyCard() {
+export function LatencyCard({ onSaved }: { onSaved?: () => void } = {}) {
   const settings = useSyncExternalStore(subscribeSettings, getSettings);
   const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');
   const [result, setResult] = useState<ReturnType<typeof estimateLatency>>(null);
@@ -52,7 +52,7 @@ export function LatencyCard() {
         : <p className="warn">Not enough taps close to the clicks. Try again.</p>)}
       <div className="actions">
         <button onClick={() => whenRunning(run)} disabled={state === 'running'}>Start</button>
-        {state === 'done' && result && result.spread <= MAX_SPREAD && result.n >= MIN_TAPS && <button className="primary" onClick={() => setSettings({ latencyMs: result.latencyMs })}>Save {result.latencyMs} ms</button>}
+        {state === 'done' && result && result.spread <= MAX_SPREAD && result.n >= MIN_TAPS && <button className="primary" onClick={() => { setSettings({ latencyMs: result.latencyMs, latencyChecked: true }); onSaved?.(); }}>Save {result.latencyMs} ms</button>}
         {settings.latencyMs !== 0 && <button onClick={() => setSettings({ latencyMs: 0 })}>Reset to 0</button>}
       </div>
     </section>

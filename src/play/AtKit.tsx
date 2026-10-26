@@ -1,16 +1,17 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Thinking } from '../coach/api';
 import { recentAccuracy } from '../engine/scoring';
 import { player, playerVersion, position, subscribePlayer } from './player';
 
 // Building blocks of the screens you use at the kit (lessons, Practice): read from 1–2 m, driven by pad gestures
 // (engine/padCommands.ts). Each move shows its gesture, so you learn them by looking.
 
-/** The coach's one line, big. */
-export function CoachLine({ line }: { line: string }) {
+/** The coach's one line, big. While the coach thinks, the verdict stays and a small line under it says so. */
+export function CoachLine({ line, under, thinking }: { line: string; under?: string; thinking?: boolean }) {
   return (
     <div className="say">
       <div className="avatar" aria-hidden>🥁</div>
-      <div className="bubble" aria-live="polite">{line}</div>
+      <div className="bubble" aria-live="polite">{line}{under && <p className="under">{under}</p>}{thinking && <Thinking what="Your coach is listening back" />}</div>
     </div>
   );
 }

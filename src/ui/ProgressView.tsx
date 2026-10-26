@@ -1,11 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { MILESTONES } from '../content/curriculum';
-import { checkpointsOf } from '../engine/planner';
+import { rankState } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { hearFill } from '../play/fills';
-import { BADGES, barsReady, dashboard, type Dashboard, type RunRow } from '../engine/progress';
+import { BADGES, dashboard, earnedBadges, songReady, type Dashboard, type RunRow } from '../engine/progress';
 import { requestLesson, requestPlay, requestSong } from './nav';
 
 const ACCENT = '#2F6FE4';
@@ -120,16 +120,19 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
   const lessons = useLessons();
   const [songs] = useYtSongs();
-  const passed = (m: (typeof MILESTONES)[number]) => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => s.lessons[l.id]?.completedAt); };
+  const rankOf = (m: (typeof MILESTONES)[number]) => rankState(m, lessons, s.lessons, s.profile);
   const stars = Object.values(s.lessons).reduce((a, p) => a + (p.completedAt ? p.stars ?? 1 : 0), 0);
-  // A show-off song: every bar played at 85% or better (across takes).
-  const showoff = songs.filter(song => { const n = songBarCount(song); return n > 0 && barsReady(runs, song.id, n) >= n; });
+  // A show-off song: 16 bars or more, every bar played at 85% or better (across takes).
+  const showoff = songs.filter(song => songReady(runs, song.id, songBarCount(song)));
+  // Journey announces new badges and stores them; the shelf also counts what the runs already earned, so it's never stale.
+  const badges = new Set([...(s.badges ?? []), ...earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, showoff.map(x => x.id))]);
   return (
     <div className="card trophies">
       <h3>Trophy shelf</h3>
       <div className="stickers">
-        {MILESTONES.map(m => passed(m)
-          ? <div key={m.level} className="rankSticker small" title={`Stage ${m.level + 1}: ${m.title}`}>{m.rank}</div>
+        {MILESTONES.map(m => rankOf(m).state !== 'locked'
+          ? <div key={m.level} className="rankSticker small" title={`Stage ${m.level + 1}: ${m.title}${rankOf(m).state === 'proven' ? ' · proven on another day' : ` · prove it on another day (${rankOf(m).proven} of ${rankOf(m).total})`}`}>
+            {m.rank}{rankOf(m).state === 'proven' ? ' ✓' : ''}</div>
           : <div key={m.level} className="rankSticker small locked" title={`Pass stage ${m.level + 1}, ${m.title}, to earn this`}>?</div>)}
       </div>
       <p><span className="stars">★</span> <b>{stars}</b> stars from your lessons</p>
@@ -138,14 +141,17 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
         : <p className="small">Fills you make up in free bars and trade bars can be kept after the take. They land here.</p>}
       <h4>Badges</h4>
       <div className="stickers">
-        {BADGES.map(b => <div key={b.id} className={`rankSticker small ${s.badges?.includes(b.id) ? '' : 'locked'}`} title={b.how}>{s.badges?.includes(b.id) ? `🏅 ${b.name}` : b.name}</div>)}
+        {BADGES.map(b => <div key={b.id} className={`rankSticker small ${badges.has(b.id) ? '' : 'locked'}`} title={b.how}>{badges.has(b.id) ? `🏅 ${b.name}` : b.name}</div>)}
       </div>
+      <p className="small honest">🎥 An app can hear your timing and volume, but it can't see your hands. Once a month, film yourself with
+        "📷 Check yourself" in a lesson and compare with "How it moves". If you can, take one lesson with a human teacher per stage:
+        they spot tension and grip habits no app can.</p>
       <h4>Show-off set</h4>
       {showoff.length ? (
         <ul className="songList">
           {showoff.map(song => <li key={song.id}><span>{song.title}</span><button className="primary" onClick={() => requestSong(song.id)}>Play it (Stage mode is under Play)</button></li>)}
         </ul>
-      ) : <p className="small">Pass a stage to unlock a show-off song, then play it scored on Songs at 85% or better. It lands here, ready to play for your friends.</p>}
+      ) : <p className="small">Pass a stage to unlock a show-off song, then play 16 bars or more of it scored on Songs, every bar at 85% or better. It lands here, ready to play for your friends.</p>}
     </div>
   );
 }

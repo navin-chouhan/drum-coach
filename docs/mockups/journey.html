@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journey revamp</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .trailM{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 0}
+  .trailM .dot{width:56px;height:56px;border-radius:50%;border:3px solid var(--line);background:var(--panel);display:grid;place-items:center;font-size:20px;box-shadow:3px 3px 0 var(--line)}
+  .trailM .done{background:var(--good);color:#fff}.trailM .now{width:72px;height:72px;background:var(--pop)}
+  .trailM .dash{flex:0 0 26px;border-top:5px dotted var(--line)}
+  .songStop{position:relative;width:110px;height:110px;border-radius:16px;border:3px solid var(--line);background:var(--cyan);display:grid;place-items:center;font:800 15px var(--display);text-align:center;box-shadow:4px 4px 0 var(--line);cursor:pointer}
+  .ringM{position:absolute;inset:-10px;border-radius:22px;background:conic-gradient(var(--good) 0 56%, #0002 56% 100%);z-index:-1}
+  .ranks{display:flex;gap:12px;flex-wrap:wrap}
+  .proven{background:var(--good);color:#fff;font:800 13px system-ui;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .prove{background:var(--panel2);font:700 13px system-ui;padding:2px 8px;border:2px dashed var(--line);margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · Journey</b> R6 weekly focus · R8 stage song at the end of the trail · R7 proven ranks · R8 after the path. Not built.</div>
+
+<section class="state">
+  <h2>A · A normal day in Stage 3</h2>
+  <div class="today home">
+    <div class="homeHero">
+      <div class="avatar">🥁</div>
+      <div class="bubble"><p>Evening! Today: "Kick on the &amp; of 3", then a bite of your stage song. About 25 minutes. Ready?</p>
+        <div class="actions"><button class="primary big">Yes, let's go ▶</button><button>Something else</button></div></div>
+      <div class="card youCard">
+        <div class="rankSticker small">Limb Wrangler <span class="proven">✓ proven</span></div>
+        <ul class="youStats"><li>🔥 4-day streak</li>
+          <li class="rel new">🎯 <b>This week: your left hand on the hi-hat</b><br><span class="small">from the coach's plan: 4 lessons picked, 2 done · why: "the left-hand 8ths land 30 ms late"</span></li></ul>
+      </div>
+    </div>
+    <div class="note"><b>R6:</b> "🎯 This week: …" replaces the "This week's thing" line; it comes from a weekly plan the coach writes on the
+      first Journey visit of the week, from your last 28 days. Its lessons lead the daily set. If there's no plan, the old line is the fallback.</div>
+
+    <div class="card">
+      <h3>Stage 3 · The money beat</h3>
+      <div class="trailM">
+        <span class="dot done">✓</span><span class="dash"></span><span class="dot done">✓</span><span class="dash"></span>
+        <span class="dot now">🥁</span><span class="dash"></span><span class="dot">★</span><span class="dash"></span><span class="dot">★</span><span class="dash"></span>
+        <div class="songStop rel new"><span class="ringM"></span>🎵 Steady Eight<br><small>9 of 16 bars ready</small></div>
+      </div>
+      <div class="note"><b>R8:</b> every stage ends at its song. Built-in songs for every stage (with the band), or "pick a real song" (the
+        Show-off flow you have). The last stop is a button with a ring of bars ready. Lessons end with a bite of it; the groove slot of the
+        daily set prefers the next unready bite. A show-off song needs 16 bars or more (M18).</div>
+    </div>
+
+    <div class="card rel new">
+      <h3>Ranks</h3>
+      <div class="ranks">
+        <div class="rankSticker small">Stick Rookie <span class="proven">✓</span></div>
+        <div class="rankSticker small">Limb Wrangler <span class="proven">✓</span></div>
+        <div class="rankSticker small">Groove Keeper <span class="prove">prove it on another day · 1 of 2</span></div>
+        <div class="rankSticker small locked">?</div>
+      </div>
+      <div class="note"><b>R7:</b> a rank is <b>earned</b> the day its checkpoints pass (never blocks the next stage). It gets <b>✓ proven</b> when
+        each checkpoint passes again at its target on a later day; reviews count, and once proven it stays. Review tiles for unproven
+        checkpoints say "Prove it".</div>
+      <div class="tiles">
+        <div class="tile"><span class="ic">🔁</span><b>Prove it: The money beat</b><span class="small">Review · passes Groove Keeper's 2nd checkpoint on a new day</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2>B · After the whole path (replaces M11's interim view)</h2>
+  <div class="today home">
+    <div class="homeHero">
+      <div class="avatar">🥁</div>
+      <div class="bubble"><p>All stages done. Today: warm-up, prove "Funk groove" again, your weekly focus (ghost notes at 100), then one
+        take of a show-off song.</p>
+        <div class="actions"><button class="primary big">Yes, let's go ▶</button><button>🎤 Show-off set</button><button>🏆 Beat your best</button><button>🎵 Learn a new song</button></div></div>
+      <div class="card youCard"><div class="rankSticker small">Swing Cat <span class="prove">prove it · 2 of 3</span></div></div>
+    </div>
+    <div class="note">The daily set never goes empty after the path; the coach can still write lessons (post-path input instead of the 400 error).</div>
+  </div>
+</section>
+</body>
+</html>

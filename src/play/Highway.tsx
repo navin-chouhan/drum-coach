@@ -89,6 +89,7 @@ export function Highway() {
         } else {
           c.beginPath(); c.roundRect(x - w / 2, y - h / 2, w, h, 5); c.fill();
           if (n.accent) { c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); }
+          for (let k = 1; k <= (n.grace ?? 0); k++) { c.beginPath(); c.arc(x - w / 3, y + h / 2 + 6 * k, 3.5, 0, Math.PI * 2); c.fill(); } // grace strokes land just before
         }
         c.globalAlpha = 1;
       }

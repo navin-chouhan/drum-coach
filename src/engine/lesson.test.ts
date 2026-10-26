@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, floorLine, lateNote, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -72,6 +72,9 @@ describe('tempo ladder', () => {
     expect(ladderStep({ ...p0, bpm: 60 }, lesson, false, D, 40)).toMatchObject({ event: 'slowDown', next: { bpm: 50 } });
     expect(ladderStep({ ...p0, bpm: 45 }, lesson, false, D, 40)).toMatchObject({ next: { bpm: 40 } });
     expect(ladderStep({ ...p0, bpm: 40 }, lesson, false, D, 40)).toMatchObject({ event: 'atFloor', next: { bpm: 40 } });
+    // every note landed, only the timing (or volume) failed: slower doesn't help, the tempo holds
+    expect(ladderStep({ ...p0, bpm: 60, fails: 1 }, lesson, false, D, 100, false, true)).toMatchObject({ event: 'hold', next: { bpm: 60 } });
+    expect(ladderStep({ ...p0, bpm: 40, fails: 5 }, lesson, false, D, 100, false, true)).toMatchObject({ event: 'hold', next: { bpm: 40 } });
   });
   it('after easing off, one clean take climbs +10 back toward the target', () => {
     expect(ladderStep({ ...p0, bpm: 45 }, lesson, true, D)).toMatchObject({ event: 'up', next: { bpm: 55 } });
@@ -160,6 +163,9 @@ describe('find your tempo', () => {
     expect(probeTempo([100, 95, 90, 60], 60, 75)).toBe(65); // broke at 75 BPM
     expect(probeTempo([100, 100, 100], 60, 75)).toBe(70);
     expect(probeTempo([50], 45, 75)).toBe(40); // never under 40
+    // With a target cap, the last bar plays the target itself (90 → 92, not 95).
+    expect(probeTempo([100, 100, 100, 100], 80, 75, 92)).toBe(92);
+    expect(probeTempo([100, 100, 100, 60], 80, 75, 92)).toBe(82); // broke at the target 92
   });
 });
 
@@ -216,5 +222,80 @@ describe('reacting to the click', () => {
   it('fails the take with that as the one thing to fix, before accuracy', () => {
     expect(checkPass(stats({ reaction: 180, accuracy: 60 })).reason).toMatch(/after each click/);
     expect(checkPass(stats({ reaction: null })).ok).toBe(true);
+  });
+});
+
+describe('nextStepInfo', () => {
+  it('names the new step and its own tempos after a step is done (so the coach doesn\'t call it a slow-down)', () => {
+    expect(nextStepInfo(lesson, { ...startProgress(lesson), step: 1, bpm: 70 }, 'stepDone')).toEqual({ title: 'b', startBpm: 70, targetBpm: 70 });
+    expect(nextStepInfo(lesson, startProgress(lesson), 'up')).toBeUndefined();
+  });
+});
+
+describe('floorLine', () => {
+  it('at the slowest tempo, wait mode only helps when notes were missed; a timing fail gets the timing fix', () => {
+    expect(floorLine(false)).toMatch(/Learn it slowly/);
+    expect(floorLine(true, 'Dragging by 41 ms. Lock onto the click.')).toBe('All the notes are there. Dragging by 41 ms. Lock onto the click.');
+    expect(floorLine(true)).not.toMatch(/Learn it slowly/);
+  });
+});
+
+describe('proven on another day (R7)', () => {
+  const passed = { ...startProgress(lesson), completedAt: '2026-10-24', bestBpm: 70 };
+  it('the same day is not proven; a pass at the target on a later day is', () => {
+    expect(isProven(proveOnAnotherDay(passed, true, '2026-10-24'))).toBe(false);
+    const p = proveOnAnotherDay(passed, true, '2026-10-26');
+    expect(p.provenAt).toBe('2026-10-26');
+    expect(isProven(p)).toBe(true);
+    expect(isProven(proveOnAnotherDay(passed, false, '2026-10-26'))).toBe(false); // a fail (or under the target) proves nothing
+  });
+  it('once proven it stays, and old saves with a passed review count', () => {
+    const p = proveOnAnotherDay(proveOnAnotherDay(passed, true, '2026-10-26'), false, '2026-10-30');
+    expect(p.provenAt).toBe('2026-10-26');
+    expect(isProven({ ...passed, reviewStage: 1 })).toBe(true);
+    expect(isProven(undefined)).toBe(false);
+    expect(isProven(proveOnAnotherDay(startProgress(lesson), true, '2026-10-26'))).toBe(false); // never finished: nothing to prove
+  });
+});
+
+describe('checkPass: grace notes (R2)', () => {
+  const g = (grace: RunStats['grace']) => stats({ grace });
+  it('needs most flams to come out as two notes (70% by default), the grace soft and close', () => {
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 25, ratio: 0.4 })).ok).toBe(true);
+    expect(checkPass(g({ notes: 10, played: 5, pct: 50, gapMs: 25, ratio: 0.4 })).reason).toMatch(/came out as one note/);
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 25, ratio: 0.9 })).reason).toMatch(/grace too loud/i);
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 70, ratio: 0.4 })).reason).toMatch(/too far apart/);
+    expect(checkPass(g({ notes: 10, played: 9, pct: 90, gapMs: 4, ratio: 0.4 })).reason).toMatch(/land together/);
+    expect(checkPass(g({ notes: 10, played: 5, pct: 50, gapMs: 25, ratio: 0.4 }), { minGracePct: 40 }).ok).toBe(true);
+    expect(checkPass(stats()).ok).toBe(true); // no graces: nothing to check
+  });
+});
+
+describe('lateNote', () => {
+  it('a passing take far off the click at levels 0-1 gets a gentle word, nothing otherwise', () => {
+    expect(lateNote(0, 93)).toBe(' A touch late: lean into the click.');
+    expect(lateNote(1, -60)).toBe(' A touch early: let the click come to you.');
+    expect(lateNote(1, 30)).toBe('');
+    expect(lateNote(2, 93)).toBe(''); // from level 2 the Good window is tight enough to say it
+  });
+});
+
+describe('checkPass: feel (R4)', () => {
+  it('swing range, dynamics that follow the marks, and playing behind the beat on purpose', () => {
+    const feel = (swing: number | null, dynamics: number | null) => stats({ feel: { swing, dynamics } });
+    expect(checkPass(feel(64, null), { swingPct: [58, 72] }).ok).toBe(true);
+    expect(checkPass(feel(52, null), { swingPct: [58, 72] }).reason).toMatch(/swing/i);
+    expect(checkPass(feel(null, 0.9), { minDynamicsR: 0.5 }).ok).toBe(true);
+    expect(checkPass(feel(null, 0.1), { minDynamicsR: 0.5 }).reason).toMatch(/soft.*loud|volume/i);
+    const late = stats({ perDrum: { snare: { total: 20, hit: 20, accuracy: 100, meanOffset: 22 } } });
+    expect(checkPass(late, { offsetTarget: { drum: 'snare', ms: 20, tol: 10 } }).ok).toBe(true);
+    expect(checkPass(stats({ perDrum: { snare: { total: 20, hit: 20, accuracy: 100, meanOffset: 2 } } }), { offsetTarget: { drum: 'snare', ms: 20, tol: 10 } }).reason).toMatch(/behind/);
+  });
+});
+
+describe('checkPass: your own bars (R3)', () => {
+  it('a solo has to stay on the beat when the step asks', () => {
+    expect(checkPass(stats(), { minFreeOnBeatPct: 70 }, undefined, { hits: 20, onGridPct: 85 }).ok).toBe(true);
+    expect(checkPass(stats(), { minFreeOnBeatPct: 70 }, undefined, { hits: 20, onGridPct: 50 }).reason).toMatch(/drifted off the beat/);
   });
 });

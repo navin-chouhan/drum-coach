@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { countInNumber } from '../engine/run';
 import {
-  Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, ModifierPosition, Parenthesis,
+  Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, GraceNote, GraceNoteGroup, ModifierPosition, Parenthesis, Tremolo,
   Renderer, Stave, StaveNote, Tuplet, Voice,
 } from 'vexflow/bravura'; // Bravura is embedded: works offline
 import type { ChartNote } from '../engine/chart';
@@ -40,6 +40,11 @@ function buildVoice(events: NotationEvent[], stem: 1 | -1, groupSlots = 4, dim?:
       if (h.accent) n.addModifier(new Articulation('a>').setPosition(stem === 1 ? ModifierPosition.ABOVE : ModifierPosition.BELOW), i);
       if (h.ghost) { n.addModifier(new Parenthesis(ModifierPosition.LEFT), i); n.addModifier(new Parenthesis(ModifierPosition.RIGHT), i); }
       if (h.open) n.addModifier(new Annotation('o').setVerticalJustification(AnnotationVerticalJustify.TOP), i);
+      if (h.buzz) n.addModifier(new Tremolo(3), i); // a buzz stroke: the Z-like slashes on the stem
+      if (h.grace) { // small notes before it: one slashed 8th for a flam, 16ths for a drag or ruff
+        const g = Array.from({ length: h.grace }, () => new GraceNote({ keys: [h.key], duration: h.grace === 1 ? '8' : '16', slash: h.grace === 1, clef: 'percussion', stemDirection: 1 }));
+        n.addModifier(new GraceNoteGroup(g, true).beamNotes(), i);
+      }
     });
     notes.push(n); beat.push(n);
     if (d.inTuplet) tupletNotes.push(n);
@@ -57,6 +62,7 @@ type SheetOptions = {
   width: number; title?: string; bpm?: number; dim?: (i: number) => boolean;
   scale?: number; barMin?: number; // zoom (1 = VexFlow size) and the narrowest bar before wrapping, in unscaled units
   hints?: boolean; // the count and who plays each note (R / L hand, K kick, H hi-hat foot) under the staff
+  dyn?: number[]; // volume marks per bar (1 p, 2 mf, 3 f), shown where they change
 };
 
 /** Draws the notation into `el` (SVG) and returns where every bar, beat and note ended up (in screen pixels). */
@@ -113,6 +119,8 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
         ctx.setFont('Arial', 11, 'bold'); ctx.fillText(h.limbs, hx - ctx.measureText(h.limbs).width / 2, y + ROW_H + 20);
       }
     }
+    const mark = o.dyn?.[m.index - 1];
+    if (mark && mark !== o.dyn?.[m.index - 2]) { ctx.setFont('Times New Roman', 18, 'bold italic'); ctx.fillText(['p', 'mf', 'f'][mark - 1], stave.getNoteStartX(), y + 18); }
     boxes.push({ index: m.index, x0: x * k, x1: (x + w) * k, y: y * k, points: points.map(q => ({ beat: q.beat, x: q.x * k })) });
   });
   // On a row, the cursor glides on to the next bar's downbeat note: stopping at the barline made it snap forward there.
@@ -137,9 +145,10 @@ const useWidth = (ref: React.RefObject<HTMLElement | null>) => {
  * Drum notation for a chart (percussion staff, hands stem up, feet stem down), wrapped to the width.
  * Bars are 1-based; `title` prints above when given.
  */
-export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bpm, hints, dim, zoom = 1.15 }: {
+export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bpm, hints, dim, zoom = 1.15, dyn }: {
   notes: (ChartNote & { i?: number })[]; timeSignature: readonly [number, number]; fromBar?: number; toBar?: number; title?: string; bpm?: number;
   hints?: boolean; dim?: (i: number) => boolean; zoom?: number; // zoom: notation size on wide screens
+  dyn?: number[]; // p / mf / f per bar
 }) {
   const host = useRef<HTMLDivElement>(null);
   const { w: width } = useWidth(host);
@@ -150,11 +159,11 @@ export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bp
     fontReady ??= document.fonts.load('30px Bravura');
     void fontReady.then(() => {
       if (cancelled || !host.current) return;
-      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, scale: width < 500 ? 1 : zoom, barMin: hints ? 320 : 250 }); setError(''); } // hints need room at the barlines
+      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, dyn, scale: width < 500 ? 1 : zoom, barMin: hints ? 320 : 250 }); setError(''); } // hints need room at the barlines
       catch (e) { setError(`Couldn't draw this part: ${(e as Error).message}`); }
     });
     return () => { cancelled = true; };
-  }, [notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, zoom]);
+  }, [notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, zoom, dyn]);
   return (
     <div className="sheet">
       <div ref={host} className="sheetPaper" role="img" aria-label={`Drum notation${title ? ` for ${title}` : ''}`} />

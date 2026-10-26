@@ -1,4 +1,4 @@
-import { dueReviews, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson.ts';
+import { dueReviews, isProven, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson.ts';
 
 export type SessionRole = 'warmup' | 'review' | 'skill' | 'groove' | 'record'; // record: one take to beat your best
 export type SessionItem = { role: SessionRole; lessonId: string; minutes: number };
@@ -16,6 +16,20 @@ export const checkpointsOf = (m: Milestone, lessons: Lesson[], profile: Profile)
   visibleLessons(lessons.filter(l => m.checkpoints.includes(l.id)), profile);
 
 /** The first milestone with an unpassed checkpoint; undefined when the whole path is done. */
+/**
+ * A rank: locked until its checkpoints pass, earned when they do (never blocks the next stage), proven when every
+ * checkpoint passed again on a later day (R7). `proven` of `total` checkpoints, for "prove it on another day (1 of 2)".
+ */
+export function rankState(m: Milestone, lessons: Lesson[], progress: Progress, profile: Profile): { state: 'locked' | 'earned' | 'proven'; proven: number; total: number } {
+  const cps = checkpointsOf(m, lessons, profile), proven = cps.filter(l => isProven(progress[l.id])).length;
+  const state = !cps.length || cps.some(l => !done(progress, l.id)) ? 'locked' : proven === cps.length ? 'proven' : 'earned';
+  return { state, proven, total: cps.length };
+}
+
+/** Checkpoints passed but not yet proven on another day (R7), easiest stage first. */
+const unproven = (milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile) =>
+  milestones.flatMap(m => checkpointsOf(m, lessons, profile)).filter(l => done(progress, l.id) && !isProven(progress[l.id])).map(l => l.id);
+
 export const currentMilestone = (milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile) =>
   milestones.find(m => checkpointsOf(m, lessons, profile).some(l => !done(progress, l.id)));
 
@@ -25,8 +39,10 @@ const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 /**
  * How this student is doing, from the evidence (not an assumption): the stars of their last 4+ finished lessons and
  * their last 12 takes. Flying = ★★★ lessons (2+) and takes that land (95%+) and are tight (spread ≤ 20 ms);
- * struggling = takes under 75% or mostly 1-star lessons. `comfortableBpm`: the median tempo of their clean takes.
+ * struggling = takes under 75%, hits wandering more than any checkpoint allows (spread > 40 ms), or mostly 1-star
+ * lessons. `comfortableBpm`: the median tempo of their clean takes.
  */
+const STRUGGLE_SPREAD_MS = 40; // the loosest checkpoint spread limit (levels 0–2)
 export function studentRead(progress: Progress, runs: { accuracy: number; spread?: number; bpm: number }[] = []) {
   // completedAt is a day: lessons finished on the same day as the 4th newest all count (no arbitrary pick among them)
   const finished = Object.values(progress).filter(p => p.completedAt && p.stars).sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
@@ -37,7 +53,7 @@ export function studentRead(progress: Progress, runs: { accuracy: number; spread
   const meanStars = stars.length ? avg(stars) : undefined;
   const clean = recent.filter(r => r.accuracy >= 90).map(r => r.bpm).sort((a, b) => a - b);
   const pace: Pace = !stars.length && recent.length < 4 ? 'new'
-    : (accuracy !== undefined && accuracy < 75) || (meanStars !== undefined && meanStars < 1.5) ? 'struggling'
+    : (accuracy !== undefined && accuracy < 75) || (spread !== undefined && spread > STRUGGLE_SPREAD_MS) || (meanStars !== undefined && meanStars < 1.5) ? 'struggling'
     : stars.length >= 2 && meanStars! >= 2.75 && (accuracy ?? 100) >= 95 && (spread ?? 0) <= 20 ? 'flying'
     : 'steady';
   return { pace, recentStars: stars, accuracyPct: accuracy, spreadMs: spread, comfortableBpm: clean.length ? Math.round(clean[clean.length >> 1]) : undefined,
@@ -64,10 +80,19 @@ export function candidates(milestones: Milestone[], lessons: Lesson[], progress:
  * lessons for the current milestone (a skill and a groove when both exist). Under 20 minutes a day,
  * only the two lessons.
  */
-export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string): SessionItem[] {
+/**
+ * `focusIds`: this week's lessons from the coach's plan (R6). An open one at or below the current stage leads the set;
+ * a finished one comes back as the review. Unknown ids and lessons ahead of the student are ignored.
+ */
+export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = []): SessionItem[] {
   const short = profile.minutesPerDay < 20;
-  const c = candidates(milestones, lessons, progress, profile);
-  const skill = c.find(l => SKILL.includes(l.kind)), groove = c.find(l => !SKILL.includes(l.kind));
+  const level = currentMilestone(milestones, lessons, progress, profile)?.level ?? Infinity;
+  const focus = focusIds.map(id => visibleLessons(lessons, profile).find(l => l.id === id)).filter(l => l !== undefined && l.level <= level) as Lesson[];
+  const lead = focus.find(l => !done(progress, l.id));
+  // after the whole path: the coach's open challenge lessons are the learning (candidates has no stage left)
+  const c = (level === Infinity ? visibleLessons(lessons, profile).filter(l => l.source === 'ai' && !done(progress, l.id)) : candidates(milestones, lessons, progress, profile)).filter(l => l !== lead);
+  // the stage song's bites lead the groove slot while the song isn't learned (R8)
+  const skill = lead ?? c.find(l => SKILL.includes(l.kind)), groove = c.find(l => l.id.startsWith('bite-')) ?? c.find(l => !SKILL.includes(l.kind) && l !== skill);
   const learning = [skill, groove].filter(l => l !== undefined);
   if (learning.length < 2) learning.push(...c.filter(l => !learning.includes(l)).slice(0, 2 - learning.length));
   const taken = new Set(learning.map(l => l.id));
@@ -76,13 +101,18 @@ export function buildSession(milestones: Milestone[], lessons: Lesson[], progres
   const day = Number(today.replaceAll('-', ''));
   const warmup = short || !rudiments.length ? undefined : rudiments[day % rudiments.length];
   if (warmup) taken.add(warmup.id);
-  const review = short ? undefined : dueReviews(progress, today).find(id => !taken.has(id) && lessons.some(l => l.id === id));
+  const review = short ? undefined : focus.find(l => done(progress, l.id) && !taken.has(l.id))?.id ?? dueReviews(progress, today).find(id => !taken.has(id) && lessons.some(l => l.id === id))
+    ?? (level === Infinity ? unproven(milestones, lessons, progress, profile).find(id => !taken.has(id)) : undefined); // after the path: prove a rank
 
-  const fixed = (warmup ? 3 : 0) + (review ? 4 : 0);
+  // After the whole path the set never goes empty: one take of a show-off song (the newest stage's song you finished).
+  const showoff = level === Infinity ? visibleLessons(lessons, profile).filter(l => l.kind === 'song' && done(progress, l.id) && !l.id.startsWith('bite-') && l.id !== review).sort((a, b) => b.level - a.level)[0] : undefined;
+  if (showoff) taken.add(showoff.id);
+  const fixed = (warmup ? 3 : 0) + (review ? 4 : 0) + (showoff ? 5 : 0);
   const each = Math.max(5, Math.floor((profile.minutesPerDay - fixed) / Math.max(1, learning.length)));
   return [
     ...(warmup ? [{ role: 'warmup' as const, lessonId: warmup.id, minutes: 3 }] : []),
     ...(review ? [{ role: 'review' as const, lessonId: review, minutes: 4 }] : []),
-    ...learning.map(l => ({ role: SKILL.includes(l.kind) ? 'skill' as const : 'groove' as const, lessonId: l.id, minutes: each })),
+    ...learning.map(l => ({ role: SKILL.includes(l.kind) || l === lead ? 'skill' as const : 'groove' as const, lessonId: l.id, minutes: each })),
+    ...(showoff ? [{ role: 'review' as const, lessonId: showoff.id, minutes: 5 }] : []),
   ];
 }

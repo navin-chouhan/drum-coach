@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M14 Onboarding setup</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .steps{display:flex;gap:10px;margin:0 0 14px}.steps span{padding:4px 12px;border:2px solid var(--line);font-weight:800}.steps .on{background:var(--pop)}.steps .ok{background:var(--good);color:#fff}
+  .pads{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:14px 0}
+  .pad{border:3px solid var(--line);padding:14px 8px;text-align:center;font:800 18px var(--display);background:var(--panel)}
+  .pad.hit{background:var(--good);color:#fff}.pad.now{background:var(--pop);box-shadow:0 0 0 6px #FFE14D88}
+  .pad small{display:block;font:600 12px system-ui;margin-top:4px}
+  .taps{display:flex;gap:10px;margin:14px 0}.taps i{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);background:var(--panel)}.taps i.on{background:var(--cyan)}
+  .onboarding h2{font-size:34px}.onboarding p{font-size:18px}
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · M14</b> Onboarding keeps your answers and makes setup a real step. Not built.</div>
+
+<section class="state">
+  <h2>Bug fix (no mockup needed)</h2>
+  <div class="note">Today the "Setup → Pads" link on the welcome screen switches tabs <b>without saving</b>: goals and minutes are lost
+    and the welcome screen comes back. The fix saves first. The link goes away once step 2 below exists.</div>
+</section>
+
+<section class="state">
+  <h2>Step 1 of 2 · goals (as today)</h2>
+  <div class="today"><div class="card form onboarding">
+    <div class="steps"><span class="on">1 · Your goals</span><span>2 · Your kit</span></div>
+    <h2>Welcome to Drum Coach</h2>
+    <p>Pick what you want to play and how long a day. (Unchanged, except the button.)</p>
+    <p><span class="pill on">Rock</span><span class="pill">Funk</span><span class="pill">Jazz</span> · <span class="pill">25 minutes (recommended)</span></p>
+    <div class="actions"><button class="primary big rel new">Next: check your kit ▶</button></div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2>Step 2 of 2 · hit each pad once</h2>
+  <div class="note">Reuses the existing <b>Calibrate</b> wizard (same order, same "it heard note 48" logic and remapping), framed as a
+    step. Readable from the throne: one pad lit at a time, a big name. Hitting the wrong pad offers "use this pad as Tom 1".</div>
+  <div class="today"><div class="card form onboarding rel new">
+    <div class="steps"><span class="ok">1 · Your goals ✓</span><span class="on">2 · Your kit</span></div>
+    <h2>Hit each pad once</h2>
+    <p>So I know your kit. Hit the one that's lit: <b>Tom 1</b>.</p>
+    <div class="pads">
+      <div class="pad hit">Kick<small>36 ✓</small></div><div class="pad hit">Snare<small>38 ✓</small></div>
+      <div class="pad hit">Hi-hat<small>46 / 42 ✓</small></div><div class="pad hit">Pedal<small>44 ✓</small></div>
+      <div class="pad now">Tom 1<small>hit it now</small></div><div class="pad">Tom 2</div><div class="pad">Floor</div>
+      <div class="pad">Crash</div><div class="pad">Ride</div>
+    </div>
+    <div class="actions"><button class="link">No kit yet → use the keyboard</button><button class="link">Skip this for now</button></div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2>Step 2b · tap 8 times for latency</h2>
+  <div class="note">Reuses the existing <b>LatencyCard</b> test. Shows the result in words ("your setup adds about 35 ms; I'll correct
+    for it"). Your play-test data suggests this matters: "landing behind the click" is very often the setup.</div>
+  <div class="today"><div class="card form onboarding rel new">
+    <div class="steps"><span class="ok">1 · Your goals ✓</span><span class="on">2 · Your kit</span></div>
+    <h2>Tap the snare with the click, 8 times</h2>
+    <p>Listen, then tap along. I'm measuring how late the sound reaches you, not how well you play.</p>
+    <div class="taps"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+    <p class="small">Afterwards: "Your setup adds about 35 ms. I'll correct for it, so on time is on time."</p>
+    <div class="actions"><button class="primary big">Done, let's start ▶</button><button class="link">No kit yet → use the keyboard</button><button class="link">Skip this for now</button></div>
+  </div></div>
+</section>
+
+<section class="state">
+  <h2>If it was skipped · Journey nudges once</h2>
+  <div class="note">Stored as <code>setupDone</code> in settings. Journey shows this line once (dismissed by doing it or by "Not now"); it never blocks a lesson.</div>
+  <div class="today home"><div class="homeHero">
+    <div class="avatar" aria-hidden>🥁</div>
+    <div class="bubble rel new"><p>Before your next lesson: two minutes to check your pads and latency? It makes the timing scores fair.</p>
+      <div class="actions"><button class="primary big">Check my kit ▶</button><button>Not now</button></div></div>
+    <div class="card youCard"><div class="rankSticker small">New drummer</div></div>
+  </div></div>
+</section>
+</body>
+</html>

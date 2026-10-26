@@ -4,10 +4,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+/** A task's own model and effort (lesson writing uses a stronger model than the live chat). */
+export type ModelChoice = { model: string; effort: string };
 export interface AiProvider {
   name: string;
   /** Returns the model's text answer. Throws AiError. */
-  complete(system: string, prompt: string): Promise<string>;
+  complete(system: string, prompt: string, choice?: ModelChoice): Promise<string>;
 }
 
 export type AiErrorCode = 'missing' | 'auth' | 'timeout' | 'refused' | 'failed';
@@ -26,11 +28,12 @@ export function claudeCliProvider(bin = process.env.CLAUDE_BIN || 'claude'): AiP
   return {
     // the model and effort are part of the name, so cached answers from another model aren't reused
     name: `claude-cli:${process.env.CLAUDE_CLI_MODEL || 'default'}:${process.env.CLAUDE_CLI_EFFORT || 'default'}`,
-    complete: (system, prompt) => new Promise((resolve, reject) => {
+    complete: (system, prompt, choice) => new Promise((resolve, reject) => {
       const cwd = mkdtempSync(join(tmpdir(), 'drum-coach-'));
       const args = ['-p', '--output-format', 'json', '--tools', '', '--safe-mode', '--no-session-persistence', '--max-turns', '1', '--system-prompt', system];
-      if (process.env.CLAUDE_CLI_MODEL) args.push('--model', process.env.CLAUDE_CLI_MODEL);
-      if (process.env.CLAUDE_CLI_EFFORT) args.push('--effort', process.env.CLAUDE_CLI_EFFORT); // low = less thinking, faster answers
+      const model = choice?.model || process.env.CLAUDE_CLI_MODEL, effort = choice?.effort || process.env.CLAUDE_CLI_EFFORT;
+      if (model) args.push('--model', model);
+      if (effort) args.push('--effort', effort); // low = less thinking, faster answers
       // Never hand the CLI an API key: it would bill the key instead of the subscription.
       const env = { ...process.env };
       delete env.ANTHROPIC_API_KEY;

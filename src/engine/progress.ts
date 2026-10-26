@@ -5,6 +5,9 @@ export type RunRow = {
   notes?: number; // notes in the take (older rows may lack it)
   fromBar?: number; toBar?: number; // the bars the take covered
   tips?: string[]; // ids of the live tips given during the take (engine/liveCoach.ts)
+  perDrum?: Record<string, { notes: number; accuracyPct: number; meanOffsetMs: number }>; // from the take's summary
+  bite?: { songId: string; fromBar: number; toBar: number }; // a take of a song bite: which bars of which song
+  tool?: string; // the lesson tool (jam, drill, copy…), or flow / arcade; none for Practice and songs
 };
 export type CatalogItem = { id: string; title: string; bpm: number; level?: number; kind?: string };
 export type Suggestion = { chartId: string; bpm: number; reason: string };
@@ -88,12 +91,13 @@ export const BADGES = [
   { id: 'streak-30', name: '30-day streak', how: 'Play 30 days in a row' },
   { id: 'notes-1k', name: '1,000 notes', how: 'Land 1,000 notes' },
   { id: 'notes-10k', name: '10,000 notes', how: 'Land 10,000 notes' },
-  { id: 'showoff', name: 'Show-off song', how: 'Play a real song at 85% or better' },
+  { id: 'showoff', name: 'Show-off song', how: 'Play 16 bars or more of a real song, every bar at 85% or better' },
   { id: 'stage-3star', name: 'Perfect stage', how: 'Every challenge of a stage at three stars' },
 ] as const;
 
 /** `stages`: each stage's checkpoint lesson ids. */
-export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: number; completedAt?: string }>, stages: string[][], now = new Date()): string[] {
+/** `readySongs`: the ids of songs that pass songReady (the caller knows each song's bar count). */
+export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: number; completedAt?: string }>, stages: string[][], now = new Date(), readySongs: string[] = []): string[] {
   const streak = dashboard(runs, now).streak;
   const landed = runs.reduce((a, r) => a + Math.round(((r.notes ?? 0) * r.accuracy) / 100), 0);
   const got: Record<(typeof BADGES)[number]['id'], boolean> = {
@@ -101,18 +105,27 @@ export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: n
     'fast-100': runs.some(r => r.bpm >= 100 && r.accuracy >= 90),
     'streak-7': streak >= 7, 'streak-30': streak >= 30,
     'notes-1k': landed >= 1000, 'notes-10k': landed >= 10000,
-    'showoff': runs.some(r => r.chartId.startsWith('yt-') && r.accuracy >= 85),
+    'showoff': readySongs.length > 0,
     'stage-3star': stages.some(ids => ids.length > 0 && ids.every(id => lessons[id]?.stars === 3)),
   };
   return BADGES.filter(b => got[b.id]).map(b => b.id);
 }
 
+/** A show-off song is a real chunk of the song: at least this many bars, every one ready. */
+export const SHOWOFF_MIN_BARS = 16;
+export const songReady = (runs: RunRow[], songId: string, totalBars: number) => totalBars >= SHOWOFF_MIN_BARS && barsReady(runs, songId, totalBars) >= totalBars;
+
 /** Song project: which of a song's bars you've played at 85% or better (in any take covering them). */
 // shortcut: a take's whole accuracy marks every bar it covered ready; upgrade to per-bar accuracy (results per bar in summary_json) when bites are 4+ bars
 export function barsReady(runs: RunRow[], songId: string, totalBars: number): number {
   const ok = new Set<number>();
-  for (const r of runs) if (r.chartId === songId && r.accuracy >= 85 && r.fromBar && r.toBar)
-    for (let b = r.fromBar; b <= Math.min(r.toBar, totalBars); b++) ok.add(b);
+  for (const r of runs) {
+    if (r.accuracy < 85) continue;
+    // the song itself (a YouTube song's id, or a built-in song lesson's chart), or a bite of it
+    const range = r.bite?.songId === songId ? [r.bite.fromBar, r.bite.toBar]
+      : (r.chartId === songId || r.chartId.startsWith(`lesson/${songId}/`)) && r.fromBar && r.toBar ? [r.fromBar, r.toBar] : undefined;
+    if (range) for (let b = range[0]; b <= Math.min(range[1], totalBars); b++) ok.add(b);
+  }
   return ok.size;
 }
 
@@ -130,18 +143,27 @@ export function forYou<C extends { id: string; kind?: string; level?: number; so
 }
 
 const THEME_WORDS: Record<string, string> = {
+  'lay-back': 'laying back behind the click', 'too-far-back': 'staying close to the click', 'swing-more': 'swinging the 8ths', straight: 'straight, even 8ths',
+  'bring-up': 'playing the loud parts louder', 'bring-down': 'playing the soft parts softer',
   rushing: 'rushing ahead of the click', dragging: 'landing behind the click', unsteady: 'keeping the click steady',
   reacting: 'playing with the click, not after it', 'missing-kick': 'the kick', extras: 'playing only the notes shown',
   'hh-open': 'keeping the hi-hat pedal down', accents: 'louder accents', ghosts: 'softer ghost notes', even: 'even strokes',
 };
-/** This week's thing: the live tip given most in the last 7 days (3+ times, praise aside), in plain words. */
+/** A live tip id in plain words ("landing behind the click", "the snare"). */
+export const tipWords = (cue: string) => THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${drumName(cue.slice(8))}` : cue);
+
+/**
+ * This week's thing: the live tip given most in the last 7 days (3+ times, praise aside), in plain words. It must
+ * also show up in the last 5 takes: a habit fixed since then is forgotten.
+ */
 export function weekTheme(runs: RunRow[], now = new Date()): { cue: string; count: number; words: string } | null {
+  const lately = new Set([...runs].sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt)).slice(-5).flatMap(r => r.tips ?? []));
   const counts = new Map<string, number>();
   for (const r of runs) if ((now.getTime() - Date.parse(r.startedAt)) / 86_400_000 < 7)
-    for (const id of r.tips ?? []) if (id !== 'praise') counts.set(id, (counts.get(id) ?? 0) + 1);
+    for (const id of r.tips ?? []) if (id !== 'praise' && lately.has(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
   const [cue, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
   if (!cue || count < 3) return null;
-  return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${drumName(cue.slice(8))}` : cue) };
+  return { cue, count, words: tipWords(cue) };
 }
 
 /** ISO week key ("2026-W43"), for "once a week" things like the Monday recap. */
