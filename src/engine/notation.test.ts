@@ -91,3 +91,11 @@ describe('grace notes (R2)', () => {
     expect(noteHints(pattern({ snare: 'f.f.d...' }, 2), 4).map(h => h.limbs)).toEqual(['lR', 'rL', 'llR']);
   });
 });
+
+describe('left-handed (N9)', () => {
+  it('hints and the limb plan swap hands; feet stay', () => {
+    const notes = [0, 0.5, 1, 1.5].map(t => ({ t, drum: 'hihat' })).concat([{ t: 0, drum: 'kick' }, { t: 1, drum: 'snare' }]);
+    expect(noteHints(notes, 4, true).map(h => h.limbs)).toEqual(['L+K', 'L', 'L+R', 'L']);
+    expect(limbPlan(notes, 4, true).map(p => `${p.limb}:${p.name}:${p.drums.join('/')}`)).toEqual(['R:right hand:snare', 'L:left hand:hi-hat', 'K:right foot:kick']);
+  });
+});

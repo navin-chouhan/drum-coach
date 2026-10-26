@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { countInNumber } from '../engine/run';
+import { getSettings } from '../input/settings';
 import {
   Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, GraceNote, GraceNoteGroup, ModifierPosition, Parenthesis, Tremolo,
   Renderer, Stave, StaveNote, Tuplet, Voice,
@@ -113,7 +114,7 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
     points.sort((a, b) => a.beat - b.beat || a.x - b.x);
     if (o.hints) { // the student's notes only: the app's (grey) ones aren't theirs to count
       const inBar = o.notes.filter(n => n.t >= barStart - 1e-6 && n.t < barStart + bpb - 1e-6);
-      for (const h of noteHints(inBar.map(n => ({ ...n, t: n.t - barStart, mine: !(n.i !== undefined && o.dim?.(n.i)) })), bpb)) {
+      for (const h of noteHints(inBar.map(n => ({ ...n, t: n.t - barStart, mine: !(n.i !== undefined && o.dim?.(n.i)) })), bpb, getSettings().leftHanded)) {
         const hx = xAtBeat(points, barStart + h.t) + 2;
         ctx.setFont('Arial', 14, 'bold'); ctx.fillText(h.count, hx - ctx.measureText(h.count).width / 2, y + ROW_H + 4);
         ctx.setFont('Arial', 11, 'bold'); ctx.fillText(h.limbs, hx - ctx.measureText(h.limbs).width / 2, y + ROW_H + 20);
