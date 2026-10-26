@@ -12,6 +12,7 @@ export const ChartNoteSchema = z.object({
   ghost: z.boolean().optional(),
   auto: z.boolean().optional(), // played by the app, not the student (the "call" of a copy-me step)
   grace: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(), // grace strokes before the note: 1 flam, 2 drag, 3 ruff
+  stick: z.enum(['R', 'L']).optional(), // the hand that plays it, when the sticking matters (paradiddles, doubles); else the hints alternate
   buzz: z.boolean().optional(), // a buzz (press) stroke: the stick presses into the pad and its bounces belong to the note
 });
 
@@ -57,4 +58,10 @@ export function pattern(lines: Partial<Record<ChartDrum, string>>, stepsPerBeat:
     }
   }
   return notes.sort((a, b) => a.t - b.t);
+}
+
+/** Writes a sticking onto the notes in time order, repeating it ("RLRRLRLL" for a paradiddle). Feet are skipped. */
+export function withSticking(notes: ChartNote[], sticking: string): ChartNote[] {
+  let k = 0;
+  return [...notes].sort((a, b) => a.t - b.t).map(n => (n.drum === 'kick' || n.drum === 'hhPedal' ? n : { ...n, stick: sticking[k++ % sticking.length] as 'R' | 'L' }));
 }

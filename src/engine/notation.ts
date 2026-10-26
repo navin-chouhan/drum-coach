@@ -85,10 +85,10 @@ const SLOT_WORD: Record<string, string> = { '0.25': 'e', '0.5': '&', '0.75': 'a'
  * H hi-hat foot. Cymbals are the right hand; a drum with a cymbal is the left; drums alone alternate R L (from R each bar).
  */
 /** `mirror`: a left-handed player (N9): R and L swapped. */
-export function noteHints(notes: { t: number; drum: string; mine?: boolean; grace?: number }[], beatsPerBar: number, mirror = false): { t: number; count: string; limbs: string }[] {
+export function noteHints(notes: { t: number; drum: string; mine?: boolean; grace?: number; stick?: 'R' | 'L' }[], beatsPerBar: number, mirror = false): { t: number; count: string; limbs: string }[] {
   // `mine: false` = the app plays it: it still decides the sticking (an app hi-hat keeps your right hand busy) but gets no label.
-  const groups = new Map<number, { drum: string; mine: boolean; grace?: number }[]>();
-  for (const n of notes) { const t = Math.round(n.t * 1000) / 1000; groups.set(t, [...(groups.get(t) ?? []), { drum: n.drum, mine: n.mine !== false, grace: n.grace }]); }
+  const groups = new Map<number, { drum: string; mine: boolean; grace?: number; stick?: 'R' | 'L' }[]>();
+  for (const n of notes) { const t = Math.round(n.t * 1000) / 1000; groups.set(t, [...(groups.get(t) ?? []), { drum: n.drum, mine: n.mine !== false, grace: n.grace, stick: n.stick }]); }
   const anyCymbal = notes.some(n => CYMBALS.has(n.drum) && n.drum !== 'crash'); // a timekeeping hand in the groove
   let next = 'R', bar = -1;
   return [...groups.entries()].sort((a, b) => a[0] - b[0]).flatMap(([t, here]) => {
@@ -98,10 +98,10 @@ export function noteHints(notes: { t: number; drum: string; mine?: boolean; grac
     // A drum alone in a groove with a timekeeping cymbal is the left hand's; with no cymbal anywhere, singles alternate.
     const lone = skins.length === 1 && !cym ? (anyCymbal ? 'L' : next) : undefined;
     if (lone && !anyCymbal) next = next === 'R' ? 'L' : 'R';
-    const limbOf = (d: string, i: number) => (d === 'kick' ? 'K' : d === 'hhPedal' ? 'H' : CYMBALS.has(d) ? 'R' : cym ? 'L' : lone ?? (i ? 'L' : 'R'));
+    const limbOf = (d: string, i: number, stick?: string) => (d === 'kick' ? 'K' : d === 'hhPedal' ? 'H' : stick ?? (CYMBALS.has(d) ? 'R' : cym ? 'L' : lone ?? (i ? 'L' : 'R')));
     // a grace note: the other hand's grace strokes in small letters first ("lR" flam, "llR" drag)
     const graced = (h: string, g?: number) => (g && (h === 'R' || h === 'L') ? (h === 'R' ? 'l' : 'r').repeat(g) + h : h);
-    const limbs = [...new Set(here.flatMap((n, i) => (n.mine ? [graced(limbOf(n.drum, skins.indexOf(n) < 0 ? 0 : skins.indexOf(n)), n.grace)] : [])))]
+    const limbs = [...new Set(here.flatMap((n, i) => (n.mine ? [graced(limbOf(n.drum, skins.indexOf(n) < 0 ? 0 : skins.indexOf(n), n.stick), n.grace)] : [])))]
       .sort((x, y) => 'RLKH'.indexOf(x.at(-1)!) - 'RLKH'.indexOf(y.at(-1)!));
     if (!limbs.length) return [];
     return [{ t, count: frac ? SLOT_WORD[String(frac)] ?? '' : String(Math.floor(pos) + 1), limbs: mirror ? mirrorHands(limbs.join('+')) : limbs.join('+') }];

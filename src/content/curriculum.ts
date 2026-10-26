@@ -1,6 +1,6 @@
 import { biteLesson } from '../engine/stageSong.ts';
 import type { DemoId } from './demos.ts';
-import { beatsPerBar, pattern, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
+import { beatsPerBar, pattern, withSticking, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
 import type { Genre, Lesson, LessonKind, Milestone, Pass, Step } from '../engine/lesson.ts';
 
 // The guided path. Milestones are fixed; each is proven by passing its checkpoint lessons.
@@ -181,8 +181,8 @@ export const CURRICULUM: Lesson[] = [
     'Two notes per hand: R R L L.',
     'Doubles lead to rolls and fast fills, and they train your weaker hand.',
     'At slow tempos play both notes with the wrist. Later the second note comes from letting the stick bounce. Keep both notes the same volume.',
-    [step('8th notes', 'R R L L, count "1 & 2 &". Second note as loud as the first.', P(2, { snare: 'xxxxxxxx' }), [60, 100], { pass: { maxVelocityCv: 20, maxPairDropPct: 15 } }),
-      step('16th notes', 'R R L L, four per beat.', P(4, { snare: 'xxxxxxxxxxxxxxxx' }), [60, 80], { pass: { maxVelocityCv: 20, maxPairDropPct: 15 } })]),
+    [step('8th notes', 'R R L L, count "1 & 2 &". Second note as loud as the first.', withSticking(P(2, { snare: 'xxxxxxxx' }), 'RRLL'), [60, 100], { pass: { maxVelocityCv: 20, maxPairDropPct: 15 } }),
+      step('16th notes', 'R R L L, four per beat.', withSticking(P(4, { snare: 'xxxxxxxxxxxxxxxx' }), 'RRLL'), [60, 80], { pass: { maxVelocityCv: 20, maxPairDropPct: 15 } })]),
   lesson(2, 'four-floor', 'groove', 'Four on the floor',
     'Kick on every beat under the money beat.',
     'Dance, disco and lots of pop live here. It also strengthens your foot.',
@@ -257,14 +257,14 @@ export const CURRICULUM: Lesson[] = [
     'R L R R  L R L L, accent the first note of each group.',
     'Paradiddles teach your hands to switch lead. They show up in grooves and fills everywhere.',
     'Say the sticking out loud: "R L R R, L R L L". Accent only the first note. Start slow enough that you never stop.',
-    [step('8th notes', 'R L R R L R L L, accent the first of each four.', P(2, { snare: 'XxxxXxxx' }), [60, 90], { pass: { maxGhostToAccent: 0.7 } }),
-      step('16th notes', 'Same sticking, twice as fast.', P(4, { snare: 'XxxxXxxxXxxxXxxx' }), [60, 80], { pass: { maxGhostToAccent: 0.7 } })]),
+    [step('8th notes', 'R L R R L R L L, accent the first of each four.', withSticking(P(2, { snare: 'XxxxXxxx' }), 'RLRRLRLL'), [60, 90], { pass: { maxGhostToAccent: 0.7 } }),
+      step('16th notes', 'Same sticking, twice as fast.', withSticking(P(4, { snare: 'XxxxXxxxXxxxXxxx' }), 'RLRRLRLL'), [60, 80], { pass: { maxGhostToAccent: 0.7 } })]),
   lesson(4, 'flam-tap', 'rudiment', 'Flam taps',
     'A flam, then a tap with the same hand: lR R, rL L.',
     'The flam tap is the rudiment behind many fast fills: it keeps both hands busy without tangling them.',
     'The main stroke drops from high and bounces once into the tap. The tap stays low, and that low stick becomes the next grace note.',
-    [step('Slow flam taps', 'lR R  rL L, in 8th notes.', P(2, { snare: 'fxfxfxfx' }), [50, 70]),
-      step('16th flam taps', 'Same, twice as fast.', P(4, { snare: 'fxfxfxfxfxfxfxfx' }), [50, 70])]),
+    [step('Slow flam taps', 'lR R  rL L, in 8th notes.', withSticking(P(2, { snare: 'fxfxfxfx' }), 'RRLL'), [50, 70]),
+      step('16th flam taps', 'Same, twice as fast.', withSticking(P(4, { snare: 'fxfxfxfxfxfxfxfx' }), 'RRLL'), [50, 70])]),
   lesson(4, 'drag', 'rudiment', 'The drag',
     'Two quick soft grace notes from one hand, then the main note: "rr L".',
     'Drags add a short roll in front of a note: the sound of marching snares, and of many rock and jazz fills.',
