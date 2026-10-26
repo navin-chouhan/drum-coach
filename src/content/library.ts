@@ -1,4 +1,5 @@
 import { pattern, type Chart } from '../engine/chart.ts';
+import { LESSON_BY_ID } from './curriculum.ts';
 
 const C = (c: Chart & { id: string }) => c;
 const g44 = [4, 4] as [number, 4];
@@ -49,4 +50,17 @@ export const LIBRARY: (Chart & { id: string })[] = [
       ...pattern({ hihat: 'x.x.x.x.x.x.x.x.', snare: '....x.......x...', kick: 'x.......x.......' }, 4, 1),
       ...pattern({ hihat: 'x.x.x.x.', snare: '....x...xxxxxxxx', kick: 'x.......' }, 4, 1, 4),
     ].sort((a, b) => a.t - b.t) }),
+  // From the path (G3): a chart from each stage's lessons, so Practice has 3+ per level and always a step up.
+  ...([
+    ['quarters-snare', 'count-quarters', 'Quarter notes on the snare'], ['8ths-count', 'count-8ths', 'Counting 8th notes'], ['rests', 'rests', 'Rests are notes too'],
+    ['hh-8ths', 'hh-8ths', 'Hi-hat 8th notes'], ['first-beat', 'money-quarters', 'Your first beat'],
+    ['shuffle', 'shuffle', 'The shuffle'], ['half-time', 'half-time', 'Half-time feel'], ['triplet-fill', 'triplet-fill', 'Triplet fill'],
+    ['jazz-ride', 'jazz-ride', 'Jazz ride pattern'], ['comping', 'comping', 'Snare comping'], ['feathered-kick', 'feathered-kick', 'Feathered kick'],
+    ['kick-16-indep', 'kick-16-indep', '16th kicks under 8ths'], ['funk-96', 'funk-at-tempo', 'Funk at tempo'], ['open-hat-funk', 'open-hat-funk', 'Open-hat funk'],
+    ['linear-groove', 'linear-groove', 'A linear groove'], ['five-four', 'five-four', 'Five-four groove'], ['seven-eight', 'seven-eight', 'Seven-eight groove'],
+    ['fill-vocab', 'fill-vocab', 'Groove and a fill'], ['fills-build', 'fills-build', 'A fill that builds'], ['linear-fill', 'linear-fill', 'Linear fill'], ['spotlight', 'song-spotlight', 'Spotlight (song)'],
+  ] as const).map(([id, lessonId, title]) => {
+    const l = LESSON_BY_ID[lessonId], c = l.steps[l.steps.length - 1].chart;
+    return C({ ...c, id, title, kind: l.kind === 'exercise' ? 'rudiment' : l.kind, level: l.level, description: l.what, bpm: l.steps[l.steps.length - 1].bpm.target });
+  }),
 ];
