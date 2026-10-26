@@ -9,12 +9,17 @@
 // Each take must show a verdict (never "…"), the tempo must move the way the verdict says, the take must be saved,
 // and the page must not throw. Prints a report; exits 1 on any problem.
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { mkdtempSync, openSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const FULL = process.argv.includes('--full');
-const OFF = Number(process.env.PLAYTEST_PORT_OFFSET ?? 0); // another play test running? PLAYTEST_PORT_OFFSET=10
+// Ports: the first free set from 8791/5181/9333 up in steps of 10, so a second play test (or another session's
+// servers) never ends up driving someone else's app (D11). PLAYTEST_PORT_OFFSET still sets where to start.
+const freePort = p => new Promise(r => { const sv = createServer().once('error', () => r(false)).once('listening', () => sv.close(() => r(true))).listen(p); });
+let OFF = Number(process.env.PLAYTEST_PORT_OFFSET ?? 0);
+while (!(await freePort(8791 + OFF) && await freePort(5181 + OFF) && await freePort(9333 + OFF))) OFF += 10;
 const API = 8791 + OFF, WEB = 5181 + OFF, CDP = 9333 + OFF;
 const root = new URL('../..', import.meta.url).pathname;
 const tmp = mkdtempSync(join(tmpdir(), 'drum-playtest-'));
@@ -43,6 +48,7 @@ run('google-chrome', ['--headless=new', `--remote-debugging-port=${CDP}`, `--use
 await waitFor(`http://127.0.0.1:${API}/api/runs`);
 await waitFor(`http://localhost:${WEB}/`);
 await waitFor(`http://127.0.0.1:${CDP}/json/version`);
+if (procs.some(p => p.exitCode !== null)) throw new Error('a play-test server stopped right after starting (see PLAYTEST_LOGS)'); // D11
 
 // ---------- a tiny DevTools-protocol client ----------
 const page = (await (await fetch(`http://127.0.0.1:${CDP}/json/list`)).json()).find(t => t.type === 'page');
@@ -56,20 +62,26 @@ ws.addEventListener('message', e => {
   else if (m.method === 'Runtime.exceptionThrown') pageErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text);
 });
 const send = (method, params = {}) => new Promise(res => { const id = ++seq; pending.set(id, res); ws.send(JSON.stringify({ id, method, params })); });
-async function evaluate(expression) {
+async function evaluate(expression, retry = true) {
   const m = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-  if (m.result?.exceptionDetails) throw new Error(m.result.exceptionDetails.exception?.description ?? m.result.exceptionDetails.text);
+  const err = m.result?.exceptionDetails && (m.result.exceptionDetails.exception?.description ?? m.result.exceptionDetails.text);
+  // Vite reloads the page once on a cold start (dependency optimisation): wait it out and try once more (D11).
+  if (err && retry && /Failed to fetch dynamically imported module/.test(err)) { await sleep(3000); return evaluate(expression, false); }
+  if (err) throw new Error(err);
   return m.result?.result?.value;
 }
 await send('Runtime.enable');
 await send('Page.enable');
-const open = async () => { await send('Page.navigate', { url: `http://localhost:${WEB}/` }); await sleep(2500); };
+const open = async () => { // the app is ready when its header is on screen and its modules load
+  await send('Page.navigate', { url: `http://localhost:${WEB}/` }); await sleep(1500);
+  for (let i = 0; i < 20; i++) { if (await evaluate(`!!document.querySelector('header') && import('/src/ui/nav.ts').then(() => true)`).catch(() => false)) return; await sleep(500); }
+};
 
 // A student who finished onboarding and the kit step; the coach, voice and spoken count-in off (no Claude, no TTS).
 await open();
 await evaluate(`localStorage.setItem('drumcoach.settings', JSON.stringify({ updatedAt: Date.now() + 1e9, latencyMs: 0, browserSounds: false, liveTips: 'screen', chattiness: 'normal',
   voice: false, countIn: false, playView: 'sheet', aiTips: false, liveCoach: false, handsFree: false, padCommands: true, clickVolume: 1, voiceVolume: 1, v: 3,
-  profile: { goals: [], minutesPerDay: 25, onboarded: true }, lessons: {}, setupDone: true, setupNudged: true }))`);
+  profile: { goals: [], minutesPerDay: 25, onboarded: true }, lessons: {}, setupDone: true, setupNudged: true, latencyChecked: true }))`); // the emulated kit has no lag to measure
 await open();
 
 // ---------- one take, played in the page: press the big move like a student saying "yes" ----------
@@ -82,6 +94,15 @@ const TAKE = `(async () => {
   if (!main) return { problem: 'no main move on screen' };
   const label = main.innerText.split('\\n')[0];
   if (/Done, next step/.test(label)) { main.click(); await sleep(400); return { label, line: 'step done', skip: true }; }
+  // A break (N10) is not a take: take it and come back (D13).
+  if (/2-minute break|Back to playing/.test(label)) { main.click(); await sleep(500); document.querySelector('.moves .move.go')?.click(); await sleep(500); return { label, skip: true }; }
+  // A stuck student's help moves (D2) are not takes either: listening back, asking the coach, the latency test.
+  if (/Hear mine|Something different|Check my latency/.test(label)) {
+    main.click(); await sleep(1500);
+    while (player.player.phase === 'playing') await sleep(300);
+    [...document.querySelectorAll('button')].find(b => /Back to the lesson/.test(b.innerText))?.click(); await sleep(500);
+    return { label, skip: true, stuck: true };
+  }
   if (/Next|Journey/.test(label)) return { label, done: true };
   main.click(); await sleep(600);
   for (let i = 0; i < 6 && document.querySelector('.introSlides'); i++) { [...document.querySelectorAll('.introSlides button')].find(b => /Next|Ready/.test(b.innerText))?.click(); await sleep(300); }
@@ -113,10 +134,14 @@ for (const [who, human, ids, takes] of scenarios) {
   for (const id of ids ?? allCheckpoints) {
     await evaluate(`import('/src/ui/nav.ts').then(n => n.requestLesson(${JSON.stringify(id)}))`);
     await sleep(1500);
+    let stuckMoves = 0;
     for (let t = 0; t < takes; t++) {
       const r = await evaluate(TAKE.replaceAll('LESSON', JSON.stringify(id)));
       if (!r) { report.push({ who, id, take: t + 1, problem: 'the page reloaded mid-take (files changed during the run?)' }); break; }
-      if (r.skip) { t--; continue; }
+      if (r.skip) {
+        if (r.stuck && ++stuckMoves > 3) { console.log(`· ${who.padEnd(8)} ${id.padEnd(16)} stuck: the app now offers "${r.label}" (moving on)`); break; }
+        t--; continue;
+      }
       report.push({ who, id, take: t + 1, ...r });
       const flag = r.problem || r.problems?.length ? '✗' : '✓';
       console.log(`${flag} ${who.padEnd(8)} ${id.padEnd(16)} take ${t + 1}: ${r.problem ?? r.line ?? r.label}${r.problems?.length ? '  ← ' + r.problems.join('; ') : ''}`);
