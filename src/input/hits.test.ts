@@ -24,6 +24,15 @@ describe('stick bounces', () => {
     expect(got).toEqual([30, 28, 95, 30, 30, 29, 95]);
   });
 
+  it('a dropped retrigger never becomes the stroke later retriggers are compared with (flams on the MPS-150)', () => {
+    const got: number[] = [];
+    const off = onHit(h => got.push(h.velocity));
+    // grace 33, main 88, the grace's retrigger 18 (dropped), then the main's retrigger 44: dropped too, not an extra
+    emitNote(38, 33, 30783); emitNote(38, 88, 30809); emitNote(38, 18, 30822); emitNote(38, 44, 30839);
+    off();
+    expect(got).toEqual([33, 88]);
+  });
+
   it('drops soft-snare crosstalk on the hi-hat, keeps real hi-hat strokes', () => {
     const got: string[] = [];
     const off = onHit(h => got.push(`${h.note}:${h.velocity}`));

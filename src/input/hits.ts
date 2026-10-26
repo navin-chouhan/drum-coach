@@ -30,9 +30,10 @@ let lastSnare = { time: -Infinity, velocity: 0 };
 
 export function emitNote(note: number, velocity: number, time = performance.now()) {
   const prev = last.get(note);
-  last.set(note, { time, velocity });
   const pad = padForNote(getNoteMap(), note), cal = pad ? getPadCal()[pad] : undefined; // N9: the pad's own retrigger window and loudness
+  // a dropped bounce isn't remembered: later retriggers are compared with the real stroke (a flam's grace retrigger let the main's through)
   if (prev && time - prev.time >= 0 && time - prev.time < (cal?.bounceMs ?? BOUNCE_MS) && velocity < prev.velocity * (cal?.bounceRatio ?? BOUNCE_RATIO)) return;
+  last.set(note, { time, velocity });
   if (pad === 'snare') lastSnare = { time, velocity };
   else if ((pad === 'hhClosed' || pad === 'hhOpen') && time - lastSnare.time >= 0 && time - lastSnare.time < CROSSTALK_MS
     && lastSnare.velocity <= CROSSTALK_SNARE_MAX && velocity <= lastSnare.velocity) return;

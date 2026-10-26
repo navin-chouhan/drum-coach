@@ -161,6 +161,15 @@ Open observations from this round (not fixed):
 - The live coach misreads a new step's start tempo as being slowed down ("The app slowed you to 60").
 
 
+### Round 7 (N11: the first automated play test, `npm run playtest`), 2026-10-26
+Headless Chrome, a fresh data folder, the coach off; the emulated MPS-150 as a Beginner (count-8ths, Your first beat) and
+a Solid player (hi-hat 8ths, the flam, 7/8, trade bars), 2 takes each.
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 20 | "The flam" for a Solid player: "6 extra hits". The bounce filter remembered a *dropped* retrigger (the grace stroke's, velocity 18) as the last stroke, so the main stroke's own retrigger (44) passed as a new hit. Flams and drags on the real kit would have shown phantom extras. | Bug | A dropped bounce is never remembered (`src/input/hits.ts`); test + an emulated flam fixture (`src/input/fixtures/emulated-flam-taps.json`). |
+| – | Trade bars takes aren't saved: every note is in your own bars, so the take has 0 scored notes and `saveRun` skips it. Its minutes don't count towards the day or the streak. | Observation | Not changed; the runner only checks saving for takes with notes. |
+
 ## Instructor's review: the whole app, as a critical drum teacher sees it
 
 Written after playing the full path (Stick Rookie → Swing Cat) as a strong student. What I could not see: Chrome
