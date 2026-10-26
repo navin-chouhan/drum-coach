@@ -39,9 +39,17 @@ export function emitNote(note: number, velocity: number, time = performance.now(
   listeners.forEach(l => l(hit));
 }
 
+const rawListeners = new Set<(data: ArrayLike<number>, time: number) => void>();
+/** Every raw MIDI message as it arrives (dev: recording real-kit fixtures, N11). */
+export function onRawMidi(fn: (data: ArrayLike<number>, time: number) => void) {
+  rawListeners.add(fn);
+  return () => { rawListeners.delete(fn); };
+}
+
 /** Simulates the kit: sends whatever note the pad is mapped to, so it goes through the same path. */
 /** Raw MIDI bytes from the kit (or the emulated kit) at `time`: only Note On becomes a hit. */
 export function receiveMidi(data: ArrayLike<number>, time: number) {
+  rawListeners.forEach(l => l(data, time));
   const n = parseMidiMessage(data);
   if (n) emitNote(n.note, n.velocity, time);
 }

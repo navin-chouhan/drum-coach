@@ -366,6 +366,12 @@ sounds). Takes ~20 minutes. Write the numbers into the table at the end; the imp
 2. A lesson with "How it moves" (e.g. Single strokes): press C, allow the camera, record 10 s (hi-hat × 1), replay
    (snare × 1). Nothing is saved.
 
+**H. Record fixtures (N11), 2 minutes**
+In the browser console on the app: `await import('/scripts/playtest/helpers.js?' + Date.now())`, then before a take
+`T.recordMidi()`, play the take on the kit, then `T.saveFixture('mps150-ghost-groove', 'ghost notes: no lost hi-hats')`.
+Save the downloaded file in `src/input/fixtures/`. Good ones: the ghost-note groove (crosstalk), 16 hard snare singles
+(retriggers), a flam take. From then on the tests replay them on every change.
+
 **Write down**
 | Check | Your number / note |
 |---|---|
