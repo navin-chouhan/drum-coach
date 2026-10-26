@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { getSettings, subscribeSettings } from '../input/settings';
+import { mirrorHands } from '../engine/padCal';
 import { ARM, armPoints, legPoints, PAD_Y, PX_PER_CM, type Pt } from '../engine/demoPose';
 import { DEMOS, poseAt, type DemoId } from '../content/demos';
 
@@ -10,7 +12,7 @@ const f1 = (v: number) => v.toFixed(1);
 const pts = (a: Pt[]) => a.map(p => `${f1(p[0])},${f1(p[1])}`).join(' ');
 const tf = (p: Pt, deg: number) => `translate(${f1(p[0])} ${f1(p[1])}) rotate(${deg.toFixed(2)})`;
 
-function draw(root: SVGGElement, id: DemoId, beat: number, wrong: boolean, trail: Pt[], joints: boolean) {
+function draw(root: SVGGElement, id: DemoId, beat: number, wrong: boolean, trail: Pt[], joints: boolean, mirror = false) {
   const el = (tag: string, attrs: Record<string, string | number>, parent: Element = root) => {
     const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, String(attrs[k])); parent.appendChild(e); return e;
   };
@@ -69,7 +71,9 @@ function draw(root: SVGGElement, id: DemoId, beat: number, wrong: boolean, trail
   }
   el('line', { x1: x - 14, y1: right.tip[1], x2: x + 14, y2: right.tip[1], stroke: '#FFE14D', 'stroke-width': 4 });
   el('text', { x: x + 14, y: right.tip[1] - 8, fill: '#FFE14D', 'font-size': 17, 'font-weight': 800, 'font-family': 'system-ui' }).textContent = `${Math.round(Math.max(0, (PAD_Y - right.tip[1]) / PX_PER_CM))} cm`;
-  if (arms.length > 1) el('text', { x: 40, y: 500, fill: '#9ec5ff', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = 'blue = left hand (behind)';
+  if (arms.length > 1) el('text', { x: 40, y: 500, fill: '#9ec5ff', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = `blue = ${mirror ? 'right' : 'left'} hand (behind)`;
+  // left-handed: the drawing is mirrored by its group; the words are flipped back so they read normally
+  if (mirror) root.querySelectorAll('text').forEach(t => { const x = Number(t.getAttribute('x')); t.setAttribute('transform', `translate(${2 * x} 0) scale(-1 1)`); t.setAttribute('text-anchor', 'end'); });
 }
 
 /** The animated technique: right vs wrong, slow motion, the count. `bpm`: the lesson's tempo (the diagram moves at it). */
@@ -77,28 +81,29 @@ export function TechniqueDemo({ id, bpm = 70, compact }: { id: DemoId; bpm?: num
   const d = DEMOS[id];
   const g = useRef<SVGGElement>(null), wordRef = useRef<HTMLDivElement>(null), countRef = useRef<HTMLDivElement>(null);
   const [wrong, setWrong] = useState(false), [speed, setSpeed] = useState(compact ? 0.5 : 1), [joints, setJoints] = useState(false);
+  const mirror = !!useSyncExternalStore(subscribeSettings, getSettings).leftHanded; // N9: drawn for a left-handed player
   useEffect(() => {
     if (!('right' in d) && !('leg' in d)) return;
     let beat = 0, last = performance.now(), raf = 0;
     const trail: Pt[] = [];
     const frame = (now: number) => {
       beat += ((now - last) / 60000) * bpm * speed; last = now;
-      if (g.current) draw(g.current, id, beat, wrong, trail, joints);
+      if (g.current) draw(g.current, id, beat, wrong, trail, joints, mirror);
       if (wordRef.current) wordRef.current.textContent = poseAt(id, beat, wrong).word ?? '';
       if (countRef.current && d.counts.length) {
         const k = Math.floor(((beat % d.beats) / d.beats) * d.counts.length);
-        countRef.current.innerHTML = d.counts.map((c, i) => `<span class="${i === k ? 'on' : ''}">${c}</span>`).join('');
+        countRef.current.innerHTML = d.counts.map((c, i) => `<span class="${i === k ? 'on' : ''}">${mirror ? mirrorHands(c) : c}</span>`).join('');
       }
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [id, bpm, speed, wrong, joints, d]);
+  }, [id, bpm, speed, wrong, joints, d, mirror]);
 
   return (
     <div className={`technique ${compact ? 'compact' : ''}`}>
       <div className="techStage">
-        {id === 'grip' ? <GripPicture /> : <svg viewBox="0 0 900 520" role="img" aria-label={`${d.title}, animated`}><g ref={g} /></svg>}
+        {id === 'grip' ? <GripPicture /> : <svg viewBox="0 0 900 520" role="img" aria-label={`${d.title}, animated`}><g transform={mirror ? 'translate(900 0) scale(-1 1)' : undefined}><g ref={g} /></g></svg>}
         <div className={`techWord ${wrong ? 'wrong' : ''}`} ref={wordRef} aria-live="off" />
         <div className="techCount" ref={countRef} aria-hidden />
       </div>

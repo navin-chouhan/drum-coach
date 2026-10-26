@@ -21,5 +21,25 @@ const T = window.T = {
   async go(re = /▶ (Play|Again)/) { const c = re ? T.click(re) : ''; await sleep(500); const s = await T.slidesThrough(); const ph = await T.untilDone(); return [c, s, ph, T.report()].join('\n'); },
   player: (o) => ek.setEmulatedKit({ on: true, retriggers: true, crosstalk: true, ...o }),
 };
+// Real-kit fixtures (N11): T.recordMidi() before a take, play it on the kit, then T.saveFixture('name', 'what it guards')
+// downloads src/input/fixtures/<name>.json with this take's result as its expectation (save it in that folder).
+const hits = await import('/src/input/hits.ts');
+let recorded = [];
+T.recordMidi = () => { recorded = []; T.stopRecording?.(); T.stopRecording = hits.onRawMidi((data, time) => recorded.push([time, ...Array.from(data)])); return 'recording: play one take on the kit'; };
+T.saveFixture = (name, note = '') => {
+  const f = pl.player.finished; if (!f) return 'play a take first';
+  T.stopRecording?.();
+  const o = f.options, landed = f.stats.total - f.stats.miss;
+  const fixture = { name, note, source: 'MPS-150', recordedAt: new Date().toISOString().slice(0, 10), noteMap: null,
+    chart: f.chart, speed: o.speed, fromBar: o.fromBar, toBar: o.toBar, repeats: o.repeats, latencyMs: st.getSettings().latencyMs, goodMs: o.goodMs,
+    midi: recorded.filter(([t]) => t >= f.zero - 2000).map(([t, ...d]) => [Math.round((t - f.zero) * 10) / 10, ...d]),
+    expect: { minLanded: landed, maxExtras: f.stats.extra } };
+  return import('/src/input/store.ts').then(store => {
+    fixture.noteMap = store.getNoteMap();
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(fixture)], { type: 'application/json' })), download: `${name}.json` });
+    a.click(); URL.revokeObjectURL(a.href);
+    return `saved ${name}.json: ${landed}/${f.stats.total} landed, ${f.stats.extra} extras, ${fixture.midi.length} MIDI messages`;
+  });
+};
 T.player({ lateMs: 45, jitterMs: 40, weakHand: 0.6 });
 export default 'armed';

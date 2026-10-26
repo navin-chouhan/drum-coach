@@ -3,6 +3,7 @@ import { onCoachAction } from '../coach/session';
 import type { ChartNote } from '../engine/chart';
 import { limbPlan, noteHints } from '../engine/notation';
 import { onHit } from '../input/hits';
+import { getSettings } from '../input/settings';
 import { TechniqueDemo } from '../ui/TechniqueDemo';
 import type { DemoId } from '../content/demos';
 
@@ -42,8 +43,9 @@ export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, 
     return () => { offHit(); offAction(); window.removeEventListener('keydown', onKey, true); };
   }, []);
 
-  const plan = limbPlan(notes, beatsPerBar);
-  const firstBar = noteHints(notes.filter(n => n.t < beatsPerBar - 1e-6), beatsPerBar);
+  const left = getSettings().leftHanded; // N9: a left-handed player's hints mirror
+  const plan = limbPlan(notes, beatsPerBar, left);
+  const firstBar = noteHints(notes.filter(n => n.t < beatsPerBar - 1e-6), beatsPerBar, left);
   const pedalDown = notes.some(n => n.drum === 'hihat') && !plan.some(p => p.limb === 'H');
 
   return (

@@ -161,6 +161,15 @@ Open observations from this round (not fixed):
 - The live coach misreads a new step's start tempo as being slowed down ("The app slowed you to 60").
 
 
+### Round 7 (N11: the first automated play test, `npm run playtest`), 2026-10-26
+Headless Chrome, a fresh data folder, the coach off; the emulated MPS-150 as a Beginner (count-8ths, Your first beat) and
+a Solid player (hi-hat 8ths, the flam, 7/8, trade bars), 2 takes each.
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 20 | "The flam" for a Solid player: "6 extra hits". The bounce filter remembered a *dropped* retrigger (the grace stroke's, velocity 18) as the last stroke, so the main stroke's own retrigger (44) passed as a new hit. Flams and drags on the real kit would have shown phantom extras. | Bug | A dropped bounce is never remembered (`src/input/hits.ts`); test + an emulated flam fixture (`src/input/fixtures/emulated-flam-taps.json`). |
+| – | Trade bars takes aren't saved: every note is in your own bars, so the take has 0 scored notes and `saveRun` skips it. Its minutes don't count towards the day or the streak. | Observation | Not changed; the runner only checks saving for takes with notes. |
+
 ## Instructor's review: the whole app, as a critical drum teacher sees it
 
 Written after playing the full path (Stick Rookie → Swing Cat) as a strong student. What I could not see: Chrome
@@ -365,6 +374,12 @@ sounds). Takes ~20 minutes. Write the numbers into the table at the end; the imp
 1. A groove lesson with 🎸 Band on: set the Band slider (Setup → Sound check) so it sits under the click and the kit.
 2. A lesson with "How it moves" (e.g. Single strokes): press C, allow the camera, record 10 s (hi-hat × 1), replay
    (snare × 1). Nothing is saved.
+
+**H. Record fixtures (N11), 2 minutes**
+In the browser console on the app: `await import('/scripts/playtest/helpers.js?' + Date.now())`, then before a take
+`T.recordMidi()`, play the take on the kit, then `T.saveFixture('mps150-ghost-groove', 'ghost notes: no lost hi-hats')`.
+Save the downloaded file in `src/input/fixtures/`. Good ones: the ghost-note groove (crosstalk), 16 hard snare singles
+(retriggers), a flam take. From then on the tests replay them on every change.
 
 **Write down**
 | Check | Your number / note |

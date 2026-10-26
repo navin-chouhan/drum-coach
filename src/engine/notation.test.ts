@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pattern } from './chart';
+import { pattern, withSticking } from './chart';
 import { durationOf, layoutMeasures, xAtBeat, type NotationEvent, limbPlan, noteHints } from './notation';
 
 const brief = (evs: NotationEvent[]) => evs.map(e => `${e.heads.map(h => h.drum).sort().join('+') || 'rest'}:${e.slots}${e.triplet ? 't' : ''}`);
@@ -89,5 +89,22 @@ describe('grace notes (R2)', () => {
     const [m] = layoutMeasures(pattern({ snare: 'f.f.d...' }, 2), 4);
     expect(m.hands.filter(e => e.heads.length).map(e => e.heads[0].grace)).toEqual([1, 1, 2]);
     expect(noteHints(pattern({ snare: 'f.f.d...' }, 2), 4).map(h => h.limbs)).toEqual(['lR', 'rL', 'llR']);
+  });
+});
+
+describe('left-handed (N9)', () => {
+  it('hints and the limb plan swap hands; feet stay', () => {
+    const notes = [0, 0.5, 1, 1.5].map(t => ({ t, drum: 'hihat' })).concat([{ t: 0, drum: 'kick' }, { t: 1, drum: 'snare' }]);
+    expect(noteHints(notes, 4, true).map(h => h.limbs)).toEqual(['L+K', 'L', 'L+R', 'L']);
+    expect(limbPlan(notes, 4, true).map(p => `${p.limb}:${p.name}:${p.drums.join('/')}`)).toEqual(['R:right hand:snare', 'L:left hand:hi-hat', 'K:right foot:kick']);
+  });
+});
+
+describe('sticking (R2)', () => {
+  it('a written sticking wins over plain alternation: paradiddle R L R R L R L L, mirrored for left-handed', () => {
+    const notes = withSticking(pattern({ snare: 'xxxxxxxx' }, 2), 'RLRRLRLL');
+    expect(noteHints(notes, 4).map(h => h.limbs)).toEqual(['R', 'L', 'R', 'R', 'L', 'R', 'L', 'L']);
+    expect(noteHints(notes, 4, true).map(h => h.limbs).join('')).toBe('LRLLRLRR');
+    expect(noteHints(withSticking(pattern({ snare: 'fxfx' }, 1), 'RRLL'), 4).map(h => h.limbs)).toEqual(['lR', 'R', 'rL', 'L']); // flam taps
   });
 });

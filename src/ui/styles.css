@@ -522,3 +522,5 @@
   .stop.songStop .dot{background:conic-gradient(var(--good) 0 var(--p), var(--cyan) var(--p) 100%)}
   .earQuiz .quizQ{font:800 30px var(--display);margin:6px 0 14px}.earQuiz .quizOptions{display:grid;gap:12px;margin-bottom:12px}
   .earQuiz .quizSaid{font:800 26px var(--display);color:var(--bad)}.earQuiz .quizSaid.ok{color:var(--good)}
+  .calDots{font:800 30px var(--display);letter-spacing:.08em}.calSummary li{margin-bottom:4px}
+  .throneCheck .big{font:800 30px var(--display);margin:4px 0}.throneCheck .ans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0}
