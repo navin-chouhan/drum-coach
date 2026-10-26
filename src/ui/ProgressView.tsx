@@ -143,6 +143,9 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
       <div className="stickers">
         {BADGES.map(b => <div key={b.id} className={`rankSticker small ${badges.has(b.id) ? '' : 'locked'}`} title={b.how}>{badges.has(b.id) ? `🏅 ${b.name}` : b.name}</div>)}
       </div>
+      <p className="small honest">🎥 An app can hear your timing and volume, but it can't see your hands. Once a month, film yourself with
+        "📷 Check yourself" in a lesson and compare with "How it moves". If you can, take one lesson with a human teacher per stage:
+        they spot tension and grip habits no app can.</p>
       <h4>Show-off set</h4>
       {showoff.length ? (
         <ul className="songList">
