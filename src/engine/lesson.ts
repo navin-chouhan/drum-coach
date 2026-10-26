@@ -82,6 +82,7 @@ export type LessonProgress = {
   layer?: number; // index into the step's `layers` (older saves: none = 0)
   bestStreak?: number; // best "in a row" on a streak challenge's record take
   provenAt?: string; // passed again at its target on a later day than completedAt (R7: a rank's ✓ proven)
+  stuck?: number; // failed takes in a row on this step, whatever the tempo did (D2: after 3 the big move changes)
 };
 
 /** Proven: passed again on a later day. Old saves count a passed review (reviewStage ≥ 1, always a later day). */
@@ -240,6 +241,27 @@ export const floorLine = (notesLanded: boolean, reason?: string) => (notesLanded
   ? `All the notes are there. ${reason ?? 'One small thing left: see the tip.'}`
   : 'This one is tricky. Try "Learn it slowly": the music waits for each note.');
 
+/** When the same step keeps failing, a teacher changes the approach instead of saying "again" (D2). */
+export type StuckMove = 'latency' | 'count' | 'listen' | 'coach';
+/**
+ * The big move after `stuck` failed takes in a row: a steady rushing/dragging fault with no latency test saved is
+ * usually the setup, so check it first; then a different tool (count along for timing, hear it for the rest);
+ * from 5, the coach writes something different.
+ */
+export function stuckMove(stuck: number, reason: string | undefined, latencyChecked: boolean): StuckMove | undefined {
+  if (stuck < 3) return undefined;
+  const timing = /^(Rushing|Dragging)|behind the click|wander/.test(reason ?? '');
+  if (timing && !latencyChecked && /^(Rushing|Dragging)/.test(reason ?? '')) return 'latency';
+  if (stuck >= 5) return 'coach';
+  return timing ? 'count' : 'listen';
+}
+export const stuckLine = (m: StuckMove) => ({
+  latency: 'Every take lands about the same amount off the click: that is usually the setup, not you. Two minutes to check the latency?',
+  count: "Let's change it up: one take where I count out loud with you.",
+  listen: "Let's hear it: your take first, then how it should sound.",
+  coach: 'This one keeps fighting back. Let the coach write you something different.',
+})[m];
+
 /** Levels 0–1 pass a take well off the click (Good is ±150 ms); the verdict still says so, gently. */
 export const lateNote = (level: number, meanOffsetMs: number) => (level > 1 || Math.abs(meanOffsetMs) <= 50 ? ''
   : meanOffsetMs > 0 ? ' A touch late: lean into the click.' : ' A touch early: let the click come to you.');
@@ -260,26 +282,28 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
   if (step.jam || step.rest || step.look || step.quiz || step.transcribe || step.listen || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
-  if (!passed && notesLanded) return { next: { ...p, clean: 0, fails: 0 }, event: 'hold' };
+  const stuck = passed ? 0 : (p.stuck ?? 0) + 1;
+  const out = (next: LessonProgress, event: LadderEvent) => ({ next: { ...next, stuck }, event });
+  if (!passed && notesLanded) return out({ ...p, clean: 0, fails: 0 }, 'hold');
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
-    if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };
-    if (p.bpm <= MIN_BPM) return { next: { ...p, clean: 0, fails: 0 }, event: 'atFloor' };
-    return { next: { ...p, clean: 0, fails: 0, bpm: Math.max(MIN_BPM, p.bpm - (rough ? 2 * BPM_STEP : BPM_STEP)) }, event: 'slowDown' };
+    if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return out({ ...p, clean: 0, fails }, 'hold');
+    if (p.bpm <= MIN_BPM) return out({ ...p, clean: 0, fails: 0 }, 'atFloor');
+    return out({ ...p, clean: 0, fails: 0, bpm: Math.max(MIN_BPM, p.bpm - (rough ? 2 * BPM_STEP : BPM_STEP)) }, 'slowDown');
   }
   const eased = p.bpm < step.bpm.start;
-  if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
+  if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return out({ ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, 'layerUp');
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
   if (step.jam || step.rest || step.look || step.quiz || step.transcribe || step.listen) { // any take (or the end of a rest or a look) finishes the step
-    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
+    if (!last) return out({ ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, 'stepDone');
   } else {
-    if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
-    if (p.bpm < step.bpm.target) return { next: { ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + (eased ? 2 : 1) * BPM_STEP) }, event: 'up' };
-    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
+    if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return out({ ...p, clean, fails: 0, bestBpm }, 'hold');
+    if (p.bpm < step.bpm.target) return out({ ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + (eased ? 2 : 1) * BPM_STEP) }, 'up');
+    if (!last) return out({ ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, 'stepDone');
   }
   const done = p.completedAt ? {} : { completedAt: today, reviewStage: 0, reviewDue: addDays(today, REVIEW_DAYS[0]) };
-  return { next: { ...p, clean: 0, fails: 0, bestBpm, ...done }, event: 'lessonDone' };
+  return out({ ...p, clean: 0, fails: 0, bestBpm, ...done }, 'lessonDone');
 }
 
 /** Spaced review: a pass pushes the next review further out (2, 5, 12, 30 days); a fail brings it back tomorrow. */

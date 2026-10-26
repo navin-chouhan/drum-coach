@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
-import { afterReview, autoProbe, floorLine, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, autoProbe, floorLine, stuckMove, stuckLine, type StuckMove, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
 import { praise } from '../engine/greeting';
 import { breakDue } from '../engine/health';
@@ -17,6 +17,7 @@ import { NotesView } from '../play/NotesView';
 import { KitView } from '../ui/KitView';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { LatencyHint, Results, saveRun } from '../play/Results';
+import { LatencyCard } from '../ui/LatencyCard';
 import { fillFromTake, takeChart } from '../engine/transcribe';
 import { hearFill, keepFill } from '../play/fills';
 import { requestSong } from '../ui/nav';
@@ -41,7 +42,7 @@ import { progressOf, resetLesson, saveProgress, today } from './state';
 const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 // text: the full verdict (spoken, sent to the coach); say: the short line for the screen; nums: the result card.
 type Nums = { landed: number; total: number; streak: number; recoveries: number; onBeat?: number; better: boolean };
-type Outcome = { passed: boolean; text: string; say?: string; slowly?: boolean; again?: boolean; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
+type Outcome = { passed: boolean; text: string; say?: string; slowly?: boolean; stuck?: StuckMove; again?: boolean; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
 // again: a finished lesson played through again (no second celebration)
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 const sitting = { playedS: 0 }; // seconds played since the last break, this page load (N10)
@@ -223,7 +224,9 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       // Keep time alone: say how the tempo held once the click went quiet (in words, no numbers).
       const drift = step.fadeClick ? takeDrift(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed) }) : undefined;
       const held = drift === undefined || drift === null ? '' : Math.abs(drift) >= 20 ? ` You ${drift < 0 ? 'sped up' : 'slowed down'} a little once the click went quiet.` : ' Tempo held on your own. That\'s the hard part.';
-      o = { passed: ok, event, again: event === 'lessonDone' && !!p.completedAt, slowly: event === 'atFloor' && !notesLanded, nums, say: `${ok ? `${praise(p.clean + p.fails + takeNo)} ` : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}${ok ? lateNote(lesson.level, st.meanOffset) : ''}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
+      // Stuck on this step: after 3 failed takes in a row the big move changes and the line says why (D2).
+      const stuckOn = ok ? undefined : stuckMove(next.stuck ?? 0, check.reason, !!getSettings().latencyChecked);
+      o = { passed: ok, event, again: event === 'lessonDone' && !!p.completedAt, slowly: event === 'atFloor' && !notesLanded, stuck: stuckOn, nums, say: `${ok ? `${praise(p.clean + p.fails + takeNo)} ` : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}${ok ? lateNote(lesson.level, st.meanOffset) : ''}${stuckOn ? ` ${stuckLine(stuckOn)}` : ''}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
     // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting,
@@ -347,6 +350,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   };
   // A break after about 22 minutes of playing in one sitting (N10): the main move offers it once the take is judged.
   const [onBreak, setOnBreak] = useState(false);
+  const [latencyOpen, setLatencyOpen] = useState(false); // D2: the latency test, right here in the lesson
   const [bigDemo, setBigDemo] = useState(false); // "How it moves" full size, over the lesson
   useEffect(() => { if (!bigDemo) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setBigDemo(false); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [bigDemo]);
   const breakNow = !!f && !!outcome && !playing && !resting && !arcade && !flow && breakDue(sitting.playedS);
@@ -361,6 +365,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     } }
     : resting ? { label: '✓ Done, next step', run: finishRest }
     : flow ? { label: '🌊 Flow ▶', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, fadeClick: 8 }); } }
+    : outcome?.stuck === 'latency' ? { label: '⏱ Check my latency', run: () => setLatencyOpen(true) }
+    : outcome?.stuck === 'count' ? { label: '🗣 Count with me, one take', run: () => void runAction({ kind: 'count', label: 'count' }) }
+    : outcome?.stuck === 'listen' && f?.hits.length ? { label: '🎧 Hear mine, then the right way', run: () => hearTake(f, () => play(true)) }
+    : outcome?.stuck === 'coach' && helpKey ? { label: '🧑‍🏫 Something different', run: askHelp }
     : coachAct && canRunAction(coachAct) ? { label: coachAct.label, run: () => void runAction(coachAct) }
     : outcome?.slowly ? { label: '🐢 Learn it slowly', run: () => play(false, bpm, true) } // at the floor a zoom can't go slower
     : outcome?.fixBar && !outcome.zoomed ? { label: `🔍 Fix bar ${outcome.fixBar}`, run: () => zoomIn(outcome.fixBar!) }
@@ -442,7 +450,11 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       </div>
 
       {checking && demo && <SelfCheck demo={demo} bpm={bpm} onClose={() => setChecking(false)} />}
-      {onBreak ? <>
+      {latencyOpen ? <>
+        <CoachLine line="Press Start, then hit any pad with each click. Then we go back to the lesson." />
+        <div className="moves"><Move label="← Back to the lesson" onClick={() => setLatencyOpen(false)} /></div>
+        <LatencyCard onSaved={() => setLatencyOpen(false)} />
+      </> : onBreak ? <>
         <CoachLine line="Break time. Stand up, shake out your hands and shoulders, sip some water. Your hands keep learning while you rest." />
         <div className="moves"><Move go label="✓ Back to playing" onClick={() => { sitting.playedS = 0; setOnBreak(false); }} /></div>
         <RestCountdown seconds={120} />

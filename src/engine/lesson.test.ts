@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, floorLine, lateNote, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, floorLine, stuckMove, stuckLine, lateNote, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -50,6 +50,30 @@ describe('checkPass', () => {
     expect(checkPass(stats(), { maxFlamMs: 25 }).ok).toBe(true); // nothing landing together: no check
     const v = stats().velocity;
     expect(checkPass(stats({ velocity: { ...v, pairDrop: 30 } }), { maxPairDropPct: 15 }).reason).toMatch(/30% softer/);
+  });
+});
+
+describe('a student stuck on one step (D2)', () => {
+  const p0 = startProgress(lesson);
+  it('counts failed takes in a row on the step, also when the tempo holds, and forgets them on a pass', () => {
+    let p = p0;
+    for (let i = 0; i < 4; i++) p = ladderStep(p, lesson, false, '2026-10-26', 100, false, true).next; // every note there, timing off
+    expect(p.stuck).toBe(4);
+    expect(p.bpm).toBe(60); // the tempo held
+    expect(ladderStep(p, lesson, true, '2026-10-26', 100).next.stuck).toBe(0);
+    expect(ladderStep({ ...p, stuck: 2 }, lesson, false, '2026-10-26', 40).next.stuck).toBe(3); // a rough take counts too
+  });
+  it('after 3 the big move changes: latency first for a steady timing fault, then a tool, then the coach', () => {
+    expect(stuckMove(2, 'Dragging by 45 ms. Lock onto the click.', false)).toBeUndefined();
+    expect(stuckMove(3, 'Dragging by 45 ms. Lock onto the click.', false)).toBe('latency');
+    expect(stuckMove(3, 'Dragging by 45 ms. Lock onto the click.', true)).toBe('count');
+    expect(stuckMove(3, 'Volume varies by 30%. Aim for every stroke the same height.', true)).toBe('listen');
+    expect(stuckMove(5, 'Volume varies by 30%. Aim for every stroke the same height.', true)).toBe('coach');
+    expect(stuckMove(6, 'Rushing by 40 ms. Lock onto the click.', false)).toBe('latency'); // a setup problem first, however long
+  });
+  it('names the cause in plain words', () => {
+    expect(stuckLine('latency')).toMatch(/setup, not you/);
+    expect(stuckLine('coach')).toMatch(/something different/);
   });
 });
 
