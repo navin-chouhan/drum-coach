@@ -156,3 +156,9 @@ personalised curation". Built in my recommended order, each item checked in Chro
 - Sight-reading grades 1–5, road maps (repeat/endings/D.C. al Coda drawn on the sheet, played expanded), the
   write-what-you-hear grid, listening assignments; coach prompt knows them. Checked in headless Chrome on the test copy.
 - Owner ask: "How it moves" bigger → ⤢ Bigger opens the full demo in an overlay (Esc closes); the side column is wider.
+
+## N3 real music in lessons (2026-10-26)
+- Song bites play over the drumless YouTube upload (embedded player, YouTube clock), checkbox to use the band instead.
+  Checked headless on the test copy with a test bite lesson: the take ran on the video clock (81 BPM). The emulated kit
+  doesn't play external-clock takes (by design), so hits weren't scored in that check.
+- Skipped: CC0 sampled kit/band (needs downloads; owner declined downloads for N1).

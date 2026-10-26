@@ -156,6 +156,14 @@ song for friends.
 - The coach can use all four in its lessons (`server/prompts/lesson.md`); they count toward "Reading and ears" on the
   skill map.
 
+## Real music in lessons (N3)
+
+- A song bite (a coach lesson's `bite` step on a YouTube song) plays over the song's **drumless upload** when it has one
+  with a beat grid: the official embedded player sits under the sheet and the take runs on the YouTube clock
+  (`src/lesson/RealSong.tsx`, same timing as Songs → Play). One pass of the bars, a bar of the song as the count-in, at
+  the nearest speed YouTube offers. A checkbox switches back to the practice band. Nothing is downloaded or recorded.
+- Not built: a sampled kit and band (needs downloaded samples; skipped with N1's downloads).
+
 ## Curriculum shape
 Levels 0–9, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open). Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
 if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.

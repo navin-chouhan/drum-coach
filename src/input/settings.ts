@@ -17,6 +17,7 @@ export type Settings = {
   intro?: boolean; // intro slides before the first take of an exercise or step (default on)
   hints?: boolean; // the count and who plays each note under the sheet (default on)
   setupDone?: boolean; setupNudged?: boolean; // onboarding's kit step (pads + latency) done; Journey's one reminder given
+  realSong?: boolean; // N3: a lesson's song bite plays over the drumless YouTube upload (default on when there is one)
   band?: boolean; bandVolume?: number; // the backing band under grooves and songs (default on, 0.6)
   latencyChecked?: boolean;
   soreUntil?: string; soreAskedWeek?: string; hearingTipWeek?: string; // N10: lighter days until this date; weekly check-ins

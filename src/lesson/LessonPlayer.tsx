@@ -30,6 +30,7 @@ import { IntroSlides } from '../play/IntroSlides';
 import { SelfCheck } from '../ui/SelfCheck';
 import { EarQuiz } from './EarQuiz';
 import { Transcribe } from './Transcribe';
+import { RealSongBox, realTake, type RealSong } from './RealSong';
 import { TechniqueDemo } from '../ui/TechniqueDemo';
 import { demoFor } from '../content/demos';
 import { takeToMidi } from '../engine/exportMidi';
@@ -259,6 +260,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   const bandSpec = bandFor(lesson, step); // on for grooves, songs and fills (engine/band.ts)
+  const [real, setReal] = useState<RealSong | null>(null); // N3: the bite's drumless song, when it has one
   const options = (demo: boolean, wait = false): PlayOptions => ({
     // Short takes so a rough one is over quickly: 4 bars; 8 for the proving take (last step at its target tempo),
     // a jam (long enough to enjoy) and copy-me (4 calls and 4 echoes).
@@ -277,7 +279,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const play = (demo: boolean, atBpm = bpm, wait = false) => {
     setDetails(false);
     const next = !demo && !wait && step.variants?.length ? chartFor(takeNo + 1).chart : chart;
-    const run = () => { if (next !== chart) setTakeNo(takeNo + 1); start(next, { ...options(demo, wait), speed: atBpm / next.bpm }); };
+    const onSong = !demo && !wait && real && step.bite && getSettings().realSong !== false ? realTake(real, step.bite.fromBar, next, atBpm) : undefined; // N3
+    const run = () => { if (next !== chart) setTakeNo(takeNo + 1); start(next, { ...options(demo, wait), speed: atBpm / next.bpm, ...onSong }); };
     const key = `${stepIdx}/${p.layer ?? 0}`, seen = introShown.current.get(key);
     if (!demo && !wait && getSettings().intro !== false && (seen === undefined || Math.abs(seen - atBpm) > 10)) {
       introShown.current.set(key, atBpm); setIntro({ run }); return;
@@ -472,6 +475,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
           {playing && <button className="primary big stopBtn" onClick={stop}>Stop <small>(crash × 4, Esc)</small></button>}
           <NotesView idle={{ chart: idleSheet.chart, bpm, goal: step.text, hints, dim: idleSheet.dim, zoom: 1.6 }} />
           {hints && <p className="hintLegend">R right hand · L left hand · K kick · H hi-hat foot</p>}
+          {step.bite?.songId.startsWith('yt-') && <RealSongBox key={step.bite.songId} songId={step.bite.songId} onPlayer={setReal} />}
         </section>
         {!playing && <aside className="lessonSide">
           {outcome?.nums ? <div className={`card result ${outcome.passed ? 'pass' : ''}`}>
@@ -498,7 +502,12 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
             {hints && <p className="hintcard">💡 <b>Hint:</b> {howHint}</p>}
             <details open={fresh}><summary>Why and how</summary><p>{lesson.why}</p><p>{lesson.how}</p></details>
           </div>}
-          {step.bite && <div className="card"><p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b></p>{step.bite.songId.startsWith('yt-') && <button onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Play it with the song →</button>}</div>}
+          {step.bite && <div className="card"><p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b></p>
+            {step.bite.songId.startsWith('yt-') && <>
+              {real && <label className="check"><input type="checkbox" checked={getSettings().realSong !== false} onChange={e => setSettings({ realSong: e.target.checked })} /> Play over the real song (drumless), not the practice band</label>}
+              {real && getSettings().realSong !== false && <p className="small">The song plays at the nearest speed YouTube offers (75%, 100%…), so its tempo can differ a little from the ladder's.</p>}
+              <button className="link" onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Open it in Songs →</button>
+            </>}</div>}
           {(step.trade || step.read || free.length > 0 || step.pass?.streak || step.gapBars || step.countAloud || step.probe || step.fadeClick || step.clickOn || step.variants?.length || (lanes && step.chart.notes.some(n => !lanes.includes(n.drum)))) && <div className="card small">
             {step.probe && <p>Find your tempo: one bar at a time from {step.bpm.start} BPM, faster after each clean bar. Then we practise just below where it got hard.</p>}
             {step.fadeClick && <p>The click fades away over {step.fadeClick} bars. Keep the tempo on your own.</p>}
