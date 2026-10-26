@@ -73,3 +73,10 @@ export function consensus(passes: ChartNote[][], min = passes.length > 1 ? 2 : 1
   }
   return [...votes.values()].filter(v => v.votes >= min).sort((a, b) => a.t - b.t);
 }
+
+/**
+ * Song parts you can trust (N4): the suggestions heard in the song that the coach's groove (from knowing the song, not
+ * hearing it) also has. Two independent sources agreeing is the part to start from; check every note by ear anyway.
+ */
+export const agreeing = <N extends ChartNote>(heard: N[], coach: ChartNote[]) =>
+  heard.filter(h => coach.some(c => c.drum === h.drum && Math.abs(c.t - h.t) < 1e-3));

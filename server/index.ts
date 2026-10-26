@@ -283,13 +283,13 @@ app.get('/api/youtube/versions', async (req, reply) => {
   } catch (e) { return ytFail(reply, e); }
 });
 
-type YtRow = { id: string; title: string; original_id: string; drumless_id: string | null; cover_id: string | null; ts_num: number; ts_den: number; notes_json: string };
+type YtRow = { id: string; title: string; original_id: string; drumless_id: string | null; cover_id: string | null; ts_num: number; ts_den: number; notes_json: string; verified_at: string | null };
 function ytSong(r: YtRow): YtSong {
   const ids = [r.original_id, r.drumless_id, r.cover_id].filter(Boolean) as string[];
   const grids = Object.fromEntries((db.prepare(`SELECT * FROM yt_grids WHERE video_id IN (${ids.map(() => '?').join(',')})`).all(...ids) as { video_id: string; bpm: number; offset_sec: number }[])
     .map(g => [g.video_id, { bpm: g.bpm, offsetSec: g.offset_sec }]));
   return { id: r.id, title: r.title, originalId: r.original_id, drumlessId: r.drumless_id, coverId: r.cover_id,
-    timeSignature: [r.ts_num, r.ts_den as 4], notes: JSON.parse(r.notes_json), grids };
+    timeSignature: [r.ts_num, r.ts_den as 4], notes: JSON.parse(r.notes_json), grids, verifiedAt: r.verified_at ?? null };
 }
 const ytById = (id: string) => db.prepare('SELECT * FROM yt_songs WHERE id = ?').get(id) as YtRow | undefined;
 
@@ -311,6 +311,9 @@ app.patch('/api/ytsongs/:id', async (req, reply) => {
   db.prepare('UPDATE yt_songs SET title = ?, drumless_id = ?, cover_id = ?, ts_num = ?, ts_den = ?, notes_json = ? WHERE id = ?').run(
     d.title ?? row.title, d.drumlessId === undefined ? row.drumless_id : d.drumlessId, d.coverId === undefined ? row.cover_id : d.coverId,
     d.timeSignature?.[0] ?? row.ts_num, d.timeSignature?.[1] ?? row.ts_den, d.notes ? JSON.stringify(d.notes) : row.notes_json, p.data.id);
+  // N4: "checked by ear" is set by the student; changed notes need checking again
+  const verified = d.verified === true ? new Date().toISOString().slice(0, 10) : d.verified === false || (d.notes && JSON.stringify(d.notes) !== row.notes_json) ? null : row.verified_at;
+  db.prepare('UPDATE yt_songs SET verified_at = ? WHERE id = ?').run(verified, p.data.id);
   return ytSong(ytById(p.data.id)!);
 });
 app.delete('/api/ytsongs/:id', async (req, reply) => {

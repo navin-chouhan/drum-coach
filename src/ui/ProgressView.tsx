@@ -3,7 +3,7 @@ import { MILESTONES } from '../content/curriculum';
 import { rankState } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
-import { songBarCount, useYtSongs } from '../youtube/api';
+import { songBarCount, songVerified, useYtSongs } from '../youtube/api';
 import { hearFill } from '../play/fills';
 import { BADGES, dashboard, earnedBadges, songReady, type Dashboard, type RunRow } from '../engine/progress';
 import { requestLesson, requestPlay, requestSong } from './nav';
@@ -127,7 +127,7 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
   const rankOf = (m: (typeof MILESTONES)[number]) => rankState(m, lessons, s.lessons, s.profile);
   const stars = Object.values(s.lessons).reduce((a, p) => a + (p.completedAt ? p.stars ?? 1 : 0), 0);
   // A show-off song: 16 bars or more, every bar played at 85% or better (across takes).
-  const showoff = songs.filter(song => songReady(runs, song.id, songBarCount(song)));
+  const showoff = songs.filter(song => songVerified(song) && songReady(runs, song.id, songBarCount(song))); // N4: checked by ear
   // Journey announces new badges and stores them; the shelf also counts what the runs already earned, so it's never stale.
   const badges = new Set([...(s.badges ?? []), ...earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, showoff.map(x => x.id))]);
   return (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consensus, createOnsetDetector, onsetsToNotes } from './onsets';
+import { agreeing, consensus, createOnsetDetector, onsetsToNotes } from './onsets';
 
 const FRAME = 256 / 48000;
 /** Synthetic band levels: a steady bed plus decaying hits at given times per band. */
@@ -52,5 +52,14 @@ describe('suggestions', () => {
     expect(p1).toEqual([{ t: 0, drum: 'kick' }, { t: 1, drum: 'snare' }, { t: 2.5, drum: 'snare' }]);
     expect(consensus([p1, p2]).map(n => `${n.t}:${n.drum}`)).toEqual(['0:kick', '1:snare']);
     expect(consensus([p1])).toHaveLength(3); // a single pass shows everything (marked as 1 vote)
+  });
+});
+
+describe('agreement (N4)', () => {
+  it('a suggestion heard in the song that the coach\'s groove also has is the one to trust first', () => {
+    const heard = [{ t: 0, drum: 'kick' as const }, { t: 1, drum: 'snare' as const }, { t: 1.5, drum: 'kick' as const }];
+    const coach = [{ t: 0, drum: 'kick' as const }, { t: 1, drum: 'snare' as const }, { t: 2, drum: 'kick' as const }];
+    expect(agreeing(heard, coach).map(n => `${n.t}${n.drum}`)).toEqual(['0kick', '1snare']);
+    expect(agreeing(heard, [])).toEqual([]);
   });
 });

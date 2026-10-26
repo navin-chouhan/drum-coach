@@ -10,7 +10,7 @@ import { stageSong } from '../engine/stageSong';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, SHOWOFF_MIN_BARS, songReady, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
-import { songBarCount, useYtSongs } from '../youtube/api';
+import { songBarCount, songVerified, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { ensureWeekPlan, refreshWeekPlan, thisWeeksPlan, useWeekPlan } from '../coach/weekPlan';
@@ -75,7 +75,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
   useEffect(() => {
     if (!runs.length) return;
-    const ready = songs.filter(x => songReady(runs, x.id, songBarCount(x))).map(x => x.id);
+    const ready = songs.filter(x => songVerified(x) && songReady(runs, x.id, songBarCount(x))).map(x => x.id); // N4: checked by ear
     const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, ready), fresh = earned.filter(id => !s.badges?.includes(id));
     if (!fresh.length) return;
     setSettings({ badges: [...(s.badges ?? []), ...fresh] });
@@ -152,7 +152,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const maxedOut = (l: Lesson) => { const t = recordTarget(l.steps[l.steps.length - 1], s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
-  const showoff = songs.filter(x => songReady(runs, x.id, songBarCount(x)));
+  const showoff = songs.filter(x => songVerified(x) && songReady(runs, x.id, songBarCount(x)));
   // Health (N10): lighter days after "a bit sore", practice-length advice, the weekly ear and wrist check-ins.
   const daysPlayed = new Set(runs.map(r => r.startedAt.slice(0, 10))).size, wk = isoWeek(new Date());
   const healthLine = soreActive(s.soreUntil, today()) ? `Easy days until ${s.soreUntil}: shorter sets, lighter playing. If something hurts, stop; if it lasts, see a doctor.`
@@ -208,7 +208,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               {weekPlan?.focus ? <li>🎯 This week: <b>{weekPlan.focus}</b>{weekPlan.why && <><br /><span className="small">{weekPlan.why}</span></>}</li>
               : theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
                 : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
-              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
+              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready${projectSong && !songVerified(projectSong) ? ' · check the part by ear in Songs' : ''}` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
             </ul>
           </div>
         </div>
