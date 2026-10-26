@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { countInNumber } from '../engine/run';
 import { getSettings } from '../input/settings';
 import {
-  Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, GraceNote, GraceNoteGroup, ModifierPosition, Parenthesis, Tremolo,
+  Annotation, AnnotationVerticalJustify, Articulation, BarlineType, Beam, Dot, VoltaType, Formatter, GraceNote, GraceNoteGroup, ModifierPosition, Parenthesis, Tremolo,
   Renderer, Stave, StaveNote, Tuplet, Voice,
 } from 'vexflow/bravura'; // Bravura is embedded: works offline
 import type { ChartNote } from '../engine/chart';
+import type { Form } from '../engine/form';
 import { durationOf, layoutMeasures, noteHints, xAtBeat, type NotationEvent } from '../engine/notation';
 import { player, playerVersion, position, subscribePlayer } from '../play/player';
 
@@ -64,6 +65,7 @@ type SheetOptions = {
   scale?: number; barMin?: number; // zoom (1 = VexFlow size) and the narrowest bar before wrapping, in unscaled units
   hints?: boolean; // the count and who plays each note (R / L hand, K kick, H hi-hat foot) under the staff
   dyn?: number[]; // volume marks per bar (1 p, 2 mf, 3 f), shown where they change
+  form?: Form; // the road map (N7): repeat signs, 1st/2nd endings, D.C. al Coda
 };
 
 /** Draws the notation into `el` (SVG) and returns where every bar, beat and note ended up (in screen pixels). */
@@ -73,7 +75,8 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
   const bpb = (ts[0] * 4) / ts[1];
   const measures = layoutMeasures([...o.notes].sort((a, b) => a.t - b.t), bpb, o.fromBar ?? 1, o.toBar);
   const perRow = Math.max(1, Math.floor((width - FIRST_EXTRA - 10) / MIN));
-  const rows = Math.ceil(measures.length / perRow), rowH = rowHeight(o.hints);
+  const volta = o.form?.endings || o.form?.coda ? 26 : 0; // room above each row for ending brackets and coda words
+  const rows = Math.ceil(measures.length / perRow), rowH = rowHeight(o.hints) + volta;
   const top = o.title || o.bpm ? 52 : 10, height = top + rows * rowH + 10;
   const r = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG);
   r.resize(width * k, height * k);
@@ -87,12 +90,23 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
   measures.forEach((m, i) => {
     const row = Math.floor(i / perRow), col = i % perRow;
     const barW = (width - FIRST_EXTRA - 10) / perRow;
-    const x = 5 + (col ? FIRST_EXTRA + col * barW : 0), w = barW + (col ? 0 : FIRST_EXTRA), y = top + row * rowH;
+    const x = 5 + (col ? FIRST_EXTRA + col * barW : 0), w = barW + (col ? 0 : FIRST_EXTRA), y = top + row * rowH + volta;
     const stave = new Stave(x, y, w);
     if (col === 0) stave.addClef('percussion');
     if (i === 0) stave.addTimeSignature(`${ts[0]}/${ts[1]}`);
     if (col === 0 || i === 0) stave.setMeasure(m.index);
+    const f = o.form, rp = f?.repeat;
+    if (rp && m.index === rp[0]) stave.setBegBarType(BarlineType.REPEAT_BEGIN);
+    if (rp && m.index === rp[1]) stave.setEndBarType(BarlineType.REPEAT_END);
+    if (rp && f?.endings && (m.index === rp[1] || m.index === rp[1] + 1)) stave.setVoltaType(VoltaType.BEGIN_END, m.index === rp[1] ? '1.' : '2.', -5);
+    if (f?.coda && m.index === f.coda.codaAt - 1) stave.setEndBarType(BarlineType.DOUBLE);
     stave.setContext(ctx).draw();
+    if (f?.coda) { // the jumps, written as words over the staff
+      ctx.setFont('Times New Roman', 14, 'bold italic');
+      if (m.index === f.coda.toCoda) ctx.fillText('To Coda ⊕', x + w - 80, y - 10);
+      if (m.index === f.coda.codaAt - 1) ctx.fillText('D.C. al Coda', x + w - 95, y - 10);
+      if (m.index === f.coda.codaAt) ctx.fillText('⊕ Coda', x + 4, y - 10);
+    }
     const hands = buildVoice(m.hands, 1, compound ? 6 : 4, o.dim), feet = buildVoice(m.feet, -1, compound ? 6 : 4, o.dim);
     const time = { numBeats: ts[0], beatValue: ts[1] };
     const vh = new Voice(time).setMode(Voice.Mode.SOFT).addTickables(hands.notes);
@@ -146,10 +160,11 @@ const useWidth = (ref: React.RefObject<HTMLElement | null>) => {
  * Drum notation for a chart (percussion staff, hands stem up, feet stem down), wrapped to the width.
  * Bars are 1-based; `title` prints above when given.
  */
-export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bpm, hints, dim, zoom = 1.15, dyn }: {
+export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bpm, hints, dim, zoom = 1.15, dyn, form }: {
   notes: (ChartNote & { i?: number })[]; timeSignature: readonly [number, number]; fromBar?: number; toBar?: number; title?: string; bpm?: number;
   hints?: boolean; dim?: (i: number) => boolean; zoom?: number; // zoom: notation size on wide screens
   dyn?: number[]; // p / mf / f per bar
+  form?: Form; // the road map, on a chart shown before it's played
 }) {
   const host = useRef<HTMLDivElement>(null);
   const { w: width } = useWidth(host);
@@ -160,11 +175,11 @@ export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bp
     fontReady ??= document.fonts.load('30px Bravura');
     void fontReady.then(() => {
       if (cancelled || !host.current) return;
-      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, dyn, scale: width < 500 ? 1 : zoom, barMin: hints ? 320 : 250 }); setError(''); } // hints need room at the barlines
+      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, dyn, form, scale: width < 500 ? 1 : zoom, barMin: hints ? 320 : 250 }); setError(''); } // hints need room at the barlines
       catch (e) { setError(`Couldn't draw this part: ${(e as Error).message}`); }
     });
     return () => { cancelled = true; };
-  }, [notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, zoom, dyn]);
+  }, [notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, zoom, dyn, form]);
   return (
     <div className="sheet">
       <div ref={host} className="sheetPaper" role="img" aria-label={`Drum notation${title ? ` for ${title}` : ''}`} />

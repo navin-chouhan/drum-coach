@@ -57,3 +57,14 @@ export function fillFromTake(hits: { time: number; pad?: PadId; velocity: number
   const inBar = hits.flatMap(h => (h.pad ? [{ beat: (h.time - take.zero) / take.beatMs - start, pad: h.pad, velocity: h.velocity }] : []));
   return quantizeTake(inBar, 0, take.beatsPerBar);
 }
+
+/**
+ * Transcription (N7): a written grid against the real chart. Notes match by drum (open or closed hi-hat alike) and
+ * position to the nearest step; `pct` = right / (all of the chart's notes + wrong extra ones).
+ */
+export function gridScore(written: { t: number; drum: ChartNote['drum'] }[], answer: { t: number; drum: ChartNote['drum'] }[], stepsPerBeat: number) {
+  const key = (n: { t: number; drum: string }) => `${Math.round(n.t * stepsPerBeat)}:${n.drum === 'hhOpen' ? 'hihat' : n.drum}`;
+  const want = new Set(answer.map(key)), got = new Set(written.map(key));
+  const right = [...got].filter(k => want.has(k)).length, extra = got.size - right, missed = want.size - right;
+  return { right, extra, missed, pct: want.size ? Math.round((right / (want.size + extra)) * 100) : 0 };
+}

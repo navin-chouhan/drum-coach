@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { startProgress, type Lesson, type LessonKind, type LessonProgress, type Milestone } from './lesson';
-import { buildSession, candidates, currentMilestone, rankState, studentRead } from './planner';
+import { startProgress, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson';
+import { buildSession, candidates, checkpointsOf, currentMilestone, rankState, studentRead } from './planner';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
 const L = (id: string, level: number, kind: LessonKind, o: Partial<Lesson> = {}): Lesson =>
@@ -117,5 +117,37 @@ describe('buildSession: songs and after the path (R8)', () => {
     expect(s.length).toBeGreaterThanOrEqual(2);
     expect(s.some(i => i.role === 'review')).toBe(true);
     expect(s.map(i => i.lessonId)).toContain('song-end');
+  });
+});
+
+describe('buildSession: health (N10)', () => {
+  const today = '2026-10-26';
+  const withStretch = [...lessons, L('stretch', 0, 'exercise', { routine: true })];
+  it('every day opens with the stretch; it is never on the path', () => {
+    const s = buildSession(milestones, withStretch, done('count'), profile, today);
+    expect(s[0]).toEqual({ role: 'stretch', lessonId: 'stretch', minutes: 2 });
+    expect(candidates(milestones, withStretch, {}, profile).map(l => l.id)).not.toContain('stretch');
+  });
+  it('a sore week: a lighter set', () => {
+    const s = buildSession(milestones, withStretch, done('count'), { ...profile, minutesPerDay: 30 }, today, [], { sore: true });
+    expect(s.reduce((a, i) => a + i.minutes, 0)).toBeLessThanOrEqual(12);
+    expect(s.filter(i => i.role === 'skill' || i.role === 'groove')).toHaveLength(1);
+  });
+});
+
+describe('buildSession: a skill due for a refresh (N5)', () => {
+  it('becomes the review when nothing else is due', () => {
+    const s = buildSession(milestones, lessons, done('count', 'rests'), { ...profile, minutesPerDay: 30 }, '2026-10-26', [], { skillReview: 'count' });
+    expect(s.find(i => i.role === 'review')?.lessonId).toBe('count');
+  });
+});
+
+describe('checkpointsOf: style tracks (N6)', () => {
+  it('follows the student\'s style, and rock / pop when not sure yet', async () => {
+    const { CURRICULUM, MILESTONES } = await import('../content/curriculum');
+    const m = MILESTONES.find(x => x.level === 11)!, ids = (goals: Profile['goals']) => checkpointsOf(m, CURRICULUM, { ...profile, goals }).map(l => l.id);
+    expect(ids([])).toEqual(['gospel-chops', 'song-gospel']);
+    expect(ids(['latin'])).toEqual(['samba', 'song-gospel']);
+    expect(ids(['jazz', 'funk'])).toEqual(['gospel-groove', 'jazz-waltz', 'song-gospel']);
   });
 });

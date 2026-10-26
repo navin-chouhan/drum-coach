@@ -3,8 +3,8 @@ import { onCoachAction } from '../coach/session';
 import { DEMOS, type DemoId } from '../content/demos';
 import { onHit } from '../input/hits';
 import { TechniqueDemo } from './TechniqueDemo';
+import { saveFile, stamp } from './download';
 
-const CLIP_S = 10;
 
 /**
  * Check yourself (R5): your camera as a mirror next to the technique diagram, and a 10-second replay of yourself.
@@ -15,7 +15,8 @@ export function SelfCheck({ demo, bpm, onClose }: { demo: DemoId; bpm: number; o
   const live = useRef<HTMLVideoElement>(null), replay = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream>(undefined), rec = useRef<MediaRecorder>(undefined), stopTimer = useRef<number>(undefined);
   const [state, setState] = useState<'starting' | 'live' | 'recording' | 'replay' | 'error'>('starting');
-  const [clip, setClip] = useState<string>();
+  const [clip, setClip] = useState<string>(), [clipS, setClipS] = useState(10); // 10 s to check yourself, 30 s for a teacher (N2)
+  const blob = useRef<Blob>(undefined);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -32,9 +33,9 @@ export function SelfCheck({ demo, bpm, onClose }: { demo: DemoId; bpm: number; o
     if (rec.current?.state === 'recording') { rec.current.stop(); return; }
     const chunks: Blob[] = [], r = new MediaRecorder(stream.current);
     r.ondataavailable = e => chunks.push(e.data);
-    r.onstop = () => { clearTimeout(stopTimer.current); setClip(URL.createObjectURL(new Blob(chunks, { type: r.mimeType }))); setState('replay'); };
+    r.onstop = () => { clearTimeout(stopTimer.current); blob.current = new Blob(chunks, { type: r.mimeType }); setClip(URL.createObjectURL(blob.current)); setState('replay'); };
     r.start(); rec.current = r; setState('recording');
-    stopTimer.current = window.setTimeout(() => r.state === 'recording' && r.stop(), CLIP_S * 1000);
+    stopTimer.current = window.setTimeout(() => r.state === 'recording' && r.stop(), clipS * 1000);
   };
   const toggleReplay = () => setState(s => (s === 'replay' ? 'live' : clip ? 'replay' : s));
   const actions = useRef({ record, toggleReplay, onClose }); actions.current = { record, toggleReplay, onClose };
@@ -57,7 +58,7 @@ export function SelfCheck({ demo, bpm, onClose }: { demo: DemoId; bpm: number; o
       <div className="selfMirror">
         <video ref={live} autoPlay muted playsInline className="mirror" style={{ display: state === 'replay' ? 'none' : 'block' }} />
         <video ref={replay} muted playsInline loop className="mirror" style={{ display: state === 'replay' ? 'block' : 'none' }} />
-        {state === 'recording' && <span className="selfRec">● REC (up to {CLIP_S} s)</span>}
+        {state === 'recording' && <span className="selfRec">● REC (up to {clipS} s)</span>}
         {state === 'replay' && <span className="selfRec replay">▶ REPLAY</span>}
         {state === 'error' && <p className="warn selfErr">{error}</p>}
         <div className="selfKeys"><i>hi-hat × 1</i> {state === 'recording' ? 'stop' : 'record'} · <i>snare × 1</i> {state === 'replay' ? 'mirror' : 'replay'} · <i>Esc</i> close</div>
@@ -66,7 +67,9 @@ export function SelfCheck({ demo, bpm, onClose }: { demo: DemoId; bpm: number; o
         <TechniqueDemo id={demo} bpm={bpm} compact />
         <p className="selfLook">Look for:</p>
         <ul>{DEMOS[demo].watch.map(w => <li key={w}>{w}</li>)}</ul>
-        <p className="small">Only on this laptop: the clip is never saved or sent, and it's gone when you close this.</p>
+        <p className="small">Only on this laptop: the clip is never sent, and it's gone when you close this, unless you save it yourself (for a teacher).</p>
+        <p><label>Clip length <select value={clipS} onChange={e => setClipS(+e.target.value)}><option value={10}>10 s</option><option value={30}>30 s (for a teacher)</option></select></label>
+          {clip && blob.current && <button className="link" onClick={() => saveFile(`self-check ${stamp()}.webm`, blob.current!)}>💾 Save clip</button>}</p>
         <div className="actions"><button className="primary" onClick={record} disabled={state === 'starting' || state === 'error'}>{state === 'recording' ? '■ Stop' : '● Record 10 s'}</button>
           <button onClick={toggleReplay} disabled={!clip}>{state === 'replay' ? 'Back to the mirror' : '▶ Replay'}</button></div>
       </div>

@@ -33,11 +33,11 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
  * Lessons, plans, show-off picks and song grooves are written in the background, so they get a stronger model
  * (CLAUDE_CLI_LESSON_MODEL / CLAUDE_CLI_LESSON_EFFORT); the live chat and quick answers keep the fast global one.
  */
-export const LESSON_KINDS = ['lesson', 'plan', 'showoff', 'groove'] as const;
+export const LESSON_KINDS = ['lesson', 'plan', 'showoff', 'groove', 'month'] as const;
 export const lessonModel = (): ModelChoice => ({ model: process.env.CLAUDE_CLI_LESSON_MODEL || 'claude-sonnet-5-5', effort: process.env.CLAUDE_CLI_LESSON_EFFORT || 'medium' });
 
 /** `noCache`: ask again (a wrong answer would otherwise come back from the cache forever); the new one replaces it. */
-export async function ask<T>(kind: 'feedback' | 'plan' | 'groove' | 'lesson' | 'tips' | 'showoff', schema: z.ZodType<T>, input: unknown, opts: { noCache?: boolean } = {}): Promise<{ data: T; cached: boolean }> {
+export async function ask<T>(kind: 'feedback' | 'plan' | 'groove' | 'lesson' | 'tips' | 'showoff' | 'month', schema: z.ZodType<T>, input: unknown, opts: { noCache?: boolean } = {}): Promise<{ data: T; cached: boolean }> {
   const system = `${prompt('system')}\n\n${prompt(kind)}`;
   const user = JSON.stringify(input);
   const choice = (LESSON_KINDS as readonly string[]).includes(kind) ? lessonModel() : undefined;

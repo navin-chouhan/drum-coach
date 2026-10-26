@@ -3,14 +3,17 @@ import { MILESTONES } from '../content/curriculum';
 import { rankState } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
-import { songBarCount, useYtSongs } from '../youtube/api';
+import { songBarCount, songVerified, useYtSongs } from '../youtube/api';
 import { hearFill } from '../play/fills';
 import { BADGES, dashboard, earnedBadges, songReady, type Dashboard, type RunRow } from '../engine/progress';
-import { requestLesson, requestPlay, requestSong } from './nav';
+import { requestLesson, requestPlay, requestSong, startConcert } from './nav';
+import { TeacherView } from './TeacherView';
+import { YouVsYou } from './YouVsYou';
 
 const ACCENT = '#2F6FE4';
 
 export function ProgressView() {
+  const [teacher, setTeacher] = useState(false); // N2: the page for a human teacher
   const [d, setD] = useState<Dashboard | null>(null);
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [error, setError] = useState('');
@@ -22,9 +25,12 @@ export function ProgressView() {
   if (error) return <div className="progress"><TrophyShelf runs={runs} /><p className="warn">{error}</p></div>;
   if (!d) return <div className="progress"><TrophyShelf runs={runs} /><p className="small">Loading…</p></div>;
 
+  if (teacher) return <TeacherView onBack={() => setTeacher(false)} />;
   return (
     <div className="progress">
+      <div className="actions"><button onClick={() => setTeacher(true)}>👩‍🏫 For your teacher (summary, notes)</button></div>
       <TrophyShelf runs={runs} />
+      <YouVsYou runs={runs} />
       <div className="tiles">
         <Tile label="Day streak" value={d.streak} />
         <Tile label="Minutes today" value={d.minutesToday} />
@@ -93,7 +99,7 @@ function MinutesChart({ days }: { days: Dashboard['days'] }) {
   );
 }
 
-function Spark({ values, min, max, unit, label }: { values: number[]; min?: number; max?: number; unit: string; label: string }) {
+export function Spark({ values, min, max, unit, label }: { values: number[]; min?: number; max?: number; unit: string; label: string }) {
   const W = 140, H = 36, p = 5;
   const lo = min ?? Math.min(...values) - 5, hi = max ?? Math.max(...values) + 5;
   const x = (i: number) => (values.length === 1 ? W / 2 : p + (i / (values.length - 1)) * (W - 2 * p));
@@ -123,7 +129,7 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
   const rankOf = (m: (typeof MILESTONES)[number]) => rankState(m, lessons, s.lessons, s.profile);
   const stars = Object.values(s.lessons).reduce((a, p) => a + (p.completedAt ? p.stars ?? 1 : 0), 0);
   // A show-off song: 16 bars or more, every bar played at 85% or better (across takes).
-  const showoff = songs.filter(song => songReady(runs, song.id, songBarCount(song)));
+  const showoff = songs.filter(song => songVerified(song) && songReady(runs, song.id, songBarCount(song))); // N4: checked by ear
   // Journey announces new badges and stores them; the shelf also counts what the runs already earned, so it's never stale.
   const badges = new Set([...(s.badges ?? []), ...earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, showoff.map(x => x.id))]);
   return (
@@ -148,9 +154,10 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
         they spot tension and grip habits no app can.</p>
       <h4>Show-off set</h4>
       {showoff.length ? (
-        <ul className="songList">
+        <><ul className="songList">
           {showoff.map(song => <li key={song.id}><span>{song.title}</span><button className="primary" onClick={() => requestSong(song.id)}>Play it (Stage mode is under Play)</button></li>)}
         </ul>
+        {showoff.length > 1 && <button className="primary big" onClick={() => startConcert(showoff.map(song => ({ id: song.id, bars: { from: 1, to: songBarCount(song) } })))}>🎤 Concert: play the whole set</button>}</>
       ) : <p className="small">Pass a stage to unlock a show-off song, then play 16 bars or more of it scored on Songs, every bar at 85% or better. It lands here, ready to play for your friends.</p>}
     </div>
   );

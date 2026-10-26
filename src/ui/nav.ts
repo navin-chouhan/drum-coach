@@ -11,6 +11,10 @@ const songListeners = new Set<(id: string, bars?: SongBars) => void>();
 export const onSongRequest = (fn: (id: string, bars?: SongBars) => void) => { songListeners.add(fn); return () => { songListeners.delete(fn); }; };
 export const requestSong = (id: string, bars?: SongBars) => songListeners.forEach(l => l(id, bars));
 
+// Concert mode (N8): the show-off set back to back; Play mode's encore offers the next song.
+export const concert: { queue: { id: string; bars: SongBars }[] } = { queue: [] };
+export const startConcert = (songs: { id: string; bars: SongBars }[]) => { concert.queue = songs.slice(1); if (songs[0]) requestSong(songs[0].id, songs[0].bars); };
+
 // "Open this lesson" from Trophies.
 const lessonListeners = new Set<(id: string) => void>();
 export const onLessonRequest = (fn: (id: string) => void) => { lessonListeners.add(fn); return () => { lessonListeners.delete(fn); }; };

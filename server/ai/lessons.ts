@@ -3,21 +3,22 @@ import { beatsPerBar } from '../../src/engine/chart.ts';
 import { cutBars } from '../../src/engine/transcribe.ts';
 import type { YtSong } from '../../src/youtube/schemas.ts';
 import type { AiLesson } from '../../src/coach/schemas.ts';
-import { passFor, toolOf, type Lesson, type LessonProgress, type Profile, type Step } from '../../src/engine/lesson.ts';
+import { dayKey, passFor, toolOf, type Lesson, type LessonProgress, type Profile, type Step } from '../../src/engine/lesson.ts';
 import { checkpointsOf, currentMilestone, studentRead } from '../../src/engine/planner.ts';
 import { stageSong } from '../../src/engine/stageSong.ts';
+import { skillMap } from '../../src/engine/skills.ts';
 import type { StudentProfile } from '../../src/engine/profile.ts';
 
 // Coach-written lessons: what the coach is told, and how its answer becomes a stored lesson.
 export type RecentRun = { chart: string; at: string; bpm: number; accuracy: number; summary: Record<string, unknown> };
 type State = { profile: Profile; progress: Record<string, LessonProgress>; aiLessons: Lesson[]; recent: RecentRun[]; struggle?: unknown; songs?: YtSong[];
-  studentProfile?: StudentProfile; weekFocus?: { focus?: string; why?: string; drums?: string[] } }; // R6: who they are, this week's plan
+  studentProfile?: StudentProfile; weekFocus?: { focus?: string; why?: string; drums?: string[] }; sore?: boolean; teacherNotes?: { date: string; text: string }[] }; // R6: who they are, this week's plan; N10: sore
 
 /**
  * Compact model input for the current milestone. After the whole path it's the last stage, marked `postPath`: the
  * coach writes a review or stretch lesson there. Null only if no stage applies to the student's goals.
  */
-export function lessonInput({ profile, progress, aiLessons, recent, struggle, songs = [], studentProfile, weekFocus }: State) {
+export function lessonInput({ profile, progress, aiLessons, recent, struggle, songs = [], studentProfile, weekFocus, sore, teacherNotes }: State) {
   const all = [...CURRICULUM, ...aiLessons];
   const current = currentMilestone(MILESTONES, all, progress, profile);
   const m = current ?? MILESTONES.filter(x => checkpointsOf(x, all, profile).length).at(-1);
@@ -45,6 +46,9 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
     ...(!current && { postPath: true }),
     ...(studentProfile && { profile: studentProfile }),
     ...(weekFocus?.focus && { weekFocus }),
+    ...(sore && { sore: true }),
+    ...(teacherNotes?.length && { teacherNotes: teacherNotes.slice(-3) }), // N2: what a human teacher said
+    skills: skillMap(all, progress, dayKey(new Date())).map(k => ({ skill: k.name, mastery: k.mastery, due: k.due })), // N5
     examples: CURRICULUM.filter(l => l.level === m.level && l.kind !== 'song').slice(0, 4).map(l => ({ ...brief(l), what: l.what, how: l.how, steps: steps(l) })),
     yourEarlierLessons: aiLessons.filter(l => l.level === m.level).map(l => ({ title: l.title, tools: l.steps.map(toolOf), passed: !!progress[l.id]?.completedAt })),
   };

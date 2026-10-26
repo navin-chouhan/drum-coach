@@ -25,6 +25,9 @@ export function saveRun(f: Finished, extra?: Record<string, unknown>): Promise<v
     chartId: c.id ?? c.title, chartTitle: c.title, level: c.level, startedAt: f.startedAt, durationS: f.durationS,
     bpm: c.bpm * f.options.speed, speed: f.options.speed, accuracy: s.accuracy, meanOffset: s.meanOffset, spread: s.spread,
     summary: { ...summarizeRun(f), ...extra },
+    // N8: keep the take (own MIDI only) to replay it against a later one
+    take: { beatMs: 60000 / (c.bpm * f.options.speed), beats: f.run.beats, beatsPerBar: f.run.beatsPerBar, timeSignature: c.timeSignature,
+      hits: f.hits.slice(0, 4000).map(h => [Math.round((h.time - f.zero) * 10) / 10, h.pad ?? 'snare', h.velocity]) },
   }) }).then(r => (r.ok ? saveOk() : saveFail()), saveFail);
   saved.set(f, p);
   return p;

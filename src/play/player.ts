@@ -1,3 +1,4 @@
+import { expandForm } from '../engine/form';
 import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '../engine/chart';
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
 import { inFreeBar } from '../engine/jam';
@@ -135,7 +136,9 @@ function waitGroups() {
   return groupsCache.groups;
 }
 
-export function start(chart: Chart, options: PlayOptions) {
+export function start(written: Chart, opts: PlayOptions) {
+  const chart = expandForm(written); // a road map (N7) is played whole, bar by bar as written
+  const options = written.form ? { ...opts, fromBar: 1, toBar: chart.bars } : opts;
   if (!options.external && audio().state !== 'running') { whenRunning(() => start(chart, options)); return; }
   endEarly = undefined; // starting something else drops a running flow
   stop();

@@ -4,7 +4,7 @@ import type { Groove } from '../coach/schemas';
 import { beatsPerBar, DRUM_PAD, type ChartNote } from '../engine/chart';
 import { beatAt, songSecAt } from '../engine/tempo';
 import { quantizeTake, replaceRange, toggleNote } from '../engine/transcribe';
-import { consensus, onsetsToNotes, type Band } from '../engine/onsets';
+import { agreeing, consensus, onsetsToNotes, type Band } from '../engine/onsets';
 import type { PadId } from '../engine/kit';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
@@ -98,13 +98,15 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
   const grooveKey = `groove:${song.id}:${Math.round(grid.bpm)}:${song.timeSignature.join('/')}`;
   const groove = useCoachEntry<Groove>(grooveKey);
   const askGroove = (again = false) => askCoach(grooveKey, 'groove', { title: song.title, bpm: Math.round(grid.bpm), timeSignature: song.timeSignature, ...(again && { again }) }, undefined, again);
-  const loadGroove = () => {
+  function coachTiled(): ChartNote[] {
     const c = groove?.data?.chart;
-    if (!c) return;
+    if (!c) return [];
     const len = c.bars * beatsPerBar(c), tiled: ChartNote[] = [];
     for (let off = fromBeat; off < toBeat; off += len) for (const n of c.notes) if (n.t + off < toBeat) tiled.push({ ...n, t: n.t + off });
-    setDraft(tiled.sort((a, b) => a.t - b.t));
-  };
+    return tiled.sort((a, b) => a.t - b.t);
+  }
+  const loadGroove = () => { const t = coachTiled(); if (t.length) setDraft(t); };
+  const agree = agreeing(suggestions, coachTiled()); // N4: heard in the song AND in the coach's groove
 
   return (
     <div className="card form">
@@ -130,6 +132,8 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
         <button onClick={() => setDraft(take)} disabled={!take.length}>Use take ({take.length} notes)</button>
         <button onClick={() => setDraft(d => [...d, ...suggestions.filter(s => !d.some(n => n.t === s.t && n.drum === s.drum)).map(({ t, drum }) => ({ t, drum }))].sort((a, b) => a.t - b.t))}
           disabled={!suggestions.length}>Use suggestions ({suggestions.length})</button>
+        {agree.length > 0 && <button onClick={() => setDraft(d => [...d, ...agree.filter(s => !d.some(n => n.t === s.t && n.drum === s.drum)).map(({ t, drum }) => ({ t, drum }))].sort((a, b) => a.t - b.t))}
+          title="Notes heard in the song that the coach's groove also has: the safest place to start">Use what both agree on ({agree.length})</button>}
         <button onClick={() => setDraft([])}>Clear</button>
         <button className="primary" onClick={save}>Save bars {range.from}–{range.to}</button>
         <button onClick={() => askGroove()} disabled={groove?.status === 'thinking'}>
@@ -139,6 +143,12 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
         Only kick, snare and hi-hat are detected, and busy mixes confuse it: check every note by ear.</p>}
       {!tab && <p className="small">Tip: connect the song audio (left) to get suggested notes.</p>}
       {msg && <p className="small">{msg}</p>}
+      <div className="card verifyCard">
+        {song.verifiedAt ? <p>✓ You checked this part by ear on {song.verifiedAt}. Changing notes asks you to check again.</p>
+          : <p>Before this can be a show-off song, check the part by ear: play bars along with the original (Hear my part, Play) and fix what doesn't match.</p>}
+        <button className={song.verifiedAt ? '' : 'primary'} onClick={() => void patchSong(song.id, { verified: !song.verifiedAt })} disabled={!song.notes.length}>
+          {song.verifiedAt ? 'Mark as not checked' : '✓ I checked the part by ear: it matches the record'}</button>
+      </div>
       {groove?.status === 'thinking' && <Thinking />}
       {groove?.status === 'error' && <p className="warn">{groove.error}</p>}
       {groove?.status === 'done' && groove.data && (

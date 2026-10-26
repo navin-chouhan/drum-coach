@@ -4,6 +4,8 @@ import { buildSession } from '../engine/planner';
 import { getSettings, setSettings, type Session } from '../input/settings';
 import { allLessons } from './aiLessons';
 import { thisWeeksPlan } from '../coach/weekPlan';
+import { soreActive } from '../engine/health';
+import { skillMap } from '../engine/skills';
 
 // Lesson state lives in the app settings (localStorage + SQLite). History of runs is separate and never reset here.
 export const today = () => dayKey(new Date());
@@ -13,7 +15,8 @@ export const saveProgress = (id: string, p: LessonProgress) => setSettings({ les
 /** Today's stored session, or a fresh proposal (not saved until started). */
 export function currentSession(): Session {
   const s = getSettings();
-  return s.session?.date === today() ? s.session : { date: today(), items: buildSession(MILESTONES, allLessons(), s.lessons, s.profile, today(), thisWeeksPlan()?.lessonIds), done: [] };
+  return s.session?.date === today() ? s.session : { date: today(), items: buildSession(MILESTONES, allLessons(), s.lessons, s.profile, today(), thisWeeksPlan()?.lessonIds,
+    { sore: soreActive(s.soreUntil, today()), skillReview: skillMap(allLessons(), s.lessons, today()).find(k => k.due)?.reviewLesson }), done: [] };
 }
 export const startSession = () => { const s = currentSession(); setSettings({ session: s }); return s; };
 export function markDone(idx: number) {

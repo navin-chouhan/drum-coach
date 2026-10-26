@@ -22,10 +22,13 @@ export const ChartSchema = z.object({
   bpm: z.number().min(30).max(300), // quarter notes per minute
   timeSignature: z.tuple([z.number().int().min(1).max(16), z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)])]),
   bars: z.number().int().min(1).max(1000),
-  level: z.number().int().min(0).max(10).optional(), // 0 = the curriculum's first level
+  level: z.number().int().min(0).max(12).optional(), // 0 = the curriculum's first level
   kind: z.enum(['groove', 'rudiment', 'fill', 'song', 'exercise']).optional(),
   description: z.string().max(500).optional(),
   dyn: z.array(z.number().int().min(1).max(3)).max(1000).optional(), // volume marks per bar: 1 p, 2 mf, 3 f (engine/feel.ts)
+  // a road map (N7, engine/form.ts): repeat signs, 1st/2nd endings, D.C. al Coda; played through expandForm
+  form: z.object({ repeat: z.tuple([z.number().int().min(1), z.number().int().min(1)]).optional(), endings: z.boolean().optional(),
+    coda: z.object({ toCoda: z.number().int().min(1), codaAt: z.number().int().min(2) }).optional() }).optional(),
   notes: z.array(ChartNoteSchema).min(1).max(50_000),
 }).refine(c => c.notes.every(n => n.t < c.bars * beatsPerBar(c)), { message: 'a note is past the last bar' });
 

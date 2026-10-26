@@ -7,7 +7,7 @@ import type { RunStats } from './scoring.ts';
 
 // Lessons, pass criteria, the tempo ladder and spaced review. See docs/LEARNING.md.
 
-export type Genre = 'rock' | 'funk' | 'jazz';
+export type Genre = 'rock' | 'funk' | 'jazz' | 'latin';
 export type Pass = {
   accuracy: number;           // % of notes within the Good window
   maxExtraPct: number;        // extra hits as % of notes
@@ -55,6 +55,8 @@ export type Step = {
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
   demo?: DemoId;        // how the body moves (content/demos.ts DEMO_IDS): the lesson card, the 4th intro slide, the self-check
   quiz?: 'steady' | 'kick'; // an ear-training step (lesson/EarQuiz.tsx): listen and answer, no playing
+  transcribe?: boolean; // N7: hear the chart, write it on a grid, scored against it (lesson/Transcribe.tsx), no playing
+  listen?: { song: string; what: string }; // N7: a listening assignment: find the song on YouTube, listen for `what`
   read?: boolean;       // a reading step: the sheet only, no count or hand hints (use `variants` so it's read, not memorised)
   look?: boolean;       // a "look" step: watch the movement (and yourself in the mirror), no playing; done moves on
 };
@@ -66,11 +68,12 @@ export type Lesson = {
   source?: 'ai'; focus?: string; // AI-curated for this student; `focus` says why
   checkpoint?: string; // a coach lesson that stands in for this checkpoint: finishing it passes the checkpoint
   demo?: DemoId; // how the body moves for the whole lesson (a step's own `demo` wins)
+  routine?: boolean; // a daily routine (the stretch), not part of the path
   needsLatency?: boolean; // judged in milliseconds (laying back): needs a saved latency test
   band?: { chords?: string }; // the backing band's chord line, one symbol per bar (engine/band.ts); default by style
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
-export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[] }; // rank: your title once it's passed
+export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[]; track?: Partial<Record<Genre, string>> }; // rank: your title once it's passed; track: what each style's branch works on (N6)
 export type Profile = { goals: Genre[]; minutesPerDay: number; onboarded: boolean; song?: { id: string; title: string; stage: number } }; // song: this stage's song project
 export type LessonProgress = {
   step: number; bpm: number; clean: number; fails: number; bestBpm: number;
@@ -256,7 +259,7 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
 export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false, notesLanded = false): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam || step.rest || step.look || step.quiz || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
+  if (step.jam || step.rest || step.look || step.quiz || step.transcribe || step.listen || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
   if (!passed && notesLanded) return { next: { ...p, clean: 0, fails: 0 }, event: 'hold' };
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
@@ -268,7 +271,7 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
-  if (step.jam || step.rest || step.look || step.quiz) { // any take (or the end of a rest or a look) finishes the step
+  if (step.jam || step.rest || step.look || step.quiz || step.transcribe || step.listen) { // any take (or the end of a rest or a look) finishes the step
     if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   } else {
     if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };

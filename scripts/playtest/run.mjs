@@ -14,7 +14,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const FULL = process.argv.includes('--full');
-const API = 8791, WEB = 5181, CDP = 9333;
+const OFF = Number(process.env.PLAYTEST_PORT_OFFSET ?? 0); // another play test running? PLAYTEST_PORT_OFFSET=10
+const API = 8791 + OFF, WEB = 5181 + OFF, CDP = 9333 + OFF;
 const root = new URL('../..', import.meta.url).pathname;
 const tmp = mkdtempSync(join(tmpdir(), 'drum-playtest-'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -102,7 +103,7 @@ const TAKE = `(async () => {
 })()`;
 
 const report = [];
-const scenarios = FULL
+const scenarios = process.env.PLAYTEST_ONLY === 'placement' ? [] : FULL
   ? [['Beginner', BEGINNER, null, 10], ['Solid', SOLID, null, 10]]
   : QUICK;
 const allCheckpoints = await evaluate(`import('/src/content/curriculum.ts').then(c => c.MILESTONES.flatMap(m => m.checkpoints))`);
@@ -114,6 +115,7 @@ for (const [who, human, ids, takes] of scenarios) {
     await sleep(1500);
     for (let t = 0; t < takes; t++) {
       const r = await evaluate(TAKE.replaceAll('LESSON', JSON.stringify(id)));
+      if (!r) { report.push({ who, id, take: t + 1, problem: 'the page reloaded mid-take (files changed during the run?)' }); break; }
       if (r.skip) { t--; continue; }
       report.push({ who, id, take: t + 1, ...r });
       const flag = r.problem || r.problems?.length ? '✗' : '✓';
@@ -122,6 +124,25 @@ for (const [who, human, ids, takes] of scenarios) {
     }
   }
 }
+// Placement (N5): a solid player passes stage 1's take and is offered stage 2.
+await open();
+await evaluate(`import('/src/input/emulatedKit.ts').then(k => k.setEmulatedKit({ on: true, retriggers: false, crosstalk: false, ...${JSON.stringify(SOLID)} }))`);
+const placed = await evaluate(`(async () => {
+  const sleep = ms => new Promise(r => setTimeout(r, ms)), player = await import('/src/play/player.ts');
+  const btn = re => [...document.querySelectorAll('button')].find(b => re.test(b.innerText));
+  [...document.querySelectorAll('nav button, header button')].find(b => b.innerText.trim() === 'Journey')?.click(); await sleep(800);
+  document.querySelectorAll('details').forEach(d => { d.open = true; }); await sleep(300); // it sits in the plan fold
+  btn(/Find my level/)?.click(); await sleep(800);
+  if (!btn(/Play it/)) return 'no placement screen; on screen: ' + document.body.innerText.replace(/\\s+/g, ' ').slice(150, 700);
+  btn(/Play it/).click(); await sleep(1500);
+  for (const t0 = Date.now(); player.player.phase === 'playing' && Date.now() - t0 < 60000;) await sleep(300);
+  await sleep(1000);
+  return document.querySelector('.placement')?.innerText.split('\\n').filter(Boolean).slice(1, 3).join(' / ');
+})()`);
+const placeOk = /Stage 2 of/.test(placed ?? '');
+console.log(`${placeOk ? '✓' : '✗'} Placement: ${placed}`);
+if (!placeOk) report.push({ who: 'Solid', id: 'placement', problem: placed });
+
 const failed = report.filter(r => r.problem || r.problems?.length);
 console.log(`\n${report.length} takes, ${failed.length} with problems, ${pageErrors.length} page errors`);
 pageErrors.slice(0, 10).forEach(e => console.log('  page error: ' + e.split('\n')[0]));

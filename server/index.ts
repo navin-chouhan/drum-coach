@@ -3,11 +3,15 @@ import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { SessionEventSchema, AiLessonSchema, FeedbackSchema, GrooveSchema, LessonRequestSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, ShowoffRequestSchema, ShowoffSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
+import { SessionEventSchema, AiLessonSchema, FeedbackSchema, GrooveSchema, LessonRequestSchema, MonthReportRequestSchema, MonthReportSchema, PlanRequestSchema, PlanSchema, RunRecordSchema, ShowoffRequestSchema, ShowoffSchema, TipsRequestSchema, TipsSchema } from '../src/coach/schemas.ts';
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import type { RunRow } from '../src/engine/progress.ts';
 import { studentProfile } from '../src/engine/profile.ts';
+import { soreActive } from '../src/engine/health.ts';
+import { skillMap } from '../src/engine/skills.ts';
+import { dayKey, type LessonProgress } from '../src/engine/lesson.ts';
+import { monthly } from '../src/engine/history.ts';
 import type { Plan } from '../src/coach/schemas.ts';
 import { ask, getProvider, lessonModel } from './ai/coach.ts';
 import { applyBites, canStandIn, lessonInput, standsInFor, toLesson, uniqueTitle } from './ai/lessons.ts';
@@ -108,11 +112,11 @@ app.get('/api/charts/:id/audio', async (req, reply) => {
 
 // ---------- runs & settings ----------
 const runRows = (limit = 5000): RunRow[] => (db.prepare(`
-  SELECT * FROM (SELECT chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
+  SELECT * FROM (SELECT id, EXISTS(SELECT 1 FROM run_hits h WHERE h.run_id = runs.id) AS hasTake, chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
     bpm, speed, accuracy, mean_offset AS meanOffset, spread, json_extract(summary_json, '$.notes') AS notes,
     json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar, json_extract(summary_json, '$.tipIds') AS tips,
     json_extract(summary_json, '$.perDrum') AS perDrum, json_extract(summary_json, '$.lesson.tool') AS tool, json_extract(summary_json, '$.lesson.bite') AS bite FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
-  .map(r => ({ ...r, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined, tips: r.tips ? JSON.parse(r.tips as unknown as string) : undefined,
+  .map(r => ({ ...r, hasTake: !!r.hasTake, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined, tips: r.tips ? JSON.parse(r.tips as unknown as string) : undefined,
     perDrum: r.perDrum ? JSON.parse(r.perDrum as unknown as string) : undefined, tool: r.tool ?? undefined, bite: r.bite ? JSON.parse(r.bite as unknown as string) : undefined }));
 const appSettings = () => { const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined; return row ? JSON.parse(row.value) : {}; };
 const latestPlan = () => {
@@ -120,6 +124,8 @@ const latestPlan = () => {
   return row ? { id: row.id, plan: JSON.parse(row.json) as Plan, checks: JSON.parse(row.checks_json) } : null;
 };
 /** This week's focus from the coach's plan, for the lesson writer and the live coach (R6). */
+/** The latest notes from the student's human teacher (N2), for the coach. */
+const teacherNotes = (): { date: string; text: string }[] => { const v = (db.prepare("SELECT value FROM settings WHERE key = 'teacherNotes'").get() as { value: string } | undefined)?.value; try { return v ? JSON.parse(v).slice(-3) : []; } catch { return []; } };
 const weekFocus = () => { const p = latestPlan()?.plan; return p?.focus ? { focus: p.focus, why: p.why, drums: p.drums } : undefined; };
 app.get('/api/profile', async () => studentProfile(runRows()));
 
@@ -129,9 +135,42 @@ app.post('/api/runs', async (req, reply) => {
   const r = b.data;
   const { lastInsertRowid } = db.prepare(`INSERT INTO runs (chart_id, chart_title, level, started_at, duration_s, bpm, speed, accuracy, mean_offset, spread, summary_json)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(r.chartId, r.chartTitle, r.level ?? null, r.startedAt, r.durationS, r.bpm, r.speed, r.accuracy, r.meanOffset, r.spread, JSON.stringify(r.summary));
+  if (r.take) {
+    db.prepare('INSERT OR REPLACE INTO run_hits (run_id, json) VALUES (?, ?)').run(lastInsertRowid, JSON.stringify(r.take));
+    // size cap: the latest 300 takes, plus the first take of each exercise each month (for "you a month ago")
+    db.exec(`DELETE FROM run_hits WHERE run_id NOT IN (SELECT id FROM runs ORDER BY id DESC LIMIT 300)
+      AND run_id NOT IN (SELECT MIN(r.id) FROM runs r JOIN run_hits h ON h.run_id = r.id GROUP BY r.chart_id, substr(r.started_at, 1, 7))`);
+  }
   return { id: Number(lastInsertRowid) };
 });
 app.get('/api/runs', async () => runRows());
+app.get('/api/runs/:id/take', async (req, reply) => {
+  const p = z.object({ id: z.coerce.number().int() }).safeParse(req.params);
+  if (!p.success) return bad(reply, p.error);
+  const row = db.prepare('SELECT json FROM run_hits WHERE run_id = ?').get(p.data.id) as { json: string } | undefined;
+  return row ? JSON.parse(row.json) : reply.code(404).send({ error: 'Not found' });
+});
+
+// N8: the coach's monthly report, written once a month (or on "ask again") and kept in settings.
+app.post('/api/coach/month', async (req, reply) => {
+  const b = MonthReportRequestSchema.safeParse(req.body ?? {});
+  if (!b.success) return bad(reply, b.error);
+  const month = dayKey(new Date()).slice(0, 7);
+  const kept = (db.prepare("SELECT value FROM settings WHERE key = 'monthReport'").get() as { value: string } | undefined)?.value;
+  const last = kept ? JSON.parse(kept) as { month: string; report: unknown } : undefined;
+  if (last?.month === month && !b.data.again) return { data: last.report, cached: true, month };
+  const runs = runRows(), s = appSettings(), progress = s.lessons ?? {}, all = [...CURRICULUM, ...aiLessons()];
+  const input = {
+    month, months: monthly(runs, Date.now()), skills: skillMap(all, progress, dayKey(new Date())).map(k => ({ skill: k.name, mastery: k.mastery, due: k.due })),
+    lessonsFinished: Object.values(progress as Record<string, LessonProgress>).filter(p => p.completedAt?.startsWith(month)).length,
+    teacherNotes: teacherNotes(), lastReport: last?.month !== month ? last?.report : undefined,
+  };
+  try {
+    const r = await ask('month', MonthReportSchema, input, { noCache: b.data.again });
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('monthReport', ?)").run(JSON.stringify({ month, report: r.data }));
+    return { ...r, month };
+  } catch (e) { return aiFail(reply, e); }
+});
 
 app.get('/api/settings', async () => Object.fromEntries((db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]).map(r => [r.key, JSON.parse(r.value)])));
 app.put('/api/settings/:key', async (req, reply) => {
@@ -179,10 +218,11 @@ app.post('/api/coach/plan', async (req, reply) => {
     const songs = (db.prepare('SELECT id, title FROM yt_songs').all() as { id: string; title: string }[]); // so play-along items can link to them
     const r = await ask('plan', PlanSchema, {
       ...b.data, goals: b.data.goals ?? (profile.goals.length ? profile.goals.join(', ') : 'not sure yet'), minutesPerDay: b.data.minutesPerDay ?? profile.minutesPerDay,
-      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()) },
+      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()), ...(soreActive(s.soreUntil, dayKey(new Date())) && { sore: true }), teacherNotes: teacherNotes() },
       stage: m && { level, title: m.title, canDo: m.canDo },
       lessons: pickable.map(l => ({ id: l.id, title: l.title, level: l.level, kind: l.kind, checkpoint: !!m?.checkpoints.includes(l.id), done: !!progress[l.id]?.completedAt, stars: progress[l.id]?.stars })),
       lastWeek: last && { focus: last.focus, notes: last.notes, week: last.week },
+      skills: skillMap(all, progress, dayKey(new Date())).map(k => ({ skill: k.name, mastery: k.mastery, due: k.due })), // N5: plan from the skill map
       recent, library: catalog(), songs,
     });
     const ids = new Set(pickable.map(l => l.id));
@@ -214,6 +254,9 @@ app.post('/api/coach/session', async (req, reply) => {
     event.student = studentRead(row ? JSON.parse(row.value).lessons ?? {} : {}, runRows(12));
     const focus = weekFocus();
     if (focus) event.weekFocus = focus; // this week's plan, so the coach's tips point the same way
+    if (soreActive(appSettings().soreUntil, dayKey(new Date()))) event.sore = true; // N10: go easy
+    const notes = teacherNotes();
+    if (notes.length) event.teacherNotes = notes.map(n => ({ date: n.date, text: n.text.slice(0, 300) })); // N2: what their teacher said (trimmed: it goes with every take)
   }
   reply.hijack();
   const res = reply.raw;
@@ -276,13 +319,13 @@ app.get('/api/youtube/versions', async (req, reply) => {
   } catch (e) { return ytFail(reply, e); }
 });
 
-type YtRow = { id: string; title: string; original_id: string; drumless_id: string | null; cover_id: string | null; ts_num: number; ts_den: number; notes_json: string };
+type YtRow = { id: string; title: string; original_id: string; drumless_id: string | null; cover_id: string | null; ts_num: number; ts_den: number; notes_json: string; verified_at: string | null };
 function ytSong(r: YtRow): YtSong {
   const ids = [r.original_id, r.drumless_id, r.cover_id].filter(Boolean) as string[];
   const grids = Object.fromEntries((db.prepare(`SELECT * FROM yt_grids WHERE video_id IN (${ids.map(() => '?').join(',')})`).all(...ids) as { video_id: string; bpm: number; offset_sec: number }[])
     .map(g => [g.video_id, { bpm: g.bpm, offsetSec: g.offset_sec }]));
   return { id: r.id, title: r.title, originalId: r.original_id, drumlessId: r.drumless_id, coverId: r.cover_id,
-    timeSignature: [r.ts_num, r.ts_den as 4], notes: JSON.parse(r.notes_json), grids };
+    timeSignature: [r.ts_num, r.ts_den as 4], notes: JSON.parse(r.notes_json), grids, verifiedAt: r.verified_at ?? null };
 }
 const ytById = (id: string) => db.prepare('SELECT * FROM yt_songs WHERE id = ?').get(id) as YtRow | undefined;
 
@@ -304,6 +347,9 @@ app.patch('/api/ytsongs/:id', async (req, reply) => {
   db.prepare('UPDATE yt_songs SET title = ?, drumless_id = ?, cover_id = ?, ts_num = ?, ts_den = ?, notes_json = ? WHERE id = ?').run(
     d.title ?? row.title, d.drumlessId === undefined ? row.drumless_id : d.drumlessId, d.coverId === undefined ? row.cover_id : d.coverId,
     d.timeSignature?.[0] ?? row.ts_num, d.timeSignature?.[1] ?? row.ts_den, d.notes ? JSON.stringify(d.notes) : row.notes_json, p.data.id);
+  // N4: "checked by ear" is set by the student; changed notes need checking again
+  const verified = d.verified === true ? new Date().toISOString().slice(0, 10) : d.verified === false || (d.notes && JSON.stringify(d.notes) !== row.notes_json) ? null : row.verified_at;
+  db.prepare('UPDATE yt_songs SET verified_at = ? WHERE id = ?').run(verified, p.data.id);
   return ytSong(ytById(p.data.id)!);
 });
 app.delete('/api/ytsongs/:id', async (req, reply) => {
@@ -355,7 +401,7 @@ app.post('/api/coach/lesson', async (req, reply) => {
     .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
   const existing = aiLessons();
   const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle,
-    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus() });
+    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus(), sore: soreActive(app.soreUntil, dayKey(new Date())), teacherNotes: teacherNotes() });
   if (!input) return bad(reply, 'No stage fits your goals yet. Change them under Journey → Goals.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);

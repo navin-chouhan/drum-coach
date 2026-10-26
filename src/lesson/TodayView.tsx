@@ -10,19 +10,22 @@ import { stageSong } from '../engine/stageSong';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, SHOWOFF_MIN_BARS, songReady, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
-import { songBarCount, useYtSongs } from '../youtube/api';
+import { songBarCount, songVerified, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { ensureWeekPlan, refreshWeekPlan, thisWeeksPlan, useWeekPlan } from '../coach/weekPlan';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, setStitched, stitchLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
 import { TechniqueView } from '../ui/TechniqueView';
+import { PlacementView, SkillMapView } from '../ui/SkillMapView';
 import { PadWizard } from '../ui/Calibrate';
 import { LatencyCard } from '../ui/LatencyCard';
 import { ShowoffCard } from './ShowoffCard';
-import { currentSession, markDone, rebuildToday, resetAllLessons, startSession } from './state';
+import { currentSession, markDone, rebuildToday, resetAllLessons, startSession, today } from './state';
+import { dayAdvice, soreActive } from '../engine/health';
+import { addDays } from '../engine/lesson';
 
-const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
+const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean; arcade?: boolean };
 
 export function TodayView({ openLessonId, device }: { openLessonId?: string; device?: string }) {
@@ -32,6 +35,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const [editing, setEditing] = useState(false);
   const [kitStep, setKitStep] = useState(false); // onboarding step 2 (or Journey's "check my kit")
   const [technique, setTechnique] = useState(false); // the stick technique page
+  const [skills, setSkills] = useState(false), [placing, setPlacing] = useState(false); // N5: the skill map, the placement test
   // Finished the old path (stages 1–7)? Say once that new stages are open (R3).
   const [newStages] = useState(() => !getSettings().newStagesSeen && ['song-swing', 'song-shuffle'].some(id => getSettings().lessons[id]?.completedAt) && !Object.keys(getSettings().lessons).some(id => LESSON_BY_ID[id]?.level >= 7));
   useEffect(() => { if (newStages) setSettings({ newStagesSeen: true }); }, [newStages]);
@@ -45,6 +49,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
   useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => { setRuns(runs); setDash(dashboard(runs)); }).catch(() => {}); }, [open]);
+  useEffect(() => { if (dash?.totalRuns && getSettings().hearingTipWeek !== isoWeek(new Date())) { const w = isoWeek(new Date()); const t = setTimeout(() => setSettings({ hearingTipWeek: w }), 60_000); return () => clearTimeout(t); } }, [dash]); // the ear tip shows for a minute, once a week
 
   const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
   const coachKey = `lesson-${new Date().toDateString()}-${milestone?.level}-${asks}`;
@@ -72,7 +77,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
   useEffect(() => {
     if (!runs.length) return;
-    const ready = songs.filter(x => songReady(runs, x.id, songBarCount(x))).map(x => x.id);
+    const ready = songs.filter(x => songVerified(x) && songReady(runs, x.id, songBarCount(x))).map(x => x.id); // N4: checked by ear
     const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, ready), fresh = earned.filter(id => !s.badges?.includes(id));
     if (!fresh.length) return;
     setSettings({ badges: [...(s.badges ?? []), ...fresh] });
@@ -85,9 +90,11 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const pReady = !!pSong && songReady(runs, pSong.id, pBars);
   useEffect(() => { setStitched(pReady && pSong ? stitchLesson(pSong, s.profile.song!.stage) : undefined); }, [pReady, pSong, s.profile.song]);
 
-  if (!s.profile.onboarded || editing) return <Onboarding onDone={first => { setEditing(false); if (first) setKitStep(true); }} />;
+  if (!s.profile.onboarded || editing) return <Onboarding onDone={(first, place) => { setEditing(false); if (first) setKitStep(true); if (place) setPlacing(true); }} />;
   if (kitStep) return <KitSetup device={device} onDone={() => setKitStep(false)} />;
   if (technique) return <TechniqueView onBack={() => setTechnique(false)} />;
+  if (placing) return <PlacementView onDone={() => { setPlacing(false); rebuildToday(); }} />;
+  if (skills) return <SkillMapView onBack={() => setSkills(false)} onOpen={id => { setSkills(false); setOpen({ lessonId: id }); }} />;
 
   const session = currentSession();
   // A coach lesson can be deleted after today's session froze; skip it (kept in storage: AI lessons may still be loading).
@@ -149,7 +156,13 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const maxedOut = (l: Lesson) => { const t = recordTarget(l.steps[l.steps.length - 1], s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
   const record = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(l.steps[l.steps.length - 1])) && !maxedOut(l))
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
-  const showoff = songs.filter(x => songReady(runs, x.id, songBarCount(x)));
+  const showoff = songs.filter(x => songVerified(x) && songReady(runs, x.id, songBarCount(x)));
+  // Health (N10): lighter days after "a bit sore", practice-length advice, the weekly ear and wrist check-ins.
+  const daysPlayed = new Set(runs.map(r => r.startedAt.slice(0, 10))).size, wk = isoWeek(new Date());
+  const healthLine = soreActive(s.soreUntil, today()) ? `Easy days until ${s.soreUntil}: shorter sets, lighter playing. If something hurts, stop; if it lasts, see a doctor.`
+    : dayAdvice(Math.round(dash?.minutesToday ?? 0), daysPlayed)
+    ?? (played && s.hearingTipWeek !== wk ? 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.' : undefined);
+  const askSore = played && daysPlayed >= 3 && s.soreAskedWeek !== wk && !soreActive(s.soreUntil, today());
   // The trail ends at the stage's song: your real song if you picked one, else the built-in one, with how much is ready.
   const builtinBars = builtinSong ? builtinSong.steps[builtinSong.steps.length - 1].chart.bars : 0;
   const songStop = project ? { title: project.title, ready: songBars ? barsReady(runs, project.id, songBars) / songBars : 0, onOpen: () => requestSong(project.id) }
@@ -161,6 +174,12 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
         <div>
           <div className="bubble" aria-live="polite">
             {recap && <p className="recap">📅 {recap}</p>}
+            {healthLine && <p className="recap">🌱 {healthLine}</p>}
+            {askSore && <div className="recap">
+              <p>Quick check: anything sore after drumming (wrists, forearms, back)?</p>
+              <div className="actions"><button onClick={() => setSettings({ soreAskedWeek: isoWeek(new Date()) })}>All good</button>
+                <button onClick={() => setSettings({ soreAskedWeek: isoWeek(new Date()), soreUntil: addDays(today(), 3) })}>A bit sore</button></div>
+            </div>}
             {!s.setupDone && !s.setupNudged && <div className="recap">
               <p>Before your next lesson: two minutes to check your pads and latency? It makes the timing scores fair.</p>
               <div className="actions"><button className="primary" onClick={() => { setSettings({ setupNudged: true }); setKitStep(true); }}>Check my kit ▶</button>
@@ -174,6 +193,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               {others.length > 0 && <button onClick={() => setSwap(swap + 1)}>Something else</button>}
               {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
               <button onClick={() => setTechnique(true)}>🥢 Stick technique</button>
+              <button onClick={() => setSkills(true)}>🗺 Skill map</button>
               {flowLesson && <button onClick={() => setOpen({ lessonId: flowLesson.id, flow: true })}>🌊 Flow{flowLesson !== jam ? `: ${flowLesson.title}` : ''}</button>}
             </div>
           </div>
@@ -193,7 +213,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               {weekPlan?.focus ? <li>🎯 This week: <b>{weekPlan.focus}</b>{weekPlan.why && <><br /><span className="small">{weekPlan.why}</span></>}</li>
               : theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
                 : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
-              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
+              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready${projectSong && !songVerified(projectSong) ? ' · check the part by ear in Songs' : ''}` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
             </ul>
           </div>
         </div>
@@ -291,6 +311,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
                 <div>
                   <b>{passed ? '✓ ' : ''}{m.level + 1}. {m.title}</b>
                   {m === milestone && <ul className="canDo">{m.canDo.map(c => <li key={c}>{c}</li>)}</ul>}
+                  {m === milestone && m.track && <p className="small">Your style track: {Object.entries(m.track).filter(([g]) => !s.profile.goals.length || s.profile.goals.includes(g as Genre)).map(([, t]) => t).join(' · ')}</p>}
                 </div>
                 <div className="chips">
                   <span className="small">Challenges:</span>{checks.map(l => chip(l, 'checkpoint'))}
@@ -304,7 +325,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
 
         <div className="actions">
           <button className="link" onClick={() => { if (!session.done.length || confirm('Plan today again from your current progress?')) rebuildToday(); }}>Rebuild today's mix</button>
-          <button className="link" onClick={() => setEditing(true)}>Goals: {s.profile.goals.length ? s.profile.goals.join(', ') : 'all styles'} · {s.profile.minutesPerDay} min/day (change)</button>
+          <button className="link" onClick={() => setPlacing(true)}>Find my level (a short placement test)</button>
+          <button className="link" onClick={() => setEditing(true)}>Goals: {s.profile.goals.length ? s.profile.goals.join(', ') : 'not sure yet'} · {s.profile.minutesPerDay} min/day (change)</button>
           <button className="link danger" onClick={() => { if (confirm('Reset all lesson progress and redo the setup questions? Your run history in Trophies is kept.')) resetAllLessons(); }}>Reset all lesson progress</button>
         </div>
       </details>
@@ -353,13 +375,14 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: {
   );
 }
 
-const GOALS: { id: Genre; label: string }[] = [{ id: 'rock', label: 'Rock / pop' }, { id: 'funk', label: 'Funk / R&B' }, { id: 'jazz', label: 'Jazz / swing' }];
+const GOALS: { id: Genre; label: string }[] = [{ id: 'rock', label: 'Rock / pop' }, { id: 'funk', label: 'Funk / R&B / gospel' }, { id: 'jazz', label: 'Jazz / swing' }, { id: 'latin', label: 'Latin' }];
 
-function Onboarding({ onDone }: { onDone: (first: boolean) => void }) {
+function Onboarding({ onDone }: { onDone: (first: boolean, place?: boolean) => void }) {
   const profile = getSettings().profile;
   const [goals, setGoals] = useState<Genre[]>(profile.goals);
   const [minutes, setMinutes] = useState(profile.minutesPerDay);
-  const save = () => { setSettings({ profile: { ...profile, goals, minutesPerDay: minutes, onboarded: true }, session: undefined }); onDone(!profile.onboarded); };
+  const [played, setPlayed] = useState(false); // N5: played before → a short placement test after setup
+  const save = () => { setSettings({ profile: { ...profile, goals, minutesPerDay: minutes, onboarded: true }, session: undefined }); onDone(!profile.onboarded, played); };
   return (
     <div className="today">
       <div className="card form onboarding">
@@ -372,6 +395,7 @@ function Onboarding({ onDone }: { onDone: (first: boolean) => void }) {
               onChange={e => setGoals(e.target.checked ? [...goals, g.id] : goals.filter(x => x !== g.id))} /> {g.label}</label>
           ))}
         </fieldset>
+        {!profile.onboarded && <label className="check"><input type="checkbox" checked={played} onChange={e => setPlayed(e.target.checked)} /> I've played drums before: find my level with a short test</label>}
         <label>Minutes a day
           <select value={minutes} onChange={e => setMinutes(+e.target.value)}>
             {[15, 20, 25, 30, 45].map(m => <option key={m} value={m}>{m} minutes{m === 25 ? ' (recommended)' : ''}</option>)}

@@ -7,6 +7,9 @@ import { player, playerVersion, start, stop, subscribePlayer } from '../play/pla
 import { Results, saveRun } from '../play/Results';
 import { coachTake, onCoachAction } from '../coach/session';
 import { flourish } from '../lesson/Celebration';
+import { takeToMidi } from '../engine/exportMidi';
+import { saveFile, stamp } from '../ui/download';
+import { concert, requestSong } from '../ui/nav';
 import type { ModeProps } from './SongView';
 
 /** Your transcription on the note highway, synced to the video (drumless version recommended), scored like any exercise. */
@@ -18,7 +21,8 @@ export function PlayMode({ song, videoId, yt, rate, bars }: ModeProps) {
   const lastBar = notes.length ? Math.floor(notes[notes.length - 1].t / bpb) + 1 : 1;
   const firstBar = notes.length ? Math.floor(notes[0].t / bpb) + 1 : 1;
   const [range, setRange] = useState(bars ?? { from: firstBar, to: lastBar });
-  const [stage, setStage] = useState(false); // Stage mode: for playing in front of friends
+  const [stage, setStage] = useState(concert.queue.length > 0); // Stage mode: for playing in front of friends (always in a concert)
+  const next = concert.queue[0];
   const encore = stage && player.phase === 'done' ? player.finished : undefined;
   useEffect(() => { if (encore) { saveRun(encore); coachTake(encore); flourish(true); } }, [encore]); // the coach must hear this take, or it answers an older one
   useEffect(() => { preloadSheet(); return () => stop(); }, []);
@@ -43,7 +47,12 @@ export function PlayMode({ song, videoId, yt, rate, bars }: ModeProps) {
       <div className="bigBurst">ENCORE!</div>
       <h2>{song.title}</h2>
       <p className="small">{encore.stats.accuracy}% on time</p>
-      <div className="actions"><button className="primary big" autoFocus onClick={go}>Play it again</button><button onClick={stop}>Back</button></div>
+      <div className="actions">
+        {next ? <button className="primary big" autoFocus onClick={() => { concert.queue.shift(); requestSong(next.id, next.bars); }}>Next song ▶</button>
+          : <button className="primary big" autoFocus onClick={go}>Play it again</button>}
+        <button onClick={() => saveFile(`${song.title} ${stamp()}.mid`, new Blob([takeToMidi({ hits: encore.hits, zero: encore.zero, bpm: Math.round(encore.chart.bpm * encore.options.speed), title: song.title })], { type: 'audio/midi' }))}>💾 Save as MIDI</button>
+        <button onClick={() => { concert.queue = []; stop(); }}>Back</button>
+      </div>
     </div>
   );
   if (player.phase === 'done' && player.finished) return <Results f={player.finished} onAgain={go} onBack={stop} />;

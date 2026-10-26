@@ -144,3 +144,27 @@ personalised curation". Built in my recommended order, each item checked in Chro
   (automated play test) and N9 (per-pad velocity calibration).
 - Observation: on "Pocket Sixteen" a Solid emulated player got a "dragging" tip mid-take; worth a look on the real kit
   (ghost-note grooves, M2 part C).
+
+## N5 skill map and placement · N8 you vs you (2026-10-26)
+- N5: `src/engine/skills.ts` (skill map, due refreshes into the daily set, placement ladder), Journey → 🗺 Skill map and
+  "Find my level", onboarding "I've played drums before". The coach sees the map for lessons and week plans. Play test
+  gained a placement check; `PLAYTEST_PORT_OFFSET` lets it run beside another session's play test (fixed ports collided).
+- N8: kept takes (`run_hits`), You vs you on Trophies with replay, month-by-month table, skill growth lines, the coach's
+  monthly report (one real call checked: good), concert mode with MIDI save. Checked on the 5180/8790 test copy.
+
+## N7 musicianship (2026-10-26)
+- Sight-reading grades 1–5, road maps (repeat/endings/D.C. al Coda drawn on the sheet, played expanded), the
+  write-what-you-hear grid, listening assignments; coach prompt knows them. Checked in headless Chrome on the test copy.
+- Owner ask: "How it moves" bigger → ⤢ Bigger opens the full demo in an overlay (Esc closes); the side column is wider.
+
+## N3 real music in lessons (2026-10-26)
+- Song bites play over the drumless YouTube upload (embedded player, YouTube clock), checkbox to use the band instead.
+  Checked headless on the test copy with a test bite lesson: the take ran on the video clock (81 BPM). The emulated kit
+  doesn't play external-clock takes (by design), so hits weren't scored in that check.
+- Skipped: CC0 sampled kit/band (needs downloads; owner declined downloads for N1).
+
+## N6 advanced levels and style tracks (2026-10-26)
+- Stages 10 (polyrhythms, ostinatos), 11 (style mastery), 12 (metric modulation, soloing), each with a built-in song.
+- Latin goal; milestones gain `track`; per-style checkpoints at stages 7 and 11 through the existing goal tags
+  (the R3 "levels 7+ untagged" test now checks every style has its own checkpoint on tracked stages).
+- "Not sure yet" (no goals) follows the rock / pop track on tracked stages (not every style).

@@ -37,6 +37,7 @@ code follows. Lesson content lives in `src/content/curriculum.ts`.
 | Feel | A step can ask for a feel (`engine/feel.ts`): a swing range (where the & lands between beats: 50% straight, 67% triplet swing), volume that follows the sheet's p / mf / f marks (correlated bar by bar, each drum against its own mean), or playing behind the beat on purpose (`offsetTarget`; then the live coach says "Lay back" instead of "Dragging. Push"). The result shows the feel next to the notes landed. "Straight or swung?" (stage 6) plays the same 8ths both ways. |
 | Reading | "Read the rhythm" (stage 1), "Read 16ths" (stage 5) and "Read triplets" (stage 6): rhythm cards on the snare, a different card each take (`variants`), shown without the count and hand hints (`read` steps), so the student reads instead of copying. |
 | Ear training | Listening games answered from the kit (`lesson/EarQuiz.tsx`, `engine/earQuiz.ts`): "Steady or rushed?" (stage 1: the bar twice, one rushing) and "Where's the kick?" (stage 3: which of three kick lines). Hi-hat / snare / floor × 1 (or keys 1–3) answer, tom 2 × 1 plays it again; four rounds, then you play it yourself. |
+| Health and habits | Every day's set opens with a 2-minute stretch (wrists, forearms, shoulders). After about 22 minutes of playing in one sitting the big move becomes "☕ 2-minute break". Journey gives practice-length advice (no marathon first week, a nudge after an hour), a weekly ear-safety tip, and once a week asks "anything sore?": "a bit sore" gives 3 lighter days (a short set, no record attempts) and tells the coach, which writes lighter lessons and plans. |
 | Demo first | Every step has **Hear it**: the app plays the whole pattern at your tempo. |
 | Count out loud | A one-bar count-in, and big beat numbers on the highway for the counting lessons. |
 | Tempo ladder | Two clean takes → +5 BPM until the step's target (one ★★★-quality take counts as both, and a streak challenge is done on its first pass). A rough take (< 60% landed) → −10 BPM at once; two close misses → −5. When every note landed and only the timing or volume failed, the tempo holds and the line names the fix (slower doesn't fix timing). The floor is 40 BPM, below the step's start if needed; after easing off, one clean take climbs +10. At the floor: "Learn it slowly" (wait mode). |
@@ -120,8 +121,51 @@ song for friends.
 - **The coach builds the path** inside the fixed stages: after every finished lesson it writes the next one in
   the background, and Journey's Next up offers it first.
 
+## Skill map and placement (N5)
+
+- **Skill map** (`src/engine/skills.ts`, Journey → 🗺 Skill map): every lesson trains skills (steady time, hands, hands and
+  feet, 16ths, triplets, loud and soft, rudiments, fills, feel, reading and ears, songs), found from its kind and charts.
+  Mastery = stars earned against 3 stars on every lesson of the skill. A skill not practised for 3/7/14 days (by mastery)
+  is *due*: the daily set takes its oldest lesson as the review, and the coach sees the map for lessons and week plans.
+- **Placement** (onboarding "I've played drums before", or Journey → Find my level): one take of each stage's first
+  checkpoint at target tempo, from stage 1 up; the first one that doesn't pass is where you start. Stages below count
+  as passed with one star, so the coach still strengthens them.
+
+## You vs you, over months (N8)
+
+- Every scored take keeps its own hits (`run_hits`, size-capped: the latest 300 takes plus each exercise's first take of
+  each month). Trophies → **You vs you** pairs a take 28+ days old with a recent one of the same bars (`youVsYou` in
+  `src/engine/history.ts`) and plays either back as drum sounds: only the student's own MIDI, never audio.
+- Month by month: minutes, takes, on-time %, spread and best BPM at 90%+ (`monthly`). The skill map draws each skill's
+  growth over the last 6 months (`skillGrowth`).
+- **The coach's monthly report** (`/api/coach/month`, `server/prompts/month.md`): written once a month on request, kept in
+  settings, "Ask again" rewrites it.
+- **Concert mode**: Trophies → 🎤 Concert plays the show-off set back to back in Stage mode; each encore offers the next
+  song and "💾 Save as MIDI" for friends.
+
+## Musicianship (N7)
+
+- **Graded sight-reading** (`src/engine/sight.ts`): lessons sight-1…sight-4 deal a new one-bar card per take, no hints:
+  grade 1 quarters, 2 8ths, 3 snare and kick, 4 16ths, 5 triplets.
+- **Road maps** (`src/engine/form.ts`): a chart may carry `form` (repeat signs, 1st/2nd endings, D.C. al Coda). The sheet
+  draws the signs before the take; the player plays `expandForm` (the bars in play order). Lesson "Road maps".
+- **Write what you hear** (`transcribe` steps, `lesson/Transcribe.tsx`): the app plays a groove, the student taps it into
+  a grid and checks it (`gridScore`, 80% passes; "Show me" after two tries), then plays it.
+- **Listening assignments** (`listen` steps): a real recording to find on YouTube (a search link, nothing is downloaded)
+  and one thing to hear in the drums, then the groove itself.
+- The coach can use all four in its lessons (`server/prompts/lesson.md`); they count toward "Reading and ears" on the
+  skill map.
+
+## Real music in lessons (N3)
+
+- A song bite (a coach lesson's `bite` step on a YouTube song) plays over the song's **drumless upload** when it has one
+  with a beat grid: the official embedded player sits under the sheet and the take runs on the YouTube clock
+  (`src/lesson/RealSong.tsx`, same timing as Songs → Play). One pass of the bars, a bar of the song as the count-in, at
+  the nearest speed YouTube offers. A checkbox switches back to the practice band. Nothing is downloaded or recorded.
+- Not built: a sampled kit and band (needs downloaded samples; skipped with N1's downloads).
+
 ## Curriculum shape
-Levels 0–9, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open). Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
+Levels 0–12, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open; 10–12 added with N6). Untagged lessons are the core path. Lessons tagged `rock`, `funk`, `jazz` or `latin` appear only
 if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.
 
 | Level | Theme |
@@ -136,6 +180,14 @@ if that goal was picked during onboarding; picking none means "not sure yet" and
 | 7 | Groove at tempo: 16th kicks under 8ths, ghost 16ths, funk at 96, open-hat funk, laying back, a ruff fill, a 5-minute groove, a song with soft and loud sections |
 | 8 | Linear and odd: linear grooves and fills, 5/4, 7/8 (practice), a 5/4 song |
 | 9 | Solo voice: six fills on demand, fills that build, trading fours, a solo vamp, a song with a 4-bar drum break |
+| 10 | Polyrhythms and ostinatos: 3 over 2, 4 over 3, a foot ostinato, a song that switches between them |
+| 11 | Style mastery: one checkpoint per style (gospel chops, gospel shuffle, jazz waltz, samba), a gospel song |
+| 12 | Time tricks and soloing: metric modulation, soloing in phrases, a 32-bar finale |
+
+**Style tracks** (N6): from stage 7 the path branches by goal. A milestone's `track` names what each style works on, and
+each style has its own tagged checkpoint there (stage 7: driving rock, open-hat funk, swing at tempo, bossa nova; stage
+11: as above). A tagged checkpoint counts only for students with that goal (`checkpointsOf`), so the planner follows
+your track; "not sure yet" follows the rock / pop track there. Journey shows your track under the current stage.
 
 Songs are written "in the style of" and played by the built-in synth. No copyrighted audio ships.
 Real songs come in through the Songs tab: search YouTube, set the tempo, learn the part by ear (with suggested notes

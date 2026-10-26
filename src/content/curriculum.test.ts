@@ -58,10 +58,14 @@ describe('levels 7–9 (R3)', () => {
       const l = LESSON_BY_ID[id];
       expect(l, id).toBeDefined();
       expect(l.level, id).toBe(m.level);
-      if (m.level >= 7) expect(l.tags, id).toBeUndefined();
+      // stages with style tracks (N6): a style's own checkpoint is tagged with just that style; the rest are for everyone
+      if (m.level >= 7) expect(l.tags === undefined || (!!m.track && l.tags.length === 1), id).toBe(true);
       expect(l.steps.at(-1)!.pass?.maxSpreadMs, id).toBe(spreadFor(m.level));
     }
-    expect(MILESTONES.map(m => m.rank).slice(7)).toEqual(['Pocket Pro', 'Shape Shifter', 'Solo Voice']);
+    expect(MILESTONES.map(m => m.rank).slice(7)).toEqual(['Pocket Pro', 'Shape Shifter', 'Solo Voice', 'Pattern Bender', 'Style Master', 'Time Lord']);
+    // every style has its own checkpoint on a tracked stage
+    for (const m of MILESTONES.filter(x => x.track)) for (const g of ['rock', 'funk', 'jazz', 'latin'] as const)
+      expect(m.checkpoints.some(id => LESSON_BY_ID[id].tags?.includes(g)), `${m.level} ${g}`).toBe(true);
     expect(spreadFor(8)).toBe(20);
   });
   it('the odd-meter charts are valid', () => {

@@ -28,3 +28,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS ai_lessons (id TEXT PRIMARY KEY, json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')));
   CREATE TABLE IF NOT EXISTS ai_cache (key TEXT PRIMARY KEY, kind TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')));
 `);
+// N4: a song's part checked by ear (the student marks it); older databases get the column.
+try { db.exec('ALTER TABLE yt_songs ADD COLUMN verified_at TEXT'); } catch { /* already there */ }
+// N8: the hits of a take (own MIDI only), to replay "you a month ago" against "you now".
+db.exec('CREATE TABLE IF NOT EXISTS run_hits (run_id INTEGER PRIMARY KEY, json TEXT NOT NULL)');

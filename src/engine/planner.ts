@@ -1,6 +1,7 @@
+import { lighten, STRETCH_ID } from './health.ts';
 import { dueReviews, isProven, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson.ts';
 
-export type SessionRole = 'warmup' | 'review' | 'skill' | 'groove' | 'record'; // record: one take to beat your best
+export type SessionRole = 'stretch' | 'warmup' | 'review' | 'skill' | 'groove' | 'record'; // record: one take to beat your best; stretch: the daily routine (N10)
 export type SessionItem = { role: SessionRole; lessonId: string; minutes: number };
 
 const SKILL: LessonKind[] = ['exercise', 'rudiment'];
@@ -9,11 +10,12 @@ const done = (p: Progress, id: string) => !!p[id]?.completedAt;
 
 /** Tagged lessons show only for matching goals; no goals ("not sure yet") shows everything. */
 export const visibleLessons = (lessons: Lesson[], profile: Profile) =>
-  lessons.filter(l => !l.tags || !profile.goals.length || l.tags.some(t => profile.goals.includes(t)));
+  lessons.filter(l => !l.routine && (!l.tags || !profile.goals.length || l.tags.some(t => profile.goals.includes(t))));
 
-/** Checkpoints of a milestone that this student has to pass (others are hidden by their goals). */
+/** Checkpoints of a milestone that this student has to pass (others are hidden by their goals). On a stage with style
+ * tracks (N6), "not sure yet" follows the rock / pop track instead of every style. */
 export const checkpointsOf = (m: Milestone, lessons: Lesson[], profile: Profile) =>
-  visibleLessons(lessons.filter(l => m.checkpoints.includes(l.id)), profile);
+  visibleLessons(lessons.filter(l => m.checkpoints.includes(l.id)), m.track && !profile.goals.length ? { ...profile, goals: ['rock'] } : profile);
 
 /** The first milestone with an unpassed checkpoint; undefined when the whole path is done. */
 /**
@@ -84,7 +86,13 @@ export function candidates(milestones: Milestone[], lessons: Lesson[], progress:
  * `focusIds`: this week's lessons from the coach's plan (R6). An open one at or below the current stage leads the set;
  * a finished one comes back as the review. Unknown ids and lessons ahead of the student are ignored.
  */
-export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = []): SessionItem[] {
+export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = [], opts: { sore?: boolean; skillReview?: string } = {}): SessionItem[] {
+  const items = buildSet(milestones, lessons, progress, profile, today, focusIds, opts.skillReview);
+  // every day opens with the 2-minute stretch (N10); a sore week gets lighter days
+  const stretch = lessons.some(l => l.id === STRETCH_ID) ? [{ role: 'stretch' as const, lessonId: STRETCH_ID, minutes: 2 }] : [];
+  return opts.sore ? lighten([...stretch, ...items]) : [...stretch, ...items];
+}
+function buildSet(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[], skillReview?: string): SessionItem[] {
   const short = profile.minutesPerDay < 20;
   const level = currentMilestone(milestones, lessons, progress, profile)?.level ?? Infinity;
   const focus = focusIds.map(id => visibleLessons(lessons, profile).find(l => l.id === id)).filter(l => l !== undefined && l.level <= level) as Lesson[];
@@ -102,6 +110,7 @@ export function buildSession(milestones: Milestone[], lessons: Lesson[], progres
   const warmup = short || !rudiments.length ? undefined : rudiments[day % rudiments.length];
   if (warmup) taken.add(warmup.id);
   const review = short ? undefined : focus.find(l => done(progress, l.id) && !taken.has(l.id))?.id ?? dueReviews(progress, today).find(id => !taken.has(id) && lessons.some(l => l.id === id))
+    ?? (skillReview && !taken.has(skillReview) && lessons.some(l => l.id === skillReview) ? skillReview : undefined) // N5: a skill due for a refresh
     ?? (level === Infinity ? unproven(milestones, lessons, progress, profile).find(id => !taken.has(id)) : undefined); // after the path: prove a rank
 
   // After the whole path the set never goes empty: one take of a show-off song (the newest stage's song you finished).
