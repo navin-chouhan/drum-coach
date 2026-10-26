@@ -21,7 +21,7 @@ subscribePlayer(() => {
   if (!run || !emu.on || !o || o.wait || o.external || o.demo) return; // wait mode and songs have no fixed note times
   // Real hits arrive latencyMs late (that's what the latency test measures), so the emulated ones do too.
   const at = (t: number) => player.zero + t * player.beatMs + getSettings().latencyMs;
-  const notes = run.notes.filter((_, i) => !player.auto[i]).map(n => ({ time: at(n.t), drum: n.drum, accent: n.accent, ghost: n.ghost }));
+  const notes = run.notes.filter((_, i) => !player.auto[i]).map(n => ({ time: at(n.t), drum: n.drum, accent: n.accent, ghost: n.ghost, grace: n.grace }));
   const kit = { ...MPS150, retrigger: emu.retriggers ? MPS150.retrigger : {}, crosstalk: emu.crosstalk ? MPS150.crosstalk : 0 };
   for (const m of emulateKit(playNotes(notes, emu), getNoteMap(), kit))
     timers.push(window.setTimeout(() => receiveMidi(m.data, m.timeStamp), m.timeStamp - performance.now())); // delivered after its timestamp, like Web MIDI

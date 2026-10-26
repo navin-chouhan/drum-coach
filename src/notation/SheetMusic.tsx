@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { countInNumber } from '../engine/run';
 import {
-  Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, ModifierPosition, Parenthesis,
+  Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, GraceNote, GraceNoteGroup, ModifierPosition, Parenthesis,
   Renderer, Stave, StaveNote, Tuplet, Voice,
 } from 'vexflow/bravura'; // Bravura is embedded: works offline
 import type { ChartNote } from '../engine/chart';
@@ -40,6 +40,10 @@ function buildVoice(events: NotationEvent[], stem: 1 | -1, groupSlots = 4, dim?:
       if (h.accent) n.addModifier(new Articulation('a>').setPosition(stem === 1 ? ModifierPosition.ABOVE : ModifierPosition.BELOW), i);
       if (h.ghost) { n.addModifier(new Parenthesis(ModifierPosition.LEFT), i); n.addModifier(new Parenthesis(ModifierPosition.RIGHT), i); }
       if (h.open) n.addModifier(new Annotation('o').setVerticalJustification(AnnotationVerticalJustify.TOP), i);
+      if (h.grace) { // small notes before it: one slashed 8th for a flam, 16ths for a drag or ruff
+        const g = Array.from({ length: h.grace }, () => new GraceNote({ keys: [h.key], duration: h.grace === 1 ? '8' : '16', slash: h.grace === 1, clef: 'percussion', stemDirection: 1 }));
+        n.addModifier(new GraceNoteGroup(g, true).beamNotes(), i);
+      }
     });
     notes.push(n); beat.push(n);
     if (d.inTuplet) tupletNotes.push(n);

@@ -123,8 +123,8 @@ if that goal was picked during onboarding; picking none means "not sure yet" and
 | 0 | Setup, posture, counting quarters and 8ths |
 | 1 | One limb at a time; single strokes and accents |
 | 2 | The money beat, built layer by layer; double strokes; four on the floor; first song |
-| 3 | Kick variations, open hi-hat, crash phrasing, first fills, a rock song |
-| 4 | 16ths, paradiddle, ghost notes, open-hat grooves, ride groove |
+| 3 | Kick variations, open hi-hat, crash phrasing, first fills, the flam, a rock song |
+| 4 | 16ths, paradiddle, flam taps, the drag, ghost notes, open-hat grooves, ride groove |
 | 5 | Triplets, shuffle, half-time, funk, 6/8, a shuffle song |
 | 6 | Jazz ride, feathered kick, comping, a swing tune |
 
@@ -143,3 +143,7 @@ and sheet music), jam along or play it scored with the drumless version. MIDI + 
 - Keyboard timing is 10–30 ms late, so expect *Good* rather than *Perfect*. Never calibrate latency
   from the keyboard. Ghost-note checks need the real kit.
 - Wait mode is for learning the pattern only; it never counts as a pass.
+- Grace notes (flam, drag, ruff) are scored as one note: the grace stroke(s) first, then the main stroke takes the note
+  over (`createMatcher`). The take checks that most came out as two strokes, the grace soft (≤ 0.75 of the main) and
+  8–50 ms before it. Keyboard: Alt + key plays a flam. On the MPS-150 pad retriggers (29–56 ms) are close to flam
+  spacing: check on the real kit (M2).

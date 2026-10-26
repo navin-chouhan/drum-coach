@@ -65,7 +65,8 @@ How to choose:
 - Don't set pass.accuracy; the app uses the stage's bar. Never ask for something above this milestone.
 - Plain words for an adult beginner. "how" gives 2–3 concrete physical tips. "focus" is one warm sentence about why
   this lesson, for them (no milliseconds or percentages).
-- Charts follow the chart format; keep them 1–4 bars. For a step's chart, "bpm" = that step's target.
+- Charts follow the chart format; keep them 1–4 bars. For a step's chart, "bpm" = that step's target. From level 3 on, a
+  snare or tom note may have "grace": 1 (flam), 2 (drag) or 3 (ruff): soft grace strokes from the other hand just before it.
 - "checkpoint": set it to the id of the unpassed checkpoint this lesson proves (its last step must be a drill at the
   checkpoint's target tempo, with at least the checkpoint's notes per bar on each of its drums: the same rhythm, not an
   easier one; otherwise the app keeps it as a practice lesson); finishing it passes that checkpoint. Leave it out for lessons that only build toward it,
@@ -78,5 +79,6 @@ Answer shape:
   "steps": [ { "title": string (≤ 40 chars), "text": "one instruction line",
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
-      "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row },
+      "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row,
+      "minGracePct"?: % of grace notes played as grace + main (default 70) },
     "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" }, "fadeClick"?: bars, "clickOn"?: "quarters" | "8ths" | "2and4", "variants"?: [charts], "bars"?: number, "rest"?: seconds, "probe"?: true } ] }

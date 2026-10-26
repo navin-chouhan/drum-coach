@@ -8,7 +8,7 @@ export const STAFF: Record<ChartDrum, { key: string; voice: 'hands' | 'feet' }> 
   floor: { key: 'a/4', voice: 'hands' }, kick: { key: 'f/4', voice: 'feet' }, hhPedal: { key: 'd/4/x2', voice: 'feet' },
 };
 
-export type NoteHead = { key: string; drum: ChartDrum; accent: boolean; ghost: boolean; open: boolean; i?: number }; // i = index of the source note, when given
+export type NoteHead = { key: string; drum: ChartDrum; accent: boolean; ghost: boolean; open: boolean; i?: number; grace?: number }; // i = index of the source note, when given; grace = grace strokes before it
 /** One note/chord or rest. `slots` = length in grid steps of its beat (16ths, or 8th-triplets when `triplet`). */
 export type NotationEvent = { heads: NoteHead[]; slots: number; triplet: boolean; beat: number }; // beat = where it starts (same clock as the notes' t)
 export type Measure = { index: number; hands: NotationEvent[]; feet: NotationEvent[] };
@@ -40,7 +40,7 @@ export function layoutMeasures(notes: (ChartNote & { i?: number })[], beatsPerBa
           const s = Math.min(slotsInBeat - 1, Math.round(rel[i] * steps));
           const heads = bySlot.get(s) ?? [];
           if (!heads.some(h => h.key === STAFF[n.drum].key)) {
-            heads.push({ key: STAFF[n.drum].key, drum: n.drum, accent: !!n.accent, ghost: !!n.ghost, open: n.drum === 'hhOpen', ...(n.i !== undefined && { i: n.i }) });
+            heads.push({ key: STAFF[n.drum].key, drum: n.drum, accent: !!n.accent, ghost: !!n.ghost, open: n.drum === 'hhOpen', ...(n.i !== undefined && { i: n.i }), ...(n.grace && { grace: n.grace }) });
           } else if (n.i !== undefined) {
             const h = heads.find(x => x.key === STAFF[n.drum].key)!; // e.g. hi-hat closed + open on one spot: keep both sources
             h.i ??= n.i;
@@ -83,10 +83,10 @@ const SLOT_WORD: Record<string, string> = { '0.25': 'e', '0.5': '&', '0.75': 'a'
  * Hints under the notes: the count ("1", "&", "e", "a", "trip", "let") and who plays it: R / L hand, K kick foot,
  * H hi-hat foot. Cymbals are the right hand; a drum with a cymbal is the left; drums alone alternate R L (from R each bar).
  */
-export function noteHints(notes: { t: number; drum: string; mine?: boolean }[], beatsPerBar: number): { t: number; count: string; limbs: string }[] {
+export function noteHints(notes: { t: number; drum: string; mine?: boolean; grace?: number }[], beatsPerBar: number): { t: number; count: string; limbs: string }[] {
   // `mine: false` = the app plays it: it still decides the sticking (an app hi-hat keeps your right hand busy) but gets no label.
-  const groups = new Map<number, { drum: string; mine: boolean }[]>();
-  for (const n of notes) { const t = Math.round(n.t * 1000) / 1000; groups.set(t, [...(groups.get(t) ?? []), { drum: n.drum, mine: n.mine !== false }]); }
+  const groups = new Map<number, { drum: string; mine: boolean; grace?: number }[]>();
+  for (const n of notes) { const t = Math.round(n.t * 1000) / 1000; groups.set(t, [...(groups.get(t) ?? []), { drum: n.drum, mine: n.mine !== false, grace: n.grace }]); }
   const anyCymbal = notes.some(n => CYMBALS.has(n.drum) && n.drum !== 'crash'); // a timekeeping hand in the groove
   let next = 'R', bar = -1;
   return [...groups.entries()].sort((a, b) => a[0] - b[0]).flatMap(([t, here]) => {
@@ -97,8 +97,10 @@ export function noteHints(notes: { t: number; drum: string; mine?: boolean }[], 
     const lone = skins.length === 1 && !cym ? (anyCymbal ? 'L' : next) : undefined;
     if (lone && !anyCymbal) next = next === 'R' ? 'L' : 'R';
     const limbOf = (d: string, i: number) => (d === 'kick' ? 'K' : d === 'hhPedal' ? 'H' : CYMBALS.has(d) ? 'R' : cym ? 'L' : lone ?? (i ? 'L' : 'R'));
-    const limbs = [...new Set(here.flatMap((n, i) => (n.mine ? [limbOf(n.drum, skins.indexOf(n) < 0 ? 0 : skins.indexOf(n))] : [])))]
-      .sort((x, y) => 'RLKH'.indexOf(x) - 'RLKH'.indexOf(y));
+    // a grace note: the other hand's grace strokes in small letters first ("lR" flam, "llR" drag)
+    const graced = (h: string, g?: number) => (g && (h === 'R' || h === 'L') ? (h === 'R' ? 'l' : 'r').repeat(g) + h : h);
+    const limbs = [...new Set(here.flatMap((n, i) => (n.mine ? [graced(limbOf(n.drum, skins.indexOf(n) < 0 ? 0 : skins.indexOf(n)), n.grace)] : [])))]
+      .sort((x, y) => 'RLKH'.indexOf(x.at(-1)!) - 'RLKH'.indexOf(y.at(-1)!));
     if (!limbs.length) return [];
     return [{ t, count: frac ? SLOT_WORD[String(frac)] ?? '' : String(Math.floor(pos) + 1), limbs: limbs.join('+') }];
   });
