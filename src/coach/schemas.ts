@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { CHART_DRUMS, ChartSchema } from '../engine/chart.ts';
 import { DEMO_IDS } from '../content/demos.ts';
+import { chordMidi } from '../engine/band.ts';
+
+const chordsOk = (line: string) => { try { line.trim().split(/\s+/).forEach(c => chordMidi(c)); return true; } catch { return false; } };
 
 // Shapes the coach must answer with. Validated on the server before anything reaches the app.
 export const FeedbackSchema = z.object({
@@ -89,6 +92,8 @@ export const AiLessonSchema = z.object({
     .min(1).max(4)
     .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe && !end.look; }, { message: 'rest, probe and look are never the last step' }),
   demo: z.enum(DEMO_IDS).optional(),
+  // the backing band's chords, one per bar (engine/band.ts); a line the app can't read is dropped, not a failed lesson
+  band: z.object({ chords: z.string().max(400).optional() }).optional().transform(b => (b?.chords && chordsOk(b.chords) ? b : undefined)).optional(),
 });
 export const LessonRequestSchema = z.object({
   struggle: z.object({ lessonId: z.string().max(80), step: z.number().int().min(1).max(10), reason: z.string().max(400), run: z.record(z.string(), z.unknown()) }).optional(),

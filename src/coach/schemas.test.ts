@@ -42,3 +42,16 @@ describe('PlanSchema (R6)', () => {
     expect(PlanSchema.safeParse({ title: 'Too many', lessonIds: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] }).success).toBe(false);
   });
 });
+
+describe('coach band chords (G5)', () => {
+  it('a readable chord line is kept, an unreadable one is dropped without failing the lesson', async () => {
+    const { AiLessonSchema } = await import('./schemas');
+    const { CURRICULUM } = await import('../content/curriculum');
+    const l = CURRICULUM.find(x => x.id === 'money-8ths')!;
+    const base = { ...l, focus: 'x', steps: l.steps.map(s => ({ ...s, chart: { ...s.chart, id: undefined } })) };
+    expect(AiLessonSchema.parse({ ...base, band: { chords: 'G C D G' } }).band).toEqual({ chords: 'G C D G' });
+    const bad = AiLessonSchema.safeParse({ ...base, band: { chords: 'G H9 D' } });
+    expect(bad.success).toBe(true);
+    expect(bad.data!.band).toBeUndefined();
+  });
+});

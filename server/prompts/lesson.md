@@ -78,6 +78,7 @@ How to choose:
 Answer shape:
 { "title": string (≤ 60 chars; never reuse a built-in or checkpoint title: name what this lesson is for you), "kind": "exercise" | "rudiment" | "groove" | "fill",
   "focus": string, "checkpoint"?: string, "what": string, "why": string, "how": string,
+  "band"?: { "chords": "one chord per bar, e.g. \"A A D E\" (C, Am, E7, Bbmaj7…), for a groove, song or fill" },
   "steps": [ { "title": string (≤ 40 chars), "text": "one instruction line",
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
