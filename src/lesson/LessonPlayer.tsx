@@ -4,7 +4,7 @@ import { summarizeRun } from '../coach/summary';
 import { cleanBars, worstBars } from '../engine/scoring';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
-import { afterReview, autoProbe, floorLine, stuckMove, stuckLine, type StuckMove, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
+import { afterReview, autoProbe, floorLine, freeStars, stuckMove, stuckLine, type StuckMove, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
 import { checkpointsOf, studentRead } from '../engine/planner';
 import { praise } from '../engine/greeting';
 import { breakDue } from '../engine/health';
@@ -160,11 +160,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     // A one-off take the coach asked for (trade, count along, one limb): for fun, no ladder.
     if (f.options.oneOff) {
       const fsx = freeBarStats(f.hits, f.extras, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: beatsPerBar(f.chart), fromBar: f.options.fromBar, sectionBars: f.options.toBar - f.options.fromBar + 1 }, f.options.freeBars ?? []);
-      // (a take with no notes of yours isn't saved: saveRun skips empty scored runs)
       const say = fsx ? (fsx.stats.hits ? `Your bars: ${fsx.stats.onGridPct}% on the beat.` : 'Your bars were empty: play anything you like in them.') : `One for fun: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed.`;
       outcomes.set(f, { passed: true, itemDone: false, zoomed: true, text: say, say: `${say} Back to the lesson when you're ready.`,
         nums: { landed: f.stats.total - f.stats.miss, total: f.stats.total, streak: f.stats.streak, recoveries: f.stats.recoveries, onBeat: fsx?.stats.hits ? fsx.stats.onGridPct : undefined, better: false } });
-      saveRun(f, { passed: true });
+      saveRun(f, { passed: true, onBeatPct: fsx?.stats.hits ? fsx.stats.onGridPct : undefined });
       setVersion(v => v + 1); return;
     }
     if (f.options.zoom) {
@@ -200,7 +199,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       // Every note landed and only the timing (or volume) failed: slower won't fix it, so the tempo holds.
       const notesLanded = st.accuracy >= Math.min(passFor(lesson.level).accuracy, step.pass?.accuracy ?? 100);
       const { next, event } = emptyBars ? { next: p, event: 'hold' as const } : ladderStep(p, lesson, check.ok, today(), st.accuracy, check.ok && starsFor(st) === 3, notesLanded);
-      const stars = event === 'lessonDone' ? starsFor(f.stats) : undefined;
+      // A take that is all your own bars has no written notes to score: its stars come from staying on the beat (D3).
+      const stars = event !== 'lessonDone' ? undefined : !st.total && fs?.stats.hits ? freeStars(fs.stats.onGridPct) : starsFor(f.stats);
       // The checkpoint this lesson proves (itself, or the one a coach lesson stands in for) was it already passed?
       const provedBefore = !!getSettings().lessons[lesson.checkpoint ?? lesson.id]?.completedAt;
       saveProgress(lesson.id, prove(stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next));
@@ -238,7 +238,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     if (o.itemDone) coachTake(f, { lesson: lesson.title, step: step.title, passed: o.passed, verdict: o.text, event: o.event, tempoNow: getSettings().lessons[lesson.id]?.bpm, target: step.bpm.target, stickyBars: sticky,
       nextStep: nextStepInfo(lesson, progressOf(lesson), o.event) });
     if (o.itemDone) onItemDone?.();
-    saveRun(f, { passed: o.passed });
+    saveRun(f, { passed: o.passed, onBeatPct: fs?.stats.hits ? fs.stats.onGridPct : undefined });
     setSecs(s => s + f.durationS);
     sitting.playedS += f.durationS; // for the break reminder (N10)
     setVersion(v => v + 1);

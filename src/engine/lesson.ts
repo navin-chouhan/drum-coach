@@ -233,6 +233,9 @@ export function starsFor(s: RunStats): 1 | 2 | 3 {
   return 1;
 }
 
+/** Stars for a take with no written notes (trade bars, solo bars): how well your own bars stayed on the beat (D3). */
+export const freeStars = (onGridPct: number): 1 | 2 | 3 => (onGridPct >= 90 ? 3 : onGridPct >= 75 ? 2 : 1);
+
 /**
  * The line at the slowest tempo. Wait mode ("Learn it slowly") helps you find the notes; when they all landed and a
  * timing or volume limit failed, waiting can't fix that, so the line names the fix instead.

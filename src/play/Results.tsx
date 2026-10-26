@@ -17,13 +17,14 @@ const [saveOk, saveFail] = [() => {}, () => console.warn('Run not saved: is the 
 /** Saves a run once (wait-mode and empty runs are skipped: they'd distort progress). Resolves when it's saved. */
 export function saveRun(f: Finished, extra?: Record<string, unknown>): Promise<void> {
   const s = f.stats;
-  if (f.options.wait || s.total === 0) return Promise.resolve();
+  // A take of only your own bars (trade, solo) has no written notes but real playing: save it, scored on the beat (D3).
+  if (f.options.wait || (s.total === 0 && !f.hits.length)) return Promise.resolve();
   const was = saved.get(f);
   if (was) return was;
   const c = f.chart as typeof f.chart & { id?: string };
   const p = fetch('/api/runs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
     chartId: c.id ?? c.title, chartTitle: c.title, level: c.level, startedAt: f.startedAt, durationS: f.durationS,
-    bpm: c.bpm * f.options.speed, speed: f.options.speed, accuracy: s.accuracy, meanOffset: s.meanOffset, spread: s.spread,
+    bpm: c.bpm * f.options.speed, speed: f.options.speed, accuracy: s.total ? s.accuracy : (extra?.onBeatPct as number | undefined) ?? 0, meanOffset: s.meanOffset, spread: s.spread,
     summary: { ...summarizeRun(f), ...extra },
     // N8: keep the take (own MIDI only) to replay it against a later one
     take: { beatMs: 60000 / (c.bpm * f.options.speed), beats: f.run.beats, beatsPerBar: f.run.beatsPerBar, timeSignature: c.timeSignature,
