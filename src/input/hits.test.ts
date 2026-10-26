@@ -36,3 +36,17 @@ describe('stick bounces', () => {
     expect(got).toEqual(['38:35', '38:30', '38:35', '42:80', '38:110', '46:40', '38:35', '46:30']);
   });
 });
+
+describe('per-pad calibration (N9)', () => {
+  it('a calibrated pad uses its own retrigger window and reports velocity on the common scale', async () => {
+    const { setPadCal } = await import('./store');
+    setPadCal({ snare: { soft: 10, loud: 100, bounceMs: 80, bounceRatio: 0.8 } }, false);
+    const got: number[] = [];
+    const off = onHit(h => got.push(h.velocity));
+    emitNote(38, 100, 50000); emitNote(38, 70, 50075); // a 75 ms retrigger at 70%: this pad's own filter drops it
+    emitNote(38, 10, 51000);
+    off();
+    setPadCal({}, false);
+    expect(got).toEqual([120, 30]);
+  });
+});
