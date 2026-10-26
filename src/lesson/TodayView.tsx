@@ -16,6 +16,7 @@ import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { ensureWeekPlan, refreshWeekPlan, thisWeeksPlan, useWeekPlan } from '../coach/weekPlan';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, setStitched, stitchLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
+import { TechniqueView } from '../ui/TechniqueView';
 import { PadWizard } from '../ui/Calibrate';
 import { LatencyCard } from '../ui/LatencyCard';
 import { ShowoffCard } from './ShowoffCard';
@@ -30,6 +31,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const [open, setOpen] = useState<Open | undefined>(openLessonId ? { lessonId: openLessonId } : undefined);
   const [editing, setEditing] = useState(false);
   const [kitStep, setKitStep] = useState(false); // onboarding step 2 (or Journey's "check my kit")
+  const [technique, setTechnique] = useState(false); // the stick technique page
   // Finished the old path (stages 1–7)? Say once that new stages are open (R3).
   const [newStages] = useState(() => !getSettings().newStagesSeen && ['song-swing', 'song-shuffle'].some(id => getSettings().lessons[id]?.completedAt) && !Object.keys(getSettings().lessons).some(id => LESSON_BY_ID[id]?.level >= 7));
   useEffect(() => { if (newStages) setSettings({ newStagesSeen: true }); }, [newStages]);
@@ -85,6 +87,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
 
   if (!s.profile.onboarded || editing) return <Onboarding onDone={first => { setEditing(false); if (first) setKitStep(true); }} />;
   if (kitStep) return <KitSetup device={device} onDone={() => setKitStep(false)} />;
+  if (technique) return <TechniqueView onBack={() => setTechnique(false)} />;
 
   const session = currentSession();
   // A coach lesson can be deleted after today's session froze; skip it (kept in storage: AI lessons may still be loading).
@@ -170,6 +173,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               <button className="primary big" autoFocus onClick={go} disabled={!hero && challenge?.status === 'thinking'}>{heroLabel}</button>
               {others.length > 0 && <button onClick={() => setSwap(swap + 1)}>Something else</button>}
               {jam && hero && hero !== jam && <button onClick={() => setOpen({ lessonId: jam.id })}>Just jam</button>}
+              <button onClick={() => setTechnique(true)}>🥢 Stick technique</button>
               {flowLesson && <button onClick={() => setOpen({ lessonId: flowLesson.id, flow: true })}>🌊 Flow{flowLesson !== jam ? `: ${flowLesson.title}` : ''}</button>}
             </div>
           </div>

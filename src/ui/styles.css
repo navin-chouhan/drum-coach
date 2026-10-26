@@ -524,3 +524,6 @@
   .earQuiz .quizSaid{font:800 26px var(--display);color:var(--bad)}.earQuiz .quizSaid.ok{color:var(--good)}
   .calDots{font:800 30px var(--display);letter-spacing:.08em}.calSummary li{margin-bottom:4px}
   .throneCheck .big{font:800 30px var(--display);margin:4px 0}.throneCheck .ans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0}
+  .techniqueView .demos{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .techniqueView .demos button{font:800 15px var(--display);padding:8px 14px;border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line)}
+  .techniqueView .demos button.on{background:var(--pop)}

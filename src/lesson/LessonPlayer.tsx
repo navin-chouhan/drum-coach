@@ -29,6 +29,7 @@ import { IntroSlides } from '../play/IntroSlides';
 import { SelfCheck } from '../ui/SelfCheck';
 import { EarQuiz } from './EarQuiz';
 import { TechniqueDemo } from '../ui/TechniqueDemo';
+import { demoFor } from '../content/demos';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -327,7 +328,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   useEffect(() => { if (appMove && fresh2?.action) dropCoachAction(true); }, [appMove, fresh2]); // the kit's "yes" moves on too
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
   const resting = (!!step.rest || !!step.look || !!step.quiz) && !oneTake; // a look or quiz step ends like a rest: "done" moves on
-  const demo = step.demo ?? lesson.demo; // how the body moves (R5)
+  const demo = demoFor(lesson, step); // how the body moves (R5): every lesson has one
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
   const arcadeBpm = p.bestBpm || step.bpm.target;
   const finishRest = () => { saveProgress(lesson.id, ladderStep(progressOf(lesson), lesson, true, today()).next); setVersion(v => v + 1); };
