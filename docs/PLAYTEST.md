@@ -47,9 +47,10 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
   check is evenness or timing can loop forever; cap takes per lesson (30) and log the give-ups.
 - A Solid run needs its own empty data folder: one 2★ lesson in the history keeps the read off *flying*, which turns
   off checkpoints-first and the probe.
-- Two app tabs on one origin share localStorage and each pushes its copy to the server, so the newer write wins. After
-  Chrome restarts it can restore an old test tab you can't see from the tool's tab group; a fresh profile on that
-  origin then gets the old tab's lessons. Start each fresh profile on a new port pair (5183/8793 …), and wipe the
+- Two app tabs on one origin share localStorage and each pushes its copy to the server, so the newer write wins. In
+  round 7 a fresh profile on 5181 picked up Stage 3 lessons it never played: either an old test tab Chrome restored
+  (invisible from the tool's tab group) or another session's tab using the same port pair (a parallel session ran its
+  own play test on 5181/8791 right after). Start each fresh profile on a new port pair (5183/8793 …), and wipe the
   data folder only while its API is stopped.
 - When the implementer's session is still around, ports 5180/8790 may be taken by it. Use the next pair (5181/8791)
   rather than sharing one API and data folder.
