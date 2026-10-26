@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useCharts, loadBacking, refreshCharts, type StoredChart } from '../content/charts';
 import { MILESTONES } from '../content/curriculum';
-import { currentMilestone } from '../engine/planner';
-import { forYou, MAX_SPEED, suggestNext, type RunRow } from '../engine/progress';
+import { currentMilestone, studentRead } from '../engine/planner';
+import { forYou, MAX_SPEED, practiceStart, suggestNext, type RunRow } from '../engine/progress';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { allLessons } from '../lesson/aiLessons';
 import { takeChart } from '../engine/transcribe';
@@ -108,7 +108,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const sug = f && !f.options.wait && mineRuns.length ? suggestNext(mineRuns, [{ id: chart.id, title: chart.title, bpm: chart.bpm, level: chart.level }]) : undefined;
   const next = sug?.chartId === chart.id ? sug.bpm : bpm;
   // Before the first take: start where you left off, a bit slower if last time was rough.
-  const startAt = last ? Math.max(40, Math.round(last.bpm) - (last.accuracy < 60 ? 10 : 0)) : bpm;
+  const startAt = practiceStart(bpm, last, studentRead(getSettings().lessons, runs));
   const act = screenAction(reply?.action, '⏭ Next one');
   const main = act && canRunAction(act) ? { label: act.label, run: () => void runAction(act) }
     : !f ? (startAt !== bpm ? { label: `▶ Play at ${startAt}`, run: () => playAt(startAt) } : { label: '▶ Play', run: () => void go() })
@@ -232,7 +232,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
 function Chooser({ charts, runs, level, onPick }: { charts: StoredChart[]; runs: RunRow[]; level: number; onPick: (id: string) => void }) {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('foryou');
   const [q, setQ] = useState('');
-  const picks = useMemo(() => forYou(charts, runs, level), [charts, runs, level]);
+  const read = useMemo(() => studentRead(getSettings().lessons, runs), [runs]);
+  const picks = useMemo(() => forYou(charts, runs, level, 8, read.pace), [charts, runs, level, read.pace]);
   const list = q.trim() ? charts.filter(c => c.title.toLowerCase().includes(q.trim().toLowerCase())).map(chart => ({ chart, why: '' }))
     : tab === 'foryou' ? picks
     // Exercises (imported or untyped charts) live under Rudiments and drills, so every chart has a tab.
@@ -253,7 +254,7 @@ function Chooser({ charts, runs, level, onPick }: { charts: StoredChart[]; runs:
               <span className="ic" aria-hidden>{KIND_ICON[c.kind ?? 'exercise']}</span>
               {why && <span className="tag">{why}</span>}
               <b>{c.title}</b>
-              <span className="small">{c.bpm} BPM{best(c.id) ? ` · best ${best(c.id)}` : ''} · {c.bars} bar{c.bars === 1 ? '' : 's'}</span>
+              <span className="small">{practiceStart(c.bpm, runs.filter(r => r.chartId === c.id).at(-1), read)} BPM{best(c.id) ? ` · best ${best(c.id)}` : ''} · {c.bars} bar{c.bars === 1 ? '' : 's'}</span>
             </button>
           ))}
         </div>

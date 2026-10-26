@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, songReady, forYou, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, songReady, forYou, practiceStart, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -93,6 +93,16 @@ describe('forYou', () => {
     expect(picks.map(p => `${p.chart.id}:${p.why}`)).toEqual(['a:played lately', 'n:played lately', 'ai1:from your coach', 'r:good warm-up', 'x:at your level']);
     expect(forYou(charts, [], 1).map(p => `${p.chart.id}:${p.why}`)).toEqual(['ai1:from your coach', 'r:good warm-up', 'a:at your level', 'n:a step up', 'x:a step up']);
     expect(forYou(charts, [], 2, 2)).toHaveLength(2);
+  });
+  it('a struggling student gets no step up (D4)', () => {
+    expect(forYou(charts, [], 1, 8, 'struggling').map(p => p.why)).not.toContain('a step up');
+  });
+  it('a first take starts where the student is comfortable, not at the chart tempo (D4)', () => {
+    expect(practiceStart(100, undefined, { pace: 'struggling', comfortableBpm: 70 })).toBe(70);
+    expect(practiceStart(100, undefined, { pace: 'struggling' })).toBe(80);
+    expect(practiceStart(60, undefined, { pace: 'struggling', comfortableBpm: 70 })).toBe(60);
+    expect(practiceStart(100, undefined, { pace: 'flying' })).toBe(100);
+    expect(practiceStart(100, run({ bpm: 90, accuracy: 50 }), { pace: 'struggling' })).toBe(80); // last time rough: 10 slower
   });
   it('above the library top level, "at your level" is the highest level below it', () => {
     expect(forYou(charts, [], 6).map(p => `${p.chart.id}:${p.why}`)).toEqual(['ai1:from your coach', 'r:good warm-up', 'n:at your level', 'x:at your level']);
