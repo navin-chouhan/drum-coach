@@ -87,3 +87,18 @@ describe('rankState (R7)', () => {
     expect(rankState(m, lessons, { rests: p({ completedAt: '2026-10-24', provenAt: '2026-10-26' }) }, profile)).toEqual({ state: 'proven', proven: 1, total: 1 });
   });
 });
+
+describe('buildSession follows the weekly focus (R6)', () => {
+  const today = '2026-10-26';
+  it('an open focus lesson at or below the current level leads the skill slot; unknown or later ids are ignored', () => {
+    const progress = done('count', 'rests'); // stage 0 done → level 1 is current
+    const focused = buildSession(milestones, lessons, progress, profile, today, ['nope', 'money', 'hands-feet']);
+    expect(focused.find(i => i.role === 'skill' || i.role === 'groove')?.lessonId).toBe('hands-feet');
+    expect(focused.map(i => i.lessonId)).not.toContain('money'); // level 2: ahead of the student
+  });
+  it('a finished focus lesson comes back as the review', () => {
+    const progress = done('count', 'rests');
+    const s = buildSession(milestones, lessons, progress, { ...profile, minutesPerDay: 30 }, today, ['rests']);
+    expect(s.find(i => i.role === 'review')?.lessonId).toBe('rests');
+  });
+});

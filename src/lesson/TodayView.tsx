@@ -12,6 +12,7 @@ import { say } from '../voice/voice';
 import { songBarCount, useYtSongs } from '../youtube/api';
 import { requestSong } from '../ui/nav';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
+import { ensureWeekPlan, refreshWeekPlan, thisWeeksPlan, useWeekPlan } from '../coach/weekPlan';
 import { aiLessonsLoaded, lessonById, requestCoachLesson, setStitched, stitchLesson, useLessons } from './aiLessons';
 import { LessonPlayer } from './LessonPlayer';
 import { PadWizard } from '../ui/Calibrate';
@@ -31,6 +32,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const [dash, setDash] = useState<Dashboard>();
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [songs] = useYtSongs();
+  useWeekPlan(); // the coach's weekly plan steers today's set (state.ts) and names the week's focus
+  useEffect(() => { void refreshWeekPlan(); }, []);
   const [newBadges, setNewBadges] = useState<string[]>([]);
   const [recap, setRecap] = useState<string>();
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
@@ -46,6 +49,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   // With "coach automatically" on, ask once a day for a lesson when there's none waiting for this milestone,
   // once you've played something (with no takes yet, the built-in first lessons are the right start).
   const played = !!dash?.totalRuns;
+  useEffect(() => { if (played && s.liveCoach && s.profile.onboarded) void ensureWeekPlan(); }, [played, s.liveCoach, s.profile.onboarded]);
   useEffect(() => {
     if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length && studentRead(s.lessons, runs).pace !== 'flying') requestCoachLesson(coachKey);
   }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons, runs]);
@@ -124,7 +128,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
     next: hero && { title: hero.title, tool: toolOf(hero.steps[0]), minutes, focus: hero.focus }, setDone: !!hero && heroItem < 0 && setDone && !swap, pathDone: pathDone && !hero });
   const heroLabel = hero ? (heroItem < 0 && setDone && !swap ? `Next lesson: ${hero.title} ▶` : "Yes, let's go ▶") : pathDone ? '🎯 Coach challenge ▶' : 'Jam ▶';
   const trailDone = trail.filter(l => done(l.id)).length;
-  const theme = weekTheme(runs);
+  const theme = weekTheme(runs), weekPlan = thisWeeksPlan(); // the coach's plan leads; the most-given tip is the fallback
   const project = s.profile.song?.stage === milestone?.level ? s.profile.song : undefined;
   const projectSong = songs.find(x => x.id === project?.id);
   const songBars = projectSong ? songBarCount(projectSong) : 0;
@@ -172,7 +176,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               <li>🔥 <b>{dash?.streak ?? 0}-day</b> streak</li>
               {dash?.landedWeek != null && <li>🎯 <b>{dash.landedWeek}%</b> notes landed this week{dash.landedLastWeek != null && dash.landedWeek > dash.landedLastWeek ? `, up from ${dash.landedLastWeek}%` : ''}</li>}
               <li>⏱ <b>{Math.round(dash?.minutesToday ?? 0)}</b> min today</li>
-              {theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
+              {weekPlan?.focus ? <li>🎯 This week: <b>{weekPlan.focus}</b>{weekPlan.why && <><br /><span className="small">{weekPlan.why}</span></>}</li>
+              : theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
                 : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
               {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
             </ul>

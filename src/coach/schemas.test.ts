@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CoachReplySchema, GrooveSchema, TipsSchema } from './schemas';
+import { CoachReplySchema, GrooveSchema, PlanSchema, TipsSchema } from './schemas';
 
 describe('TipsSchema', () => {
   it('drops a tip that is too long instead of failing the whole answer', () => {
@@ -30,5 +30,15 @@ describe('GrooveSchema', () => {
     expect(GrooveSchema.parse({ reply: 'Eighths on the hat.', confidence: 'know' }).confidence).toBe('know');
     expect(GrooveSchema.parse({ reply: 'Eighths on the hat.' }).confidence).toBe('style-guess');
     expect(GrooveSchema.parse({ reply: 'Eighths on the hat.', confidence: 'sure' }).confidence).toBe('style-guess');
+  });
+});
+
+describe('PlanSchema (R6)', () => {
+  it('a weekly focus with lessons and the coach\'s notebook; old plans with only days still parse', () => {
+    const p = PlanSchema.parse({ title: 'Left hand week', focus: 'your left hand on the hi-hat', why: 'the & notes land 30 ms late', lessonIds: ['hh-8ths', 'singles'], drums: ['hihat'], notes: 'Slow is working; try 75 next week.' });
+    expect(p.lessonIds).toEqual(['hh-8ths', 'singles']);
+    expect(PlanSchema.parse({ title: 'Old', days: [{ day: 'Day 1', items: [{ title: 'x', minutes: 10 }] }] }).days).toHaveLength(1);
+    expect(PlanSchema.parse({ title: 'No days', focus: 'kick', days: null, notes: null }).days).toBeUndefined();
+    expect(PlanSchema.safeParse({ title: 'Too many', lessonIds: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] }).success).toBe(false);
   });
 });

@@ -38,7 +38,7 @@ export type PlayOptions = RunOptions & {
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
   band?: BandSpec;           // the backing band (engine/band.ts): bass and keys under the take
-  lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach
+  lesson?: { id: string; step: number; title: string; goal: string; tool?: string }; // saved with the run, read by the coach (and the profile: minutes per tool)
 };
 export type Finished = { cues: Cue[]; zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
 export type Feedback = { lane: string; judgement: Judgement | 'extra'; time: number };

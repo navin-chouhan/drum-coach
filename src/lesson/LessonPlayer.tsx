@@ -252,7 +252,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
     countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud),
     activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false, freeBars: free.length ? free : undefined, fadeClick: demo ? undefined : step.fadeClick, clickOn: step.clickOn,
-    lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text },
+    lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text, tool: flow ? 'flow' : arcade ? 'arcade' : toolOf(step) },
     band: getSettings().band !== false ? bandSpec : undefined,
   });
   // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).

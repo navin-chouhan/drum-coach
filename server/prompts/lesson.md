@@ -8,6 +8,9 @@ The input has:
   velocity and the weakest beat positions. "struggle" (optional): a take they just failed and why.
 - "examples": built-in lessons for this milestone, to show the format and the level of difficulty.
 - "yourEarlierLessons": lessons you already wrote for this milestone. Don't repeat one.
+- "profile" (if present): their last 28 days: per drum accuracy and offset with a trend, the tips given most, minutes per
+  tool (what they enjoy), their songs, the weakest drum. "weekFocus": the coach's plan for this week. Aim the lesson at the
+  focus when it fits this milestone, and lean on the tools they play most.
 - "postPath": true when the student has passed every stage. Then write a review or stretch lesson at this last level, aimed
   at the weakest skill in "recentRuns" (a faster tempo, a variation, a longer take); never a new topic beyond this level.
 

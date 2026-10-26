@@ -5,6 +5,8 @@ export type RunRow = {
   notes?: number; // notes in the take (older rows may lack it)
   fromBar?: number; toBar?: number; // the bars the take covered
   tips?: string[]; // ids of the live tips given during the take (engine/liveCoach.ts)
+  perDrum?: Record<string, { notes: number; accuracyPct: number; meanOffsetMs: number }>; // from the take's summary
+  tool?: string; // the lesson tool (jam, drill, copy…), or flow / arcade; none for Practice and songs
 };
 export type CatalogItem = { id: string; title: string; bpm: number; level?: number; kind?: string };
 export type Suggestion = { chartId: string; bpm: number; reason: string };
@@ -139,6 +141,9 @@ const THEME_WORDS: Record<string, string> = {
   reacting: 'playing with the click, not after it', 'missing-kick': 'the kick', extras: 'playing only the notes shown',
   'hh-open': 'keeping the hi-hat pedal down', accents: 'louder accents', ghosts: 'softer ghost notes', even: 'even strokes',
 };
+/** A live tip id in plain words ("landing behind the click", "the snare"). */
+export const tipWords = (cue: string) => THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${drumName(cue.slice(8))}` : cue);
+
 /**
  * This week's thing: the live tip given most in the last 7 days (3+ times, praise aside), in plain words. It must
  * also show up in the last 5 takes: a habit fixed since then is forgotten.
@@ -150,7 +155,7 @@ export function weekTheme(runs: RunRow[], now = new Date()): { cue: string; coun
     for (const id of r.tips ?? []) if (id !== 'praise' && lately.has(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
   const [cue, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
   if (!cue || count < 3) return null;
-  return { cue, count, words: THEME_WORDS[cue] ?? (cue.startsWith('missing-') ? `the ${drumName(cue.slice(8))}` : cue) };
+  return { cue, count, words: tipWords(cue) };
 }
 
 /** ISO week key ("2026-W43"), for "once a week" things like the Monday recap. */

@@ -76,10 +76,17 @@ export function candidates(milestones: Milestone[], lessons: Lesson[], progress:
  * lessons for the current milestone (a skill and a groove when both exist). Under 20 minutes a day,
  * only the two lessons.
  */
-export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string): SessionItem[] {
+/**
+ * `focusIds`: this week's lessons from the coach's plan (R6). An open one at or below the current stage leads the set;
+ * a finished one comes back as the review. Unknown ids and lessons ahead of the student are ignored.
+ */
+export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = []): SessionItem[] {
   const short = profile.minutesPerDay < 20;
-  const c = candidates(milestones, lessons, progress, profile);
-  const skill = c.find(l => SKILL.includes(l.kind)), groove = c.find(l => !SKILL.includes(l.kind));
+  const level = currentMilestone(milestones, lessons, progress, profile)?.level ?? Infinity;
+  const focus = focusIds.map(id => visibleLessons(lessons, profile).find(l => l.id === id)).filter(l => l !== undefined && l.level <= level) as Lesson[];
+  const lead = focus.find(l => !done(progress, l.id));
+  const c = candidates(milestones, lessons, progress, profile).filter(l => l !== lead);
+  const skill = lead ?? c.find(l => SKILL.includes(l.kind)), groove = c.find(l => !SKILL.includes(l.kind) && l !== skill);
   const learning = [skill, groove].filter(l => l !== undefined);
   if (learning.length < 2) learning.push(...c.filter(l => !learning.includes(l)).slice(0, 2 - learning.length));
   const taken = new Set(learning.map(l => l.id));
@@ -88,13 +95,13 @@ export function buildSession(milestones: Milestone[], lessons: Lesson[], progres
   const day = Number(today.replaceAll('-', ''));
   const warmup = short || !rudiments.length ? undefined : rudiments[day % rudiments.length];
   if (warmup) taken.add(warmup.id);
-  const review = short ? undefined : dueReviews(progress, today).find(id => !taken.has(id) && lessons.some(l => l.id === id));
+  const review = short ? undefined : focus.find(l => done(progress, l.id) && !taken.has(l.id))?.id ?? dueReviews(progress, today).find(id => !taken.has(id) && lessons.some(l => l.id === id));
 
   const fixed = (warmup ? 3 : 0) + (review ? 4 : 0);
   const each = Math.max(5, Math.floor((profile.minutesPerDay - fixed) / Math.max(1, learning.length)));
   return [
     ...(warmup ? [{ role: 'warmup' as const, lessonId: warmup.id, minutes: 3 }] : []),
     ...(review ? [{ role: 'review' as const, lessonId: review, minutes: 4 }] : []),
-    ...learning.map(l => ({ role: SKILL.includes(l.kind) ? 'skill' as const : 'groove' as const, lessonId: l.id, minutes: each })),
+    ...learning.map(l => ({ role: SKILL.includes(l.kind) || l === lead ? 'skill' as const : 'groove' as const, lessonId: l.id, minutes: each })),
   ];
 }

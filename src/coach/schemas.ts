@@ -13,15 +13,21 @@ export const FeedbackSchema = z.object({
     chart: ChartSchema.optional(),
   }),
 });
+/** The coach's weekly plan (R6): one focus, why, up to 6 lessons the Journey leads with, and notes it reads next week. */
 export const PlanSchema = z.object({
   title: z.string().max(120),
+  focus: z.string().max(120).nullish().transform(v => v ?? undefined), why: z.string().max(300).nullish().transform(v => v ?? undefined),
+  lessonIds: z.array(z.string().max(80)).max(6).nullish().transform(v => v ?? undefined), // filtered to known lessons by the server
+  drums: z.array(z.string().max(20)).max(4).nullish().transform(v => v ?? undefined),
+  notes: z.string().max(1000).nullish().transform(v => v ?? undefined), // the coach's notebook, given back next week
+  week: z.string().max(10).optional(), // ISO week it's for (set by the server)
   days: z.array(z.object({
     day: z.string().max(30),
     items: z.array(z.object({
       title: z.string().max(120), minutes: z.number().min(1).max(120),
       chartId: z.string().max(80).optional(), bpm: z.number().min(30).max(300).optional(), notes: z.string().max(300).optional(),
     })).max(10),
-  })).min(1).max(7),
+  })).min(1).max(7).nullish().transform(v => v ?? undefined), // the model writes "days": null when there are none
 });
 /** Show-off songs: real songs a student at this stage can play for friends. Video ids are looked up by the server. */
 export const ShowoffRequestSchema = z.object({ stage: z.string().max(120), canDo: z.array(z.string().max(200)).max(8), goals: z.array(z.string().max(20)).max(5) });
@@ -98,7 +104,8 @@ export const RunRecordSchema = z.object({
 });
 export type RunRecord = z.infer<typeof RunRecordSchema> & { id: number };
 export const PlanRequestSchema = z.object({
-  goals: z.string().min(1).max(500), minutesPerDay: z.number().int().min(5).max(180), daysPerWeek: z.number().int().min(1).max(7),
+  goals: z.string().min(1).max(500).optional(), minutesPerDay: z.number().int().min(5).max(180).optional(), daysPerWeek: z.number().int().min(1).max(7).optional(),
+  week: z.string().regex(/^\d{4}-W\d{2}$/).optional(), // the automatic weekly plan
 });
 
 /** The live coaching conversation (server/ai/session.ts, server/prompts/session.md). */

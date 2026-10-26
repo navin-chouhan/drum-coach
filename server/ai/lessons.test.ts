@@ -94,3 +94,13 @@ describe('after the whole path', () => {
     expect(input.milestone.level).toBe(Math.max(...CURRICULUM.map(l => l.level)));
   });
 });
+
+describe('personal input (R6)', () => {
+  it('the lesson input carries the student profile and this week\'s focus', () => {
+    const studentProfile = { days: 3, minutes: 40, perDrum: {}, timing: null, topTips: [], tools: {}, songs: [], weakest: 'kick' };
+    const input = lessonInput({ profile, progress: {}, aiLessons: [], recent: [], studentProfile, weekFocus: { focus: 'the kick on 1', drums: ['kick'] } })!;
+    expect(input.profile?.weakest).toBe('kick');
+    expect(input.weekFocus).toEqual({ focus: 'the kick on 1', drums: ['kick'] });
+    expect(lessonInput({ profile, progress: {}, aiLessons: [], recent: [] })!.weekFocus).toBeUndefined();
+  });
+});
