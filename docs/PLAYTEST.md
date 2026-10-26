@@ -195,7 +195,8 @@ Still open:
 - **N3 song bites over a drumless video** have never had a take scored (the emulated kit doesn't play on the
   YouTube clock): owner checks with the kit.
 - **N1 camera pose tracking and G4 sampled sounds** were skipped (they need downloads the owner declined).
-- **The grip and kick-foot drawings** in How it moves read poorly for a beginner (D10, waiting for a mockup).
+- **The grip and kick-foot drawings** in How it moves read poorly for a beginner (D10: animated v2 mockup waiting for "build it").
+- **Repeated rank-up** at stage 8 with several style tracks (D16).
 
 ### Round 8 (N11: the first automated play test, `npm run playtest`), 2026-10-26
 Headless Chrome, a fresh data folder, the coach off; the emulated MPS-150 as a Beginner (count-8ths, Your first beat) and
@@ -223,6 +224,15 @@ full Solid path to stage 12 (166 takes). Findings and fixes:
 | D11, D13 | The play test drove another session's app when its ports were taken, and counted N10's break as a take. | Test tool | Free ports, readiness wait, breaks and help moves skipped; `PLAYTEST_ONLY=solid|beginner`. |
 | D14 | The emulated kit ignored volume marks and feel targets, so stage 8's song could never pass. | Test tool | Velocity follows p / mf / f; timing aims at the feel target. |
 | D15 | How it moves was silent. | Owner ask | The coach reads the description, then the cue words for two loops. |
+
+After the fixes, a full Solid run on the merged code (6a12983): 170 takes, 0 problems, 0 page errors, every rank up to
+Time Lord; stage 8's "song-pocket" passes now that the emulated kit follows volume marks (D14). One new finding:
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| D16 | Stage 8 with all style tracks: "Rank up: you're now a Pocket Pro!" four times (rock-drive, open-hat-funk, jazz-tempo, bossa). The rank-up test in `LessonPlayer` asks "are all the stage's checkpoints done?" after saving, and the other tracks' checkpoints are new lessons, so each one passes it again. | Bug | Open: only rank up when the stage wasn't passed before this take. |
+
+D10 (grip and kick foot) has a v2 mockup with animation: `docs/mockups/d10-grip-foot.html`.
 
 Testing lesson: when the shared `/tmp` quota fills, SQLite writes fail ("disk I/O error") and the play test reports
 "the take was not saved". Run it with a short temp path on the real disk: `TMPDIR=~/.cache/dpt npm run playtest`
