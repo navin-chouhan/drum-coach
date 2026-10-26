@@ -29,6 +29,7 @@ import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
 import { SelfCheck } from '../ui/SelfCheck';
 import { EarQuiz } from './EarQuiz';
+import { Transcribe } from './Transcribe';
 import { TechniqueDemo } from '../ui/TechniqueDemo';
 import { demoFor } from '../content/demos';
 import { takeToMidi } from '../engine/exportMidi';
@@ -333,7 +334,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const coachAct = appMove ? undefined : screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
   useEffect(() => { if (appMove && fresh2?.action) dropCoachAction(true); }, [appMove, fresh2]); // the kit's "yes" moves on too
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
-  const resting = (!!step.rest || !!step.look || !!step.quiz) && !oneTake; // a look or quiz step ends like a rest: "done" moves on
+  const resting = (!!step.rest || !!step.look || !!step.quiz || !!step.transcribe || !!step.listen) && !oneTake; // a look or quiz step ends like a rest: "done" moves on
   const demo = demoFor(lesson, step); // how the body moves (R5): every lesson has one
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
   const arcadeBpm = p.bestBpm || step.bpm.target;
@@ -343,6 +344,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   };
   // A break after about 22 minutes of playing in one sitting (N10): the main move offers it once the take is judged.
   const [onBreak, setOnBreak] = useState(false);
+  const [bigDemo, setBigDemo] = useState(false); // "How it moves" full size, over the lesson
+  useEffect(() => { if (!bigDemo) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setBigDemo(false); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [bigDemo]);
   const breakNow = !!f && !!outcome && !playing && !resting && !arcade && !flow && breakDue(sitting.playedS);
   const main: { label: string; run: () => void } =
     breakNow ? { label: '☕ 2-minute break', run: () => setOnBreak(true) }
@@ -442,9 +445,17 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         <RestCountdown seconds={120} />
       </> : resting ? <>
         <CoachLine line={step.text} />
-        {!step.quiz && <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} />{demo && <Move alt label="📷 Check yourself" gesture="key C" onClick={() => setChecking(true)} />}</div>}
+        {!step.quiz && !step.transcribe && <div className="moves"><Move go label={step.listen ? '✓ I listened: next step' : '✓ Done, next step'} onClick={finishRest} />{demo && <Move alt label="📷 Check yourself" gesture="key C" onClick={() => setChecking(true)} />}</div>}
         {step.quiz ? <EarQuiz key={stepIdx} kind={step.quiz} chart={chart} onDone={finishRest}
           play={(c, then) => start(c, { ...options(true), fromBar: 1, toBar: c.bars, repeats: 1, speed: bpm / c.bpm, activeLanes: undefined, band: undefined, then })} />
+          : step.transcribe ? <Transcribe key={stepIdx} chart={chart} onDone={finishRest}
+            play={c => start(c, { ...options(true), fromBar: 1, toBar: c.bars, repeats: 2, speed: bpm / c.bpm, activeLanes: undefined, band: undefined })} />
+          : step.listen ? <div className="card listenStep">
+            <p className="quizQ">🎧 {step.listen.song}</p>
+            <p>Listen for: {step.listen.what}</p>
+            <p><a className="button primary" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(step.listen.song)}`} target="_blank" rel="noreferrer">▶ Find it on YouTube</a></p>
+            <p className="small">Listen two or three times, eyes closed, then tap along on your knee before you come back.</p>
+          </div>
           : step.look && demo ? <div className="card lookStep"><TechniqueDemo id={demo} bpm={bpm} /></div> : <RestCountdown key={stepIdx} seconds={step.rest!} />}
       </> : playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
         <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} under={said.under} thinking={!fresh2 && thinkingAbout(coach, f)} />
@@ -506,9 +517,15 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
           {lesson.needsLatency && !getSettings().latencyChecked && <div className="card"><p className="warn">This lesson is judged in milliseconds. Run the latency test first
             (⚙ Setup → Pads → Latency), or "behind the beat" may just be your speakers.</p></div>}
           {demo && <div className="card howItMoves">
-            <h3>How it moves</h3>
+            <h3>How it moves <button className="link" onClick={() => setBigDemo(true)}>⤢ Bigger</button></h3>
             <TechniqueDemo id={demo} bpm={bpm} compact />
             <button className="primary" onClick={() => setChecking(true)}>📷 Check yourself <small>(key C)</small></button>
+          </div>}
+          {demo && bigDemo && <div className="demoOverlay" role="dialog" aria-label="How it moves" onClick={e => { if (e.target === e.currentTarget) setBigDemo(false); }}>
+            <div className="card">
+              <h3>How it moves <button className="link" autoFocus onClick={() => setBigDemo(false)}>✕ Close (Esc)</button></h3>
+              <TechniqueDemo id={demo} bpm={bpm} />
+            </div>
           </div>}
           <div className="lessonKit"><KitView /></div>
           <div className="actions small">

@@ -55,6 +55,12 @@ Your toolbox. Each step uses one tool, and the app runs it:
   drill (give any 1-bar chart; nothing is played); "probe": true on a first step to find their tempo (1-bar takes from
   bpm.start, +5 per clean bar up to bpm.target; the step then practises 10 below where it got hard).
   "rest" and "probe" are never the last step (the lesson ends by playing).
+- Musicianship steps (never the last step; follow each with a step that plays the same chart):
+  "transcribe": true: I play the chart, they write it on a grid and it's scored (1–2 bars, 8ths or 16ths, 2–3 drums).
+  "listen": { "song": "Title Artist", "what": "what to listen for in the drums" }: a real, well-known recording they
+  find on YouTube; name one concrete thing to hear (the hi-hat pattern, the snare laying back).
+  A chart may carry a road map: "form": { "repeat": [fromBar, toBar], "endings"?: true, "coda"?: { "toCoda", "codaAt" } }
+  (repeat signs, 1st/2nd endings, D.C. al Coda): use it on reading lessons from stage 3 on.
 - "layers": build a groove one limb at a time. "layers": [["hihat"], ["hihat","kick"], ["hihat","kick","snare"]]
   (simplest first, full groove last). Each clean take adds the next layer at the same tempo, then the tempo ladder runs
   on the full groove. Best for any new groove.
@@ -91,4 +97,4 @@ Answer shape:
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
       "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row,
       "minGracePct"?: % of grace notes played as grace + main (default 70) },
-    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" }, "fadeClick"?: bars, "clickOn"?: "quarters" | "8ths" | "2and4", "variants"?: [charts], "bars"?: number, "rest"?: seconds, "probe"?: true } ] }
+    "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" }, "fadeClick"?: bars, "clickOn"?: "quarters" | "8ths" | "2and4", "variants"?: [charts], "bars"?: number, "rest"?: seconds, "probe"?: true, "transcribe"?: true, "listen"?: { "song", "what" } } ] }

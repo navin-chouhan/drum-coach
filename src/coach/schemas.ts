@@ -86,11 +86,12 @@ export const AiLessonSchema = z.object({
     freeBars: z.array(z.number().int().min(1).max(16)).min(1).max(8).optional(), trade: z.boolean().optional(),
     layers: z.array(z.array(z.enum(CHART_DRUMS)).min(1)).min(2).max(5).optional(),
     demo: z.enum(DEMO_IDS).optional(), look: z.boolean().optional(), read: z.boolean().optional(), quiz: z.enum(['steady', 'kick']).optional(),
+    transcribe: z.boolean().optional(), listen: z.object({ song: z.string().max(120), what: z.string().max(300) }).optional(),
   }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })
     .refine(s => [...(s.activeLanes ?? []), ...(s.layers ?? []).flat()].every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' })
     .refine(s => (s.variants ?? []).every(v => v.bars === s.chart.bars && v.timeSignature.join() === s.chart.timeSignature.join()), { message: 'variants need the same bars and time signature as the chart' }))
     .min(1).max(4)
-    .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe && !end.look && !end.quiz; }, { message: 'rest, probe, look and quiz are never the last step' }),
+    .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe && !end.look && !end.quiz && !end.transcribe && !end.listen; }, { message: 'rest, probe, look, quiz, transcribe and listen are never the last step' }),
   demo: z.enum(DEMO_IDS).optional(),
   // the backing band's chords, one per bar (engine/band.ts); a line the app can't read is dropped, not a failed lesson
   band: z.object({ chords: z.string().max(400).optional() }).optional().transform(b => (b?.chords && chordsOk(b.chords) ? b : undefined)).optional(),

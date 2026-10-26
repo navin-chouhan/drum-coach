@@ -23,7 +23,7 @@ export type SkillId = (typeof SKILLS)[number]['id'];
 export function skillsOf(l: Lesson): SkillId[] {
   const out = new Set<SkillId>();
   if (/^(count|rests|eight-in|stamina|steady)/.test(l.id) || l.steps.some(s => s.fadeClick || s.gapBars || s.countAloud)) out.add('time');
-  if (/^(read-|ear-)/.test(l.id) || l.steps.some(s => s.read || s.quiz)) out.add('reading');
+  if (/^(read-|ear-|sight-|write-|listen-)/.test(l.id) || l.steps.some(s => s.read || s.quiz || s.transcribe || s.listen || s.chart.form)) out.add('reading');
   if (l.kind === 'fill' || l.steps.some(s => s.freeBars?.length || s.trade)) out.add('fills');
   if (l.kind === 'song' || l.steps.some(s => s.bite)) out.add('songs');
   if (l.kind === 'rudiment') out.add('hands');

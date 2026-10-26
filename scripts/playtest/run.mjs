@@ -115,6 +115,7 @@ for (const [who, human, ids, takes] of scenarios) {
     await sleep(1500);
     for (let t = 0; t < takes; t++) {
       const r = await evaluate(TAKE.replaceAll('LESSON', JSON.stringify(id)));
+      if (!r) { report.push({ who, id, take: t + 1, problem: 'the page reloaded mid-take (files changed during the run?)' }); break; }
       if (r.skip) { t--; continue; }
       report.push({ who, id, take: t + 1, ...r });
       const flag = r.problem || r.problems?.length ? '✗' : '✓';

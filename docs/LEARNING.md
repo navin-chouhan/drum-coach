@@ -143,6 +143,19 @@ song for friends.
 - **Concert mode**: Trophies → 🎤 Concert plays the show-off set back to back in Stage mode; each encore offers the next
   song and "💾 Save as MIDI" for friends.
 
+## Musicianship (N7)
+
+- **Graded sight-reading** (`src/engine/sight.ts`): lessons sight-1…sight-4 deal a new one-bar card per take, no hints:
+  grade 1 quarters, 2 8ths, 3 snare and kick, 4 16ths, 5 triplets.
+- **Road maps** (`src/engine/form.ts`): a chart may carry `form` (repeat signs, 1st/2nd endings, D.C. al Coda). The sheet
+  draws the signs before the take; the player plays `expandForm` (the bars in play order). Lesson "Road maps".
+- **Write what you hear** (`transcribe` steps, `lesson/Transcribe.tsx`): the app plays a groove, the student taps it into
+  a grid and checks it (`gridScore`, 80% passes; "Show me" after two tries), then plays it.
+- **Listening assignments** (`listen` steps): a real recording to find on YouTube (a search link, nothing is downloaded)
+  and one thing to hear in the drums, then the groove itself.
+- The coach can use all four in its lessons (`server/prompts/lesson.md`); they count toward "Reading and ears" on the
+  skill map.
+
 ## Curriculum shape
 Levels 0–9, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open). Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
 if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.

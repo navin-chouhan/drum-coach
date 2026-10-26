@@ -1,5 +1,7 @@
 import { biteLesson } from '../engine/stageSong.ts';
 import type { DemoId } from './demos.ts';
+import type { Form } from '../engine/form.ts';
+import { sightCards } from '../engine/sight.ts';
 import { beatsPerBar, pattern, withSticking, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
 import type { Genre, Lesson, LessonKind, Milestone, Pass, Step } from '../engine/lesson.ts';
 
@@ -51,6 +53,15 @@ const readCards = (title: string, text: string, spb: number, cards: string[], bp
   ...step(title, text, P(spb, { snare: cards[0] }), bpm), read: true,
   variants: cards.slice(1).map(snare => ({ title, bpm: bpm[1], timeSignature: [4, 4] as [number, 4], bars: 1, notes: P(spb, { snare }) })),
 });
+/** A graded sight-reading step (N7, engine/sight.ts): one fresh card per take, no hints.
+ * shortcut: the cards are fixed per grade (5 each), generate per day if students start memorising them */
+function sightStep(grade: number, title: string, bpm: [number, number]): Step {
+  const cards = sightCards(grade, 5, grade * 7), notes = (c: (typeof cards)[number]) => P(c.spb, c.lines);
+  return { ...step(title, 'Read the card and play it as written.', notes(cards[0]), bpm, { lanes: grade === 3 ? ['snare', 'kick'] : undefined }), read: true,
+    variants: cards.slice(1).map(c => ({ title, bpm: bpm[1], timeSignature: [4, 4] as [number, 4], bars: 1, notes: notes(c) })) };
+}
+/** A step whose chart is written with a road map (N7, engine/form.ts). */
+const roadmap = (s: Step, form: Form): Step => ({ ...s, chart: { ...s.chart, form } });
 /** A bar of the money beat, then this fill bar, crash back on 1 (fill vocabulary). */
 const fillBar = (fill: ChartNote[]) => crashOn(cat([P(2, MONEY8), fill]), [0]);
 
@@ -528,6 +539,66 @@ export const CURRICULUM: Lesson[] = [
     'Before the break, take a breath. Keep the break in time (the app checks it is on the beat), then crash on 1 with the band.',
     [step('Whole song', 'Groove, a 4-bar break (yours), groove to the end.', crashOn(P(2, MONEY8, 32), [0, 32, 64, 96]), [80, 100], { lanes: [...HH_K_S, 'crash'], freeBars: [13, 14, 15, 16], pass: { minFreeOnBeatPct: 70 } })]),
 
+
+  // N7 musicianship: graded sight-reading, road maps, writing what you hear, listening assignments.
+  lesson(1, 'sight-1', 'exercise', 'Sight-reading 1',
+    'A new rhythm card each take: quarters, then 8ths. No hints: you read it.',
+    'Reading at sight is a skill like any other: a little every week and new music opens up fast.',
+    'Look at the whole bar during the count-in. Say it in your head ("1 & 2 & …"), then play only what is written.',
+    [sightStep(1, 'Quarters', [55, 75]), sightStep(2, '8ths', [55, 75])]),
+  lesson(3, 'sight-2', 'exercise', 'Sight-reading 2',
+    'Two lines to read: snare and kick, never together.',
+    'Real drum charts have more than one line. Reading both at once is how you learn a song from paper.',
+    'Notes above the middle are the snare, low ones the kick. Read beat by beat: what plays on 1, on &, on 2…',
+    [sightStep(3, 'Snare and kick', [55, 80])]),
+  lesson(4, 'sight-3', 'exercise', 'Sight-reading 3',
+    '16th-note cards: "1 e & a".',
+    'Most fills and busy grooves are written in 16ths: read them and you can learn any fill from a chart.',
+    'Count "1 e & a" slowly. Beamed groups of four are one beat; find the beats first, then the notes in them.',
+    [sightStep(4, '16ths', [50, 70])]),
+  lesson(5, 'sight-4', 'exercise', 'Sight-reading 4',
+    'Triplet cards: "1 trip let".',
+    'Shuffles, 6/8 and many fills are written in triplets: the little 3 over the beam.',
+    'Say "1 trip let 2 trip let" and read each beat as a group of three.',
+    [sightStep(5, 'Triplets', [50, 70])]),
+  lesson(2, 'read-roadmap', 'exercise', 'Road maps: repeats and endings',
+    'Charts save paper with signs: repeat, 1st and 2nd endings, D.C. al Coda. Read the road map, then play it through.',
+    'Every song chart a band hands you uses these signs. Read them and you know the whole song from one page.',
+    'Before you start, trace the path with your finger: where you go back, which ending to skip, where the coda is.',
+    [roadmap(step('Repeat sign', 'Play to the repeat sign :|, go back to |: and play it again.', cat([P(2, MONEY8), P(2, { hihat: 'xxxxxxxx', kick: 'x...x...', snare: '..x...xx' })]), [60, 80]), { repeat: [1, 2] }),
+      roadmap(step('1st and 2nd endings', 'Bar 2 is the 1st ending: play it the first time only. The second time, skip to the 2nd ending.', cat([P(2, MONEY8), P(2, MONEY8), crashOn(P(2, FILL8), [])]), [60, 80]), { repeat: [1, 2], endings: true }),
+      roadmap(step('D.C. al Coda', 'Play to the end of bar 3, go back to the start (D.C.), at "To Coda" jump to the Coda and finish.', cat([P(2, MONEY8), P(2, MONEY8), P(2, FILL8), crashOn(P(1, { kick: 'x...' }), [0])]), [60, 80]), { coda: { toCoda: 2, codaAt: 4 } })]),
+  lesson(2, 'write-it', 'exercise', 'Write what you hear',
+    'The app plays a groove; you write it on a grid, then play it.',
+    'Writing down what you hear is how drummers learn songs by ear, and it trains your ears faster than anything.',
+    'Listen for one drum at a time: first the hi-hat, then the kick, then the snare. Count "1 & 2 &" while you listen.',
+    [{ ...step('The money beat', 'Hear it, then tap the boxes where each drum plays.', P(2, MONEY8), [70, 70]), transcribe: true },
+      { ...step('A new kick', 'Same hi-hat and snare: where does the kick go?', P(2, { hihat: 'xxxxxxxx', kick: 'x....xx.', snare: '..x...x.' }), [70, 70]), transcribe: true },
+      step('Play what you wrote', 'Now play the groove you just wrote down.', P(2, { hihat: 'xxxxxxxx', kick: 'x....xx.', snare: '..x...x.' }), [60, 80], { lanes: HH_K_S })]),
+  lesson(4, 'write-16ths', 'exercise', 'Write it: 16th kicks',
+    'Hear a groove with a 16th-note kick, write it, then play it.',
+    'Kicks on the "e" and "a" are what make grooves funky; hearing where they land is the first step.',
+    'Count "1 e & a" while you listen; the kick that is not on a beat or an & is on an e or an a.',
+    [{ ...step('Where is the kick?', 'Hi-hat 8ths, snare on 2 and 4, a kick off the beat.', P(4, { hihat: 'x.x.x.x.x.x.x.x.', kick: 'x.....x...x.....', snare: '....x.......x...' }), [70, 70]), transcribe: true },
+      step('Play it', 'Play what you wrote.', P(4, { hihat: 'x.x.x.x.x.x.x.x.', kick: 'x.....x...x.....', snare: '....x.......x...' }), [60, 80], { lanes: HH_K_S })]),
+  lesson(2, 'listen-money', 'groove', 'Listen: the money beat in real songs',
+    'A listening assignment, then the groove you heard.',
+    'Listening like a drummer (only to the drums) teaches feel no exercise can.',
+    'Listen two or three times only to the drums. Then play the groove and try to sound as steady.',
+    [{ ...step('Listen', 'Find the song, listen only to the drums.', P(2, MONEY8), [80, 80]), listen: { song: 'Billie Jean Michael Jackson', what: 'the hi-hat 8ths and the snare on 2 and 4 never change for minutes. That steadiness is the whole groove.' } },
+      step('Play it like that', 'The money beat, steady as a machine.', P(2, MONEY8, 2), [80, 100], { lanes: HH_K_S, pass: { maxAbsOffsetMs: 30 } })], ['rock']),
+  lesson(6, 'listen-swing', 'groove', 'Listen: the jazz ride',
+    'A listening assignment, then the ride pattern you heard.',
+    'Swing is learned by ear: every jazz drummer copied records before reading about it.',
+    'Hum the ride pattern "ding, ding-a ding" along with the record, then play it with the hi-hat foot on 2 and 4.',
+    [{ ...step('Listen', 'Find the song, listen to the ride cymbal.', P(3, JAZZ), [120, 120]), listen: { song: "Moanin' Art Blakey", what: 'the ride cymbal "ding, ding-a ding" and the hi-hat foot closing on 2 and 4. Hear how the skip note is late, close to the next beat.' } },
+      step('Play the ride', 'Ride pattern with the hi-hat foot on 2 and 4.', P(3, JAZZ, 2), [80, 120], { lanes: ['ride', 'hhPedal'] })], ['jazz']),
+  { ...lesson(7, 'listen-pocket', 'groove', 'Listen: laying back',
+    'A listening assignment, then a laid-back groove.',
+    'The best grooves sit a hair behind the beat. Hearing it on a record makes it easy to copy.',
+    'Notice how relaxed the snare sounds, almost lazy. Then play the money beat and let the snare fall a touch late.',
+    [{ ...step('Listen', 'Find the song, listen to the snare.', P(2, MONEY8), [70, 70]), listen: { song: "Let's Stay Together Al Green", what: 'the snare lands a tiny bit late and soft: the drummer lays back, and the song feels warm instead of rushed.' } },
+      step('Lay it back', 'Hi-hat on the click, snare just behind it.', P(2, MONEY8), [70, 80], { lanes: HH_K_S, pass: { offsetTarget: { drum: 'snare', ms: 22, tol: 10 } } })], ['funk']), needsLatency: true },
 ];
 
 // The backing band's chords for the built-in songs (one per bar, wrapping; engine/band.ts).
@@ -546,6 +617,7 @@ const LESSON_DEMOS: Record<string, DemoId> = {
   posture: 'rebound', 'count-quarters': 'rebound', singles: 'rebound', 'hh-quarters': 'rebound', accents: 'accent-tap', doubles: 'doubles',
   'kick-quarters': 'kick', paradiddle: 'accent-tap', 'ghost-notes': 'accent-tap', flam: 'flam', 'flam-tap': 'flam', drag: 'drag',
 };
+CURRICULUM.sort((a, b) => a.level - b.level); // lessons added later (N7) join the end of their level; the sort is stable
 for (const l of CURRICULUM) if (LESSON_DEMOS[l.id]) l.demo = LESSON_DEMOS[l.id];
 // Long songs get a "learn it in bites" lesson just before them (R8).
 for (const song of CURRICULUM.filter(l => l.kind === 'song')) { const b = biteLesson(song); if (b) CURRICULUM.splice(CURRICULUM.indexOf(song), 0, b); }

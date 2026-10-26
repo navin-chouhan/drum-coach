@@ -151,3 +151,8 @@ personalised curation". Built in my recommended order, each item checked in Chro
   gained a placement check; `PLAYTEST_PORT_OFFSET` lets it run beside another session's play test (fixed ports collided).
 - N8: kept takes (`run_hits`), You vs you on Trophies with replay, month-by-month table, skill growth lines, the coach's
   monthly report (one real call checked: good), concert mode with MIDI save. Checked on the 5180/8790 test copy.
+
+## N7 musicianship (2026-10-26)
+- Sight-reading grades 1–5, road maps (repeat/endings/D.C. al Coda drawn on the sheet, played expanded), the
+  write-what-you-hear grid, listening assignments; coach prompt knows them. Checked in headless Chrome on the test copy.
+- Owner ask: "How it moves" bigger → ⤢ Bigger opens the full demo in an overlay (Esc closes); the side column is wider.
