@@ -54,6 +54,7 @@ export type Step = {
   rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
   demo?: DemoId;        // how the body moves (content/demos.ts DEMO_IDS): the lesson card, the 4th intro slide, the self-check
+  read?: boolean;       // a reading step: the sheet only, no count or hand hints (use `variants` so it's read, not memorised)
   look?: boolean;       // a "look" step: watch the movement (and yourself in the mirror), no playing; done moves on
 };
 export type LessonKind = NonNullable<Chart['kind']>;

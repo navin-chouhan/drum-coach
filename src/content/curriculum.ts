@@ -46,6 +46,11 @@ const SHUFFLE = { hihat: 'x.xx.xx.xx.x', kick: 'x.....x.....', snare: '...x.....
 const TRIP_FILL = { snare: 'xxx.........', tom1: '...xxx......', tom2: '......xxx...', floor: '.........xxx' };
 const JAZZ = { ride: 'x..x.xx..x.x', hhPedal: '...x.....x..' };
 
+/** A reading step (G1): one rhythm card per take on the snare, shown without hints. `cards` are pattern lines. */
+const readCards = (title: string, text: string, spb: number, cards: string[], bpm: [number, number]): Step => ({
+  ...step(title, text, P(spb, { snare: cards[0] }), bpm), read: true,
+  variants: cards.slice(1).map(snare => ({ title, bpm: bpm[1], timeSignature: [4, 4] as [number, 4], bars: 1, notes: P(spb, { snare }) })),
+});
 /** A bar of the money beat, then this fill bar, crash back on 1 (fill vocabulary). */
 const fillBar = (fill: ChartNote[]) => crashOn(cat([P(2, MONEY8), fill]), [0]);
 
@@ -94,6 +99,12 @@ export const CURRICULUM: Lesson[] = [
     'Keep counting every number out loud, including the silent one. Move your stick in the air on the rest if it helps.',
     [step('Rest on 3', 'Hit on 1, 2 and 4. Say "3" but don\'t play it.', P(1, { snare: 'xx.x' }), [60, 80]),
       step('Rest on 2 and 4', 'Skip the numbers 2 and 4 but play their &s: "1 & (2) & 3 & (4) &".', P(2, { snare: 'xx.xxx.x' }), [60, 80])]),
+  lesson(0, 'read-1', 'exercise', 'Read the rhythm',
+    'Rhythm cards: one bar of quarters, 8ths and rests, a new card every take. No hints: you read it.',
+    'Reading a bar before you play it is how you learn songs faster, and how drummers talk about rhythm.',
+    'Look at the card during the count-in and say it: "1 & 2 (3) 4". A note with a flag is an 8th; a squiggle is a rest.',
+    [readCards('Quarters and rests', 'Quarter notes and quarter rests.', 1, ['xx.x', 'x.xx', 'xxx.', '.xxx'], [55, 70]),
+      readCards('With 8ths', 'Quarters, 8ths and rests mixed.', 2, ['x.xxx.x.', 'xxx.x.x.', 'x.x.xxxx', 'xx..x.xx'], [55, 70])]),
   lesson(0, 'song-first', 'song', 'Song: First Steps',
     'Your first song: 8 bars on the snare with the band. Four bars of quarter notes, then four bars of 8ths.',
     'Playing with a band is the fun part of drumming. Even one drum, in time, makes the song move.',
@@ -293,6 +304,12 @@ export const CURRICULUM: Lesson[] = [
       crashOn(P(4, { hihat: 'xxxxxxxxxxxxxxxx', kick: 'x......xx.......', snare: '....x.......x...' }, 7), [0]), P(4, { snare: 'xxxxxxxxxxxxxxxx', kick: 'x...............' }),
     ]), [60, 85])]),
 
+  lesson(4, 'read-16ths', 'exercise', 'Read 16ths',
+    'Rhythm cards with 16th notes: a new one every take, no hints.',
+    'Most fills and funk grooves are written in 16ths. Reading them makes new grooves quick to learn.',
+    'Say it first: "1 e & a". A beam with two lines is 16ths. Find the beats (1 2 3 4) before the notes in between.',
+    [readCards('16th cards', 'Read and play the card.', 4, ['x.xxx.x.x.xxx.x.', 'xxx.x.x.xxx.x.x.', 'x..xx.x.x..xx.x.', 'x.xxx...x.xxx...'], [50, 70])]),
+
   // ───────── Level 5: triplets, shuffle, half-time, funk, 6/8 ─────────
   lesson(5, 'triplets', 'rudiment', 'Triplets',
     'Three even notes per beat: "1 trip let 2 trip let".',
@@ -342,6 +359,12 @@ export const CURRICULUM: Lesson[] = [
       crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 3), [0]), P(3, TRIP_FILL),
       crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 3), [0]), P(3, TRIP_FILL),
     ]), [70, 92])]),
+
+  lesson(5, 'read-triplets', 'exercise', 'Read triplets',
+    'Rhythm cards with 8th-note triplets mixed with quarters, no hints.',
+    'Triplets are written with a little 3 over the notes. Reading them is the key to shuffles and swing charts.',
+    'Say "1-trip-let" for each triplet beat and just "2" for a quarter. Keep the beats even under the triplets.',
+    [readCards('Triplet cards', 'Read and play the card.', 3, ['xxxx..xxxx..', 'x..xxxx..xxx', 'xxxxxxx..x..', 'x..x..xxxxxx'], [50, 70])]),
 
   // ───────── Level 6: jazz ─────────
   lesson(6, 'jazz-ride', 'groove', 'Jazz ride pattern',

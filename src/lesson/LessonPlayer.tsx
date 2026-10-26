@@ -256,7 +256,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     fromBar: 1, toBar: chart.bars, repeats: stitchedSong ? 1 : step.bars ? Math.max(1, Math.ceil(step.bars / chart.bars)) : Math.max(1, Math.ceil((step.copy || step.trade || step.jam || role === 'record' || (stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target) ? 8 : 4) / chart.bars)),
     speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
     countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud, chart.timeSignature),
-    activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false, freeBars: free.length ? free : undefined, fadeClick: demo ? undefined : step.fadeClick, clickOn: step.clickOn,
+    activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false && !step.read, freeBars: free.length ? free : undefined, fadeClick: demo ? undefined : step.fadeClick, clickOn: step.clickOn,
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text, tool: flow ? 'flow' : arcade ? 'arcade' : toolOf(step),
       ...(step.bite && { bite: { songId: step.bite.songId, fromBar: step.bite.fromBar, toBar: step.bite.toBar } }) }, // bars of a song: count towards it
     band: getSettings().band !== false ? bandSpec : undefined,
@@ -377,7 +377,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       onAgain={() => { setCelebrated(f); play(false); }} onClose={() => setCelebrated(f)} />
   );
 
-  const hints = getSettings().hints !== false;
+  const hints = getSettings().hints !== false && !step.read; // a reading step is read without the hints
   const takeStats = f?.stats, feel = takeStats?.feel; // the feel row (R4)
   const behind = takeStats && step.pass?.offsetTarget ? takeStats.perDrum[step.pass.offsetTarget.drum ?? 'snare']?.meanOffset ?? takeStats.meanOffset : undefined;
   // Your fills: each free bar of the last take with 2+ strokes can be kept (up to 4 per take).
@@ -459,12 +459,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
             <details open={fresh}><summary>Why and how</summary><p>{lesson.why}</p><p>{lesson.how}</p></details>
           </div>}
           {step.bite && <div className="card"><p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b></p>{step.bite.songId.startsWith('yt-') && <button onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Play it with the song →</button>}</div>}
-          {(step.trade || free.length > 0 || step.pass?.streak || step.gapBars || step.countAloud || step.probe || step.fadeClick || step.clickOn || step.variants?.length || (lanes && step.chart.notes.some(n => !lanes.includes(n.drum)))) && <div className="card small">
+          {(step.trade || step.read || free.length > 0 || step.pass?.streak || step.gapBars || step.countAloud || step.probe || step.fadeClick || step.clickOn || step.variants?.length || (lanes && step.chart.notes.some(n => !lanes.includes(n.drum)))) && <div className="card small">
             {step.probe && <p>Find your tempo: one bar at a time from {step.bpm.start} BPM, faster after each clean bar. Then we practise just below where it got hard.</p>}
             {step.fadeClick && <p>The click fades away over {step.fadeClick} bars. Keep the tempo on your own.</p>}
             {step.clickOn === '2and4' && <p>The click is only on 2 and 4, like a snare backbeat. Feel 1 and 3 yourself.</p>}
             {step.clickOn === '8ths' && <p>The click is on every 8th note.</p>}
             {!!step.variants?.length && <p>A different phrase each take: read it, don't memorise it.</p>}
+            {step.read && <p>📖 Reading: no hints under the notes. Count it in your head first, then play what you see.</p>}
             {step.countAloud && <p>{engine === 'browser' ? "I'd count along here with the Piper voice (Setup → Coach and voice)." : 'I count along with you for the first bars, then you take over.'}</p>}
             {step.trade && <p>Trade bars: I play a bar, you answer with anything. No wrong notes, just stay on the beat.</p>}
             {!step.trade && free.length > 0 && <p>Bar {free.join(' and ')} is yours: play any fill you like.</p>}
