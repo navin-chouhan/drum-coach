@@ -129,7 +129,9 @@ export function forYou<C extends { id: string; kind?: string; level?: number; so
   recent.slice(0, 3).forEach(id => add(charts.find(c => c.id === id), 'played lately'));
   charts.filter(c => c.source === 'ai').slice(-2).reverse().forEach(c => add(c, 'from your coach'));
   add(charts.find(c => c.kind === 'rudiment' && (c.level ?? 0) <= level && !has(c)), 'good warm-up');
-  charts.filter(c => c.level === level).forEach(c => add(c, 'at your level'));
+  // The library can stop below the path's last stage: then the highest level under yours stands in.
+  const at = Math.max(-1, ...charts.map(c => c.level ?? -1).filter(l => l <= level));
+  charts.filter(c => c.level === at).forEach(c => add(c, 'at your level'));
   charts.filter(c => c.level === level + 1).forEach(c => add(c, 'a step up'));
   return out;
 }

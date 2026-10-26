@@ -84,6 +84,9 @@ describe('forYou', () => {
     expect(forYou(charts, [], 1).map(p => `${p.chart.id}:${p.why}`)).toEqual(['ai1:from your coach', 'r:good warm-up', 'a:at your level', 'n:a step up', 'x:a step up']);
     expect(forYou(charts, [], 2, 2)).toHaveLength(2);
   });
+  it('above the library top level, "at your level" is the highest level below it', () => {
+    expect(forYou(charts, [], 6).map(p => `${p.chart.id}:${p.why}`)).toEqual(['ai1:from your coach', 'r:good warm-up', 'n:at your level', 'x:at your level']);
+  });
 });
 
 describe('weekTheme', () => {
