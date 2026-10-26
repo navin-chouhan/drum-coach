@@ -20,7 +20,8 @@ export function biteLesson(song: Lesson): Lesson | undefined {
   const steps: Step[] = [];
   for (let from = 1; from <= c.bars; from += size) {
     const to = Math.min(c.bars, from + size - 1), title = `Bars ${from}–${to}`;
-    steps.push({ ...full, title, text: `Bars ${from} to ${to} of ${name}, on a loop with the band.`, fadeClick: undefined,
+    steps.push({ ...full, title, text: `Bars ${from} to ${to} of ${name}, on a loop with the band.`, fadeClick: undefined, freeBars: undefined, variants: undefined, bars: undefined,
+      pass: undefined, // a bite is practice: the stage's bar, no song-wide limits
       chart: { ...c, id: `lesson/${id}/${steps.length + 1}`, title: `${name} in bites · ${title}`, bars: to - from + 1, notes: cutBars(c.notes, bpb, from, to) },
       bpm: { start: Math.max(40, full.bpm.start - 10), target: full.bpm.target }, bite: { songId: song.id, fromBar: from, toBar: to, title: name } });
   }

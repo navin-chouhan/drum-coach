@@ -105,7 +105,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     // A step's extra limits (flams, timing) are for the full groove, not its first layers.
     const fs = freeBarStats(f.hits, f.extras, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: beatsPerBar(f.chart), fromBar: f.options.fromBar, sectionBars: f.options.toBar - f.options.fromBar + 1 }, free);
     const st = f.stats; // strokes in your own bars never became extras (the player knows the free bars)
-    const check = checkPass(st, recordStreak ? { ...step.pass, streak: recordStreak } : step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level);
+    const check = checkPass(st, recordStreak ? { ...step.pass, streak: recordStreak } : step.layers && (p0.layer ?? 0) < step.layers.length - 1 ? undefined : step.pass, lesson.level, fs?.stats);
     // A zoom loop is practice for the next real take: no ladder, not saved.
     // Beat the clock: clean bars in 2 minutes, best kept per lesson.
     if (f.options.seconds) {
@@ -254,7 +254,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     // A song plays through once; anything else loops to the take length.
     fromBar: 1, toBar: chart.bars, repeats: stitchedSong ? 1 : step.bars ? Math.max(1, Math.ceil(step.bars / chart.bars)) : Math.max(1, Math.ceil((step.copy || step.trade || step.jam || role === 'record' || (stepIdx === lesson.steps.length - 1 && bpm >= step.bpm.target) ? 8 : 4) / chart.bars)),
     speed: bpm / chart.bpm, metronome: true, subdivision: 1, countInBars: 1, wait,
-    countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud),
+    countAloud: step.countAloud && countPlan(16, beatsPerBar(chart), step.countAloud, chart.timeSignature),
     activeLanes: lanes, demo, gapBars: demo ? undefined : step.gapBars, count: lesson.level <= 1, goodMs: goodMsFor(lesson.level), hints: getSettings().hints !== false, freeBars: free.length ? free : undefined, fadeClick: demo ? undefined : step.fadeClick, clickOn: step.clickOn,
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text, tool: flow ? 'flow' : arcade ? 'arcade' : toolOf(step),
       ...(step.bite && { bite: { songId: step.bite.songId, fromBar: step.bite.fromBar, toBar: step.bite.toBar } }) }, // bars of a song: count towards it
@@ -294,7 +294,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       setDetails(false);
       start(t.chart, { ...options(false), toBar: t.chart.bars, repeats: Math.max(1, Math.ceil(8 / t.chart.bars)), speed: bpm / t.chart.bpm, oneOff: true,
         freeBars: t.freeBars.length ? t.freeBars : undefined,
-        ...(a.kind === 'count' && { countAloud: countPlan(16, beatsPerBar(chart), '8ths') }), ...(a.kind === 'layers' && { activeLanes: first }) });
+        ...(a.kind === 'count' && { countAloud: countPlan(16, beatsPerBar(chart), "8ths", chart.timeSignature) }), ...(a.kind === 'layers' && { activeLanes: first }) });
       return true;
     }
     const bar = a.kind === 'zoom' ? (a.bar && a.bar <= chart.bars ? a.bar : stickyBar.current) : undefined;
@@ -472,6 +472,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
             {lanes && step.chart.notes.some(n => !lanes.includes(n.drum)) && <p>You play: {lanes.map(laneName).join(', ')}. The app plays the rest (grey).</p>}
             {step.gapBars && <p>The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
           </div>}
+          {lesson.needsLatency && !getSettings().latencyChecked && <div className="card"><p className="warn">This lesson is judged in milliseconds. Run the latency test first
+            (⚙ Setup → Pads → Latency), or "behind the beat" may just be your speakers.</p></div>}
           {demo && <div className="card howItMoves">
             <h3>How it moves</h3>
             <TechniqueDemo id={demo} bpm={bpm} compact />

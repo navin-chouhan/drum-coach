@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
-import { MILESTONES } from '../content/curriculum';
+import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
 import { isProven, recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { iconOf, TOOL_LABEL } from './tools';
@@ -30,6 +30,9 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const [open, setOpen] = useState<Open | undefined>(openLessonId ? { lessonId: openLessonId } : undefined);
   const [editing, setEditing] = useState(false);
   const [kitStep, setKitStep] = useState(false); // onboarding step 2 (or Journey's "check my kit")
+  // Finished the old path (stages 1–7)? Say once that new stages are open (R3).
+  const [newStages] = useState(() => !getSettings().newStagesSeen && ['song-swing', 'song-shuffle'].some(id => getSettings().lessons[id]?.completedAt) && !Object.keys(getSettings().lessons).some(id => LESSON_BY_ID[id]?.level >= 7));
+  useEffect(() => { if (newStages) setSettings({ newStagesSeen: true }); }, [newStages]);
   const [dash, setDash] = useState<Dashboard>();
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [songs] = useYtSongs();
@@ -160,6 +163,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               <div className="actions"><button className="primary" onClick={() => { setSettings({ setupNudged: true }); setKitStep(true); }}>Check my kit ▶</button>
                 <button onClick={() => setSettings({ setupNudged: true })}>Not now</button></div>
             </div>}
+            {newStages && <p className="newBadge">🎉 New stages open: <b>Groove at tempo</b>, <b>Linear and odd</b> and <b>Solo voice</b>.</p>}
             {newBadges.length > 0 && <p className="newBadge">🏅 New badge: <b>{newBadges.map(id => BADGES.find(b => b.id === id)?.name).join(', ')}</b>!</p>}
             <p>{line}</p>
             <div className="actions">

@@ -70,6 +70,7 @@ export const AiLessonSchema = z.object({
       streak: z.number().int().min(4).max(64),
       swingPct: z.tuple([z.number().min(45).max(80), z.number().min(45).max(80)]), minDynamicsR: z.number().min(0).max(1),
       offsetTarget: z.object({ drum: z.enum(CHART_DRUMS).optional(), ms: z.number().min(-60).max(60), tol: z.number().min(3).max(40) }),
+      minFreeOnBeatPct: z.number().min(0).max(100),
       minGracePct: z.number().min(0).max(100), graceGapMs: z.tuple([z.number().min(0).max(100), z.number().min(0).max(150)]), maxGraceRatio: z.number().min(0.1).max(1),
     }).partial().optional(),
     gapBars: z.number().int().min(2).max(8).optional(),

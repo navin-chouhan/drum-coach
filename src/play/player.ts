@@ -3,6 +3,7 @@ import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type Ru
 import { inFreeBar } from '../engine/jam';
 import { clickOnBeat } from '../engine/lesson';
 import { bandNotes, type BandSpec } from '../engine/band';
+import { groupStarts, isOdd8 } from '../engine/meter';
 import { computeStats, createMatcher, noteWindows, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
@@ -208,7 +209,9 @@ export function start(chart: Chart, options: PlayOptions) {
   startLive(options, hits, extras);
   const countVoice = getSettings().countIn && !options.demo;
   // Lookahead scheduler for clicks, app-played notes, live tips and the end of the run.
-  const sub = options.clickOn === '8ths' ? 2 : options.subdivision, bpb = beatsPerBar(chart);
+  // An odd /8 meter (7/8) clicks every 8th, accenting each group (2+2+3) and counting "one … seven" in the count-in.
+  const odd8 = isOdd8(chart.timeSignature), n8 = chart.timeSignature[0], starts = groupStarts(chart.timeSignature);
+  const sub = odd8 ? 2 : options.clickOn === '8ths' ? 2 : options.subdivision, bpb = beatsPerBar(chart);
   const sounding = options.guide ? run.notes : auto;
   const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
   let a = 0;
@@ -227,6 +230,13 @@ export function start(chart: Chart, options: PlayOptions) {
     const late = c.currentTime - 0.03; // after a stall, drop what's due instead of playing it all at once
     for (; k < lastK && timeOf(k) < c.currentTime + 0.2; k++) {
       if (timeOf(k) < late) continue;
+      if (odd8) {
+        const p = ((k % n8) + n8) % n8, bar8 = Math.floor(k / n8);
+        if (k < 0 && countVoice) sayAt(NUMBERS[p], timeOf(k));
+        const gap8 = options.gapBars && k >= 0 && (bar8 + 1) % options.gapBars === 0, vol8 = options.fadeClick && k >= 0 ? Math.max(0, 1 - bar8 / options.fadeClick) : 1;
+        if (!gap8 && vol8 > 0 && options.metronome) click(timeOf(k), p === 0 ? 0 : starts.has(p) ? 1 : 2, vol8);
+        continue;
+      }
       const onBeat = k % sub === 0;
       if (!onBeat && !options.metronome) continue;
       const barStart = onBeat && (((k / sub) % bpb) + bpb) % bpb < 1e-6;

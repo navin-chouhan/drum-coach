@@ -292,3 +292,10 @@ describe('checkPass: feel (R4)', () => {
     expect(checkPass(stats({ perDrum: { snare: { total: 20, hit: 20, accuracy: 100, meanOffset: 2 } } }), { offsetTarget: { drum: 'snare', ms: 20, tol: 10 } }).reason).toMatch(/behind/);
   });
 });
+
+describe('checkPass: your own bars (R3)', () => {
+  it('a solo has to stay on the beat when the step asks', () => {
+    expect(checkPass(stats(), { minFreeOnBeatPct: 70 }, undefined, { hits: 20, onGridPct: 85 }).ok).toBe(true);
+    expect(checkPass(stats(), { minFreeOnBeatPct: 70 }, undefined, { hits: 20, onGridPct: 50 }).reason).toMatch(/drifted off the beat/);
+  });
+});

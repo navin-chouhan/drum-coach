@@ -18,7 +18,8 @@ export type Settings = {
   hints?: boolean; // the count and who plays each note under the sheet (default on)
   setupDone?: boolean; setupNudged?: boolean; // onboarding's kit step (pads + latency) done; Journey's one reminder given
   band?: boolean; bandVolume?: number; // the backing band under grooves and songs (default on, 0.6)
-  latencyChecked?: boolean; // a latency test was saved (lay-back lessons need it)
+  latencyChecked?: boolean;
+  newStagesSeen?: boolean; // the one-time "New stages open" line (levels 7–9) // a latency test was saved (lay-back lessons need it)
   badges?: string[]; // earned badge ids (engine/progress.ts BADGES), so a new one is announced once
   updatedAt?: number; // ms; the newer copy wins when browser and server disagree
   liveTips: 'off' | 'screen' | 'voice'; chattiness: Chattiness;

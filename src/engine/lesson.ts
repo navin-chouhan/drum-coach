@@ -1,5 +1,6 @@
 import type { DemoId } from '../content/demos.ts';
 import { offsetOnTarget } from './feel.ts';
+import { isOdd8 } from './meter.ts';
 import { beatsPerBar, type Chart, type ChartDrum } from './chart.ts';
 import { seededRandom } from './kitEmulator.ts';
 import type { RunStats } from './scoring.ts';
@@ -23,6 +24,7 @@ export type Pass = {
   swingPct?: [number, number]; // feel: where the & lands between beats, % (50 straight, 67 triplet swing)
   minDynamicsR?: number;      // feel: how closely the volume follows the chart's p / mf / f marks (correlation, 0–1)
   offsetTarget?: { drum?: ChartDrum; ms: number; tol: number }; // feel: behind (+) or on top of (−) the beat on purpose
+  minFreeOnBeatPct?: number;  // your own bars (solos, breaks): % of strokes on the 8th-note grid
 };
 export const GRACE_PASS = { minGracePct: 70, graceGapMs: [8, 50] as [number, number], maxGraceRatio: 0.75 };
 export const DEFAULT_PASS: Pass = { accuracy: 90, maxExtraPct: 15 };
@@ -62,6 +64,7 @@ export type Lesson = {
   source?: 'ai'; focus?: string; // AI-curated for this student; `focus` says why
   checkpoint?: string; // a coach lesson that stands in for this checkpoint: finishing it passes the checkpoint
   demo?: DemoId; // how the body moves for the whole lesson (a step's own `demo` wins)
+  needsLatency?: boolean; // judged in milliseconds (laying back): needs a saved latency test
   band?: { chords?: string }; // the backing band's chord line, one symbol per bar (engine/band.ts); default by style
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
@@ -89,8 +92,9 @@ export const toolOf = (s: Step): Tool => (s.bite ? 'bite' : s.jam ? 'jam' : s.tr
 
 const COUNT = ['one', 'two', 'three', 'four', 'five', 'six', 'seven'];
 /** What the voice says per bar: one word per slot ('' = silent), full count for 4 bars, then only "one" so you take over. */
-export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | '8ths'): string[][] {
-  const full = COUNT.slice(0, beatsPerBar).flatMap(n => (mode === '8ths' ? [n, 'and'] : [n]));
+export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | '8ths', ts?: readonly [number, number]): string[][] {
+  // an odd /8 meter is counted in 8ths ("one … seven"), never in half beats
+  const full = ts && isOdd8(ts) ? COUNT.slice(0, ts[0]) : COUNT.slice(0, beatsPerBar).flatMap(n => (mode === '8ths' ? [n, 'and'] : [n]));
   return Array.from({ length: bars }, (_, b) => (b < 4 ? full : full.map((w, i) => (i ? '' : w))));
 }
 
@@ -156,7 +160,7 @@ export const startProgress = (l: Lesson): LessonProgress =>
  * Did this take pass? `reason` is the one thing to fix, in plain words. With a `level`, the bar is that level's
  * (`passFor`) and a lesson may relax it but not make it stricter.
  */
-export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number): { ok: boolean; reason?: string } {
+export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number, free?: { hits: number; onGridPct: number }): { ok: boolean; reason?: string } {
   const base = level === undefined ? DEFAULT_PASS : passFor(level);
   const c = level === undefined ? { ...base, ...p }
     : { ...base, ...p, accuracy: Math.min(base.accuracy, p?.accuracy ?? 100), maxExtraPct: Math.max(base.maxExtraPct, p?.maxExtraPct ?? 0) };
@@ -174,6 +178,8 @@ export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number): { ok:
     if (s.grace.played && s.grace.gapMs > g.graceGapMs[1]) return { ok: false, reason: 'The two sticks land too far apart: drop them closer together.' };
     if (s.grace.played && s.grace.gapMs < g.graceGapMs[0]) return { ok: false, reason: 'The sticks land together: start the low stick a hair earlier.' };
   }
+  if (c.minFreeOnBeatPct !== undefined && free && free.hits && free.onGridPct < c.minFreeOnBeatPct)
+    return { ok: false, reason: `Your own bars drifted off the beat (${free.onGridPct}% on it). Play anything, but keep the pulse.` };
   if (c.swingPct && s.feel?.swing != null && (s.feel.swing < c.swingPct[0] || s.feel.swing > c.swingPct[1]))
     return { ok: false, reason: s.feel.swing < c.swingPct[0] ? 'Swing it more: the & a little later, long-short, long-short.' : 'A bit too swung: the & is landing almost on the next beat.' };
   if (c.minDynamicsR !== undefined && s.feel?.dynamics != null && s.feel.dynamics < c.minDynamicsR)
