@@ -301,8 +301,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const goNext = onNext ?? onBack;
   // A record, a rank up or a finished lesson keeps the app's verdict and its next move; the coach's words go under it.
   const big = !!outcome && (outcome.event === 'lessonDone' || !!outcome.rankUp || (role === 'record' && outcome.passed));
-  const coachAct = big ? undefined : screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
-  useEffect(() => { if (big && fresh2?.action) dropCoachAction(true); }, [big, fresh2]); // the kit's "yes" moves on too
+  // After a step mid-lesson the coach's "next" means the next step, not the next item: the app's ▶ Play starts it.
+  const appMove = big || (outcome?.event === 'stepDone' && fresh2?.action?.kind === 'next');
+  const coachAct = appMove ? undefined : screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
+  useEffect(() => { if (appMove && fresh2?.action) dropCoachAction(true); }, [appMove, fresh2]); // the kit's "yes" moves on too
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
   const resting = !!step.rest && !oneTake;
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
