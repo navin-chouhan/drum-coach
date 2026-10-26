@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grip and kick foot</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  body{padding:18px}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .view{background:#141414;border:3px solid var(--line);box-shadow:6px 6px 0 var(--line);position:relative}
+  .view svg{display:block;width:100%;height:auto}
+  .view h4{position:absolute;top:10px;left:14px;margin:0;font:800 20px var(--display);color:var(--pop)}
+  .tabs{display:flex;gap:8px;margin:12px 0}
+  .tabs button{font:800 15px var(--display);padding:8px 14px;border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line)}
+  .tabs button{background:#fff;color:#111}
+  .tabs button.on{background:var(--pop)} .tabs button.no.on{background:#FF4D6D;color:#fff}
+  .wrongOnly{display:none} .showWrong .wrongOnly{display:inline} .showWrong .rightOnly{display:none}
+  ul{font-size:18px;line-height:1.5}
+  .note{font-size:14px;opacity:.8}
+  @media (max-width:900px){ .pair{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<h1>How it moves: grip and kick foot (D10 mockup)</h1>
+<p class="note">Mockup for review. Replaces the current grip picture (a blob) and the kick foot (a triangle). Same dark stage and colours as How it moves; the words are what the coach says too (D15).</p>
+
+<section class="card" id="grip">
+  <h2>The grip</h2>
+  <div class="tabs"><button class="on" onclick="grip(false,this)">✓ Right</button><button class="no" onclick="grip(true,this)">✗ Wrong</button></div>
+  <div class="pair">
+    <div class="view">
+      <h4>From the side</h4>
+      <svg viewBox="0 0 640 360" role="img" aria-label="Grip from the thumb side">
+        <!-- stick: butt end left, a third marked -->
+        <rect x="40" y="196" width="560" height="16" rx="8" fill="#D8AD68" stroke="#000" stroke-width="2"/>
+        <line x1="40" y1="236" x2="227" y2="236" stroke="#FFE14D" stroke-width="2" stroke-dasharray="6 6"/>
+        <text x="40" y="290" fill="#FFE14D" font="700 15px system-ui">← a third of the stick →</text>
+        <!-- RIGHT: hand from the side: forearm, back of hand above, fingers curled under, thumb flat along the side -->
+        <g class="rightOnly">
+          <path d="M-10 120 L120 150 L132 186 L-10 176 Z" fill="#E9B493" stroke="#5a3b2a" stroke-width="2.5"/>
+          <path d="M118 148 Q160 132 214 148 Q236 158 238 182 L232 196 L132 194 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+          <!-- back fingers: loose curls under the stick, a gap to the palm -->
+          <path d="M136 210 Q132 246 150 252 Q164 252 166 236 L162 212" fill="#E9B493" stroke="#5a3b2a" stroke-width="2"/>
+          <path d="M168 212 Q166 252 186 256 Q200 254 200 238 L196 212" fill="#E9B493" stroke="#5a3b2a" stroke-width="2"/>
+          <!-- index finger wraps under at the fulcrum -->
+          <path d="M204 194 Q236 196 238 222 Q238 244 218 244 Q204 240 206 222" fill="#E9B493" stroke="#5a3b2a" stroke-width="2.5"/>
+          <!-- thumb: flat along the side of the stick, pointing to the tip -->
+          <path d="M196 176 Q240 172 282 184 Q292 190 282 196 L206 198 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+          <circle cx="227" cy="204" r="11" fill="none" stroke="#FFE14D" stroke-width="4"/>
+          <line x1="236" y1="196" x2="300" y2="96" stroke="#FFE14D" stroke-width="2"/>
+          <text x="306" y="84" fill="#FFE14D" font="800 17px system-ui">FULCRUM: thumb pad + index finger</text>
+          <line x1="268" y1="182" x2="380" y2="140" stroke="#fff" stroke-width="2"/>
+          <text x="386" y="138" fill="#fff" font="700 16px system-ui">thumb lies flat, along the side</text>
+          <line x1="196" y1="256" x2="290" y2="306" stroke="#2DE1C2" stroke-width="2"/>
+          <text x="296" y="320" fill="#2DE1C2" font="700 16px system-ui">back fingers loose: a gap under the palm</text>
+        </g>
+        <!-- WRONG: a fist round the stick, thumb on top -->
+        <g class="wrongOnly">
+          <path d="M-10 120 L120 150 L132 186 L-10 176 Z" fill="#E9B493" stroke="#5a3b2a" stroke-width="2.5"/>
+          <rect x="118" y="150" width="128" height="104" rx="34" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+          <path d="M150 150 Q190 120 236 152" fill="#E9B493" stroke="#5a3b2a" stroke-width="2.5"/>
+          <line x1="200" y1="132" x2="300" y2="84" stroke="#FF4D6D" stroke-width="2"/>
+          <text x="306" y="80" fill="#FF4D6D" font="800 17px system-ui">✗ thumb on top, all fingers squeezing</text>
+          <text x="306" y="320" fill="#FF4D6D" font="700 16px system-ui">no gap: the stick can't bounce, the forearm tires</text>
+        </g>
+      </svg>
+    </div>
+    <div class="view">
+      <h4>From above</h4>
+      <svg viewBox="0 0 640 360" role="img" aria-label="Grip seen from above">
+        <rect x="40" y="186" width="560" height="16" rx="8" fill="#D8AD68" stroke="#000" stroke-width="2"/>
+        <g class="rightOnly">
+          <!-- back of the hand, flat, palm facing the floor -->
+          <path d="M60 150 Q150 128 214 144 L226 190 L214 236 Q150 252 60 230 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+          <!-- knuckles: four bumps across the back of the hand -->
+          <g fill="#E9B493" stroke="#5a3b2a" stroke-width="2"><circle cx="208" cy="156" r="9"/><circle cx="214" cy="176" r="9"/><circle cx="214" cy="198" r="9"/><circle cx="208" cy="220" r="9"/></g>
+          <!-- thumb along the stick's side (towards you), pointing to the tip -->
+          <path d="M200 236 Q250 226 296 210 Q306 206 300 200 L232 206 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+          <line x1="292" y1="214" x2="380" y2="290" stroke="#fff" stroke-width="2"/>
+          <text x="330" y="312" fill="#fff" font="700 16px system-ui">thumb on the side, not on top</text>
+          <line x1="140" y1="150" x2="170" y2="76" stroke="#2DE1C2" stroke-width="2"/>
+          <text x="96" y="66" fill="#2DE1C2" font="700 16px system-ui">back of the hand up: palm faces the floor</text>
+          <text x="420" y="160" fill="#FFE14D" font="800 17px system-ui">both hands the same:</text>
+          <text x="420" y="182" fill="#FFE14D" font="800 17px system-ui">"matched grip"</text>
+        </g>
+        <g class="wrongOnly">
+          <path d="M80 120 Q150 104 214 124 L230 194 L214 264 Q150 280 80 260 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5" transform="rotate(-30 150 190)"/>
+          <text x="330" y="100" fill="#FF4D6D" font="800 17px system-ui">✗ hand turned on its side</text>
+          <text x="330" y="124" fill="#FF4D6D" font="700 16px system-ui">(palm facing the other stick)</text>
+          <text x="330" y="300" fill="#FF4D6D" font="700 16px system-ui">fine for timpani grip later, not now</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <ul>
+    <li>Find the balance point: the stick pivots between the <b>thumb pad</b> and the <b>first joint of the index finger</b>, a third up from the end.</li>
+    <li>The other fingers wrap loosely; you could slide a pencil between palm and stick.</li>
+    <li>Back of the hand up, both hands the same.</li>
+  </ul>
+</section>
+
+<section class="card" id="foot">
+  <h2>Kick: heel down and heel up</h2>
+  <div class="tabs"><button class="on" onclick="foot('down',this)">Heel down</button><button onclick="foot('up',this)">Heel up</button></div>
+  <div class="view">
+    <h4 id="footTitle">HEEL DOWN: the ankle plays</h4>
+    <svg viewBox="0 0 900 420" role="img" aria-label="Foot on the kick pedal">
+      <!-- pedal: heel plate, footboard hinge, beater, drum head -->
+      <rect x="250" y="360" width="440" height="14" fill="#333" stroke="#000" stroke-width="2"/>
+      <rect x="760" y="110" width="26" height="264" fill="#3a3a3a" stroke="#000" stroke-width="2"/>
+      <line x1="690" y1="300" x2="740" y2="170" stroke="#999" stroke-width="5"/><circle cx="742" cy="164" r="16" fill="#eee" stroke="#000" stroke-width="2"/>
+      <!-- HEEL DOWN -->
+      <g id="down">
+        <polygon points="270,356 680,300 690,316 280,364" fill="#555" stroke="#000" stroke-width="2"/>
+        <path d="M250 120 L330 120 L338 300 L262 312 Z" fill="#2B6BE0" stroke="#000" stroke-width="2"/>
+        <!-- foot: heel on the heel plate, arch, ball on the board, toes -->
+        <path d="M262 300 Q258 352 300 356 L560 322 Q610 314 618 300 Q616 286 590 284 L420 300 Q360 296 338 290 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+        <circle cx="290" cy="340" r="9" fill="none" stroke="#FFE14D" stroke-width="3"/>
+        <text x="200" y="398" fill="#FFE14D" font="700 16px system-ui">heel stays on the plate</text>
+        <circle cx="540" cy="312" r="9" fill="none" stroke="#2DE1C2" stroke-width="3"/>
+        <text x="480" y="270" fill="#2DE1C2" font="700 16px system-ui">ball of the foot presses</text>
+        <text x="40" y="90" fill="#fff" font="700 16px system-ui">ankle bends: quiet, controlled, good for soft grooves</text>
+      </g>
+      <!-- HEEL UP -->
+      <g id="up" style="display:none">
+        <polygon points="270,356 680,300 690,316 280,364" fill="#555" stroke="#000" stroke-width="2"/>
+        <path d="M250 70 L330 70 L376 250 L300 268 Z" fill="#2B6BE0" stroke="#000" stroke-width="2"/>
+        <path d="M300 262 Q300 290 340 300 L560 322 Q610 314 618 300 Q616 286 590 284 L420 286 Q392 262 376 250 Z" fill="#F2C4A4" stroke="#5a3b2a" stroke-width="2.5"/>
+        <line x1="300" y1="300" x2="300" y2="350" stroke="#FFE14D" stroke-width="3" stroke-dasharray="5 5"/>
+        <text x="200" y="398" fill="#FFE14D" font="700 16px system-ui">heel off the plate</text>
+        <circle cx="540" cy="312" r="9" fill="none" stroke="#2DE1C2" stroke-width="3"/>
+        <text x="480" y="270" fill="#2DE1C2" font="700 16px system-ui">the whole leg drops onto the ball of the foot</text>
+        <text x="40" y="40" fill="#fff" font="700 16px system-ui">more power and speed; let the beater come back off the head</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<script>
+  function grip(wrong, b) { document.getElementById('grip').classList.toggle('showWrong', wrong); b.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }
+  function foot(which, b) {
+    document.getElementById('down').style.display = which === 'down' ? '' : 'none';
+    document.getElementById('up').style.display = which === 'up' ? '' : 'none';
+    document.getElementById('footTitle').textContent = which === 'down' ? 'HEEL DOWN: the ankle plays' : 'HEEL UP: the leg plays';
+    b.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  }
+</script>
+</body>
+</html>
