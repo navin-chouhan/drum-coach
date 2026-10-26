@@ -123,3 +123,24 @@ personalised curation". Built in my recommended order, each item checked in Chro
 | R8 a song at the centre of every stage (+ server import fix) | 91d7270 | ✓ |
 | R4 feel judging | 44fe8fd | ✓ straight take 49.8% swing |
 | R3 levels 7–9 | a66545e | ✓ 7/8 take |
+| R2 buzz rolls | 1d2e429 | ✓ 0 extras from bounces |
+| R4 live feel cues | deff9df | ✓ smoke test |
+| G7 "Still solid" on replay | d78bba3 | ✓ |
+| G10 honest note on Trophies | afe855e | – |
+| G8 play-test tooling (presets, free-bar fill, streak test, scripts/playtest) | c28b92c | ✓ |
+| G3 Practice library 3+ per level | 16af45f | tests |
+| G5 coach band chords | 011d102 | tests |
+| G1 reading lessons | 81bfb81 | ✓ |
+| G2 ear-training quizzes | 67c563f | ✓ |
+| G6 rotating praise, weekly target | 5e58ca2 | ✓ |
+
+**Final check:** all tests pass, tsc clean, server modules import; my test servers stopped, my Chrome tabs closed.
+
+**Not done, and why**
+- **G4 sampled sounds:** needs CC0 sample files downloaded; I don't download files without your OK. Say which source.
+- **G9:** voice talk-back and song-audio capture are yours to try (microphone, tab-share prompt).
+- **G11 own demo videos:** out of scope (you chose diagrams + camera).
+- **N1–N11 (path to 10):** each needs its own short plan and mockup first (the plan says so). Suggested next: N11
+  (automated play test) and N9 (per-pad velocity calibration).
+- Observation: on "Pocket Sixteen" a Solid emulated player got a "dragging" tip mid-take; worth a look on the real kit
+  (ghost-note grooves, M2 part C).
