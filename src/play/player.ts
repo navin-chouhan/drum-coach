@@ -38,6 +38,7 @@ export type PlayOptions = RunOptions & {
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
   band?: BandSpec;           // the backing band (engine/band.ts): bass and keys under the take
+  feelTarget?: { ms: number; tol: number }; // a step that asks for behind / on top of the beat: the live coach judges timing against it
   lesson?: { id: string; step: number; title: string; goal: string; tool?: string; bite?: { songId: string; fromBar: number; toBar: number } }; // saved with the run, read by the coach (and the profile: minutes per tool)
 };
 export type Finished = { cues: Cue[]; zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
@@ -86,7 +87,7 @@ function liveCheck(pos: number) {
   const from = (bar - 2) * bpb, to = bar * bpb;
   const notes = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [{ drum: n.drum, accent: n.accent, ghost: n.ghost, ...player.results[i] }]));
   const extras = live.extras.filter(h => { const b = (h.time - player.zero) / player.beatMs; return b >= from && b < to; }).length;
-  const raw = live.coach({ bar, notes, extras, reaction: reactingToClick(expectedTimes(run), live.hits) });
+  const raw = live.coach({ bar, notes, extras, reaction: reactingToClick(expectedTimes(run), live.hits), target: player.options?.feelTarget });
   if (!raw) return;
   const cue = applyTip(player.chart, raw); // the coach's own words for this exercise, when it has written them
   player.cue = { cue, at: performance.now() };
@@ -318,7 +319,9 @@ function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: 
   if (options!.demo) { stop(); options!.then?.(); return; }
   cleanup.forEach(f => f()); cleanup = [];
   const results = scored.notes.map(n => player.results[n.i]);
-  const stats = { ...computeStats(scored, results, extras.length), reaction: options!.wait ? null : reactingToClick(scored.notes.map(n => ({ time: player.zero + n.t * player.beatMs, drum: n.drum })), hits) };
+  // the chart's volume marks per run bar (the section repeats), for the take's dynamics (R4)
+  const secBars = options!.toBar - options!.fromBar + 1, dyn = chart!.dyn && Array.from({ length: Math.ceil(scored.beats / scored.beatsPerBar) }, (_, b) => chart!.dyn![options!.fromBar - 1 + (b % secBars)]);
+  const stats = { ...computeStats(scored, results, extras.length, player.beatMs, dyn), reaction: options!.wait ? null : reactingToClick(scored.notes.map(n => ({ time: player.zero + n.t * player.beatMs, drum: n.drum })), hits) };
   player.phase = 'done';
   player.finished = { cues: live?.cues ?? [], zero: player.zero, chart: chart!, run: scored, options: options!, results, extras, hits, stats, startedAt, durationS: Math.round((Date.now() - Date.parse(startedAt)) / 1000) };
   notify();

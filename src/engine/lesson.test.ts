@@ -279,3 +279,16 @@ describe('lateNote', () => {
     expect(lateNote(2, 93)).toBe(''); // from level 2 the Good window is tight enough to say it
   });
 });
+
+describe('checkPass: feel (R4)', () => {
+  it('swing range, dynamics that follow the marks, and playing behind the beat on purpose', () => {
+    const feel = (swing: number | null, dynamics: number | null) => stats({ feel: { swing, dynamics } });
+    expect(checkPass(feel(64, null), { swingPct: [58, 72] }).ok).toBe(true);
+    expect(checkPass(feel(52, null), { swingPct: [58, 72] }).reason).toMatch(/swing/i);
+    expect(checkPass(feel(null, 0.9), { minDynamicsR: 0.5 }).ok).toBe(true);
+    expect(checkPass(feel(null, 0.1), { minDynamicsR: 0.5 }).reason).toMatch(/soft.*loud|volume/i);
+    const late = stats({ perDrum: { snare: { total: 20, hit: 20, accuracy: 100, meanOffset: 22 } } });
+    expect(checkPass(late, { offsetTarget: { drum: 'snare', ms: 20, tol: 10 } }).ok).toBe(true);
+    expect(checkPass(stats({ perDrum: { snare: { total: 20, hit: 20, accuracy: 100, meanOffset: 2 } } }), { offsetTarget: { drum: 'snare', ms: 20, tol: 10 } }).reason).toMatch(/behind/);
+  });
+});

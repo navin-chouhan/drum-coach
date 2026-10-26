@@ -47,3 +47,12 @@ describe('live coach gate', () => {
     expect(said).toEqual(['1:dragging', '9:dragging', '12:praise']);
   });
 });
+
+describe('a lay-back target (R4)', () => {
+  const notes = (offset: number) => Array.from({ length: 8 }, () => ({ drum: 'snare' as const, judgement: 'good' as const, offset }));
+  it('a step that asks for "behind the beat" never hears "Dragging. Push" for doing it', () => {
+    expect(candidateCues({ bar: 2, notes: notes(22), extras: 0, target: { ms: 20, tol: 10 } }, 'normal').map(c => c.id)).not.toContain('dragging');
+    expect(candidateCues({ bar: 2, notes: notes(0), extras: 0, target: { ms: 20, tol: 10 } }, 'normal').map(c => c.id)).toContain('lay-back');
+    expect(candidateCues({ bar: 2, notes: notes(22), extras: 0 }, 'normal').map(c => c.id)).toContain('dragging');
+  });
+});

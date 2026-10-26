@@ -297,6 +297,12 @@ export const CURRICULUM: Lesson[] = [
     'Alternate hands; the lead switches every beat. Accent the first of each three in step 2.',
     [step('Even triplets', 'R L R L R L…, count "1 trip let".', P(3, { snare: 'xxxxxxxxxxxx' }), [60, 90]),
       step('Accent the beat', 'Loud on each number.', P(3, { snare: 'XxxXxxXxxXxx' }), [60, 90], { pass: { maxGhostToAccent: 0.7 } })]),
+  lesson(5, 'swing-feel', 'groove', 'Straight or swung?',
+    'The same hi-hat 8ths two ways: straight (even) and swung (long-short), with the band.',
+    'Swing is a feel, not just a pattern. Hearing and playing the difference is what makes a shuffle groove.',
+    'Straight: the & exactly halfway. Swung: say "1-trip-let" and play on "1" and "let". The app measures where your & lands.',
+    [step('Straight', 'Even 8ths on the hi-hat. The app plays kick and snare.', P(2, { hihat: 'xxxxxxxx', kick: 'x...x...', snare: '..x...x.' }), [60, 80], { lanes: ['hihat'], pass: { swingPct: [44, 56] } }),
+      step('Swung', 'Long-short: the & moves late, to the "let" of the triplet.', P(3, { hihat: 'x.xx.xx.xx.x', kick: 'x.....x.....', snare: '...x.....x..' }), [60, 80], { lanes: ['hihat'], pass: { swingPct: [58, 74] } })], ['rock']),
   lesson(5, 'shuffle', 'groove', 'The shuffle',
     'Hi-hat on the first and last note of each triplet.',
     'Blues, rock\'n\'roll and lots of classic rock swing like this.',
@@ -368,6 +374,9 @@ const SONG_CHORDS: Record<string, string> = {
   'song-swing': 'C Am Dm G7 C Am Dm G7 F F7 C A7 Dm G7 C G7',
 };
 for (const l of CURRICULUM) if (SONG_CHORDS[l.id]) l.band = { chords: SONG_CHORDS[l.id] };
+// Volume marks per bar (1 p, 2 mf, 3 f) on the songs with sections: shown on the sheet (R4).
+const SONG_DYN: Record<string, number[]> = { 'song-garage': [...Array(8).fill(2), ...Array(8).fill(3), ...Array(8).fill(2)], 'song-sixteen': [...Array(8).fill(2), ...Array(8).fill(3)] };
+for (const l of CURRICULUM) if (SONG_DYN[l.id]) l.steps.forEach(st => { if (st.chart.bars === SONG_DYN[l.id].length) st.chart.dyn = SONG_DYN[l.id]; });
 // How the body moves (content/demos.ts): shown on the lesson card, as the 4th intro slide and in the self-check.
 const LESSON_DEMOS: Record<string, DemoId> = {
   posture: 'grip', 'count-quarters': 'rebound', singles: 'rebound', 'hh-quarters': 'rebound', accents: 'accent-tap', doubles: 'doubles',

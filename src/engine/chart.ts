@@ -23,6 +23,7 @@ export const ChartSchema = z.object({
   level: z.number().int().min(0).max(10).optional(), // 0 = the curriculum's first level
   kind: z.enum(['groove', 'rudiment', 'fill', 'song', 'exercise']).optional(),
   description: z.string().max(500).optional(),
+  dyn: z.array(z.number().int().min(1).max(3)).max(1000).optional(), // volume marks per bar: 1 p, 2 mf, 3 f (engine/feel.ts)
   notes: z.array(ChartNoteSchema).min(1).max(50_000),
 }).refine(c => c.notes.every(n => n.t < c.bars * beatsPerBar(c)), { message: 'a note is past the last bar' });
 

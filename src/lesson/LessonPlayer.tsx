@@ -259,6 +259,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text, tool: flow ? 'flow' : arcade ? 'arcade' : toolOf(step),
       ...(step.bite && { bite: { songId: step.bite.songId, fromBar: step.bite.fromBar, toBar: step.bite.toBar } }) }, // bars of a song: count towards it
     band: getSettings().band !== false ? bandSpec : undefined,
+    feelTarget: step.pass?.offsetTarget && { ms: step.pass.offsetTarget.ms, tol: step.pass.offsetTarget.tol },
   });
   // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).
   const [intro, setIntro] = useState<{ run: () => void }>();
@@ -376,6 +377,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   );
 
   const hints = getSettings().hints !== false;
+  const takeStats = f?.stats, feel = takeStats?.feel; // the feel row (R4)
+  const behind = takeStats && step.pass?.offsetTarget ? takeStats.perDrum[step.pass.offsetTarget.drum ?? 'snare']?.meanOffset ?? takeStats.meanOffset : undefined;
   // Your fills: each free bar of the last take with 2+ strokes can be kept (up to 4 per take).
   const yourFills = f && f.options.freeBars && !playing ? Array.from({ length: Math.ceil(f.run.beats / f.run.beatsPerBar) }, (_, b) => b)
     .filter(b => inFreeBar(b * f.run.beatsPerBar, f.run.beatsPerBar, f.options.fromBar, f.options.toBar - f.options.fromBar + 1, f.options.freeBars!))
@@ -436,6 +439,10 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
               {outcome.nums.total > 0 && <div><b>{outcome.nums.streak}</b><span>in a row</span></div>}
               {outcome.nums.onBeat !== undefined && <div><b>{outcome.nums.onBeat}%</b><span>on the beat</span></div>}
               {outcome.nums.total > 0 && <div><b>{outcome.nums.recoveries}</b><span>comebacks</span></div>}
+              {/* the feel, when this step asks for it (R4) */}
+              {step.pass?.swingPct && feel?.swing != null && <div><b>{Math.round(feel.swing)}%</b><span>swing (aim {step.pass.swingPct.join('–')})</span></div>}
+              {step.pass?.minDynamicsR !== undefined && feel?.dynamics != null && <div><b>{feel.dynamics >= step.pass.minDynamicsR ? '✓' : '✗'}</b><span>soft / loud</span></div>}
+              {step.pass?.offsetTarget && behind !== undefined && <div><b>{Math.round(behind)} ms</b><span>behind (aim {step.pass.offsetTarget.ms - step.pass.offsetTarget.tol}–{step.pass.offsetTarget.ms + step.pass.offsetTarget.tol})</span></div>}
             </div>
             {outcome.reason && <p className="tip">💡 {outcome.reason}</p>}
             <p className="small">{outcome.nums.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && !outcome.itemDone && (layer === undefined || layer === step.layers!.length - 1) ? cleanCount(p.clean, cleanNeeded(step), p.bpm) : ''}</p>

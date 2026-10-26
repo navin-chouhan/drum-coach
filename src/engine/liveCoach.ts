@@ -7,7 +7,8 @@ import type { PadId } from './kit.ts';
 export type Chattiness = 'quiet' | 'normal' | 'talkative';
 export type WindowNote = { drum: ChartDrum; accent?: boolean; ghost?: boolean; judgement: 'perfect' | 'good' | 'miss'; offset?: number; off?: number; velocity?: number; pad?: PadId }; // off: an off-time stroke's ms (a miss, but played)
 /** What happened in the last two bars (notes already past the hit line, oldest first). */
-export type LiveWindow = { bar: number; notes: WindowNote[]; extras: number; reaction?: number | null }; // reaction: see scoring.reactingToClick
+export type LiveWindow = { bar: number; notes: WindowNote[]; extras: number; reaction?: number | null; // reaction: see scoring.reactingToClick
+  target?: { ms: number; tol: number } }; // a step that asks to play behind (or on top of) the beat: timing is judged against it
 export type Cue = { id: string; text: string; spoken: string; priority: number };
 
 const NAME: Partial<Record<ChartDrum, string>> = { hihat: 'hi-hat', hhOpen: 'open hi-hat', hhPedal: 'hi-hat foot', tom1: 'tom 1', tom2: 'tom 2', floor: 'floor tom' };
@@ -40,9 +41,11 @@ export function candidateCues(w: LiveWindow, c: Chattiness): Cue[] {
   }
   const played = w.notes.flatMap(n => (n.offset ?? n.off) === undefined ? [] : [(n.offset ?? n.off)!]); // on time or off time
   if (played.length >= 6) {
-    const m = mean(played);
-    if (m < -L.timingMs) out.push({ id: 'rushing', priority: 70, text: `Rushing by ${Math.round(-m)} ms. Sit back on the click`, spoken: 'Rushing. Sit back' });
-    else if (m > L.timingMs) out.push({ id: 'dragging', priority: 70, text: `Dragging by ${Math.round(m)} ms. Push a little`, spoken: 'Dragging. Push' });
+    const m = mean(played) - (w.target?.ms ?? 0), lim = w.target ? w.target.tol : L.timingMs; // a target brings its own tolerance
+    if (w.target && w.target.ms > 0 && m < -lim) out.push({ id: 'lay-back', priority: 70, text: 'Lay back: let it land just behind the click', spoken: 'Lay back' });
+    else if (w.target && m > lim) out.push({ id: 'too-far-back', priority: 70, text: 'A touch too far back: closer to the click', spoken: 'Closer to the click' });
+    else if (m < -lim) out.push({ id: 'rushing', priority: 70, text: `Rushing by ${Math.round(-m)} ms. Sit back on the click`, spoken: 'Rushing. Sit back' });
+    else if (m > lim) out.push({ id: 'dragging', priority: 70, text: `Dragging by ${Math.round(m)} ms. Push a little`, spoken: 'Dragging. Push' });
     else if (std(played) > 35) out.push({ id: 'unsteady', priority: 50, text: 'Steady. Listen to the click', spoken: 'Steady' });
   }
   if (w.extras >= 3) out.push({ id: 'extras', priority: 40, text: 'Only the notes shown', spoken: 'Only the notes shown' });
@@ -78,6 +81,6 @@ export function createLiveCoach(chattiness: Chattiness) {
 /** Everything the coach may say during play, so the voice can prepare it ahead of time. */
 export const SPOKEN_CUES = [
   'Rushing. Sit back', 'Dragging. Push', 'Steady', 'Only the notes shown', 'Hi-hat foot down',
-  'Accents louder', 'Softer ghost notes', 'Even strokes', "That's it",
+  'Accents louder', 'Softer ghost notes', 'Even strokes', "That's it", 'Lay back', 'Closer to the click',
   ...(['kick', 'snare', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'crash', 'ride'] as ChartDrum[]).map(d => `${name(d)}!`),
 ];

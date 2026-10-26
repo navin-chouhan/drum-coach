@@ -1,6 +1,7 @@
 import { padMatches, type ChartDrum } from './chart.ts';
 import type { PadId } from './kit.ts';
 import type { Run } from './run.ts';
+import { barDynamics, swingPct } from './feel.ts';
 
 export const WINDOWS = { perfect: 40, good: 100, near: 250 }; // near: an off-time stroke still belongs to its note (a miss, not an extra)
 /**
@@ -166,6 +167,7 @@ export type RunStats = {
     pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
   flam: number | null; // ms, mean split between limbs on notes meant to land together (null: none played)
   grace?: { notes: number; played: number; pct: number; gapMs: number; ratio: number } | null; // grace notes: how many came out as grace + main
+  feel?: { swing: number | null; dynamics: number | null }; // engine/feel.ts: swing %, volume following the marks (when the player gives the tempo)
   heat: HeatCell[];   // one cell per grid position in the bar: 16ths, or triplets for a triplet groove (heatSlotName)
   streak: number;     // most notes hit in a row
   recoveries: number; // times a hit came straight after a miss: you kept going
@@ -220,7 +222,8 @@ export function heatSlotName(i: number, slots: number, beatsPerBar: number): str
   return `beat ${Math.floor(i / perBeat) + 1}${name ? ' ' + name : ''}`;
 }
 
-export function computeStats(run: Run, results: NoteResult[], extra: number): RunStats {
+/** `beatMs` and `dyn` (the chart's 1–3 marks per run bar) add the feel: swing % and dynamics (R4). */
+export function computeStats(run: Run, results: NoteResult[], extra: number, beatMs?: number, dyn?: (number | undefined)[]): RunStats {
   const hitOffsets = results.flatMap(r => (r.offset === undefined ? [] : [r.offset]));
   // Timing counts off-time strokes too: at fast tempos a dragging player's late strokes fall outside Good,
   // and leaving them out would report them as nearly on time.
@@ -268,8 +271,10 @@ export function computeStats(run: Run, results: NoteResult[], extra: number): Ru
   const grace = graceNotes.length ? { notes: graceNotes.length, played: played.length, pct: pct(played.length, graceNotes.length),
     gapMs: r1(mean(played.map(r => r.grace!.gapMs))), ratio: Math.round(mean(played.map(r => r.grace!.ratio)) * 100) / 100 } : null;
 
+  const feel = beatMs ? { swing: swingPct(run, results, beatMs), dynamics: dyn?.some(d => d !== undefined) ? barDynamics(run, results, dyn) : null } : undefined;
+
   return {
-    grace, total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
+    ...(feel && { feel }), grace, total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
     accuracy: pct(hitOffsets.length, results.length),
     meanOffset: r1(mean(timing)), spread: r1(std(timing)), perDrum,
     velocity: {
