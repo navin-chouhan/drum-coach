@@ -33,7 +33,8 @@ import { progressOf, resetLesson, saveProgress, today } from './state';
 const ROLE: Record<SessionRole, string> = { warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 // text: the full verdict (spoken, sent to the coach); say: the short line for the screen; nums: the result card.
 type Nums = { landed: number; total: number; streak: number; recoveries: number; onBeat?: number; better: boolean };
-type Outcome = { passed: boolean; text: string; say?: string; slowly?: boolean; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
+type Outcome = { passed: boolean; text: string; say?: string; slowly?: boolean; again?: boolean; nums?: Nums; reason?: string; fixBar?: number; zoomed?: boolean; event?: LadderEvent; itemDone: boolean; stars?: number; rankUp?: boolean };
+// again: a finished lesson played through again (no second celebration)
 const outcomes = new WeakMap<Finished, Outcome>(); // one outcome per take, survives StrictMode re-runs
 let probeExplained = false; // the probe's sentence once per session; afterwards just the number
 /** Clean takes a step needs at one tempo: a streak challenge is done on its first pass. */
@@ -207,17 +208,17 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         layerUp: `Now add the ${(lanesNow(step, next) ?? []).filter(d => !(lanesNow(step, p) ?? []).includes(d)).map(laneName).join(' and ')}.`,
         atFloor: floorLine(notesLanded, check.reason),
         stepDone: `Step done! Next: ${lesson.steps[next.step].title}.`,
-        lessonDone: `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
+        lessonDone: p.completedAt ? `Still solid at ${next.bestBpm} BPM${stars ? `, ${stars} star${stars === 1 ? '' : 's'}` : ''}.` : `Lesson complete at ${next.bestBpm} BPM, ${stars} star${stars === 1 ? '' : 's'}!${cp ? ` That passes the "${cp.title}" checkpoint.` : ''}${rankUp ? ` Rank up: you're now a ${stage!.rank}!` : ''} It will come back for review in a few days.`,
       };
       // Keep time alone: say how the tempo held once the click went quiet (in words, no numbers).
       const drift = step.fadeClick ? takeDrift(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed) }) : undefined;
       const held = drift === undefined || drift === null ? '' : Math.abs(drift) >= 20 ? ` You ${drift < 0 ? 'sped up' : 'slowed down'} a little once the click went quiet.` : ' Tempo held on your own. That\'s the hard part.';
-      o = { passed: ok, event, slowly: event === 'atFloor' && !notesLanded, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}${ok ? lateNote(lesson.level, st.meanOffset) : ''}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
+      o = { passed: ok, event, again: event === 'lessonDone' && !!p.completedAt, slowly: event === 'atFloor' && !notesLanded, nums, say: `${ok ? 'Nice! ' : nums.recoveries >= 3 ? 'Nice comebacks! ' : ''}${msg[event]}${held}${ok ? lateNote(lesson.level, st.meanOffset) : ''}`, reason: ok ? undefined : check.reason, fixBar: ok ? undefined : sticky[0], text: `${ok ? 'Nice! ' : ''}${landed.trim()} ${msg[event]}`, itemDone: event === 'stepDone' || event === 'lessonDone', stars, rankUp };
     }
     outcomes.set(f, o);
     // The coach builds the path: once a lesson is done, it writes the next one in the background (unless one is waiting,
     // or you're flying through the stage: then its checkpoints are next, no lessons in between).
-    if (o.event === 'lessonDone' && studentRead(getSettings().lessons).pace !== 'flying' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
+    if (o.event === 'lessonDone' && !o.again && studentRead(getSettings().lessons).pace !== 'flying' && !allLessons().some(l => l.source === 'ai' && !getSettings().lessons[l.id]?.completedAt))
       requestCoachLesson(`after-${lesson.id}-${f.startedAt}`);
     // Between takes of a step the verdict stays on screen; the coach speaks once the step or lesson is done.
     if (o.itemDone && getSettings().voice) void say(o.text);
@@ -367,7 +368,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
 
   const stage = MILESTONES.find(m => m.checkpoints.includes(lesson.checkpoint ?? lesson.id)) ?? MILESTONES.find(m => m.level === lesson.level);
   const stageChecks = stage ? checkpointsOf(stage, allLessons(), getSettings().profile) : [];
-  const celebration = f && outcome?.event === 'lessonDone' && celebrated !== f && (
+  const celebration = f && outcome?.event === 'lessonDone' && !outcome.again && celebrated !== f && (
     <Celebration lesson={lesson} stars={outcome.stars ?? 1} milestone={stage} rankUp={!!outcome.rankUp}
       next={stage && MILESTONES.find(m => m.level === stage.level + 1)}
       done={stageChecks.filter(l => getSettings().lessons[l.id]?.completedAt).length} total={stageChecks.length}

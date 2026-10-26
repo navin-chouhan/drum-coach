@@ -104,7 +104,8 @@ song for friends.
 - **Stars per lesson** (`starsFor` in `src/engine/lesson.ts`), from the take that completes it, best kept:
   ★ passed · ★★ ≥95% on time and ≤5% extra hits · ★★★ ≥98%, ≤2% extra, ≥70% perfect and spread ≤15 ms.
   The coach sees stars: 1 star means shaky, so strengthening it beats a new topic.
-- **Celebration** after every finished lesson: stars, a drum fill, progress to the next rank, one Next button.
+- **Celebration** after every finished lesson: stars, a drum fill, progress to the next rank, one Next button. Playing a finished lesson
+  through again says "Still solid" instead (no second celebration).
 - **Ranks**: each milestone has a title (`rank` in `MILESTONES`), earned when its checkpoints pass:
   Stick Rookie, Limb Wrangler, Groove Keeper, Fill Maker, Dynamics Boss, Triplet Traveller, Swing Cat, Pocket Pro, Shape
   Shifter, Solo Voice.
