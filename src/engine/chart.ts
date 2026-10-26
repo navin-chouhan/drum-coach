@@ -22,7 +22,7 @@ export const ChartSchema = z.object({
   bpm: z.number().min(30).max(300), // quarter notes per minute
   timeSignature: z.tuple([z.number().int().min(1).max(16), z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)])]),
   bars: z.number().int().min(1).max(1000),
-  level: z.number().int().min(0).max(10).optional(), // 0 = the curriculum's first level
+  level: z.number().int().min(0).max(12).optional(), // 0 = the curriculum's first level
   kind: z.enum(['groove', 'rudiment', 'fill', 'song', 'exercise']).optional(),
   description: z.string().max(500).optional(),
   dyn: z.array(z.number().int().min(1).max(3)).max(1000).optional(), // volume marks per bar: 1 p, 2 mf, 3 f (engine/feel.ts)

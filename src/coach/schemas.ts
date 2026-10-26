@@ -50,7 +50,7 @@ export const TipsSchema = z.object({
     .transform(tips => Object.fromEntries(Object.entries(tips).filter(([, t]) => fits(t)))),
 });
 export const TipsRequestSchema = z.object({
-  title: z.string().min(1).max(160), kind: z.string().max(20).optional(), level: z.number().int().min(0).max(10).optional(),
+  title: z.string().min(1).max(160), kind: z.string().max(20).optional(), level: z.number().int().min(0).max(12).optional(),
   goal: z.string().max(400).optional(), cueIds: z.array(z.string().max(40)).min(1).max(30),
 });
 
@@ -108,7 +108,7 @@ export type Groove = z.infer<typeof GrooveSchema>;
 
 // Requests from the browser (validated at the server boundary).
 export const RunRecordSchema = z.object({
-  chartId: z.string().max(80), chartTitle: z.string().max(200), level: z.number().int().min(0).max(10).optional(),
+  chartId: z.string().max(80), chartTitle: z.string().max(200), level: z.number().int().min(0).max(12).optional(),
   startedAt: z.string().datetime(), durationS: z.number().min(0).max(36_000),
   bpm: z.number().min(10).max(400), speed: z.number().min(0.25).max(2),
   accuracy: z.number().min(0).max(100), meanOffset: z.number(), spread: z.number().min(0),

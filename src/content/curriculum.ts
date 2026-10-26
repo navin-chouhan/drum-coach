@@ -47,6 +47,12 @@ const FILL8 = { snare: 'xx......', tom1: '..xx....', tom2: '....xx..', floor: '.
 const SHUFFLE = { hihat: 'x.xx.xx.xx.x', kick: 'x.....x.....', snare: '...x.....x..' };
 const TRIP_FILL = { snare: 'xxx.........', tom1: '...xxx......', tom2: '......xxx...', floor: '.........xxx' };
 const JAZZ = { ride: 'x..x.xx..x.x', hhPedal: '...x.....x..' };
+// N6, stages 10–12
+const POLY32 = { ride: 'x.x.x.x.x.x.', snare: '...x.....x..', kick: 'x.....x.....' };
+const OSTINATO = { kick: 'x..xx..x', hhPedal: '..x...x.', ride: 'x.x.x.x.', snare: 'x..x..x.' };
+const GOSPEL = { hihat: 'x.xx.xx.xx.x', kick: 'x.....x..x..', snare: '..gX.g..gX.g' };
+const CHOPS = { snare: 'xx.xx.xx.xx.', kick: '..x..x..x..x' };
+const TRIP_PULSE = { hihat: 'x.x.x.x.x.x.', kick: 'x.....x.....', snare: '..x.....x...' };
 
 /** A reading step (G1): one rhythm card per take on the snare, shown without hints. `cards` are pattern lines. */
 const readCards = (title: string, text: string, spb: number, cards: string[], bpm: [number, number]): Step => ({
@@ -599,6 +605,92 @@ export const CURRICULUM: Lesson[] = [
     'Notice how relaxed the snare sounds, almost lazy. Then play the money beat and let the snare fall a touch late.',
     [{ ...step('Listen', 'Find the song, listen to the snare.', P(2, MONEY8), [70, 70]), listen: { song: "Let's Stay Together Al Green", what: 'the snare lands a tiny bit late and soft: the drummer lays back, and the song feels warm instead of rushed.' } },
       step('Lay it back', 'Hi-hat on the click, snare just behind it.', P(2, MONEY8), [70, 80], { lanes: HH_K_S, pass: { offsetTarget: { drum: 'snare', ms: 22, tol: 10 } } })], ['funk']), needsLatency: true },
+
+  // N6 style tracks: each style's own checkpoint at stages 7 and 11 (a tagged checkpoint counts only for students with that goal)
+  lesson(7, 'rock-drive', 'groove', 'Driving rock at tempo',
+    'Accented quarter notes on the hi-hat over a pushing kick, at real rock tempos.',
+    'Rock lives at 110–140 BPM. The accents on the beat make the groove drive instead of chatter.',
+    'Accent the hi-hat on every beat (stick shoulder on the edge), the &s soft. Keep the snare loud and the same every time.',
+    [step('Drive it', 'Accents on the beats, kick pushing on the & of 2.', P(2, { hihat: 'XxXxXxXx', kick: 'x..xx...', snare: '..x...x.' }), [100, 130], { lanes: HH_K_S, pass: { maxAbsOffsetMs: 25 } })], ['rock']),
+  lesson(7, 'jazz-tempo', 'groove', 'Swing at tempo',
+    'The ride pattern with the hi-hat foot on 2 and 4, up to medium-up tempo.',
+    'Jazz tunes run from ballads to 250 BPM. Medium-up swing is where most jam sessions live.',
+    'Let the ride stick bounce; the skip note gets lighter as the tempo goes up. Keep the foot on 2 and 4 like a clock.',
+    [step('Ride and foot', 'Ride pattern, hi-hat foot on 2 and 4.', P(3, JAZZ, 2), [120, 160], { lanes: ['ride', 'hhPedal'] })], ['jazz']),
+  lesson(7, 'bossa', 'groove', 'Bossa nova',
+    'Hi-hat 8ths, the bossa kick, and a cross-stick clave over two bars.',
+    'Bossa nova is the gateway to Latin drumming: soft, steady and built on a two-bar clave.',
+    'Learn the feet first (kick on 1, the & of 2, 3, the & of 4). Then add the cross-stick: play it soft, on the rim.',
+    [step('Feet and hi-hat', 'The bossa kick under hi-hat 8ths.', cat([P(2, { hihat: 'xxxxxxxx', kick: 'x..xx..x' }), P(2, { hihat: 'xxxxxxxx', kick: 'x..xx..x' })]), [60, 80], { lanes: ['hihat', 'kick'] }),
+      step('+ the clave', 'Cross-stick on the snare: the two-bar bossa clave.', cat([P(2, { hihat: 'xxxxxxxx', kick: 'x..xx..x', snare: 'x..x..x.' }), P(2, { hihat: 'xxxxxxxx', kick: 'x..xx..x', snare: '..x..x..' })]), [60, 90], { lanes: HH_K_S })], ['latin']),
+  // N6 stage 10: polyrhythms and ostinatos
+  lesson(10, 'poly-3-2', 'exercise', 'Three over two',
+    'One hand plays three evenly while the other plays two, in the same space.',
+    'Polyrhythms are behind Afro-Cuban grooves, modern fills and that "floating" feel in great drummers.',
+    'Count triplets: "1 trip let 2 trip let". The ride lands on 1, "let" of 1, and "trip" of 2; the snare on 1 and 2.',
+    [step('Hands', 'Ride three, snare two, over every two beats.', P(3, { ride: 'x.x.x.x.x.x.', snare: 'x..x..x..x..' }), [50, 70], { lanes: ['ride', 'snare'] }),
+      step('+ kick on 1 and 3', 'Add the kick under it.', P(3, { ride: 'x.x.x.x.x.x.', snare: '...x.....x..', kick: 'x.....x.....' }), [50, 70])]),
+  lesson(10, 'poly-4-3', 'exercise', 'Four over three',
+    'In 3/4, the ride plays four even notes per bar over the kick on every beat.',
+    'Four over three is the classic "cross-rhythm" over a waltz: it makes a bar feel like it is turning.',
+    'Count 16ths in 3/4 ("1 e & a 2 e & a 3 e & a"): the ride is on 1, the "a" of 1, the "&" of 2 and the "e" of 3.',
+    [step('Four over three', 'Ride four, kick three.', P(4, { ride: 'x..x..x..x..', kick: 'x...x...x...' }), [50, 70], { ts: [3, 4] })]),
+  lesson(10, 'ostinato-feet', 'groove', 'Foot ostinato',
+    'Your feet loop a pattern that never changes while your hands play something else.',
+    'An ostinato frees the hands: Latin, fusion and gospel drummers keep their feet going and solo on top.',
+    'Get the feet automatic first (say it: "boom, chick, boom-boom, chick"). Then add the ride, then the 3-3-2 snare.',
+    [step('Feet, then hands', 'Kick and hi-hat foot loop; add the ride, then the snare.', P(2, { kick: 'x..xx..x', hhPedal: '..x...x.', ride: 'x.x.x.x.', snare: 'x..x..x.' }), [60, 90],
+      { layers: [['kick', 'hhPedal'], ['kick', 'hhPedal', 'ride'], ['kick', 'hhPedal', 'ride', 'snare']] })]),
+  // N6 stage 11: style mastery (one checkpoint per style)
+  lesson(11, 'gospel-chops', 'fill', 'Gospel chops',
+    'A bar of groove, then a bar of fast hand-hand-kick triplets around the kit.',
+    'Gospel "chops" are fast linear fills: hands and feet never together, so they flow like a machine gun.',
+    'R L K, R L K: hands on the snare, then the kick. Start slow; keep every note the same volume.',
+    [step('Chops', 'Groove, then R L K triplets.', crashOn(cat([P(2, MONEY8), P(3, { snare: 'xx.xx.xx.xx.', kick: '..x..x..x..x' })]), [0]), [50, 80])], ['rock']),
+  lesson(11, 'gospel-groove', 'groove', 'Gospel shuffle',
+    'A shuffle with ghost notes and a heavy backbeat.',
+    'Church drummers mix shuffle, ghost notes and big backbeats: the root of modern R&B drumming.',
+    'Ghost notes barely touch the snare; the backbeat is loud. The hi-hat keeps the shuffle "long-short".',
+    [step('Gospel shuffle', 'Shuffle hats, ghosts, loud 2 and 4.', P(3, { hihat: 'x.xx.xx.xx.x', kick: 'x.....x..x..', snare: '..gX.g..gX.g' }), [60, 90], { lanes: HH_K_S })], ['funk']),
+  lesson(11, 'jazz-waltz', 'groove', 'Jazz waltz',
+    'The ride pattern in 3/4 with the hi-hat foot on 2.',
+    'Jazz waltzes ("Someday My Prince Will Come") swing in three: the pattern turns over every other bar.',
+    'Ride: "1, 2-a 3". Hi-hat foot on 2. Feather the kick on 1 if it helps you feel the bar.',
+    [step('Waltz', 'Ride in three, foot on 2.', P(3, { ride: 'x..x.xx..', hhPedal: '...x.....', kick: 'x........' }), [90, 140], { ts: [3, 4], lanes: ['ride', 'hhPedal'] })], ['jazz']),
+  lesson(11, 'samba', 'groove', 'Samba on the kit',
+    'The samba kick and foot pattern with 16ths on the hi-hat.',
+    'Samba is fast, light and all about the feet: the kick plays the surdo drum of a samba band.',
+    'Kick on 1, the "a" of 1, 2, the "a" of 2 (and again). Light hands, accents on the "a". Start slow.',
+    [step('Samba feet', 'Kick pattern with the hi-hat foot on the &s.', P(4, { kick: 'x..xx..xx..xx..x', hhPedal: '..x...x...x...x.' }), [50, 70], { lanes: ['kick', 'hhPedal'] }),
+      step('+ 16ths', 'Add hi-hat 16ths on top.', P(4, { hihat: 'xxxxxxxxxxxxxxxx', kick: 'x..xx..xx..xx..x', hhPedal: '..x...x...x...x.' }), [50, 80])], ['latin']),
+  // N6 stage 12: metric modulation and soloing
+  lesson(12, 'metric-mod', 'exercise', 'Metric modulation',
+    'Two bars of groove, then the same groove on quarter-note triplets: a new, faster pulse that fits the old one.',
+    'Metric modulation changes the felt tempo without changing the click: a big-stage trick from fusion and prog.',
+    'Count triplets the whole time. In bars 3–4 the hi-hat lands on every second triplet: that is the new beat.',
+    [step('The switch', 'Groove, then the same groove on the triplet pulse.', cat([P(3, { hihat: 'x..x..x..x..', kick: 'x.....x.....', snare: '...x.....x..' }, 2), P(3, { hihat: 'x.x.x.x.x.x.', kick: 'x.....x.....', snare: '..x.....x...' }, 2)]), [60, 80])]),
+  lesson(12, 'solo-phrase', 'fill', 'Solo in phrases',
+    'Two bars of groove, two bars of your solo, twice: say something, then come back.',
+    'A good solo is a conversation: short phrases with space, always landing on 1.',
+    'Play one idea in your solo bars (a rhythm on two drums) and repeat it with a change. Land on the crash on 1.',
+    [step('Groove, solo, groove, solo', 'Bars 3–4 and 7–8 are yours.', cat([P(2, MONEY8), P(2, MONEY8), P(2, { snare: 'x' }), P(2, { snare: 'x' }), crashOn(P(2, MONEY8), [0]), P(2, MONEY8), P(2, { snare: 'x' }), P(2, { snare: 'x' })]), [70, 90], { freeBars: [3, 4, 7, 8] })]),
+  // N6: the songs of stages 10–12
+  lesson(10, 'song-cross', 'song', 'Song: Crosscurrent',
+    'A 16-bar song: eight bars of three-over-two, then eight bars on the foot ostinato.',
+    'Your polyrhythm and ostinato inside a real song with the band.',
+    'Count triplets in the first half, 8ths in the second. The crash on bar 9 marks the switch.',
+    [step('Whole song', 'Three over two, then the foot ostinato.', crashOn(cat([P(3, POLY32, 8), P(2, OSTINATO, 8)]), [0, 32]), [60, 80])]),
+  lesson(11, 'song-gospel', 'song', 'Song: Sunday Shuffle',
+    'A 16-bar gospel shuffle with a chops bar every eighth bar.',
+    'Groove and chops together, the way church drummers play a whole service.',
+    'Keep the shuffle relaxed and the ghosts soft; the chops bar is R L K triplets, then crash back on 1.',
+    [step('Whole song', 'Seven bars of shuffle, a bar of chops, twice.', crashOn(cat([P(3, GOSPEL, 7), P(3, CHOPS), P(3, GOSPEL, 7), P(3, CHOPS)]), [0, 32]), [60, 85])]),
+  lesson(12, 'song-finale', 'song', 'Song: Finale',
+    'A 32-bar closer: groove, a metric-modulation section, a 4-bar solo, and back home.',
+    'Everything you learned in one song: time, feel, a tempo trick and your own voice.',
+    'Bars 9–16 move to the triplet pulse; bars 17–20 are your solo. Land the crash on bar 21 with the band.',
+    [step('Whole song', 'Groove, the switch, your solo, groove.', crashOn(cat([P(2, MONEY8, 8), P(3, TRIP_PULSE, 8), P(2, { snare: 'x' }), P(2, { snare: 'x' }), P(2, { snare: 'x' }), P(2, { snare: 'x' }), P(2, MONEY8, 12)]), [0, 32, 80]),
+      [70, 90], { freeBars: [17, 18, 19, 20], pass: { minFreeOnBeatPct: 70 } })]),
 ];
 
 // The backing band's chords for the built-in songs (one per bar, wrapping; engine/band.ts).
@@ -607,6 +699,7 @@ const SONG_CHORDS: Record<string, string> = {
   'song-shuffle': 'A A A A D D A A E D A E', // a 12-bar blues
   'song-swing': 'C Am Dm G7 C Am Dm G7 F F7 C A7 Dm G7 C G7',
   'song-pocket': 'Em7 Em7 A7 A7', 'song-odd': 'D D G A', 'song-spotlight': 'A A D E',
+  'song-cross': 'Am Am F G', 'song-gospel': 'C C F F C C G G', 'song-finale': 'D D G A',
 };
 for (const l of CURRICULUM) if (SONG_CHORDS[l.id]) l.band = { chords: SONG_CHORDS[l.id] };
 // Volume marks per bar (1 p, 2 mf, 3 f) on the songs with sections: shown on the sheet (R4).
@@ -639,12 +732,21 @@ export const MILESTONES: Milestone[] = [
     canDo: ['Even triplets', 'A shuffle that swings', 'Half-time feel', 'A 12-bar blues'] },
   { level: 6, title: 'Swing', rank: 'Swing Cat', checkpoints: ['jazz-ride', 'comping', 'song-swing'],
     canDo: ['The jazz ride pattern with the foot on 2 and 4', 'Comping on the snare', 'A 16-bar swing tune'] },
-  { level: 7, title: 'Groove at tempo', rank: 'Pocket Pro', checkpoints: ['kick-16-indep', 'funk-at-tempo', 'song-pocket'],
+  { level: 7, title: 'Groove at tempo', rank: 'Pocket Pro', checkpoints: ['kick-16-indep', 'funk-at-tempo', 'song-pocket', 'rock-drive', 'open-hat-funk', 'jazz-tempo', 'bossa'],
+    track: { rock: 'Rock: driving 8ths', funk: 'Funk: open-hat funk', jazz: 'Jazz: swing at tempo', latin: 'Latin: bossa nova' },
     canDo: ['Read 16th-note kicks under a steady groove', 'Funk with ghost notes at 96 BPM', 'A song with soft and loud sections'] },
   { level: 8, title: 'Linear and odd', rank: 'Shape Shifter', checkpoints: ['linear-groove', 'linear-fill', 'five-four', 'song-odd'],
     canDo: ['Linear grooves and fills', 'Grooves in 5/4 (and a taste of 7/8)', 'An odd-time song all the way through'] },
   { level: 9, title: 'Solo voice', rank: 'Solo Voice', checkpoints: ['fill-vocab', 'trade-fours', 'song-spotlight'],
     canDo: ['Six fills on demand', 'Trading fours: a solo that comes back on 1', 'A drum break inside a song'] },
+  // N6: the advanced stages
+  { level: 10, title: 'Polyrhythms and ostinatos', rank: 'Pattern Bender', checkpoints: ['poly-3-2', 'ostinato-feet', 'song-cross'],
+    canDo: ['Three over two between your hands', 'Feet on a loop while the hands play something else'] },
+  { level: 11, title: 'Style mastery', rank: 'Style Master', checkpoints: ['gospel-chops', 'gospel-groove', 'jazz-waltz', 'samba', 'song-gospel'],
+    canDo: ['A signature groove or fill of your style, at tempo'],
+    track: { rock: 'Rock: gospel chops', funk: 'Funk / R&B: gospel shuffle', jazz: 'Jazz: the jazz waltz', latin: 'Latin: samba' } },
+  { level: 12, title: 'Time tricks and soloing', rank: 'Time Lord', checkpoints: ['metric-mod', 'solo-phrase', 'song-finale'],
+    canDo: ['A metric modulation in time', 'A solo in phrases that lands on 1'] },
 ];
 
 // Checkpoints prove steady time: their last step also limits how much your hits wander (looser for beginners).

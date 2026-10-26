@@ -311,6 +311,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
                 <div>
                   <b>{passed ? '✓ ' : ''}{m.level + 1}. {m.title}</b>
                   {m === milestone && <ul className="canDo">{m.canDo.map(c => <li key={c}>{c}</li>)}</ul>}
+                  {m === milestone && m.track && <p className="small">Your style track: {Object.entries(m.track).filter(([g]) => !s.profile.goals.length || s.profile.goals.includes(g as Genre)).map(([, t]) => t).join(' · ')}</p>}
                 </div>
                 <div className="chips">
                   <span className="small">Challenges:</span>{checks.map(l => chip(l, 'checkpoint'))}
@@ -374,7 +375,7 @@ function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: {
   );
 }
 
-const GOALS: { id: Genre; label: string }[] = [{ id: 'rock', label: 'Rock / pop' }, { id: 'funk', label: 'Funk / R&B' }, { id: 'jazz', label: 'Jazz / swing' }];
+const GOALS: { id: Genre; label: string }[] = [{ id: 'rock', label: 'Rock / pop' }, { id: 'funk', label: 'Funk / R&B / gospel' }, { id: 'jazz', label: 'Jazz / swing' }, { id: 'latin', label: 'Latin' }];
 
 function Onboarding({ onDone }: { onDone: (first: boolean, place?: boolean) => void }) {
   const profile = getSettings().profile;

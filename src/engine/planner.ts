@@ -12,9 +12,10 @@ const done = (p: Progress, id: string) => !!p[id]?.completedAt;
 export const visibleLessons = (lessons: Lesson[], profile: Profile) =>
   lessons.filter(l => !l.routine && (!l.tags || !profile.goals.length || l.tags.some(t => profile.goals.includes(t))));
 
-/** Checkpoints of a milestone that this student has to pass (others are hidden by their goals). */
+/** Checkpoints of a milestone that this student has to pass (others are hidden by their goals). On a stage with style
+ * tracks (N6), "not sure yet" follows the rock / pop track instead of every style. */
 export const checkpointsOf = (m: Milestone, lessons: Lesson[], profile: Profile) =>
-  visibleLessons(lessons.filter(l => m.checkpoints.includes(l.id)), profile);
+  visibleLessons(lessons.filter(l => m.checkpoints.includes(l.id)), m.track && !profile.goals.length ? { ...profile, goals: ['rock'] } : profile);
 
 /** The first milestone with an unpassed checkpoint; undefined when the whole path is done. */
 /**

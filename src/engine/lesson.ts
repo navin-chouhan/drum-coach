@@ -7,7 +7,7 @@ import type { RunStats } from './scoring.ts';
 
 // Lessons, pass criteria, the tempo ladder and spaced review. See docs/LEARNING.md.
 
-export type Genre = 'rock' | 'funk' | 'jazz';
+export type Genre = 'rock' | 'funk' | 'jazz' | 'latin';
 export type Pass = {
   accuracy: number;           // % of notes within the Good window
   maxExtraPct: number;        // extra hits as % of notes
@@ -73,7 +73,7 @@ export type Lesson = {
   band?: { chords?: string }; // the backing band's chord line, one symbol per bar (engine/band.ts); default by style
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
-export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[] }; // rank: your title once it's passed
+export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[]; track?: Partial<Record<Genre, string>> }; // rank: your title once it's passed; track: what each style's branch works on (N6)
 export type Profile = { goals: Genre[]; minutesPerDay: number; onboarded: boolean; song?: { id: string; title: string; stage: number } }; // song: this stage's song project
 export type LessonProgress = {
   step: number; bpm: number; clean: number; fails: number; bestBpm: number;

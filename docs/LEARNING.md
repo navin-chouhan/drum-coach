@@ -165,7 +165,7 @@ song for friends.
 - Not built: a sampled kit and band (needs downloaded samples; skipped with N1's downloads).
 
 ## Curriculum shape
-Levels 0–9, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open). Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
+Levels 0–12, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open; 10–12 added with N6). Untagged lessons are the core path. Lessons tagged `rock`, `funk`, `jazz` or `latin` appear only
 if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.
 
 | Level | Theme |
@@ -180,6 +180,14 @@ if that goal was picked during onboarding; picking none means "not sure yet" and
 | 7 | Groove at tempo: 16th kicks under 8ths, ghost 16ths, funk at 96, open-hat funk, laying back, a ruff fill, a 5-minute groove, a song with soft and loud sections |
 | 8 | Linear and odd: linear grooves and fills, 5/4, 7/8 (practice), a 5/4 song |
 | 9 | Solo voice: six fills on demand, fills that build, trading fours, a solo vamp, a song with a 4-bar drum break |
+| 10 | Polyrhythms and ostinatos: 3 over 2, 4 over 3, a foot ostinato, a song that switches between them |
+| 11 | Style mastery: one checkpoint per style (gospel chops, gospel shuffle, jazz waltz, samba), a gospel song |
+| 12 | Time tricks and soloing: metric modulation, soloing in phrases, a 32-bar finale |
+
+**Style tracks** (N6): from stage 7 the path branches by goal. A milestone's `track` names what each style works on, and
+each style has its own tagged checkpoint there (stage 7: driving rock, open-hat funk, swing at tempo, bossa nova; stage
+11: as above). A tagged checkpoint counts only for students with that goal (`checkpointsOf`), so the planner follows
+your track; "not sure yet" follows the rock / pop track there. Journey shows your track under the current stage.
 
 Songs are written "in the style of" and played by the built-in synth. No copyrighted audio ships.
 Real songs come in through the Songs tab: search YouTube, set the tempo, learn the part by ear (with suggested notes

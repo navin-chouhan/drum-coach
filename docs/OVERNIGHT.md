@@ -162,3 +162,9 @@ personalised curation". Built in my recommended order, each item checked in Chro
   Checked headless on the test copy with a test bite lesson: the take ran on the video clock (81 BPM). The emulated kit
   doesn't play external-clock takes (by design), so hits weren't scored in that check.
 - Skipped: CC0 sampled kit/band (needs downloads; owner declined downloads for N1).
+
+## N6 advanced levels and style tracks (2026-10-26)
+- Stages 10 (polyrhythms, ostinatos), 11 (style mastery), 12 (metric modulation, soloing), each with a built-in song.
+- Latin goal; milestones gain `track`; per-style checkpoints at stages 7 and 11 through the existing goal tags
+  (the R3 "levels 7+ untagged" test now checks every style has its own checkpoint on tracked stages).
+- "Not sure yet" (no goals) follows the rock / pop track on tracked stages (not every style).
