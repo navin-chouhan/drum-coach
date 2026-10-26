@@ -312,7 +312,12 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const finishRest = () => { saveProgress(lesson.id, ladderStep(progressOf(lesson), lesson, true, today()).next); setVersion(v => v + 1); };
   const main: { label: string; run: () => void } =
     arcade ? { label: outcome ? '⏱ Again, 2 minutes' : '⏱ Start the 2 minutes', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, seconds: 120, speed: arcadeBpm / chart.bpm }); } }
-    : canProbe ? { label: '🔍 Find my tempo', run: () => { probing.current = { tempo: step.bpm.start, accs: [] }; probeBar(); } }
+    : canProbe ? { label: '🔍 Find my tempo', run: () => {
+      const go = () => { probing.current = { tempo: step.bpm.start, accs: [] }; probeBar(); };
+      // A first-time step gets its slides before the probe, not after it (the probe's finish then marks them seen).
+      const key = `${stepIdx}/${p.layer ?? 0}`;
+      if (getSettings().intro !== false && !introShown.current.has(key)) { introShown.current.set(key, step.bpm.start); setIntro({ run: go }); } else go();
+    } }
     : resting ? { label: '✓ Done, next step', run: finishRest }
     : flow ? { label: '🌊 Flow ▶', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, fadeClick: 8 }); } }
     : coachAct && canRunAction(coachAct) ? { label: coachAct.label, run: () => void runAction(coachAct) }
