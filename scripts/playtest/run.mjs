@@ -124,9 +124,11 @@ const TAKE = `(async () => {
 })()`;
 
 const report = [];
-const scenarios = process.env.PLAYTEST_ONLY === 'placement' ? [] : FULL
+// PLAYTEST_ONLY=placement | beginner | solid runs just that part (a full path for one player is long enough)
+const only = process.env.PLAYTEST_ONLY;
+const scenarios = (only === 'placement' ? [] : FULL
   ? [['Beginner', BEGINNER, null, 10], ['Solid', SOLID, null, 10]]
-  : QUICK;
+  : QUICK).filter(([who]) => !only || only.toLowerCase() === who.toLowerCase());
 const allCheckpoints = await evaluate(`import('/src/content/curriculum.ts').then(c => c.MILESTONES.flatMap(m => m.checkpoints))`);
 for (const [who, human, ids, takes] of scenarios) {
   await open();
