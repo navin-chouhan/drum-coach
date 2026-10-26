@@ -144,3 +144,10 @@ personalised curation". Built in my recommended order, each item checked in Chro
   (automated play test) and N9 (per-pad velocity calibration).
 - Observation: on "Pocket Sixteen" a Solid emulated player got a "dragging" tip mid-take; worth a look on the real kit
   (ghost-note grooves, M2 part C).
+
+## N5 skill map and placement · N8 you vs you (2026-10-26)
+- N5: `src/engine/skills.ts` (skill map, due refreshes into the daily set, placement ladder), Journey → 🗺 Skill map and
+  "Find my level", onboarding "I've played drums before". The coach sees the map for lessons and week plans. Play test
+  gained a placement check; `PLAYTEST_PORT_OFFSET` lets it run beside another session's play test (fixed ports collided).
+- N8: kept takes (`run_hits`), You vs you on Trophies with replay, month-by-month table, skill growth lines, the coach's
+  monthly report (one real call checked: good), concert mode with MIDI save. Checked on the 5180/8790 test copy.

@@ -85,13 +85,13 @@ export function candidates(milestones: Milestone[], lessons: Lesson[], progress:
  * `focusIds`: this week's lessons from the coach's plan (R6). An open one at or below the current stage leads the set;
  * a finished one comes back as the review. Unknown ids and lessons ahead of the student are ignored.
  */
-export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = [], opts: { sore?: boolean } = {}): SessionItem[] {
-  const items = buildSet(milestones, lessons, progress, profile, today, focusIds);
+export function buildSession(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[] = [], opts: { sore?: boolean; skillReview?: string } = {}): SessionItem[] {
+  const items = buildSet(milestones, lessons, progress, profile, today, focusIds, opts.skillReview);
   // every day opens with the 2-minute stretch (N10); a sore week gets lighter days
   const stretch = lessons.some(l => l.id === STRETCH_ID) ? [{ role: 'stretch' as const, lessonId: STRETCH_ID, minutes: 2 }] : [];
   return opts.sore ? lighten([...stretch, ...items]) : [...stretch, ...items];
 }
-function buildSet(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[]): SessionItem[] {
+function buildSet(milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile, today: string, focusIds: string[], skillReview?: string): SessionItem[] {
   const short = profile.minutesPerDay < 20;
   const level = currentMilestone(milestones, lessons, progress, profile)?.level ?? Infinity;
   const focus = focusIds.map(id => visibleLessons(lessons, profile).find(l => l.id === id)).filter(l => l !== undefined && l.level <= level) as Lesson[];
@@ -109,6 +109,7 @@ function buildSet(milestones: Milestone[], lessons: Lesson[], progress: Progress
   const warmup = short || !rudiments.length ? undefined : rudiments[day % rudiments.length];
   if (warmup) taken.add(warmup.id);
   const review = short ? undefined : focus.find(l => done(progress, l.id) && !taken.has(l.id))?.id ?? dueReviews(progress, today).find(id => !taken.has(id) && lessons.some(l => l.id === id))
+    ?? (skillReview && !taken.has(skillReview) && lessons.some(l => l.id === skillReview) ? skillReview : undefined) // N5: a skill due for a refresh
     ?? (level === Infinity ? unproven(milestones, lessons, progress, profile).find(id => !taken.has(id)) : undefined); // after the path: prove a rank
 
   // After the whole path the set never goes empty: one take of a show-off song (the newest stage's song you finished).

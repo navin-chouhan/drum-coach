@@ -1,5 +1,6 @@
 import { drumName } from './liveCoach.ts';
 export type RunRow = {
+  id?: number; hasTake?: boolean; // N8: the take's hits are kept (replay it)
   chartId: string; chartTitle: string; level?: number; startedAt: string; durationS: number;
   bpm: number; speed: number; accuracy: number; meanOffset: number; spread: number;
   notes?: number; // notes in the take (older rows may lack it)

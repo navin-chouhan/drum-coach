@@ -17,6 +17,8 @@ The input has:
   tempos, no stamina or speed work), and say in "focus" to stop if anything hurts.
 - "teacherNotes": what the student's human teacher said lately. A teacher who has watched them beats any statistic:
   follow it (the technique point, the exercise, the tempo).
+- "skills": the skill map (mastery 0–1 per skill, "due" = not practised for a while). Prefer the weakest or due skill that
+  fits this milestone.
 - "postPath": true when the student has passed every stage. Then write a review or stretch lesson at this last level, aimed
   at the weakest skill in "recentRuns" (a faster tempo, a variation, a longer take); never a new topic beyond this level.
 

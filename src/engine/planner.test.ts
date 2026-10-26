@@ -134,3 +134,10 @@ describe('buildSession: health (N10)', () => {
     expect(s.filter(i => i.role === 'skill' || i.role === 'groove')).toHaveLength(1);
   });
 });
+
+describe('buildSession: a skill due for a refresh (N5)', () => {
+  it('becomes the review when nothing else is due', () => {
+    const s = buildSession(milestones, lessons, done('count', 'rests'), { ...profile, minutesPerDay: 30 }, '2026-10-26', [], { skillReview: 'count' });
+    expect(s.find(i => i.role === 'review')?.lessonId).toBe('count');
+  });
+});

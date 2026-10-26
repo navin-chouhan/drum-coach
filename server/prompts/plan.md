@@ -9,6 +9,8 @@ The input has:
 - "stage": where they are on the path; "lessons": the lessons you may pick (id, title, level, kind, checkpoint, done,
   stars). Finished lessons with 1–2 stars are worth strengthening.
 - "student.teacherNotes": what their human teacher said lately; build the week around it when it applies.
+- "skills": the skill map (mastery 0–1, "due" = needs a refresh). Plan the week from it: the weakest skill that matters
+  for this stage, plus one due refresh.
 - "lastWeek": your previous focus and notebook ("notes"), if any. Build on it: keep what's working, change what isn't.
 - "goals", "minutesPerDay"; "daysPerWeek" only when they asked for a day-by-day plan.
 

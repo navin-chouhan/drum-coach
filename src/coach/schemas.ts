@@ -112,7 +112,15 @@ export const RunRecordSchema = z.object({
   bpm: z.number().min(10).max(400), speed: z.number().min(0.25).max(2),
   accuracy: z.number().min(0).max(100), meanOffset: z.number(), spread: z.number().min(0),
   summary: z.record(z.string(), z.unknown()),
+  // N8: the take itself, hits as [ms from beat 0, pad, velocity]
+  take: z.object({ beatMs: z.number().positive().max(5000), beats: z.number().positive().max(10_000), beatsPerBar: z.number().positive().max(32),
+    timeSignature: z.tuple([z.number().int().min(1).max(32), z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)])]),
+    hits: z.array(z.tuple([z.number(), z.string().max(12), z.number().int().min(0).max(127)])).max(4000) }).optional(),
 });
+export type RunTake = NonNullable<z.infer<typeof RunRecordSchema>['take']>;
+export const MonthReportRequestSchema = z.object({ again: z.boolean().optional() });
+/** The coach's monthly report (N8). */
+export const MonthReportSchema = z.object({ headline: z.string().max(200), better: z.array(z.string().max(300)).max(4), next: z.array(z.string().max(300)).max(3), note: z.string().max(600) });
 export type RunRecord = z.infer<typeof RunRecordSchema> & { id: number };
 export const PlanRequestSchema = z.object({
   goals: z.string().min(1).max(500).optional(), minutesPerDay: z.number().int().min(5).max(180).optional(), daysPerWeek: z.number().int().min(1).max(7).optional(),

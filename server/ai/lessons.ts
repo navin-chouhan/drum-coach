@@ -3,9 +3,10 @@ import { beatsPerBar } from '../../src/engine/chart.ts';
 import { cutBars } from '../../src/engine/transcribe.ts';
 import type { YtSong } from '../../src/youtube/schemas.ts';
 import type { AiLesson } from '../../src/coach/schemas.ts';
-import { passFor, toolOf, type Lesson, type LessonProgress, type Profile, type Step } from '../../src/engine/lesson.ts';
+import { dayKey, passFor, toolOf, type Lesson, type LessonProgress, type Profile, type Step } from '../../src/engine/lesson.ts';
 import { checkpointsOf, currentMilestone, studentRead } from '../../src/engine/planner.ts';
 import { stageSong } from '../../src/engine/stageSong.ts';
+import { skillMap } from '../../src/engine/skills.ts';
 import type { StudentProfile } from '../../src/engine/profile.ts';
 
 // Coach-written lessons: what the coach is told, and how its answer becomes a stored lesson.
@@ -47,6 +48,7 @@ export function lessonInput({ profile, progress, aiLessons, recent, struggle, so
     ...(weekFocus?.focus && { weekFocus }),
     ...(sore && { sore: true }),
     ...(teacherNotes?.length && { teacherNotes: teacherNotes.slice(-3) }), // N2: what a human teacher said
+    skills: skillMap(all, progress, dayKey(new Date())).map(k => ({ skill: k.name, mastery: k.mastery, due: k.due })), // N5
     examples: CURRICULUM.filter(l => l.level === m.level && l.kind !== 'song').slice(0, 4).map(l => ({ ...brief(l), what: l.what, how: l.how, steps: steps(l) })),
     yourEarlierLessons: aiLessons.filter(l => l.level === m.level).map(l => ({ title: l.title, tools: l.steps.map(toolOf), passed: !!progress[l.id]?.completedAt })),
   };

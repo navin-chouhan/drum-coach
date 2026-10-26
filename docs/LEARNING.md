@@ -121,6 +121,28 @@ song for friends.
 - **The coach builds the path** inside the fixed stages: after every finished lesson it writes the next one in
   the background, and Journey's Next up offers it first.
 
+## Skill map and placement (N5)
+
+- **Skill map** (`src/engine/skills.ts`, Journey → 🗺 Skill map): every lesson trains skills (steady time, hands, hands and
+  feet, 16ths, triplets, loud and soft, rudiments, fills, feel, reading and ears, songs), found from its kind and charts.
+  Mastery = stars earned against 3 stars on every lesson of the skill. A skill not practised for 3/7/14 days (by mastery)
+  is *due*: the daily set takes its oldest lesson as the review, and the coach sees the map for lessons and week plans.
+- **Placement** (onboarding "I've played drums before", or Journey → Find my level): one take of each stage's first
+  checkpoint at target tempo, from stage 1 up; the first one that doesn't pass is where you start. Stages below count
+  as passed with one star, so the coach still strengthens them.
+
+## You vs you, over months (N8)
+
+- Every scored take keeps its own hits (`run_hits`, size-capped: the latest 300 takes plus each exercise's first take of
+  each month). Trophies → **You vs you** pairs a take 28+ days old with a recent one of the same bars (`youVsYou` in
+  `src/engine/history.ts`) and plays either back as drum sounds: only the student's own MIDI, never audio.
+- Month by month: minutes, takes, on-time %, spread and best BPM at 90%+ (`monthly`). The skill map draws each skill's
+  growth over the last 6 months (`skillGrowth`).
+- **The coach's monthly report** (`/api/coach/month`, `server/prompts/month.md`): written once a month on request, kept in
+  settings, "Ask again" rewrites it.
+- **Concert mode**: Trophies → 🎤 Concert plays the show-off set back to back in Stage mode; each encore offers the next
+  song and "💾 Save as MIDI" for friends.
+
 ## Curriculum shape
 Levels 0–9, one milestone each (levels 7–9 added later: a student who finished level 6 carries on at level 7, told once that new stages are open). Untagged lessons are the core path. Lessons tagged `rock`, `funk` or `jazz` appear only
 if that goal was picked during onboarding; picking none means "not sure yet" and shows everything.

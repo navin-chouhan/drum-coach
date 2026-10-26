@@ -6,8 +6,9 @@ import { useLessons } from '../lesson/aiLessons';
 import { songBarCount, songVerified, useYtSongs } from '../youtube/api';
 import { hearFill } from '../play/fills';
 import { BADGES, dashboard, earnedBadges, songReady, type Dashboard, type RunRow } from '../engine/progress';
-import { requestLesson, requestPlay, requestSong } from './nav';
+import { requestLesson, requestPlay, requestSong, startConcert } from './nav';
 import { TeacherView } from './TeacherView';
+import { YouVsYou } from './YouVsYou';
 
 const ACCENT = '#2F6FE4';
 
@@ -29,6 +30,7 @@ export function ProgressView() {
     <div className="progress">
       <div className="actions"><button onClick={() => setTeacher(true)}>👩‍🏫 For your teacher (summary, notes)</button></div>
       <TrophyShelf runs={runs} />
+      <YouVsYou runs={runs} />
       <div className="tiles">
         <Tile label="Day streak" value={d.streak} />
         <Tile label="Minutes today" value={d.minutesToday} />
@@ -97,7 +99,7 @@ function MinutesChart({ days }: { days: Dashboard['days'] }) {
   );
 }
 
-function Spark({ values, min, max, unit, label }: { values: number[]; min?: number; max?: number; unit: string; label: string }) {
+export function Spark({ values, min, max, unit, label }: { values: number[]; min?: number; max?: number; unit: string; label: string }) {
   const W = 140, H = 36, p = 5;
   const lo = min ?? Math.min(...values) - 5, hi = max ?? Math.max(...values) + 5;
   const x = (i: number) => (values.length === 1 ? W / 2 : p + (i / (values.length - 1)) * (W - 2 * p));
@@ -152,9 +154,10 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
         they spot tension and grip habits no app can.</p>
       <h4>Show-off set</h4>
       {showoff.length ? (
-        <ul className="songList">
+        <><ul className="songList">
           {showoff.map(song => <li key={song.id}><span>{song.title}</span><button className="primary" onClick={() => requestSong(song.id)}>Play it (Stage mode is under Play)</button></li>)}
         </ul>
+        {showoff.length > 1 && <button className="primary big" onClick={() => startConcert(showoff.map(song => ({ id: song.id, bars: { from: 1, to: songBarCount(song) } })))}>🎤 Concert: play the whole set</button>}</>
       ) : <p className="small">Pass a stage to unlock a show-off song, then play 16 bars or more of it scored on Songs, every bar at 85% or better. It lands here, ready to play for your friends.</p>}
     </div>
   );
