@@ -1,3 +1,4 @@
+import type { DemoId } from '../content/demos.ts';
 import { beatsPerBar, type Chart, type ChartDrum } from './chart.ts';
 import { seededRandom } from './kitEmulator.ts';
 import type { RunStats } from './scoring.ts';
@@ -46,6 +47,8 @@ export type Step = {
   probe?: boolean;      // find your tempo: 1-bar takes from bpm.start, +5 per clean bar, until one falls apart
   rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
+  demo?: DemoId;        // how the body moves (content/demos.ts DEMO_IDS): the lesson card, the 4th intro slide, the self-check
+  look?: boolean;       // a "look" step: watch the movement (and yourself in the mirror), no playing; done moves on
 };
 export type LessonKind = NonNullable<Chart['kind']>;
 export type Lesson = {
@@ -54,6 +57,7 @@ export type Lesson = {
   steps: Step[]; tags?: Genre[];
   source?: 'ai'; focus?: string; // AI-curated for this student; `focus` says why
   checkpoint?: string; // a coach lesson that stands in for this checkpoint: finishing it passes the checkpoint
+  demo?: DemoId; // how the body moves for the whole lesson (a step's own `demo` wins)
   band?: { chords?: string }; // the backing band's chord line, one symbol per bar (engine/band.ts); default by style
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
@@ -232,7 +236,7 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
 export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false, notesLanded = false): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam || step.rest || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
+  if (step.jam || step.rest || step.look || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
   if (!passed && notesLanded) return { next: { ...p, clean: 0, fails: 0 }, event: 'hold' };
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
@@ -244,7 +248,7 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
-  if (step.jam || step.rest) { // any take (or the end of a rest) finishes the step
+  if (step.jam || step.rest || step.look) { // any take (or the end of a rest or a look) finishes the step
     if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   } else {
     if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };

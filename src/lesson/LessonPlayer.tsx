@@ -25,6 +25,8 @@ import { canRunAction, coachLine, coachTake, screenAction, dropCoachAction, onCo
 import { stepIcon, TOOL_LABEL } from './tools';
 import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
+import { SelfCheck } from '../ui/SelfCheck';
+import { TechniqueDemo } from '../ui/TechniqueDemo';
 import { allLessons, deleteCoachLesson, lessonById, requestCoachLesson } from './aiLessons';
 import { progressOf, resetLesson, saveProgress, today } from './state';
 
@@ -57,6 +59,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   useSyncExternalStore(subscribePlayer, playerVersion);
   useSyncExternalStore(subscribeSettings, getSettings);
   const [details, setDetails] = useState(false);
+  const [checking, setChecking] = useState(false); // the camera self-check (R5)
   const [celebrated, setCelebrated] = useState<Finished>(); // the take whose celebration was closed
   const [secs, setSecs] = useState(0); // time spent playing this item
   const [, setVersion] = useState(0);
@@ -239,6 +242,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       if (e.target instanceof HTMLInputElement) return;
       if (e.key === 'h') setSettings({ hints: getSettings().hints === false });
       if (e.key === 'b') setSettings({ band: getSettings().band === false }); // the band on / off
+      if (e.key === 'c' && player.phase !== 'playing') setChecking(c => !c); // check yourself (camera)
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -315,7 +319,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
   const coachAct = big ? undefined : screenAction(fresh2?.action, onNext ? 'Next ▶' : '← Journey');
   useEffect(() => { if (big && fresh2?.action) dropCoachAction(true); }, [big, fresh2]); // the kit's "yes" moves on too
   // Shake it out: a rest step ends with "done", which moves the lesson on like a passed step.
-  const resting = !!step.rest && !oneTake;
+  const resting = (!!step.rest || !!step.look) && !oneTake; // a look step ends like a rest: "done" moves on
+  const demo = step.demo ?? lesson.demo; // how the body moves (R5)
   const arcadeBest = getSettings().arcade?.[lesson.id] ?? 0;
   const arcadeBpm = p.bestBpm || step.bpm.target;
   const finishRest = () => { saveProgress(lesson.id, ladderStep(progressOf(lesson), lesson, true, today()).next); setVersion(v => v + 1); };
@@ -390,7 +395,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     <div className={`lessonScreen ${playing ? 'playing' : ''}`}>
       {celebration}
       {intro && <IntroSlides title={lesson.title} sub={step.title} bpm={bpm} what={step.text} notes={chart.notes.filter(n => !n.auto).map(n => ({ ...n, mine: !lanes || lanes.includes(n.drum) }))}
-        beatsPerBar={beatsPerBar(chart)} focus={outcome?.reason ?? (hints ? howHint : undefined)} onDone={() => { const r = intro.run; setIntro(undefined); r(); }} onClose={() => setIntro(undefined)} />}
+        beatsPerBar={beatsPerBar(chart)} focus={outcome?.reason ?? (hints ? howHint : undefined)} demo={demo} onDone={() => { const r = intro.run; setIntro(undefined); r(); }} onClose={() => setIntro(undefined)} />}
       <div className="lbar card">
         <button className="link back" onClick={() => { stop(); onBack(); }}>← Journey</button>
         <h2>{lesson.title}</h2>
@@ -402,10 +407,11 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
           : <span className="small" title="Counting, rudiments and find-your-tempo are just you and the click">🎸 just you and the click</span>}
       </div>
 
+      {checking && demo && <SelfCheck demo={demo} bpm={bpm} onClose={() => setChecking(false)} />}
       {resting ? <>
         <CoachLine line={step.text} />
-        <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} /></div>
-        <RestCountdown key={stepIdx} seconds={step.rest!} />
+        <div className="moves"><Move go label="✓ Done, next step" onClick={finishRest} />{demo && <Move alt label="📷 Check yourself" gesture="key C" onClick={() => setChecking(true)} />}</div>
+        {step.look && demo ? <div className="card lookStep"><TechniqueDemo id={demo} bpm={bpm} /></div> : <RestCountdown key={stepIdx} seconds={step.rest!} />}
       </> : playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
         <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} under={said.under} thinking={!fresh2 && thinkingAbout(coach, f)} />
         <div className="moves">
@@ -457,6 +463,11 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
             {step.pass?.streak && <p>Challenge: {recordStreak ?? step.pass.streak} notes in a row. Missed one? The count just starts again.</p>}
             {lanes && step.chart.notes.some(n => !lanes.includes(n.drum)) && <p>You play: {lanes.map(laneName).join(', ')}. The app plays the rest (grey).</p>}
             {step.gapBars && <p>The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
+          </div>}
+          {demo && <div className="card howItMoves">
+            <h3>How it moves</h3>
+            <TechniqueDemo id={demo} bpm={bpm} compact />
+            <button className="primary" onClick={() => setChecking(true)}>📷 Check yourself <small>(key C)</small></button>
           </div>}
           <div className="lessonKit"><KitView /></div>
           <div className="actions small">

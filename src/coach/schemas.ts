@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CHART_DRUMS, ChartSchema } from '../engine/chart.ts';
+import { DEMO_IDS } from '../content/demos.ts';
 
 // Shapes the coach must answer with. Validated on the server before anything reaches the app.
 export const FeedbackSchema = z.object({
@@ -78,11 +79,13 @@ export const AiLessonSchema = z.object({
       .refine(b => b.fromBar <= b.toBar && b.toBar - b.fromBar < 8, { message: 'a bite is 1–8 bars' }).optional(),
     freeBars: z.array(z.number().int().min(1).max(16)).min(1).max(8).optional(), trade: z.boolean().optional(),
     layers: z.array(z.array(z.enum(CHART_DRUMS)).min(1)).min(2).max(5).optional(),
+    demo: z.enum(DEMO_IDS).optional(), look: z.boolean().optional(),
   }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })
     .refine(s => [...(s.activeLanes ?? []), ...(s.layers ?? []).flat()].every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' })
     .refine(s => (s.variants ?? []).every(v => v.bars === s.chart.bars && v.timeSignature.join() === s.chart.timeSignature.join()), { message: 'variants need the same bars and time signature as the chart' }))
     .min(1).max(4)
-    .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe; }, { message: 'rest and probe are never the last step' }),
+    .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe && !end.look; }, { message: 'rest, probe and look are never the last step' }),
+  demo: z.enum(DEMO_IDS).optional(),
 });
 export const LessonRequestSchema = z.object({
   struggle: z.object({ lessonId: z.string().max(80), step: z.number().int().min(1).max(10), reason: z.string().max(400), run: z.record(z.string(), z.unknown()) }).optional(),

@@ -1,3 +1,4 @@
+import type { DemoId } from './demos';
 import { beatsPerBar, pattern, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
 import type { Genre, Lesson, LessonKind, Milestone, Pass, Step } from '../engine/lesson.ts';
 
@@ -210,7 +211,8 @@ export const CURRICULUM: Lesson[] = [
     'Two sticks, almost together: a soft grace note a hair before the main note. "Fla-am", not "flam" and not "flam-am".',
     'Flams make a note fat and wide. They start fills and accents, and they train your weaker hand to be soft and exact.',
     'One stick low (3 cm), one high (30 cm). Drop both at the same time: the low one lands first because it is closer. Then swap: the hand that played loud stays low for the next flam.',
-    [step('One flam per beat', 'lR, rL, lR, rL. Two heights before every flam.', P(1, { snare: 'ffff' }), [45, 70]),
+    [{ ...step('Watch it first', 'Watch how the hands trade heights. Try it slowly in the air, or check yourself with the camera. Done = hi-hat pedal × 3.', P(1, { snare: 'ffff' }), [45, 45]), look: true },
+      step('One flam per beat', 'lR, rL, lR, rL. Two heights before every flam.', P(1, { snare: 'ffff' }), [45, 70]),
       step('Flam, tap', 'A flam on the beat, a soft tap on the &.', P(2, { snare: 'fxfxfxfx' }), [50, 75])]),
 
   // ───────── Level 4: 16ths, paradiddle, ghost notes ─────────
@@ -230,7 +232,8 @@ export const CURRICULUM: Lesson[] = [
     'Two quick soft grace notes from one hand, then the main note: "rr L".',
     'Drags add a short roll in front of a note: the sound of marching snares, and of many rock and jazz fills.',
     'Let the grace stick bounce twice, close to the pad (a double, but tiny), then drop the other stick for the main note.',
-    [step('One drag per beat', 'llR, rrL, llR, rrL.', P(1, { snare: 'dddd' }), [45, 65]),
+    [{ ...step('Watch it first', 'Watch the low stick bounce twice, then the main note. Done = hi-hat pedal × 3.', P(1, { snare: 'dddd' }), [45, 45]), look: true },
+      step('One drag per beat', 'llR, rrL, llR, rrL.', P(1, { snare: 'dddd' }), [45, 65]),
       step('Drag, tap', 'A drag on the beat, a tap on the &.', P(2, { snare: 'dxdxdxdx' }), [50, 70])]),
   lesson(4, 'hh-16ths', 'groove', '16th-note hi-hat',
     'One hand playing 16ths on the hi-hat over kick and snare.',
@@ -345,6 +348,12 @@ const SONG_CHORDS: Record<string, string> = {
   'song-swing': 'C Am Dm G7 C Am Dm G7 F F7 C A7 Dm G7 C G7',
 };
 for (const l of CURRICULUM) if (SONG_CHORDS[l.id]) l.band = { chords: SONG_CHORDS[l.id] };
+// How the body moves (content/demos.ts): shown on the lesson card, as the 4th intro slide and in the self-check.
+const LESSON_DEMOS: Record<string, DemoId> = {
+  posture: 'grip', 'count-quarters': 'rebound', singles: 'rebound', 'hh-quarters': 'rebound', accents: 'accent-tap', doubles: 'doubles',
+  'kick-quarters': 'kick', paradiddle: 'accent-tap', 'ghost-notes': 'accent-tap', flam: 'flam', 'flam-tap': 'flam', drag: 'drag',
+};
+for (const l of CURRICULUM) if (LESSON_DEMOS[l.id]) l.demo = LESSON_DEMOS[l.id];
 
 export const LESSON_BY_ID = Object.fromEntries(CURRICULUM.map(l => [l.id, l])) as Record<string, Lesson>;
 
