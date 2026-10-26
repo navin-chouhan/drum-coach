@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { cleanSongTitle } from '../engine/youtube';
 import { MILESTONES } from '../content/curriculum';
 import { rankState } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
@@ -155,7 +156,7 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
       <h4>Show-off set</h4>
       {showoff.length ? (
         <><ul className="songList">
-          {showoff.map(song => <li key={song.id}><span>{song.title}</span><button className="primary" onClick={() => requestSong(song.id)}>Play it (Stage mode is under Play)</button></li>)}
+          {showoff.map(song => <li key={song.id}><span>{cleanSongTitle(song.title)}</span><button className="primary" onClick={() => requestSong(song.id)}>Play it (Stage mode is under Play)</button></li>)}
         </ul>
         {showoff.length > 1 && <button className="primary big" onClick={() => startConcert(showoff.map(song => ({ id: song.id, bars: { from: 1, to: songBarCount(song) } })))}>🎤 Concert: play the whole set</button>}</>
       ) : <p className="small">Pass a stage to unlock a show-off song, then play 16 bars or more of it scored on Songs, every bar at 85% or better. It lands here, ready to play for your friends.</p>}

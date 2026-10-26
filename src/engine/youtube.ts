@@ -1,3 +1,7 @@
+/** A song title without YouTube noise: "(Official Video Remastered)", "[HD]", "(Lyrics)", "| Channel" (D9). */
+export const cleanSongTitle = (t: string) =>
+  t.replace(/\s*[([][^)\]]*\b(official|video|lyrics?|audio|remaster(ed)?|hd|4k|visuali[sz]er|mv)\b[^)\]]*[)\]]/gi, '').replace(/\s+\|.*$/, '').trim() || t;
+
 /** YouTube video id from a watch / youtu.be / music.youtube.com / shorts / embed / live link, or a bare id. */
 export function parseYouTubeId(input: string): string | null {
   const s = input.trim();

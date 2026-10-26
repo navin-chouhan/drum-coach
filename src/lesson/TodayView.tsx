@@ -7,6 +7,7 @@ import { isProven, recordTarget, toolOf, type Genre, type Lesson } from '../engi
 import { iconOf, TOOL_LABEL } from './tools';
 import { checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '../engine/planner';
 import { stageSong } from '../engine/stageSong';
+import { cleanSongTitle } from '../engine/youtube';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, SHOWOFF_MIN_BARS, songReady, weekRecap, weekTheme, type Dashboard, type RunRow } from '../engine/progress';
 import { flourish } from './Celebration';
 import { say } from '../voice/voice';
@@ -166,7 +167,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const askSore = played && daysPlayed >= 3 && s.soreAskedWeek !== wk && !soreActive(s.soreUntil, today());
   // The trail ends at the stage's song: your real song if you picked one, else the built-in one, with how much is ready.
   const builtinBars = builtinSong ? builtinSong.steps[builtinSong.steps.length - 1].chart.bars : 0;
-  const songStop = project ? { title: project.title, ready: songBars ? barsReady(runs, project.id, songBars) / songBars : 0, onOpen: () => requestSong(project.id) }
+  // D6: a real song without its part yet can't be played: until it has its 16 bars, the built-in song stays the goal.
+  const songStop = project && (songBars >= SHOWOFF_MIN_BARS || !builtinSong) ? { title: cleanSongTitle(project.title), ready: songBars ? barsReady(runs, project.id, songBars) / songBars : 0, onOpen: () => requestSong(project.id) }
     : builtinSong ? { title: builtinSong.title.replace(/^Song: /, ''), ready: done(builtinSong.id) ? 1 : barsReady(runs, builtinSong.id, builtinBars) / builtinBars, onOpen: () => setOpen({ lessonId: builtinSong.id }) } : undefined;
   return (
     <div className="today home">
@@ -214,7 +216,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
               {weekPlan?.focus ? <li>🎯 This week: <b>{weekPlan.focus}</b>{weekPlan.why && <><br /><span className="small">{weekPlan.why}</span></>}</li>
               : theme && <li>🎯 This week: <b>{theme.words}</b> · {themeEntry?.status === 'thinking' ? 'your coach is on it…' : themeEntry?.status === 'done' ? 'lesson ready on your trail'
                 : <button className="link" onClick={() => requestCoachLesson(themeKey, { lessonId: 'week', step: 1, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).`, run: {} })}>lesson for this</button>}</li>}
-              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{project.title}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready${projectSong && !songVerified(projectSong) ? ' · check the part by ear in Songs' : ''}` : songBars ? `${songBars} bars of notes: add at least ${SHOWOFF_MIN_BARS} in Songs` : 'add its notes in Songs'}</li>}
+              {project && <li>🎵 <button className="link" onClick={() => requestSong(project.id)}>{cleanSongTitle(project.title)}</button>: {songBars >= SHOWOFF_MIN_BARS ? `${barsReady(runs, project.id, songBars)} of ${songBars} bars ready${projectSong && !songVerified(projectSong) ? ' · check the part by ear in Songs' : ''}`
+                : `${songBars ? `${songBars} of ${SHOWOFF_MIN_BARS} bars of its part are in` : 'its drum part isn\'t in yet'}: open it, set the tempo, and the coach can suggest the part.${builtinSong ? ` Until then your stage song is ${builtinSong.title.replace(/^Song: /, '')}.` : ''}`}</li>}
             </ul>
           </div>
         </div>

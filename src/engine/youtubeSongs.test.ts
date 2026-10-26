@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { scoreJam } from './jam';
 import { alignPhase, fitBeatGrid, songSecAt } from './tempo';
 import { cutBars, fillFromTake, quantizeTake, replaceRange, songChart, takeChart, toggleNote } from './transcribe';
-import { parseYouTubeId } from './youtube';
+import { cleanSongTitle, parseYouTubeId } from './youtube';
+
+describe('cleanSongTitle (D9)', () => {
+  it('drops YouTube noise, keeps the song', () => {
+    expect(cleanSongTitle('Queen - Another One Bites the Dust (Official Video Remastered)')).toBe('Queen - Another One Bites the Dust');
+    expect(cleanSongTitle('Billie Jean [Official HD Video]')).toBe('Billie Jean');
+    expect(cleanSongTitle('Song (Lyrics) | Artist')).toBe('Song');
+    expect(cleanSongTitle('Take Five (Live at Newport)')).toBe('Take Five (Live at Newport)');
+  });
+});
 
 describe('parseYouTubeId', () => {
   it.each([
