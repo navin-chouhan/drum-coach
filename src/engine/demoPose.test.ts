@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { armPoints, legPoints, PAD_Y, sample, tipCm, type ArmPose } from './demoPose';
-import { ARM_POSES, DEMOS, DEMO_IDS, poseAt, SHOULDER, type Demo } from '../content/demos';
+import { ARM_POSES, DEMOS, DEMO_IDS, demoFor, poseAt, SHOULDER, type Demo } from '../content/demos';
+import { pattern } from './chart';
 
 describe('demo poses', () => {
   it('the named heights match the ruler: contact on the pad, low 3 cm, mid 15, high 30', () => {
@@ -25,5 +26,20 @@ describe('demo poses', () => {
       }
       expect(hit, `${id}${wrong ? ' (wrong)' : ''}`).toBe(true);
     }
+  });
+});
+
+describe('demoFor: every lesson has a movement to watch', () => {
+  const chart = (lines: Parameters<typeof pattern>[0]) => ({ title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: pattern(lines, 2) });
+  it('picks one from what the step plays when the lesson names none', () => {
+    expect(demoFor({}, { chart: chart({ snare: 'xxxxxxxx' }) })).toBe('rebound');
+    expect(demoFor({}, { chart: chart({ snare: 'Xxx.Xxx.' }) })).toBe('accent-tap');
+    expect(demoFor({}, { chart: chart({ snare: 'f.f.f.f.' }) })).toBe('flam');
+    expect(demoFor({}, { chart: chart({ snare: 'd.d.d.d.' }) })).toBe('drag');
+    expect(demoFor({}, { chart: chart({ kick: 'x.x.x.x.' }) })).toBe('kick');
+  });
+  it('the step\'s own, then the lesson\'s, win', () => {
+    expect(demoFor({ demo: 'doubles' }, { chart: chart({ snare: 'xxxxxxxx' }) })).toBe('doubles');
+    expect(demoFor({ demo: 'doubles' }, { chart: chart({ snare: 'xxxxxxxx' }), demo: 'grip' })).toBe('grip');
   });
 });

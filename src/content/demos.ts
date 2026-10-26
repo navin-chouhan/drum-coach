@@ -1,3 +1,4 @@
+import type { Chart } from '../engine/chart.ts';
 import { sample, type ArmPose, type Key, type LegPose, type Pt } from '../engine/demoPose.ts';
 
 // "How it moves" (R5): techniques as pose keyframes per beat (engine/demoPose.ts draws and eases them). Each has the
@@ -99,4 +100,18 @@ export function poseAt(id: DemoId, beat: number, wrong = false) {
     arms: [...(left ? [{ shoulder: LEFT_SHOULDER, pose: left.pose, left: true }] : []), { shoulder: SHOULDER, pose: r.pose, left: false }],
     leg: undefined, word: r.word ?? left?.word,
   };
+}
+
+/**
+ * The movement to show for a lesson step: its own, the lesson's, else one that fits what it plays (grace notes →
+ * flam or drag, accents → accent and taps, only feet → the kick, hands → the full stroke). Every lesson has one.
+ */
+export function demoFor(lesson: { demo?: DemoId }, step: { demo?: DemoId; chart: Chart }): DemoId {
+  if (step.demo ?? lesson.demo) return (step.demo ?? lesson.demo)!;
+  const n = step.chart.notes;
+  if (n.some(x => x.grace === 2 || x.grace === 3)) return 'drag';
+  if (n.some(x => x.grace === 1)) return 'flam';
+  if (n.every(x => x.drum === 'kick' || x.drum === 'hhPedal')) return 'kick';
+  if (n.some(x => x.accent)) return 'accent-tap';
+  return 'rebound';
 }
