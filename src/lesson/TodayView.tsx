@@ -262,14 +262,15 @@ export function TodayView({ onCalibrate, openLessonId }: { onCalibrate: () => vo
 function Trail({ song, lessons, current, done, isChallenge, onOpen }: { song?: string; lessons: Lesson[]; current?: Lesson; done: (id: string) => boolean; isChallenge: (l: Lesson) => boolean; onOpen: (id: string) => void }) {
   const c = Math.max(0, current ? lessons.indexOf(current) : lessons.findIndex(l => !done(l.id)));
   const before = lessons.slice(0, c), after = lessons.slice(c + 1);
-  const folded = before.length > 2 ? before.slice(0, -1) : [];
+  const finished = before.filter(l => done(l.id)); // the current stop can be a coach lesson ahead of unplayed ones
+  const folded = finished.length > 2 ? finished.slice(0, -1) : [];
   const upcoming = after.filter(l => !isChallenge(l)), later = upcoming.slice(4);
   type Stop = { l?: Lesson; icon: string; name: string; cls: string };
   const stop = (l: Lesson): Stop => ({ l, name: l.title, icon: done(l.id) ? '✓' : isChallenge(l) ? '★' : iconOf(l),
     cls: l === current ? 'now' : done(l.id) ? 'done' : isChallenge(l) ? 'boss' : '' });
   const stops: Stop[] = [
     ...(folded.length ? [{ icon: '✓', name: `${folded.length} done`, cls: 'done' }] : []),
-    ...before.slice(folded.length).map(stop), ...(lessons[c] ? [stop(lessons[c])] : []),
+    ...before.filter(l => !folded.includes(l)).map(stop), ...(lessons[c] ? [stop(lessons[c])] : []),
     ...after.filter(l => !later.includes(l) && !isChallenge(l)).map(stop),
     ...(later.length ? [{ icon: `+${later.length}`, name: 'more', cls: 'more' }] : []),
     ...after.filter(isChallenge).map(stop),
