@@ -4,6 +4,7 @@ import { inFreeBar } from '../engine/jam';
 import { clickOnBeat } from '../engine/lesson';
 import { bandNotes, type BandSpec } from '../engine/band';
 import { groupStarts, isOdd8 } from '../engine/meter';
+import { swingPct } from '../engine/feel';
 import { computeStats, createMatcher, noteWindows, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
@@ -40,6 +41,7 @@ export type PlayOptions = RunOptions & {
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
   band?: BandSpec;           // the backing band (engine/band.ts): bass and keys under the take
   feelTarget?: { ms: number; tol: number }; // a step that asks for behind / on top of the beat: the live coach judges timing against it
+  swingWant?: [number, number]; // a step's swing range: the live coach says "Swing it" / "Straighter"
   lesson?: { id: string; step: number; title: string; goal: string; tool?: string; bite?: { songId: string; fromBar: number; toBar: number } }; // saved with the run, read by the coach (and the profile: minutes per tool)
 };
 export type Finished = { cues: Cue[]; zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
@@ -88,7 +90,13 @@ function liveCheck(pos: number) {
   const from = (bar - 2) * bpb, to = bar * bpb;
   const notes = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [{ drum: n.drum, accent: n.accent, ghost: n.ghost, ...player.results[i] }]));
   const extras = live.extras.filter(h => { const b = (h.time - player.zero) / player.beatMs; return b >= from && b < to; }).length;
-  const raw = live.coach({ bar, notes, extras, reaction: reactingToClick(expectedTimes(run), live.hits), target: player.options?.feelTarget });
+  // the feel this step asks for (R4): swing over the window, and the sheet's volume marks this bar vs the one before
+  const o = player.options!, inWin = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [i]));
+  const swing = o.swingWant ? { now: swingPct({ ...run, notes: inWin.map(i => run.notes[i]) }, inWin.map(i => player.results[i]), player.beatMs), want: o.swingWant } : undefined;
+  const marks = player.chart?.dyn, sec = o.toBar - o.fromBar + 1, markOf = (b: number) => marks?.[o.fromBar - 1 + (((b % sec) + sec) % sec)];
+  const vel = (b: number) => { const v = inWin.filter(i => run.notes[i].bar === b).flatMap(i => player.results[i].velocity ?? []); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : 0; };
+  const dyn = marks && bar >= 2 && markOf(bar - 1) !== undefined && markOf(bar - 2) !== undefined ? { want: markOf(bar - 1)!, prevWant: markOf(bar - 2)!, got: vel(bar - 1), prevGot: vel(bar - 2) } : undefined;
+  const raw = live.coach({ bar, notes, extras, reaction: reactingToClick(expectedTimes(run), live.hits), target: o.feelTarget, swing, dyn: dyn && dyn.got && dyn.prevGot ? dyn : undefined });
   if (!raw) return;
   const cue = applyTip(player.chart, raw); // the coach's own words for this exercise, when it has written them
   player.cue = { cue, at: performance.now() };

@@ -143,7 +143,8 @@ export function forYou<C extends { id: string; kind?: string; level?: number; so
 }
 
 const THEME_WORDS: Record<string, string> = {
-  'lay-back': 'laying back behind the click', 'too-far-back': 'staying close to the click',
+  'lay-back': 'laying back behind the click', 'too-far-back': 'staying close to the click', 'swing-more': 'swinging the 8ths', straight: 'straight, even 8ths',
+  'bring-up': 'playing the loud parts louder', 'bring-down': 'playing the soft parts softer',
   rushing: 'rushing ahead of the click', dragging: 'landing behind the click', unsteady: 'keeping the click steady',
   reacting: 'playing with the click, not after it', 'missing-kick': 'the kick', extras: 'playing only the notes shown',
   'hh-open': 'keeping the hi-hat pedal down', accents: 'louder accents', ghosts: 'softer ghost notes', even: 'even strokes',

@@ -262,7 +262,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     lesson: { id: lesson.id, step: stepIdx + 1, title: lesson.title, goal: step.text, tool: flow ? 'flow' : arcade ? 'arcade' : toolOf(step),
       ...(step.bite && { bite: { songId: step.bite.songId, fromBar: step.bite.fromBar, toBar: step.bite.toBar } }) }, // bars of a song: count towards it
     band: getSettings().band !== false ? bandSpec : undefined,
-    feelTarget: step.pass?.offsetTarget && { ms: step.pass.offsetTarget.ms, tol: step.pass.offsetTarget.tol },
+    feelTarget: step.pass?.offsetTarget && { ms: step.pass.offsetTarget.ms, tol: step.pass.offsetTarget.tol }, swingWant: step.pass?.swingPct,
   });
   // Intro slides before the first take of a step or layer (or after a tempo jump of more than 10 BPM).
   const [intro, setIntro] = useState<{ run: () => void }>();

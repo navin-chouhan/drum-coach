@@ -56,3 +56,17 @@ describe('a lay-back target (R4)', () => {
     expect(candidateCues({ bar: 2, notes: notes(22), extras: 0 }, 'normal').map(c => c.id)).toContain('dragging');
   });
 });
+
+describe('feel cues (R4)', () => {
+  const notes = Array.from({ length: 8 }, () => ({ drum: 'hihat' as const, judgement: 'good' as const, offset: 0 }));
+  it('swing: too straight hears "Swing it", too swung hears "Straighter"', () => {
+    expect(candidateCues({ bar: 2, notes, extras: 0, swing: { now: 51, want: [58, 74] } }, 'normal').map(c => c.id)).toContain('swing-more');
+    expect(candidateCues({ bar: 2, notes, extras: 0, swing: { now: 80, want: [44, 56] } }, 'normal').map(c => c.id)).toContain('straight');
+    expect(candidateCues({ bar: 2, notes, extras: 0, swing: { now: 64, want: [58, 74] } }, 'normal').map(c => c.id)).toEqual([]);
+  });
+  it('dynamics: the marks go up but you didn\'t, or down', () => {
+    expect(candidateCues({ bar: 2, notes, extras: 0, dyn: { want: 3, prevWant: 1, got: 80, prevGot: 82 } }, 'normal').map(c => c.id)).toContain('bring-up');
+    expect(candidateCues({ bar: 2, notes, extras: 0, dyn: { want: 1, prevWant: 3, got: 100, prevGot: 98 } }, 'normal').map(c => c.id)).toContain('bring-down');
+    expect(candidateCues({ bar: 2, notes, extras: 0, dyn: { want: 3, prevWant: 1, got: 110, prevGot: 70 } }, 'normal').map(c => c.id)).toEqual([]);
+  });
+});
