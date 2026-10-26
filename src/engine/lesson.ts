@@ -1,3 +1,6 @@
+import type { DemoId } from '../content/demos.ts';
+import { offsetOnTarget } from './feel.ts';
+import { isOdd8 } from './meter.ts';
 import { beatsPerBar, type Chart, type ChartDrum } from './chart.ts';
 import { seededRandom } from './kitEmulator.ts';
 import type { RunStats } from './scoring.ts';
@@ -18,6 +21,10 @@ export type Pass = {
   minGracePct?: number;       // grace notes (flams, drags): % that came out as grace + main (default 70 when the chart has any)
   graceGapMs?: [number, number]; // grace → main stroke, ms (default 8–50)
   maxGraceRatio?: number;     // grace volume / main volume (default 0.75)
+  swingPct?: [number, number]; // feel: where the & lands between beats, % (50 straight, 67 triplet swing)
+  minDynamicsR?: number;      // feel: how closely the volume follows the chart's p / mf / f marks (correlation, 0–1)
+  offsetTarget?: { drum?: ChartDrum; ms: number; tol: number }; // feel: behind (+) or on top of (−) the beat on purpose
+  minFreeOnBeatPct?: number;  // your own bars (solos, breaks): % of strokes on the 8th-note grid
 };
 export const GRACE_PASS = { minGracePct: 70, graceGapMs: [8, 50] as [number, number], maxGraceRatio: 0.75 };
 export const DEFAULT_PASS: Pass = { accuracy: 90, maxExtraPct: 15 };
@@ -46,6 +53,10 @@ export type Step = {
   probe?: boolean;      // find your tempo: 1-bar takes from bpm.start, +5 per clean bar, until one falls apart
   rest?: number;        // shake it out: a rest of this many seconds, no playing (the step text says what to loosen)
   layers?: ChartDrum[][]; // one limb at a time: each clean take adds the next layer's lanes, then the tempo ladder
+  demo?: DemoId;        // how the body moves (content/demos.ts DEMO_IDS): the lesson card, the 4th intro slide, the self-check
+  quiz?: 'steady' | 'kick'; // an ear-training step (lesson/EarQuiz.tsx): listen and answer, no playing
+  read?: boolean;       // a reading step: the sheet only, no count or hand hints (use `variants` so it's read, not memorised)
+  look?: boolean;       // a "look" step: watch the movement (and yourself in the mirror), no playing; done moves on
 };
 export type LessonKind = NonNullable<Chart['kind']>;
 export type Lesson = {
@@ -54,6 +65,9 @@ export type Lesson = {
   steps: Step[]; tags?: Genre[];
   source?: 'ai'; focus?: string; // AI-curated for this student; `focus` says why
   checkpoint?: string; // a coach lesson that stands in for this checkpoint: finishing it passes the checkpoint
+  demo?: DemoId; // how the body moves for the whole lesson (a step's own `demo` wins)
+  needsLatency?: boolean; // judged in milliseconds (laying back): needs a saved latency test
+  band?: { chords?: string }; // the backing band's chord line, one symbol per bar (engine/band.ts); default by style
 };
 /** A fixed point on the path: what you can do, proven by passing its checkpoint lessons. */
 export type Milestone = { level: number; title: string; rank: string; canDo: string[]; checkpoints: string[] }; // rank: your title once it's passed
@@ -80,8 +94,9 @@ export const toolOf = (s: Step): Tool => (s.bite ? 'bite' : s.jam ? 'jam' : s.tr
 
 const COUNT = ['one', 'two', 'three', 'four', 'five', 'six', 'seven'];
 /** What the voice says per bar: one word per slot ('' = silent), full count for 4 bars, then only "one" so you take over. */
-export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | '8ths'): string[][] {
-  const full = COUNT.slice(0, beatsPerBar).flatMap(n => (mode === '8ths' ? [n, 'and'] : [n]));
+export function countPlan(bars: number, beatsPerBar: number, mode: 'quarters' | '8ths', ts?: readonly [number, number]): string[][] {
+  // an odd /8 meter is counted in 8ths ("one … seven"), never in half beats
+  const full = ts && isOdd8(ts) ? COUNT.slice(0, ts[0]) : COUNT.slice(0, beatsPerBar).flatMap(n => (mode === '8ths' ? [n, 'and'] : [n]));
   return Array.from({ length: bars }, (_, b) => (b < 4 ? full : full.map((w, i) => (i ? '' : w))));
 }
 
@@ -147,7 +162,7 @@ export const startProgress = (l: Lesson): LessonProgress =>
  * Did this take pass? `reason` is the one thing to fix, in plain words. With a `level`, the bar is that level's
  * (`passFor`) and a lesson may relax it but not make it stricter.
  */
-export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number): { ok: boolean; reason?: string } {
+export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number, free?: { hits: number; onGridPct: number }): { ok: boolean; reason?: string } {
   const base = level === undefined ? DEFAULT_PASS : passFor(level);
   const c = level === undefined ? { ...base, ...p }
     : { ...base, ...p, accuracy: Math.min(base.accuracy, p?.accuracy ?? 100), maxExtraPct: Math.max(base.maxExtraPct, p?.maxExtraPct ?? 0) };
@@ -164,6 +179,16 @@ export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number): { ok:
     if (s.grace.played && s.grace.ratio > g.maxGraceRatio) return { ok: false, reason: 'Grace too loud: keep that stick 3 cm off the pad.' };
     if (s.grace.played && s.grace.gapMs > g.graceGapMs[1]) return { ok: false, reason: 'The two sticks land too far apart: drop them closer together.' };
     if (s.grace.played && s.grace.gapMs < g.graceGapMs[0]) return { ok: false, reason: 'The sticks land together: start the low stick a hair earlier.' };
+  }
+  if (c.minFreeOnBeatPct !== undefined && free && free.hits && free.onGridPct < c.minFreeOnBeatPct)
+    return { ok: false, reason: `Your own bars drifted off the beat (${free.onGridPct}% on it). Play anything, but keep the pulse.` };
+  if (c.swingPct && s.feel?.swing != null && (s.feel.swing < c.swingPct[0] || s.feel.swing > c.swingPct[1]))
+    return { ok: false, reason: s.feel.swing < c.swingPct[0] ? 'Swing it more: the & a little later, long-short, long-short.' : 'A bit too swung: the & is landing almost on the next beat.' };
+  if (c.minDynamicsR !== undefined && s.feel?.dynamics != null && s.feel.dynamics < c.minDynamicsR)
+    return { ok: false, reason: 'Follow the volume marks: soft where it says p, loud at f.' };
+  if (c.offsetTarget) {
+    const t = offsetOnTarget(s, c.offsetTarget);
+    if (!t.ok) return { ok: false, reason: t.offset < c.offsetTarget.ms ? 'Sit a little behind the click: let it land just after.' : 'A touch too far behind: bring it closer to the click.' };
   }
   if (c.maxAbsOffsetMs !== undefined && Math.abs(s.meanOffset) > c.maxAbsOffsetMs)
     return { ok: false, reason: `${s.meanOffset < 0 ? 'Rushing' : 'Dragging'} by ${Math.abs(s.meanOffset)} ms. Lock onto the click.` };
@@ -212,6 +237,10 @@ export const floorLine = (notesLanded: boolean, reason?: string) => (notesLanded
   ? `All the notes are there. ${reason ?? 'One small thing left: see the tip.'}`
   : 'This one is tricky. Try "Learn it slowly": the music waits for each note.');
 
+/** Levels 0–1 pass a take well off the click (Good is ±150 ms); the verdict still says so, gently. */
+export const lateNote = (level: number, meanOffsetMs: number) => (level > 1 || Math.abs(meanOffsetMs) <= 50 ? ''
+  : meanOffsetMs > 0 ? ' A touch late: lean into the click.' : ' A touch early: let the click come to you.');
+
 export type LadderEvent = 'up' | 'hold' | 'slowDown' | 'atFloor' | 'layerUp' | 'stepDone' | 'lessonDone';
 /** The lanes the student plays now: the current layer, else the step's own `activeLanes`. */
 export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.layers[Math.min(p.layer ?? 0, s.layers.length - 1)] : s.activeLanes);
@@ -222,11 +251,13 @@ export const lanesNow = (s: Step, p: LessonProgress) => (s.layers?.length ? s.la
  * ROUGH_ACCURACY % landed) → −10 at once; FAILS_BEFORE_SLOWDOWN close ones → −5. Never below MIN_BPM ('atFloor').
  * A `jam` step counts any take as clean. A `layers` step adds a layer per clean take (tempo stays) before the ladder;
  * a fail never takes a layer away. A `strong` take (★★★ quality) and a streak challenge's pass count as both clean takes.
+ * `notesLanded`: the fail was timing or volume only, every note there: slower doesn't fix that, the tempo holds.
  */
-export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false): { next: LessonProgress; event: LadderEvent } {
+export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, today: string, accuracy?: number, strong = false, notesLanded = false): { next: LessonProgress; event: LadderEvent } {
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
-  if (step.jam || step.rest || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
+  if (step.jam || step.rest || step.look || step.quiz || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
+  if (!passed && notesLanded) return { next: { ...p, clean: 0, fails: 0 }, event: 'hold' };
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
     if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };
@@ -237,7 +268,7 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
-  if (step.jam || step.rest) { // any take (or the end of a rest) finishes the step
+  if (step.jam || step.rest || step.look || step.quiz) { // any take (or the end of a rest or a look) finishes the step
     if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
   } else {
     if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };

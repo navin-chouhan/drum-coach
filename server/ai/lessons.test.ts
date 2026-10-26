@@ -84,3 +84,34 @@ describe('coach lesson titles', () => {
     expect(uniqueTitle('The money beat', 'x'.repeat(200), builtins).length).toBeLessThanOrEqual(80);
   });
 });
+
+describe('after the whole path', () => {
+  it('the coach still gets an input: the last stage, marked postPath (no more "finished every milestone")', () => {
+    const progress = Object.fromEntries(CURRICULUM.map(l => [l.id, done()]));
+    const input = lessonInput({ profile, progress, aiLessons: [], recent: [] })!;
+    expect(input).not.toBeNull();
+    expect(input.postPath).toBe(true);
+    expect(input.milestone.level).toBe(Math.max(...CURRICULUM.map(l => l.level)));
+  });
+});
+
+describe('personal input (R6)', () => {
+  it('the lesson input carries the student profile and this week\'s focus', () => {
+    const studentProfile = { days: 3, minutes: 40, perDrum: {}, timing: null, topTips: [], tools: {}, songs: [], weakest: 'kick' };
+    const input = lessonInput({ profile, progress: {}, aiLessons: [], recent: [], studentProfile, weekFocus: { focus: 'the kick on 1', drums: ['kick'] } })!;
+    expect(input.profile?.weakest).toBe('kick');
+    expect(input.weekFocus).toEqual({ focus: 'the kick on 1', drums: ['kick'] });
+    expect(lessonInput({ profile, progress: {}, aiLessons: [], recent: [] })!.weekFocus).toBeUndefined();
+  });
+});
+
+describe('bites of a built-in stage song (R8)', () => {
+  it('a coach bite may name the built-in song; its bars are cut from the song', () => {
+    const l = CURRICULUM.find(x => x.id === 'money-8ths')!;
+    const step = { ...l.steps[0], chart: { ...l.steps[0].chart, id: undefined }, bite: { songId: 'song-steady', fromBar: 1, toBar: 4 } };
+    const out = applyBites({ ...l, focus: '', steps: [step] }, () => undefined);
+    expect(out.steps[0].bite?.title).toBe('Steady Eight');
+    expect(out.steps[0].chart.bars).toBe(4);
+    expect(lessonInput({ profile, progress: { 'count-8ths': done(), rests: done() }, aiLessons: [], recent: [] })!.stageSong?.id).toBe('song-hats');
+  });
+});

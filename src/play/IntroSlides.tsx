@@ -3,6 +3,9 @@ import { onCoachAction } from '../coach/session';
 import type { ChartNote } from '../engine/chart';
 import { limbPlan, noteHints } from '../engine/notation';
 import { onHit } from '../input/hits';
+import { getSettings } from '../input/settings';
+import { TechniqueDemo } from '../ui/TechniqueDemo';
+import type { DemoId } from '../content/demos';
 
 const TAP_GAP_MS = 250; // a stick bounce or a double hit counts once
 
@@ -11,12 +14,13 @@ const TAP_GAP_MS = 250; // a stick bounce or a double hit counts once
  * one hi-hat hit forward and one snare hit back; forward on the last one starts the take (count-in as usual).
  * While they're up, the other pad gestures do nothing (a quick double snare mustn't start a take).
  */
-export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, onDone, onClose }: {
+export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, demo, onDone, onClose }: {
   title: string; sub?: string; bpm: number; what: string; notes: (ChartNote & { mine?: boolean })[]; beatsPerBar: number; focus?: string;
+  demo?: DemoId; // a 4th slide: how the body moves (R5)
   onDone: () => void; onClose: () => void;
 }) {
   const [i, setI] = useState(0);
-  const last = 2;
+  const last = demo ? 3 : 2;
   const next = () => (i >= last ? onDone() : setI(i + 1));
   const back = () => setI(Math.max(0, i - 1));
   const nav = useRef({ next, back, onClose });
@@ -39,8 +43,9 @@ export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, 
     return () => { offHit(); offAction(); window.removeEventListener('keydown', onKey, true); };
   }, []);
 
-  const plan = limbPlan(notes, beatsPerBar);
-  const firstBar = noteHints(notes.filter(n => n.t < beatsPerBar - 1e-6), beatsPerBar);
+  const left = getSettings().leftHanded; // N9: a left-handed player's hints mirror
+  const plan = limbPlan(notes, beatsPerBar, left);
+  const firstBar = noteHints(notes.filter(n => n.t < beatsPerBar - 1e-6), beatsPerBar, left);
   const pedalDown = notes.some(n => n.drum === 'hihat') && !plan.some(p => p.limb === 'H');
 
   return (
@@ -65,6 +70,10 @@ export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, 
             {firstBar.slice(0, 16).map(h => <div key={h.t} className={Number.isInteger(h.t) ? 'beat' : ''}>{h.count}<small>{h.limbs}</small></div>)}
           </div>
           {focus && <p className="s">💡 {focus}</p>}
+        </>}
+        {i === 3 && demo && <>
+          <span className="k">HOW IT MOVES</span>
+          <TechniqueDemo id={demo} bpm={bpm} compact />
         </>}
         <div className="slideNav">
           <button className="go" onClick={next}>{i >= last ? 'Ready ▶' : 'Next ▶'} <i>hi-hat × 1</i></button>

@@ -12,6 +12,8 @@ export const ChartNoteSchema = z.object({
   ghost: z.boolean().optional(),
   auto: z.boolean().optional(), // played by the app, not the student (the "call" of a copy-me step)
   grace: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(), // grace strokes before the note: 1 flam, 2 drag, 3 ruff
+  stick: z.enum(['R', 'L']).optional(), // the hand that plays it, when the sticking matters (paradiddles, doubles); else the hints alternate
+  buzz: z.boolean().optional(), // a buzz (press) stroke: the stick presses into the pad and its bounces belong to the note
 });
 
 export const ChartSchema = z.object({
@@ -23,6 +25,7 @@ export const ChartSchema = z.object({
   level: z.number().int().min(0).max(10).optional(), // 0 = the curriculum's first level
   kind: z.enum(['groove', 'rudiment', 'fill', 'song', 'exercise']).optional(),
   description: z.string().max(500).optional(),
+  dyn: z.array(z.number().int().min(1).max(3)).max(1000).optional(), // volume marks per bar: 1 p, 2 mf, 3 f (engine/feel.ts)
   notes: z.array(ChartNoteSchema).min(1).max(50_000),
 }).refine(c => c.notes.every(n => n.t < c.bars * beatsPerBar(c)), { message: 'a note is past the last bar' });
 
@@ -48,11 +51,17 @@ export function pattern(lines: Partial<Record<ChartDrum, string>>, stepsPerBeat:
   for (let b = 0; b < bars; b++) {
     for (const [drum, line] of Object.entries(lines) as [ChartDrum, string][]) {
       [...line].forEach((ch, i) => {
-        if (!'xXgfFdDr'.includes(ch)) return;
+        if (!'xXgfFdDrz'.includes(ch)) return;
         const grace = ({ f: 1, F: 1, d: 2, D: 2, r: 3 } as const)[ch as 'f'];
-        notes.push({ t: offsetBeats + b * barBeats + i / stepsPerBeat, drum, ...('XFD'.includes(ch) && { accent: true }), ...(ch === 'g' && { ghost: true }), ...(grace && { grace }) });
+        notes.push({ t: offsetBeats + b * barBeats + i / stepsPerBeat, drum, ...('XFD'.includes(ch) && { accent: true }), ...(ch === 'g' && { ghost: true }), ...(grace && { grace }), ...(ch === 'z' && { buzz: true }) });
       });
     }
   }
   return notes.sort((a, b) => a.t - b.t);
+}
+
+/** Writes a sticking onto the notes in time order, repeating it ("RLRRLRLL" for a paradiddle). Feet are skipped. */
+export function withSticking(notes: ChartNote[], sticking: string): ChartNote[] {
+  let k = 0;
+  return [...notes].sort((a, b) => a.t - b.t).map(n => (n.drum === 'kick' || n.drum === 'hhPedal' ? n : { ...n, stick: sticking[k++ % sticking.length] as 'R' | 'L' }));
 }

@@ -1,6 +1,7 @@
 import { padMatches, type ChartDrum } from './chart.ts';
 import type { PadId } from './kit.ts';
 import type { Run } from './run.ts';
+import { barDynamics, swingPct } from './feel.ts';
 
 export const WINDOWS = { perfect: 40, good: 100, near: 250 }; // near: an off-time stroke still belongs to its note (a miss, not an extra)
 /**
@@ -13,7 +14,7 @@ export function windowsFor(beatMs: number, gapMs = Infinity, goodMs = WINDOWS.go
 }
 export type Judgement = 'perfect' | 'good' | 'miss';
 /** time = ms on the performance.now() clock (latency already removed for hits). */
-export type Expected = { time: number; drum: ChartDrum; good?: number; grace?: number }; // good: this note's own Good window (noteWindows); grace: chart grace strokes
+export type Expected = { time: number; drum: ChartDrum; good?: number; grace?: number; buzz?: boolean }; // buzz: a buzz (press) stroke, its bounces belong to it // good: this note's own Good window (noteWindows); grace: chart grace strokes
 /**
  * Per-note Good windows: 40% of the gap to the nearest note on the same drum, capped at `goodMs`. Fast 16ths on the
  * snare are judged tighter without shrinking the 8ths on the hi-hat beside them (a take-wide window did).
@@ -31,7 +32,7 @@ export function noteWindows(expected: Expected[], goodMs = WINDOWS.good): Expect
 export type PlayedHit = { time: number; pad?: PadId; velocity: number };
 /** How a grace note came out: grace strokes before the main one, first stroke → main stroke ms, first / main velocity. */
 export type GraceResult = { strokes: number; gapMs: number; ratio: number };
-export type Match = { index: number; offset: number; judgement: Judgement; grace?: GraceResult }; // 'miss' = claimed by an off-time stroke
+export type Match = { index: number; offset: number; judgement: Judgement; grace?: GraceResult; bounce?: boolean }; // 'miss' = claimed by an off-time stroke; bounce = part of a buzz note, neither a hit nor an extra
 export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId; off?: number; grace?: GraceResult }; // off: ms of an off-time stroke (not a hit)
 
 /** What a match means for its note: a hit with its offset, or a miss that remembers how far off the stroke was. */
@@ -42,6 +43,7 @@ export const toResult = (m: Match, velocity: number, pad?: PadId): NoteResult =>
 
 // Grace chain: a later stroke on the same pad within GRACE_STEP_MS, at least GRACE_VEL × the stroke before it, takes a
 // grace note over (the grace stroke came first, the main stroke counts). A softer stroke is a bounce, not the main one.
+const BUZZ_MAX_MS = 400; // a buzz stroke rings this long at most
 const GRACE_STEP_MS = 60, GRACE_SPAN_MS = 120, GRACE_MAX_MOVES = 3, GRACE_VEL = 0.9;
 
 /**
@@ -96,6 +98,11 @@ export function createMatcher(expected: Expected[], w = WINDOWS) {
         if (a < nearAbs) { near = k; nearAbs = a; }
         if (!taken[k] && expected[k].time <= hit.time) past = k;
       }
+      // a bounce of a buzz stroke: same pad, after a played buzz note and before the next note on that pad
+      // shortcut: two linear scans per stray stroke; fine for lesson-size charts, index notes by pad if songs get buzz notes
+      const buzz = expected.findLastIndex((e, j) => taken[j] && e.buzz && e.time <= hit.time && padMatches(e.drum, hit.pad!));
+      if (buzz >= 0 && !expected.some((e, j) => j > buzz && e.time <= hit.time - 1e-6 && padMatches(e.drum, hit.pad!)) && hit.time - expected[buzz].time < BUZZ_MAX_MS)
+        return { index: buzz, offset: 0, judgement: 'miss', bounce: true };
       if (near < 0 || taken[near]) return null; // nothing close, or that note was already played: a real extra
       const idx = past >= 0 ? past : near;
       taken[idx] = 1;
@@ -114,6 +121,7 @@ export function scoreRun(expected: Expected[], hits: PlayedHit[]) {
   const extras: PlayedHit[] = [];
   for (const h of hits) {
     const m = match(h);
+    if (m?.bounce) continue; // part of a buzz note
     if (m) results[m.index] = toResult(m, h.velocity);
     else extras.push(h);
   }
@@ -166,6 +174,7 @@ export type RunStats = {
     pairDrop: number | null }; // % the 2nd note of each pair (notes 1–2, 3–4…) is softer than the 1st: weak doubles
   flam: number | null; // ms, mean split between limbs on notes meant to land together (null: none played)
   grace?: { notes: number; played: number; pct: number; gapMs: number; ratio: number } | null; // grace notes: how many came out as grace + main
+  feel?: { swing: number | null; dynamics: number | null }; // engine/feel.ts: swing %, volume following the marks (when the player gives the tempo)
   heat: HeatCell[];   // one cell per grid position in the bar: 16ths, or triplets for a triplet groove (heatSlotName)
   streak: number;     // most notes hit in a row
   recoveries: number; // times a hit came straight after a miss: you kept going
@@ -220,7 +229,8 @@ export function heatSlotName(i: number, slots: number, beatsPerBar: number): str
   return `beat ${Math.floor(i / perBeat) + 1}${name ? ' ' + name : ''}`;
 }
 
-export function computeStats(run: Run, results: NoteResult[], extra: number): RunStats {
+/** `beatMs` and `dyn` (the chart's 1–3 marks per run bar) add the feel: swing % and dynamics (R4). */
+export function computeStats(run: Run, results: NoteResult[], extra: number, beatMs?: number, dyn?: (number | undefined)[]): RunStats {
   const hitOffsets = results.flatMap(r => (r.offset === undefined ? [] : [r.offset]));
   // Timing counts off-time strokes too: at fast tempos a dragging player's late strokes fall outside Good,
   // and leaving them out would report them as nearly on time.
@@ -268,8 +278,10 @@ export function computeStats(run: Run, results: NoteResult[], extra: number): Ru
   const grace = graceNotes.length ? { notes: graceNotes.length, played: played.length, pct: pct(played.length, graceNotes.length),
     gapMs: r1(mean(played.map(r => r.grace!.gapMs))), ratio: Math.round(mean(played.map(r => r.grace!.ratio)) * 100) / 100 } : null;
 
+  const feel = beatMs ? { swing: swingPct(run, results, beatMs), dynamics: dyn?.some(d => d !== undefined) ? barDynamics(run, results, dyn) : null } : undefined;
+
   return {
-    grace, total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
+    ...(feel && { feel }), grace, total: results.length, perfect: count('perfect'), good: count('good'), miss: count('miss'), extra,
     accuracy: pct(hitOffsets.length, results.length),
     meanOffset: r1(mean(timing)), spread: r1(std(timing)), perDrum,
     velocity: {

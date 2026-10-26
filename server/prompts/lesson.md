@@ -8,6 +8,13 @@ The input has:
   velocity and the weakest beat positions. "struggle" (optional): a take they just failed and why.
 - "examples": built-in lessons for this milestone, to show the format and the level of difficulty.
 - "yourEarlierLessons": lessons you already wrote for this milestone. Don't repeat one.
+- "profile" (if present): their last 28 days: per drum accuracy and offset with a trend, the tips given most, minutes per
+  tool (what they enjoy), their songs, the weakest drum. "weekFocus": the coach's plan for this week. Aim the lesson at the
+  focus when it fits this milestone, and lean on the tools they play most.
+- "stageSong": the built-in song of this stage. A step's "bite" may name it ({ "songId": its id, "fromBar", "toBar" }) like a
+  saved song: a few bars of the stage song are the most motivating practice for a beginner.
+- "postPath": true when the student has passed every stage. Then write a review or stretch lesson at this last level, aimed
+  at the weakest skill in "recentRuns" (a faster tempo, a variation, a longer take); never a new topic beyond this level.
 
 Who you teach: an adult learning drums as a first instrument. Teach the student the evidence shows, not a stereotype:
 "student.read" sums up their history ("pace", stars of their last lessons, accuracy %, spread ms, "comfortableBpm").
@@ -60,7 +67,9 @@ How to choose:
 - Don't set pass.accuracy; the app uses the stage's bar. Never ask for something above this milestone.
 - Plain words for an adult beginner. "how" gives 2–3 concrete physical tips. "focus" is one warm sentence about why
   this lesson, for them (no milliseconds or percentages).
-- Charts follow the chart format; keep them 1–4 bars. For a step's chart, "bpm" = that step's target.
+- Charts follow the chart format; keep them 1–4 bars. For a step's chart, "bpm" = that step's target. From level 3 on, a
+  snare or tom note may have "grace": 1 (flam), 2 (drag) or 3 (ruff): soft grace strokes from the other hand just before it,
+  or "buzz": true (a press stroke whose bounces belong to it).
 - "checkpoint": set it to the id of the unpassed checkpoint this lesson proves (its last step must be a drill at the
   checkpoint's target tempo, with at least the checkpoint's notes per bar on each of its drums: the same rhythm, not an
   easier one; otherwise the app keeps it as a practice lesson); finishing it passes that checkpoint. Leave it out for lessons that only build toward it,
@@ -70,8 +79,10 @@ How to choose:
 Answer shape:
 { "title": string (≤ 60 chars; never reuse a built-in or checkpoint title: name what this lesson is for you), "kind": "exercise" | "rudiment" | "groove" | "fill",
   "focus": string, "checkpoint"?: string, "what": string, "why": string, "how": string,
+  "band"?: { "chords": "one chord per bar, e.g. \"A A D E\" (C, Am, E7, Bbmaj7…), for a groove, song or fill" },
   "steps": [ { "title": string (≤ 40 chars), "text": "one instruction line",
     "chart": { chart }, "activeLanes"?: [lanes], "bpm": { "start": number, "target": number },
     "pass"?: { "accuracy"?: %, "maxAbsOffsetMs"?: ms, "maxVelocityCv"?: %, "maxGhostToAccent"?: 0–1,
-      "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row },
+      "maxSpreadMs"?: ms (hit consistency), "maxFlamMs"?: ms (limbs landing together), "maxPairDropPct"?: % (weak 2nd note of doubles), "streak"?: notes in a row,
+      "minGracePct"?: % of grace notes played as grace + main (default 70) },
     "gapBars"?: 2, "jam"?: true, "copy"?: true, "layers"?: [[lanes], ...], "trade"?: true, "freeBars"?: [bar numbers], "countAloud"?: "quarters" | "8ths", "bite"?: { "songId", "fromBar", "toBar" }, "fadeClick"?: bars, "clickOn"?: "quarters" | "8ths" | "2and4", "variants"?: [charts], "bars"?: number, "rest"?: seconds, "probe"?: true } ] }

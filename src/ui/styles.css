@@ -495,3 +495,32 @@
   .restCountdown{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:360px;font:800 160px/1 var(--display);text-align:center}
   .restCountdown p{font:700 28px system-ui;margin:16px 0 0}
   .recap{background:var(--panel2);border:2px solid var(--line);padding:6px 12px;font-size:16px}
+
+  /* How it moves (R5) and the camera self-check */
+  .technique .techStage{position:relative;background:var(--night);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line)}
+  .technique svg{display:block;width:100%;height:auto}
+  .technique .techWord{position:absolute;top:10px;left:14px;font:800 36px/1 var(--display);color:var(--pop);text-shadow:3px 3px 0 #000}
+  .technique .techWord.wrong{color:var(--bad)}
+  .technique .techCount{position:absolute;top:12px;right:14px;display:flex;gap:10px;font:800 24px var(--display);color:#666}
+  .technique .techCount .on{color:var(--cyan)}
+  .technique.compact .techWord{font-size:24px}.technique.compact .techCount{font-size:18px}
+  .technique .techBar{margin-top:8px}
+  .technique .seg{display:inline-flex;border:2px solid var(--line)}.technique .seg button{border:0;border-radius:0;border-right:2px solid var(--line)}
+  .technique .seg button:last-child{border-right:0}.technique .seg button.on{background:var(--good);color:#fff}.technique .seg button.on.bad{background:var(--bad)}
+  .technique .techWhat{font-size:17px;margin:10px 0 6px}.technique .techWatch li{font-size:16px;margin-bottom:4px}
+  .selfCheck{position:fixed;inset:0;z-index:60;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;padding:24px;background:#141414f2;color:#fff;overflow:auto}
+  .selfCheck .selfClose{position:absolute;top:10px;right:18px;color:#fff;font-weight:800}
+  .selfMirror{position:relative;align-self:start}
+  .selfMirror video{width:100%;border:3px solid var(--pop);background:#000;aspect-ratio:16/9;object-fit:cover}
+  .selfMirror video.mirror{transform:scaleX(-1)}
+  .selfRec{position:absolute;top:12px;left:12px;background:var(--bad);color:#fff;font:800 15px var(--display);padding:3px 10px;border-radius:999px}
+  .selfRec.replay{background:var(--accent)}
+  .selfErr{position:absolute;top:40%;left:10%;right:10%}
+  .selfKeys{margin-top:10px;font:700 16px system-ui}.selfKeys i{font-style:normal;background:var(--pop);color:var(--line);border-radius:999px;padding:2px 10px}
+  .selfSide .selfLook{font:800 24px var(--display);color:var(--pop);margin:12px 0 4px}.selfSide li{font-size:19px;margin-bottom:6px}
+  @media (max-width:900px){.selfCheck{grid-template-columns:1fr}}
+  .stop.songStop .dot{background:conic-gradient(var(--good) 0 var(--p), var(--cyan) var(--p) 100%)}
+  .earQuiz .quizQ{font:800 30px var(--display);margin:6px 0 14px}.earQuiz .quizOptions{display:grid;gap:12px;margin-bottom:12px}
+  .earQuiz .quizSaid{font:800 26px var(--display);color:var(--bad)}.earQuiz .quizSaid.ok{color:var(--good)}
+  .calDots{font:800 30px var(--display);letter-spacing:.08em}.calSummary li{margin-bottom:4px}
+  .throneCheck .big{font:800 30px var(--display);margin:4px 0}.throneCheck .ans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0}

@@ -13,6 +13,9 @@ was fixed. Newest stage at the bottom. Updated as the run goes.
 - **Browser:** Claude in Chrome. Its screenshot, click and find tools time out on every page here (even a plain JSON
   page), so the app is driven by page scripts: clicks on the buttons the user would press, hi-hat taps for the intro
   slides, and one real key press per page load to allow sound.
+- **Tooling (G8):** Setup → Pads → Emulated kit has Beginner and Solid presets and now fills free bars with 8ths. The
+  page driver is `scripts/playtest/helpers.js`: `await import('/scripts/playtest/helpers.js?' + Date.now())`, then
+  `T.player({…})`, `T.nav.requestLesson(id)`, `await T.go()` (one take, then the verdict, side card and progress).
 - **Onboarding:** all three styles picked (rock, funk, jazz) so every tagged lesson is on the path; 25 minutes a day.
 
 ## Lessons learned about testing this app
@@ -125,6 +128,7 @@ Late 45 ms, Jitter ±40 ms, Weak hand 60%, retriggers and crosstalk on. Branch `
 | 16 | "🔍 Fix bar 2" worked (bar 2 looped 4× at 50 instead of 60, the ladder didn't move), but its verdict always said "Bar 2 sounds better", even when the loop went badly. | Honesty | "sounds better" only when the loop passed, else "is getting there". |
 | 17 | After ~15 rough takes (avg 75% landed, hits wandering ±75 ms, no lesson finished, comfortable at 40 BPM) the student read was *steady*, not *struggling*: the cut-off was accuracy < 75 and spread was ignored. The coach would write for a steady student. | Teaching | A spread wider than 40 ms (looser than any checkpoint allows) also reads as struggling (`studentRead`). On the test data the read is now *struggling*. |
 | 18 | After "Lesson complete" (M4 kept the verdict, with the coach's short line under it: verified) the big move and the kit's "yes" became the coach's "Try a slower tempo", replaying a finished lesson instead of moving on. | UX | A record, rank up or finished lesson keeps the app's own next move; the coach's button is dropped (`dropCoachAction(true)`), its words stay. |
+| 19 | Saving the goals screen (onboarding, or "Goals … (change)") rebuilt the profile from goals and minutes only, so the stage's song pick (`profile.song`) was lost. | Bug | The profile keeps its other fields. (M14 commit) |
 
 Routes walked (Beginner preset unless noted), against `docs/LEARNING.md`:
 | Route | Result |
@@ -201,6 +205,15 @@ RECORD: 85 BPM!" kept, coach line under it).
   several seconds.
 - The live coach misreads a new step's start tempo as being slowed down ("The app slowed you to 60").
 
+
+### Round 7 (N11: the first automated play test, `npm run playtest`), 2026-10-26
+Headless Chrome, a fresh data folder, the coach off; the emulated MPS-150 as a Beginner (count-8ths, Your first beat) and
+a Solid player (hi-hat 8ths, the flam, 7/8, trade bars), 2 takes each.
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| 20 | "The flam" for a Solid player: "6 extra hits". The bounce filter remembered a *dropped* retrigger (the grace stroke's, velocity 18) as the last stroke, so the main stroke's own retrigger (44) passed as a new hit. Flams and drags on the real kit would have shown phantom extras. | Bug | A dropped bounce is never remembered (`src/input/hits.ts`); test + an emulated flam fixture (`src/input/fixtures/emulated-flam-taps.json`). |
+| – | Trade bars takes aren't saved: every note is in your own bars, so the take has 0 scored notes and `saveRun` skips it. Its minutes don't count towards the day or the streak. | Observation | Not changed; the runner only checks saving for takes with notes. |
 
 ## Instructor's review: the whole app, as a critical drum teacher sees it
 
@@ -397,6 +410,22 @@ sounds). Takes ~20 minutes. Write the numbers into the table at the end; the imp
 2. In the intro slides: hi-hat × 1 = forward, snare × 1 = back.
 3. At 40 BPM after a rough take: floor × 2 should now start **wait mode** ("Learn it slowly"), not a scored take.
 
+**F. Flams, drags, buzz rolls** (pad retriggers are 29–56 ms, close to flam spacing)
+1. Stage 4 "The flam": one take. Does the result say the flams came out as two notes? Any "came out as one note"
+   when you clearly played two?
+2. Stage 5 "The drag" and stage 6 "Buzz roll": one take each. Note extras and misses.
+
+**G. The band and the camera**
+1. A groove lesson with 🎸 Band on: set the Band slider (Setup → Sound check) so it sits under the click and the kit.
+2. A lesson with "How it moves" (e.g. Single strokes): press C, allow the camera, record 10 s (hi-hat × 1), replay
+   (snare × 1). Nothing is saved.
+
+**H. Record fixtures (N11), 2 minutes**
+In the browser console on the app: `await import('/scripts/playtest/helpers.js?' + Date.now())`, then before a take
+`T.recordMidi()`, play the take on the kit, then `T.saveFixture('mps150-ghost-groove', 'ghost notes: no lost hi-hats')`.
+Save the downloaded file in `src/input/fixtures/`. Good ones: the ghost-note groove (crosstalk), 16 hard snare singles
+(retriggers), a flam take. From then on the tests replay them on every change.
+
 **Write down**
 | Check | Your number / note |
 |---|---|
@@ -409,3 +438,6 @@ sounds). Takes ~20 minutes. Write the numbers into the table at the end; the imp
 | Retrigger extras (snare / toms) | |
 | Softest ghost that counts | |
 | Gestures that didn't work | |
+| Flams read as one note / extras | |
+| Drag, buzz: extras / misses | |
+| Band level that works | |

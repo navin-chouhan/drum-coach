@@ -24,6 +24,15 @@ describe('stick bounces', () => {
     expect(got).toEqual([30, 28, 95, 30, 30, 29, 95]);
   });
 
+  it('a dropped retrigger never becomes the stroke later retriggers are compared with (flams on the MPS-150)', () => {
+    const got: number[] = [];
+    const off = onHit(h => got.push(h.velocity));
+    // grace 33, main 88, the grace's retrigger 18 (dropped), then the main's retrigger 44: dropped too, not an extra
+    emitNote(38, 33, 30783); emitNote(38, 88, 30809); emitNote(38, 18, 30822); emitNote(38, 44, 30839);
+    off();
+    expect(got).toEqual([33, 88]);
+  });
+
   it('drops soft-snare crosstalk on the hi-hat, keeps real hi-hat strokes', () => {
     const got: string[] = [];
     const off = onHit(h => got.push(`${h.note}:${h.velocity}`));
@@ -34,5 +43,19 @@ describe('stick bounces', () => {
     emitNote(38, 35, 14000); emitNote(46, 30, 14040); // 40 ms later: a stroke of its own
     off();
     expect(got).toEqual(['38:35', '38:30', '38:35', '42:80', '38:110', '46:40', '38:35', '46:30']);
+  });
+});
+
+describe('per-pad calibration (N9)', () => {
+  it('a calibrated pad uses its own retrigger window and reports velocity on the common scale', async () => {
+    const { setPadCal } = await import('./store');
+    setPadCal({ snare: { soft: 10, loud: 100, bounceMs: 80, bounceRatio: 0.8 } }, false);
+    const got: number[] = [];
+    const off = onHit(h => got.push(h.velocity));
+    emitNote(38, 100, 50000); emitNote(38, 70, 50075); // a 75 ms retrigger at 70%: this pad's own filter drops it
+    emitNote(38, 10, 51000);
+    off();
+    setPadCal({}, false);
+    expect(got).toEqual([120, 30]);
   });
 });

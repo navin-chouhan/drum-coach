@@ -62,11 +62,11 @@ Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1
 `~/.claude/plans/plan-all-the-change-purrfect-flamingo.md`.
 
 ## Questions for the owner
-1. **A take where every note landed but the timing failed slows the tempo (−5, down to 40).** Slower makes staying
+1. ✅ *Answered: hold the tempo (done).* **A take where every note landed but the timing failed slows the tempo (−5, down to 40).** Slower makes staying
    with the click harder, not easier. Should a timing-only fail *hold* the tempo instead (and give the timing tip)?
    *I'd recommend: hold the tempo for timing-only fails, slow down only for missed notes.* Waiting: a small ladder
    change in `src/engine/lesson.ts` (`ladderStep`) plus `docs/LEARNING.md`.
-2. **Level 0–1 lets a take ~90 ms late pass** (Good is ±150 ms) while the live tip says "play with the click, not after
+2. ✅ *Answered: pass + gentle note (done).* **Level 0–1 lets a take ~90 ms late pass** (Good is ±150 ms) while the live tip says "play with the click, not after
    it". Mixed message. Keep the generous window and soften the tip at levels 0–1, or make the verdict mention it?
    *I'd recommend: keep the window, and say "Nice! A touch late: lean into the click" in the verdict when the mean
    offset is over 50 ms.* Waiting: one line in `LessonPlayer.tsx`.
@@ -104,3 +104,43 @@ Branch: `claude/plan-phase1-2026-10-25` (worktree `.claude/worktrees/plan-phase1
 | 04:00 | R4 feel.ts | done | e38efe6 | 241 | – |
 | 04:10 | R1 band.ts | done | abdc06d | 248 | – |
 | 04:15 | final run | 248/248, tsc clean | – | – | servers stopped, tab closed |
+
+## Day session, 2026-10-26 (owner approved all mockups; "How it moves" redone as v2 and approved)
+Owner: "complete all the changes … keep a beginner drummer as the user and find him the best experience via AI coach
+personalised curation". Built in my recommended order, each item checked in Chrome on a data copy (5180 / 8790).
+
+| Item | Commit | Checked |
+|---|---|---|
+| Owner decisions: timing-only fails hold the tempo; late passes get a gentle note | 0f0e040 | unit tests |
+| How it moves v2 mockup (approved) | b5cadcf | geometry checked by script |
+| M11 Journey after the set / after the path | 4d08eae | ✓ incl. one coach challenge |
+| M14 onboarding kit step + one nudge (also: goals save dropped the stage song) | bb1ce7a | ✓ |
+| R7 proven ranks on screen | 890f6a2 | ✓ |
+| R1 backing band | 6a1cc46 | ✓ oscillators during a take |
+| R6 student profile + weekly plan | 8fab4b4 | ✓ coach planned "Play right with the click, not behind" |
+| R2 flam/drag lessons, notation, keyboard + emulated graces | 5908ff1 | ✓ 16/16 flams scored |
+| R5 How it moves + camera self-check + look steps | cc5c2b9 | ✓ (camera permission not granted by me) |
+| R8 a song at the centre of every stage (+ server import fix) | 91d7270 | ✓ |
+| R4 feel judging | 44fe8fd | ✓ straight take 49.8% swing |
+| R3 levels 7–9 | a66545e | ✓ 7/8 take |
+| R2 buzz rolls | 1d2e429 | ✓ 0 extras from bounces |
+| R4 live feel cues | deff9df | ✓ smoke test |
+| G7 "Still solid" on replay | d78bba3 | ✓ |
+| G10 honest note on Trophies | afe855e | – |
+| G8 play-test tooling (presets, free-bar fill, streak test, scripts/playtest) | c28b92c | ✓ |
+| G3 Practice library 3+ per level | 16af45f | tests |
+| G5 coach band chords | 011d102 | tests |
+| G1 reading lessons | 81bfb81 | ✓ |
+| G2 ear-training quizzes | 67c563f | ✓ |
+| G6 rotating praise, weekly target | 5e58ca2 | ✓ |
+
+**Final check:** all tests pass, tsc clean, server modules import; my test servers stopped, my Chrome tabs closed.
+
+**Not done, and why**
+- **G4 sampled sounds:** needs CC0 sample files downloaded; I don't download files without your OK. Say which source.
+- **G9:** voice talk-back and song-audio capture are yours to try (microphone, tab-share prompt).
+- **G11 own demo videos:** out of scope (you chose diagrams + camera).
+- **N1–N11 (path to 10):** each needs its own short plan and mockup first (the plan says so). Suggested next: N11
+  (automated play test) and N9 (per-pad velocity calibration).
+- Observation: on "Pocket Sixteen" a Solid emulated player got a "dragging" tip mid-take; worth a look on the real kit
+  (ghost-note grooves, M2 part C).

@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { MILESTONES } from '../content/curriculum';
-import { checkpointsOf } from '../engine/planner';
+import { rankState } from '../engine/planner';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { useLessons } from '../lesson/aiLessons';
 import { songBarCount, useYtSongs } from '../youtube/api';
@@ -120,7 +120,7 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
   const lessons = useLessons();
   const [songs] = useYtSongs();
-  const passed = (m: (typeof MILESTONES)[number]) => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => s.lessons[l.id]?.completedAt); };
+  const rankOf = (m: (typeof MILESTONES)[number]) => rankState(m, lessons, s.lessons, s.profile);
   const stars = Object.values(s.lessons).reduce((a, p) => a + (p.completedAt ? p.stars ?? 1 : 0), 0);
   // A show-off song: 16 bars or more, every bar played at 85% or better (across takes).
   const showoff = songs.filter(song => songReady(runs, song.id, songBarCount(song)));
@@ -130,8 +130,9 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
     <div className="card trophies">
       <h3>Trophy shelf</h3>
       <div className="stickers">
-        {MILESTONES.map(m => passed(m)
-          ? <div key={m.level} className="rankSticker small" title={`Stage ${m.level + 1}: ${m.title}`}>{m.rank}</div>
+        {MILESTONES.map(m => rankOf(m).state !== 'locked'
+          ? <div key={m.level} className="rankSticker small" title={`Stage ${m.level + 1}: ${m.title}${rankOf(m).state === 'proven' ? ' · proven on another day' : ` · prove it on another day (${rankOf(m).proven} of ${rankOf(m).total})`}`}>
+            {m.rank}{rankOf(m).state === 'proven' ? ' ✓' : ''}</div>
           : <div key={m.level} className="rankSticker small locked" title={`Pass stage ${m.level + 1}, ${m.title}, to earn this`}>?</div>)}
       </div>
       <p><span className="stars">★</span> <b>{stars}</b> stars from your lessons</p>
@@ -142,6 +143,9 @@ function TrophyShelf({ runs }: { runs: RunRow[] }) {
       <div className="stickers">
         {BADGES.map(b => <div key={b.id} className={`rankSticker small ${badges.has(b.id) ? '' : 'locked'}`} title={b.how}>{badges.has(b.id) ? `🏅 ${b.name}` : b.name}</div>)}
       </div>
+      <p className="small honest">🎥 An app can hear your timing and volume, but it can't see your hands. Once a month, film yourself with
+        "📷 Check yourself" in a lesson and compare with "How it moves". If you can, take one lesson with a human teacher per stage:
+        they spot tension and grip habits no app can.</p>
       <h4>Show-off set</h4>
       {showoff.length ? (
         <ul className="songList">

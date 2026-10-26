@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N9 Fair hardware</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .pads{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0}
+  .pad{border:3px solid var(--line);padding:10px 6px;text-align:center;font:800 16px var(--display);background:var(--panel)}
+  .pad.done{background:var(--good);color:#fff}.pad.now{background:var(--pop);box-shadow:0 0 0 6px #FFE14D88}
+  .pad small{display:block;font:600 12px system-ui;margin-top:3px}
+  .big{font:800 34px var(--display);margin:6px 0}
+  .meter{position:relative;height:34px;border:3px solid var(--line);background:linear-gradient(90deg,#2DE1C2 0 30%,#FFE14D 30% 70%,#E8423F 70%);margin:10px 0}
+  .meter i{position:absolute;top:-8px;bottom:-8px;width:6px;background:var(--line)}
+  .meter b{position:absolute;top:38px;font:700 13px system-ui;transform:translateX(-50%)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .ans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .mirror{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .hint{font:800 22px var(--display);letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · N9 fair hardware</b> Velocity and retrigger calibration per pad · sound check from the throne · left-handed. Not built.</div>
+
+<section class="state">
+  <h2>A · Calibration, new step: "soft, then loud" (after "hit each pad once")</h2>
+  <div class="note">Each pad answers differently: one gives 40 for a soft stroke, another 15. This step measures each pad's soft and
+    loud, so accents, ghost notes and "bring it up" are judged the same on every pad. The loud strokes also measure the pad's own
+    retriggers (the double-notes some pads send), so the app filters exactly those. About 2 minutes for the whole kit.</div>
+  <div class="today"><div class="card form onboarding rel new">
+    <h2>Soft, then loud</h2>
+    <p style="font-size:19px">Pad <b>Snare</b>: four <b>soft</b> taps (3 cm), then four <b>loud</b> strokes (full height).</p>
+    <div class="big">Soft: ● ● ● ○ &nbsp; Loud: ○ ○ ○ ○</div>
+    <div class="meter"><i style="left:22%"></i><b style="left:22%">your soft: 18</b></div>
+    <p class="small" style="margin-top:28px">Then: tom 1, tom 2, floor, hi-hat, ride, crash, kick. Skip a pad you don't use.</p>
+    <div class="pads">
+      <div class="pad done">Kick<small>soft 22 · loud 118</small></div><div class="pad now">Snare<small>now</small></div><div class="pad">Hi-hat</div><div class="pad">Tom 1</div><div class="pad">Tom 2</div>
+      <div class="pad">Floor</div><div class="pad">Crash</div><div class="pad">Ride</div>
+    </div>
+    <div class="actions"><button>◀ Redo this pad</button><button>Skip this pad</button><button class="link">Stop (keeps what's done)</button></div>
+  </div></div>
+  <div class="note"><b>At the end</b> a summary: "Snare: soft 18, loud 124 · retriggers seen 3 of 4, at ~40 ms and half as loud: filtered."
+    Saved with the note map for this kit. "Reset" puts every pad back to plain MIDI velocity.</div>
+</section>
+
+<section class="state">
+  <h2>B · Sound check from the throne</h2>
+  <div class="note">Today the sound check is three sliders. From the kit you can't reach the mouse, so the app plays each sound and you
+    answer with a pad; it adjusts the level and plays it again until you say OK.</div>
+  <div class="cols">
+    <div class="card rel new">
+      <h3>Sound check · 2 of 3</h3>
+      <p class="big">The band</p>
+      <p style="font-size:18px">Play a simple beat along with it. How is the band against your drums?</p>
+      <div class="ans">
+        <button class="move"><b>Too quiet</b><span class="g"><i>hi-hat × 1</i></span></button>
+        <button class="move go"><b>OK</b><span class="g"><i>snare × 1</i></span></button>
+        <button class="move"><b>Too loud</b><span class="g"><i>floor × 1</i></span></button>
+      </div>
+      <p class="small">1 · click · 2 · band · 3 · coach voice</p>
+    </div>
+    <div class="card"><h3>Where</h3><p>Setup → Sound check gets "Check from the kit ▶" next to the sliders; onboarding's kit step offers it after latency.</p></div>
+  </div>
+</section>
+
+<section class="state">
+  <h2>C · Left-handed</h2>
+  <div class="note">One switch in Setup → Pads ("I play left-handed: hi-hat on my right, lead with my left"). Every hint, intro slide and
+    "How it moves" mirrors: R ↔ L. Scoring is the same (the kit tells the app which pad, not which hand).</div>
+  <div class="mirror">
+    <div class="card"><h3>Right-handed (now)</h3><p class="hint">R L R R · L R L L</p><p class="small">Paradiddle hints · flam: lR rL</p></div>
+    <div class="card rel new"><h3>Left-handed</h3><p class="hint">L R L L · R L R R</p><p class="small">Paradiddle hints · flam: rL lR · the animated arm drawn from the other side</p></div>
+  </div>
+</section>
+</body>
+</html>

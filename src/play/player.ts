@@ -2,13 +2,16 @@ import { beatsPerBar, DRUM_PAD, padMatches, type Chart, type ChartDrum } from '.
 import { buildRun, splitRun, beatMs as toBeatMs, type Run, type RunNote, type RunOptions } from '../engine/run';
 import { inFreeBar } from '../engine/jam';
 import { clickOnBeat } from '../engine/lesson';
+import { bandNotes, type BandSpec } from '../engine/band';
+import { groupStarts, isOdd8 } from '../engine/meter';
+import { swingPct } from '../engine/feel';
 import { computeStats, createMatcher, noteWindows, reactingToClick, toResult, windowsFor, type Judgement, type NoteResult, type PlayedHit, type RunStats } from '../engine/scoring';
 import { onHit } from '../input/hits';
 import { getSettings } from '../input/settings';
 import { createLiveCoach, type Cue } from '../engine/liveCoach';
 import { hush, NUMBERS, sayAt } from '../voice/voice';
 import { applyTip, loadTips } from '../coach/aiTips';
-import { audio, audioToPerf, click, playBuffer, playDrum, whenRunning } from './audio';
+import { audio, audioToPerf, click, playBand, playBuffer, playDrum, whenRunning } from './audio';
 
 export type PlayOptions = RunOptions & {
   speed: number; // 0.5–1
@@ -36,7 +39,10 @@ export type PlayOptions = RunOptions & {
   zoom?: number;             // a "fix this bar" loop (lessons): practice only, no tempo ladder
   goodMs?: number;           // a wider Good window for beginners (engine/lesson.ts goodMsFor)
   count?: boolean;           // big "1 & 2 &" on the highway, for the counting lessons
-  lesson?: { id: string; step: number; title: string; goal: string }; // saved with the run, read by the coach
+  band?: BandSpec;           // the backing band (engine/band.ts): bass and keys under the take
+  feelTarget?: { ms: number; tol: number }; // a step that asks for behind / on top of the beat: the live coach judges timing against it
+  swingWant?: [number, number]; // a step's swing range: the live coach says "Swing it" / "Straighter"
+  lesson?: { id: string; step: number; title: string; goal: string; tool?: string; bite?: { songId: string; fromBar: number; toBar: number } }; // saved with the run, read by the coach (and the profile: minutes per tool)
 };
 export type Finished = { cues: Cue[]; zero: number; chart: Chart; run: Run; options: PlayOptions; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats; startedAt: string; durationS: number };
 export type Feedback = { lane: string; judgement: Judgement | 'extra'; time: number };
@@ -84,7 +90,13 @@ function liveCheck(pos: number) {
   const from = (bar - 2) * bpb, to = bar * bpb;
   const notes = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [{ drum: n.drum, accent: n.accent, ghost: n.ghost, ...player.results[i] }]));
   const extras = live.extras.filter(h => { const b = (h.time - player.zero) / player.beatMs; return b >= from && b < to; }).length;
-  const raw = live.coach({ bar, notes, extras, reaction: reactingToClick(expectedTimes(run), live.hits) });
+  // the feel this step asks for (R4): swing over the window, and the sheet's volume marks this bar vs the one before
+  const o = player.options!, inWin = run.notes.flatMap((n, i) => (player.auto[i] || n.t < from || n.t >= to ? [] : [i]));
+  const swing = o.swingWant ? { now: swingPct({ ...run, notes: inWin.map(i => run.notes[i]) }, inWin.map(i => player.results[i]), player.beatMs), want: o.swingWant } : undefined;
+  const marks = player.chart?.dyn, sec = o.toBar - o.fromBar + 1, markOf = (b: number) => marks?.[o.fromBar - 1 + (((b % sec) + sec) % sec)];
+  const vel = (b: number) => { const v = inWin.filter(i => run.notes[i].bar === b).flatMap(i => player.results[i].velocity ?? []); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : 0; };
+  const dyn = marks && bar >= 2 && markOf(bar - 1) !== undefined && markOf(bar - 2) !== undefined ? { want: markOf(bar - 1)!, prevWant: markOf(bar - 2)!, got: vel(bar - 1), prevGot: vel(bar - 2) } : undefined;
+  const raw = live.coach({ bar, notes, extras, reaction: reactingToClick(expectedTimes(run), live.hits), target: o.feelTarget, swing, dyn: dyn && dyn.got && dyn.prevGot ? dyn : undefined });
   if (!raw) return;
   const cue = applyTip(player.chart, raw); // the coach's own words for this exercise, when it has written them
   player.cue = { cue, at: performance.now() };
@@ -179,12 +191,13 @@ export function start(chart: Chart, options: PlayOptions) {
   }
 
   // Each note's Good window comes from its own drum's spacing (noteWindows), not the tightest gap in the take.
-  const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum, grace: n.grace })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
+  const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum, grace: n.grace, buzz: n.buzz })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   if (!options.demo) cleanup.push(onHit(h => {
     const hit = { time: h.time - latency - drift, pad: h.pad, velocity: h.velocity };
     const m = match(hit);
     if (!m && hit.time < player.zero) return; // count-in noodling isn't scored (an early first note still matches)
     hits.push(hit);
+    if (m?.bounce) return; // a bounce of a buzz note: neither a note nor an extra
     if (m) {
       const i = scored.notes[m.index].i;
       player.results[i] = toResult(m, h.velocity, h.pad);
@@ -205,7 +218,9 @@ export function start(chart: Chart, options: PlayOptions) {
   startLive(options, hits, extras);
   const countVoice = getSettings().countIn && !options.demo;
   // Lookahead scheduler for clicks, app-played notes, live tips and the end of the run.
-  const sub = options.clickOn === '8ths' ? 2 : options.subdivision, bpb = beatsPerBar(chart);
+  // An odd /8 meter (7/8) clicks every 8th, accenting each group (2+2+3) and counting "one … seven" in the count-in.
+  const odd8 = isOdd8(chart.timeSignature), n8 = chart.timeSignature[0], starts = groupStarts(chart.timeSignature);
+  const sub = odd8 ? 2 : options.clickOn === '8ths' ? 2 : options.subdivision, bpb = beatsPerBar(chart);
   const sounding = options.guide ? run.notes : auto;
   const autoAt = (n: RunNote) => zeroAudio + (n.t * beatMs) / 1000;
   let a = 0;
@@ -213,12 +228,24 @@ export function start(chart: Chart, options: PlayOptions) {
   const plan = options.countAloud, perBar = plan?.[0]?.length ?? 1, slots = plan ? Math.min(plan.length, Math.ceil(run.beats / bpb)) * perBar : 0; // never past the take's end
   const slotAt = (w: number) => zeroAudio + ((w * bpb) / perBar) * beatMs / 1000;
   let w = 0;
+  // The band: free bars (yours) get one hit on beat 1; it goes quiet with the gap click and fades with the click.
+  const runBars = Math.ceil(run.beats / bpb - 1e-9), sectionBars = options.toBar - options.fromBar + 1;
+  const fillBars = options.freeBars ? Array.from({ length: runBars }, (_, b) => b).filter(b => inFreeBar(b * bpb, bpb, options.fromBar, sectionBars, options.freeBars!)) : [];
+  const band = options.band && !options.wait ? bandNotes({ ...options.band, fillBars }, run) : [];
+  let bi = 0;
   const lastK = options.metronome ? run.beats * sub : 0; // metronome off → count-in only
   const timeOf = (k: number) => t0 + ((k / sub + countIn) * beatMs) / 1000;
   const timer = setInterval(() => {
     const late = c.currentTime - 0.03; // after a stall, drop what's due instead of playing it all at once
     for (; k < lastK && timeOf(k) < c.currentTime + 0.2; k++) {
       if (timeOf(k) < late) continue;
+      if (odd8) {
+        const p = ((k % n8) + n8) % n8, bar8 = Math.floor(k / n8);
+        if (k < 0 && countVoice) sayAt(NUMBERS[p], timeOf(k));
+        const gap8 = options.gapBars && k >= 0 && (bar8 + 1) % options.gapBars === 0, vol8 = options.fadeClick && k >= 0 ? Math.max(0, 1 - bar8 / options.fadeClick) : 1;
+        if (!gap8 && vol8 > 0 && options.metronome) click(timeOf(k), p === 0 ? 0 : starts.has(p) ? 1 : 2, vol8);
+        continue;
+      }
       const onBeat = k % sub === 0;
       if (!onBeat && !options.metronome) continue;
       const barStart = onBeat && (((k / sub) % bpb) + bpb) % bpb < 1e-6;
@@ -232,6 +259,11 @@ export function start(chart: Chart, options: PlayOptions) {
       const n = sounding[a];
       if (autoAt(n) < late) continue;
       playDrum(DRUM_PAD[n.drum][0], (n.accent ? 110 : n.ghost ? 40 : 80) * (options.guide ? 0.5 : 1), autoAt(n));
+    }
+    for (; bi < band.length && zeroAudio + (band[bi].t * beatMs) / 1000 < c.currentTime + 0.2; bi++) {
+      const n = band[bi], at = zeroAudio + (n.t * beatMs) / 1000, bar = Math.floor(n.t / bpb + 1e-6);
+      const vol = options.fadeClick ? Math.max(0, 1 - bar / options.fadeClick) : 1;
+      if (at >= late && vol > 0 && !(options.gapBars && (bar + 1) % options.gapBars === 0)) playBand({ ...n, vel: n.vel * vol }, at, (n.dur * beatMs) / 1000);
     }
     for (; w < slots && slotAt(w) < c.currentTime + 0.2; w++) {
       const word = plan![Math.floor(w / perBar)][w % perBar];
@@ -276,12 +308,13 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
-  const match = createMatcher(noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum, grace: n.grace })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
+  const match = createMatcher(noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum, grace: n.grace, buzz: n.buzz })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   cleanup.push(onHit(h => {
     const hit = { time: ext.position(h.time - latency) * beatMs, pad: h.pad, velocity: h.velocity };
     const m = match(hit);
     if (!m && hit.time < 0) return; // pre-roll noodling isn't scored (an early first note still matches)
     hits.push(hit);
+    if (m?.bounce) return;
     if (m) {
       player.results[m.index] = toResult(m, h.velocity, h.pad);
       player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });
@@ -306,7 +339,9 @@ function finish(scored: Run, hits: PlayedHit[], extras: PlayedHit[], startedAt: 
   if (options!.demo) { stop(); options!.then?.(); return; }
   cleanup.forEach(f => f()); cleanup = [];
   const results = scored.notes.map(n => player.results[n.i]);
-  const stats = { ...computeStats(scored, results, extras.length), reaction: options!.wait ? null : reactingToClick(scored.notes.map(n => ({ time: player.zero + n.t * player.beatMs, drum: n.drum })), hits) };
+  // the chart's volume marks per run bar (the section repeats), for the take's dynamics (R4)
+  const secBars = options!.toBar - options!.fromBar + 1, dyn = chart!.dyn && Array.from({ length: Math.ceil(scored.beats / scored.beatsPerBar) }, (_, b) => chart!.dyn![options!.fromBar - 1 + (b % secBars)]);
+  const stats = { ...computeStats(scored, results, extras.length, player.beatMs, dyn), reaction: options!.wait ? null : reactingToClick(scored.notes.map(n => ({ time: player.zero + n.t * player.beatMs, drum: n.drum })), hits) };
   player.phase = 'done';
   player.finished = { cues: live?.cues ?? [], zero: player.zero, chart: chart!, run: scored, options: options!, results, extras, hits, stats, startedAt, durationS: Math.round((Date.now() - Date.parse(startedAt)) / 1000) };
   notify();

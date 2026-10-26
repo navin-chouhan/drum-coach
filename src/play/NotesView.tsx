@@ -33,7 +33,7 @@ export function NotesView({ idle }: { idle?: { chart: Chart & { id?: string }; f
       </div>
       {view === 'highway' ? <Highway />
         : playing ? <SheetPlayer />
-        : idle ? <div className="sheetIdle"><SheetMusic notes={idle.chart.notes} timeSignature={idle.chart.timeSignature} fromBar={idle.fromBar} toBar={idle.toBar} title={idle.chart.title} bpm={idle.bpm ?? idle.chart.bpm} hints={idle.hints} dim={idle.dim} zoom={idle.zoom} /></div>
+        : idle ? <div className="sheetIdle"><SheetMusic notes={idle.chart.notes} timeSignature={idle.chart.timeSignature} fromBar={idle.fromBar} toBar={idle.toBar} title={idle.chart.title} bpm={idle.bpm ?? idle.chart.bpm} hints={idle.hints} dim={idle.dim} zoom={idle.zoom} dyn={idle.chart.dyn} /></div>
         : <SheetPlayer />}
     </div>
   );

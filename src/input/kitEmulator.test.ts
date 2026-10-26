@@ -57,3 +57,18 @@ describe('emulated MPS-150 through the real input path', () => {
     expect(t.extras).toHaveLength(0);
   });
 });
+
+describe('emulated graces (R2)', () => {
+  it('a flam is a soft grace stroke 25 ms early from the other hand, then the main stroke; a drag two', () => {
+    const still = { lateMs: 0, jitterMs: 0, weakHand: 1 };
+    const flam = playNotes([{ time: 1000, drum: 'snare', grace: 1 }], still, () => 0.5);
+    expect(flam.map(s => [s.time, s.velocity < 50])).toEqual([[975, true], [1000, false]]);
+    expect(playNotes([{ time: 1000, drum: 'snare', grace: 2 }], still, () => 0.5).map(s => s.time)).toEqual([950, 975, 1000]);
+  });
+  it('the matcher hears an emulated flam as one note with its grace', () => {
+    const strokes = playNotes([{ time: 1000, drum: 'snare', grace: 1 }], { lateMs: 0, jitterMs: 0, weakHand: 1 }, () => 0.5);
+    const { results, extras } = scoreRun([{ time: 1000, drum: 'snare', grace: 1 }], strokes.map(s => ({ ...s, pad: s.pad })));
+    expect(extras).toHaveLength(0);
+    expect(results[0].grace).toMatchObject({ strokes: 1, gapMs: 25 });
+  });
+});

@@ -9,7 +9,7 @@ import { getSettings, setSettings } from '../input/settings';
  * The stage's song project: the coach suggests real songs this stage gets you ready for; the one you pick becomes the
  * stage's goal (Profile.song), the coach writes song bites from it, and once every bar is ready it's a show-off song.
  */
-export function ShowoffCard({ stage, profile }: { stage: Milestone; profile: Profile }) {
+export function ShowoffCard({ stage, profile, builtin }: { stage: Milestone; profile: Profile; builtin?: { title: string; open: () => void } }) {
   const key = `project-${stage.level}`;
   const e = useCoachEntry<ShowoffSongs>(key);
   const learn = async (video: { id: string; title: string }) => {
@@ -20,6 +20,7 @@ export function ShowoffCard({ stage, profile }: { stage: Milestone; profile: Pro
   return (
     <div className="card showoff">
       <h3>Pick your song for this stage</h3>
+      {builtin && <p>🎵 Your stage song: <button className="link" onClick={builtin.open}><b>{builtin.title}</b></button>, built in, with the band. Or pick a real one:</p>}
       <p>A real song you'll play for your friends. The lessons in <b>{stage.title}</b> get you ready for it, a few bars at a time.</p>
       {e?.status === 'thinking' ? <Thinking what="Your coach is picking songs for this stage" />
         : e?.status === 'done' && e.data ? (

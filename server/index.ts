@@ -7,10 +7,12 @@ import { SessionEventSchema, AiLessonSchema, FeedbackSchema, GrooveSchema, Lesso
 import { LIBRARY } from '../src/content/library.ts';
 import { ChartSchema } from '../src/engine/chart.ts';
 import type { RunRow } from '../src/engine/progress.ts';
+import { studentProfile } from '../src/engine/profile.ts';
+import type { Plan } from '../src/coach/schemas.ts';
 import { ask, getProvider, lessonModel } from './ai/coach.ts';
 import { applyBites, canStandIn, lessonInput, standsInFor, toLesson, uniqueTitle } from './ai/lessons.ts';
-import { LESSON_BY_ID } from '../src/content/curriculum.ts';
-import { studentRead } from '../src/engine/planner.ts';
+import { CURRICULUM, LESSON_BY_ID, MILESTONES } from '../src/content/curriculum.ts';
+import { checkpointsOf, currentMilestone, studentRead, visibleLessons } from '../src/engine/planner.ts';
 import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
@@ -108,8 +110,18 @@ app.get('/api/charts/:id/audio', async (req, reply) => {
 const runRows = (limit = 5000): RunRow[] => (db.prepare(`
   SELECT * FROM (SELECT chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
     bpm, speed, accuracy, mean_offset AS meanOffset, spread, json_extract(summary_json, '$.notes') AS notes,
-    json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar, json_extract(summary_json, '$.tipIds') AS tips FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
-  .map(r => ({ ...r, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined, tips: r.tips ? JSON.parse(r.tips as unknown as string) : undefined }));
+    json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar, json_extract(summary_json, '$.tipIds') AS tips,
+    json_extract(summary_json, '$.perDrum') AS perDrum, json_extract(summary_json, '$.lesson.tool') AS tool, json_extract(summary_json, '$.lesson.bite') AS bite FROM runs ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`).all(limit) as RunRow[])
+  .map(r => ({ ...r, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined, toBar: r.toBar ?? undefined, tips: r.tips ? JSON.parse(r.tips as unknown as string) : undefined,
+    perDrum: r.perDrum ? JSON.parse(r.perDrum as unknown as string) : undefined, tool: r.tool ?? undefined, bite: r.bite ? JSON.parse(r.bite as unknown as string) : undefined }));
+const appSettings = () => { const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined; return row ? JSON.parse(row.value) : {}; };
+const latestPlan = () => {
+  const row = db.prepare('SELECT * FROM plans ORDER BY id DESC LIMIT 1').get() as { id: number; json: string; checks_json: string } | undefined;
+  return row ? { id: row.id, plan: JSON.parse(row.json) as Plan, checks: JSON.parse(row.checks_json) } : null;
+};
+/** This week's focus from the coach's plan, for the lesson writer and the live coach (R6). */
+const weekFocus = () => { const p = latestPlan()?.plan; return p?.focus ? { focus: p.focus, why: p.why, drums: p.drums } : undefined; };
+app.get('/api/profile', async () => studentProfile(runRows()));
 
 app.post('/api/runs', async (req, reply) => {
   const b = RunRecordSchema.safeParse(req.body);
@@ -151,21 +163,35 @@ app.post('/api/coach/feedback', async (req, reply) => {
   try { return await ask('feedback', FeedbackSchema, { run: b.data.summary, library: catalog() }); } catch (e) { return aiFail(reply, e); }
 });
 
+// The weekly plan (R6): written from the student profile, the stage and last week's notes; its lessons lead the Journey.
 app.post('/api/coach/plan', async (req, reply) => {
-  const b = PlanRequestSchema.safeParse(req.body);
+  const b = PlanRequestSchema.safeParse(req.body ?? {});
   if (!b.success) return bad(reply, b.error);
   const recent = runRows(30).map(r => ({ chart: r.chartTitle, bpm: Math.round(r.bpm), accuracy: r.accuracy, at: r.startedAt.slice(0, 10) }));
+  const s = appSettings(), profile = s.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress = s.lessons ?? {};
+  const all = [...CURRICULUM, ...aiLessons()];
+  const m = currentMilestone(MILESTONES, all, progress, profile) ?? MILESTONES.filter(x => checkpointsOf(x, all, profile).length).at(-1);
+  const level = m?.level ?? 0;
+  // the lessons it may pick: this stage's, plus finished ones from earlier stages that came out shaky (1–2 stars)
+  const pickable = visibleLessons(all, profile).filter(l => l.level === level || (l.level < level && (progress[l.id]?.stars ?? 3) <= 2)).slice(-30);
+  const last = latestPlan()?.plan;
   try {
     const songs = (db.prepare('SELECT id, title FROM yt_songs').all() as { id: string; title: string }[]); // so play-along items can link to them
-    const r = await ask('plan', PlanSchema, { ...b.data, recent, library: catalog(), songs });
-    const { lastInsertRowid } = db.prepare('INSERT INTO plans (json) VALUES (?)').run(JSON.stringify(r.data));
-    return { id: Number(lastInsertRowid), plan: r.data, checks: {} };
+    const r = await ask('plan', PlanSchema, {
+      ...b.data, goals: b.data.goals ?? (profile.goals.length ? profile.goals.join(', ') : 'not sure yet'), minutesPerDay: b.data.minutesPerDay ?? profile.minutesPerDay,
+      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()) },
+      stage: m && { level, title: m.title, canDo: m.canDo },
+      lessons: pickable.map(l => ({ id: l.id, title: l.title, level: l.level, kind: l.kind, checkpoint: !!m?.checkpoints.includes(l.id), done: !!progress[l.id]?.completedAt, stars: progress[l.id]?.stars })),
+      lastWeek: last && { focus: last.focus, notes: last.notes, week: last.week },
+      recent, library: catalog(), songs,
+    });
+    const ids = new Set(pickable.map(l => l.id));
+    const plan = { ...r.data, lessonIds: r.data.lessonIds?.filter(id => ids.has(id)), week: b.data.week ?? r.data.week };
+    const { lastInsertRowid } = db.prepare('INSERT INTO plans (json) VALUES (?)').run(JSON.stringify(plan));
+    return { id: Number(lastInsertRowid), plan, checks: {} };
   } catch (e) { return aiFail(reply, e); }
 });
-app.get('/api/plan', async () => {
-  const row = db.prepare('SELECT * FROM plans ORDER BY id DESC LIMIT 1').get() as { id: number; json: string; checks_json: string } | undefined;
-  return row ? { id: row.id, plan: JSON.parse(row.json), checks: JSON.parse(row.checks_json) } : null;
-});
+app.get('/api/plan', async () => latestPlan());
 app.put('/api/plan/:id/checks', async (req, reply) => {
   const p = z.object({ id: z.coerce.number().int() }).safeParse(req.params), b = z.record(z.string().max(20), z.boolean()).safeParse(req.body);
   if (!p.success || !b.success) return bad(reply, 'Invalid request');
@@ -186,6 +212,8 @@ app.post('/api/coach/session', async (req, reply) => {
   if (event.type === 'open' || event.type === 'take') { // how they're doing overall, so the coach teaches this student, not a stereotype
     const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined;
     event.student = studentRead(row ? JSON.parse(row.value).lessons ?? {} : {}, runRows(12));
+    const focus = weekFocus();
+    if (focus) event.weekFocus = focus; // this week's plan, so the coach's tips point the same way
   }
   reply.hijack();
   const res = reply.raw;
@@ -327,8 +355,8 @@ app.post('/api/coach/lesson', async (req, reply) => {
     .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
   const existing = aiLessons();
   const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle,
-    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong) });
-  if (!input) return bad(reply, 'You have finished every milestone. Hold V or the mic button and ask the coach for new challenges.');
+    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus() });
+  if (!input) return bad(reply, 'No stage fits your goals yet. Change them under Journey → Goals.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
     r.data = { ...r.data, title: uniqueTitle(r.data.title, r.data.focus, Object.values(LESSON_BY_ID).map(l => l.title)) };

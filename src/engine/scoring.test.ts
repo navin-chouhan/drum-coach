@@ -118,6 +118,20 @@ describe('grace notes (R2): flam, drag, ruff', () => {
   });
 });
 
+describe('buzz notes (R2)', () => {
+  const sn = (time: number, velocity = 60): PlayedHit => ({ time, pad: 'snare', velocity });
+  it('the bounces of a buzz stroke are part of the note, not extras, until the next note', () => {
+    const exp = [{ time: 1000, drum: 'snare' as const, buzz: true }, { time: 1250, drum: 'snare' as const, buzz: true }];
+    const { results, extras } = scoreRun(exp, [sn(1000, 80), sn(1030), sn(1060), sn(1090), sn(1250, 80), sn(1280), sn(1310)]);
+    expect(extras).toHaveLength(0);
+    expect(results.map(r => r.offset)).toEqual([0, 0]);
+  });
+  it('without buzz the same strokes are extras (regression)', () => {
+    const exp = [{ time: 1000, drum: 'snare' as const }, { time: 1250, drum: 'snare' as const }];
+    expect(scoreRun(exp, [sn(1000, 80), sn(1030), sn(1060), sn(1250, 80)]).extras).toHaveLength(2);
+  });
+});
+
 describe('stats', () => {
   it('detects rushing and per-drum accuracy', () => {
     const hits = perfectHits(-20).filter(h => h.pad !== 'kick');

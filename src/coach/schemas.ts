@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { CHART_DRUMS, ChartSchema } from '../engine/chart.ts';
+import { DEMO_IDS } from '../content/demos.ts';
+import { chordMidi } from '../engine/band.ts';
+
+const chordsOk = (line: string) => { try { line.trim().split(/\s+/).forEach(c => chordMidi(c)); return true; } catch { return false; } };
 
 // Shapes the coach must answer with. Validated on the server before anything reaches the app.
 export const FeedbackSchema = z.object({
@@ -13,15 +17,21 @@ export const FeedbackSchema = z.object({
     chart: ChartSchema.optional(),
   }),
 });
+/** The coach's weekly plan (R6): one focus, why, up to 6 lessons the Journey leads with, and notes it reads next week. */
 export const PlanSchema = z.object({
   title: z.string().max(120),
+  focus: z.string().max(120).nullish().transform(v => v ?? undefined), why: z.string().max(300).nullish().transform(v => v ?? undefined),
+  lessonIds: z.array(z.string().max(80)).max(6).nullish().transform(v => v ?? undefined), // filtered to known lessons by the server
+  drums: z.array(z.string().max(20)).max(4).nullish().transform(v => v ?? undefined),
+  notes: z.string().max(1000).nullish().transform(v => v ?? undefined), // the coach's notebook, given back next week
+  week: z.string().max(10).optional(), // ISO week it's for (set by the server)
   days: z.array(z.object({
     day: z.string().max(30),
     items: z.array(z.object({
       title: z.string().max(120), minutes: z.number().min(1).max(120),
       chartId: z.string().max(80).optional(), bpm: z.number().min(30).max(300).optional(), notes: z.string().max(300).optional(),
     })).max(10),
-  })).min(1).max(7),
+  })).min(1).max(7).nullish().transform(v => v ?? undefined), // the model writes "days": null when there are none
 });
 /** Show-off songs: real songs a student at this stage can play for friends. Video ids are looked up by the server. */
 export const ShowoffRequestSchema = z.object({ stage: z.string().max(120), canDo: z.array(z.string().max(200)).max(8), goals: z.array(z.string().max(20)).max(5) });
@@ -61,6 +71,9 @@ export const AiLessonSchema = z.object({
       maxVelocityCv: z.number().min(3).max(100), maxGhostToAccent: z.number().min(0.1).max(1),
       maxSpreadMs: z.number().min(5).max(100), maxFlamMs: z.number().min(5).max(100), maxPairDropPct: z.number().min(0).max(100),
       streak: z.number().int().min(4).max(64),
+      swingPct: z.tuple([z.number().min(45).max(80), z.number().min(45).max(80)]), minDynamicsR: z.number().min(0).max(1),
+      offsetTarget: z.object({ drum: z.enum(CHART_DRUMS).optional(), ms: z.number().min(-60).max(60), tol: z.number().min(3).max(40) }),
+      minFreeOnBeatPct: z.number().min(0).max(100),
       minGracePct: z.number().min(0).max(100), graceGapMs: z.tuple([z.number().min(0).max(100), z.number().min(0).max(150)]), maxGraceRatio: z.number().min(0.1).max(1),
     }).partial().optional(),
     gapBars: z.number().int().min(2).max(8).optional(),
@@ -72,11 +85,15 @@ export const AiLessonSchema = z.object({
       .refine(b => b.fromBar <= b.toBar && b.toBar - b.fromBar < 8, { message: 'a bite is 1–8 bars' }).optional(),
     freeBars: z.array(z.number().int().min(1).max(16)).min(1).max(8).optional(), trade: z.boolean().optional(),
     layers: z.array(z.array(z.enum(CHART_DRUMS)).min(1)).min(2).max(5).optional(),
+    demo: z.enum(DEMO_IDS).optional(), look: z.boolean().optional(), read: z.boolean().optional(), quiz: z.enum(['steady', 'kick']).optional(),
   }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })
     .refine(s => [...(s.activeLanes ?? []), ...(s.layers ?? []).flat()].every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' })
     .refine(s => (s.variants ?? []).every(v => v.bars === s.chart.bars && v.timeSignature.join() === s.chart.timeSignature.join()), { message: 'variants need the same bars and time signature as the chart' }))
     .min(1).max(4)
-    .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe; }, { message: 'rest and probe are never the last step' }),
+    .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe && !end.look && !end.quiz; }, { message: 'rest, probe, look and quiz are never the last step' }),
+  demo: z.enum(DEMO_IDS).optional(),
+  // the backing band's chords, one per bar (engine/band.ts); a line the app can't read is dropped, not a failed lesson
+  band: z.object({ chords: z.string().max(400).optional() }).optional().transform(b => (b?.chords && chordsOk(b.chords) ? b : undefined)).optional(),
 });
 export const LessonRequestSchema = z.object({
   struggle: z.object({ lessonId: z.string().max(80), step: z.number().int().min(1).max(10), reason: z.string().max(400), run: z.record(z.string(), z.unknown()) }).optional(),
@@ -98,7 +115,8 @@ export const RunRecordSchema = z.object({
 });
 export type RunRecord = z.infer<typeof RunRecordSchema> & { id: number };
 export const PlanRequestSchema = z.object({
-  goals: z.string().min(1).max(500), minutesPerDay: z.number().int().min(5).max(180), daysPerWeek: z.number().int().min(1).max(7),
+  goals: z.string().min(1).max(500).optional(), minutesPerDay: z.number().int().min(5).max(180).optional(), daysPerWeek: z.number().int().min(1).max(7).optional(),
+  week: z.string().regex(/^\d{4}-W\d{2}$/).optional(), // the automatic weekly plan
 });
 
 /** The live coaching conversation (server/ai/session.ts, server/prompts/session.md). */
