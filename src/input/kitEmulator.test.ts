@@ -58,6 +58,17 @@ describe('emulated MPS-150 through the real input path', () => {
   });
 });
 
+describe('emulated dynamics (D14)', () => {
+  it('follows the volume marks: soft bars soft, loud bars loud', () => {
+    const notes = [1, 2, 3, 3].flatMap((level, bar) => [0, 1, 2, 3].map(b => ({ time: (bar * 4 + b) * 500, drum: 'snare' as ChartDrum, level: level as 1 | 2 | 3 })));
+    const v = playNotes(notes, STEADY_PLAYER, seededRandom(2)).map(s => s.velocity);
+    const bar = (i: number) => v.slice(i * 4, i * 4 + 4).reduce((a, b) => a + b, 0) / 4;
+    expect(bar(0)).toBeLessThan(bar(1));
+    expect(bar(1)).toBeLessThan(bar(2));
+    expect(bar(0) / bar(2)).toBeLessThan(0.7);
+  });
+});
+
 describe('emulated graces (R2)', () => {
   it('a flam is a soft grace stroke 25 ms early from the other hand, then the main stroke; a drag two', () => {
     const still = { lateMs: 0, jitterMs: 0, weakHand: 1 };

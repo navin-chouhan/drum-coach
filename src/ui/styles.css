@@ -241,12 +241,12 @@
   .setTile .ic{font-size:40px;margin-bottom:auto}
   .setTile b{font:800 19px var(--display)}
   .setTile .tag{position:absolute;top:-12px;right:10px;background:var(--night);color:var(--nightText);font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px}
-  .trail{position:relative;height:260px;margin:14px 50px 20px}
+  .trail{position:relative;height:260px;margin:14px 50px 20px;container-type:inline-size}
   .trail svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
   .trail polyline{fill:none;stroke:var(--line);stroke-width:5;stroke-dasharray:2 12;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
   .stop{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:0;border:0;background:none;border-radius:0}
   .stop .dot{width:56px;height:56px;border-radius:50%;border:3px solid var(--line);background:var(--panel);display:grid;place-items:center;font-size:19px;box-shadow:3px 3px 0 var(--line)}
-  .stop .name{position:absolute;top:calc(100% + 4px);font-size:11.5px;font-weight:700;line-height:1.2;width:120px;text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .stop .name{position:absolute;top:calc(100% + 4px);font-size:11.5px;font-weight:700;line-height:1.2;width:min(120px, calc(var(--gap, 20) * 1cqw - 6px));text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .stop.up .name{top:auto;bottom:calc(100% + 4px)}
   .stop.more .dot{background:var(--panel2);font:800 14px var(--display)}
   .stop.done .dot{background:var(--good);color:#fff}

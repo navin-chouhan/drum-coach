@@ -183,30 +183,21 @@ stand-in), most checkpoints 2–4 takes with the probe; Roadhouse Shuffle in 2 (
 takes disappeared after the path (M12). After the path: a review, the 2-minute challenge and Beat your best ("🏆 NEW
 RECORD: 85 BPM!" kept, coach line under it).
 
-### Open observations (not fixed yet)
-- **Weekly theme never forgets.** "This week: landing behind the click" came from 3 deliberately sloppy takes at the very
-  start; ~180 on-time takes later it's still the habit to work on. It should need the issue to still be present lately.
-- **Trophies can be stale right after a take.** The 10,000-notes badge only lit after leaving and reopening Trophies.
-- **Flow after the path opens Stage 1's jam** ("Your first jam") for a Swing Cat; it should use the latest stage.
-- **The coach invents next steps.** After "Beat your best" its button said "Next posture step", which doesn't exist.
-- **Coach text replaces the big moment.** "🏆 NEW RECORD" was replaced by the coach's paragraph.
-- **The coach's groove for a real song can be wrong.** Billie Jean: it suggested a kick on the & of 2 and ghost
-  snares; the real part is 8th hi-hat, kick 1 and 3, snare 2 and 4. It says "verify by ear", but a beginner can't.
-- **A show-off song can be very short.** The set counts any saved bars of a song at 85%+, even 2 bars, with a grid the
-  student tapped; the app can't tell whether the part matches the record.
-- **The Practice library is thin at the top.** 12 charts, one at level 6, none for swing or shuffle.
-- **Song audio (tab capture) wasn't tested:** it needs Chrome's share-a-tab prompt, which the test can't click.
-- The tempo probe never tries the target itself when +5 overshoots it (90 → 95 > 92 stops at 90).
-- After a probe's tempo jump (> 10 BPM) the intro slides show again for the exercise just played.
-- Even when flying, the coach (Haiku, low effort) still opens with an echo warm-up step the prompt tells it to skip.
-- When today's set is done, Journey's big button is "Jam ▶". A student who wants more has to use "Something else" or
-  the path to get to the next checkpoint.
-- While the coach is thinking after a step, the coach line shows "…" in place of the verdict ("Step done! Next: …") for
-  several seconds.
-- The live coach misreads a new step's start tempo as being slowed down ("The app slowed you to 60").
+### Open observations
+Fixed since they were written (rounds 6–9): weekly theme forgets (M12), trophies never stale (M13), Flow after the
+path (M11), invented coach buttons (M5), big moments keep their verdict (M4), song groove confidence and "ask again"
+(M17), show-off songs ≥ 16 bars (M18), Practice library 3+ charts per level (G3), probe tries the target (M8), no
+slides after a probe (M9), lesson writing on Sonnet (M16), next lesson when the set is done (M11), the verdict stays
+while the coach thinks (M3), new-step tempo explained to the coach (M7).
 
+Still open:
+- **Song audio (tab capture) and voice talk-back** need Chrome's share-a-tab prompt or the microphone: owner checks.
+- **N3 song bites over a drumless video** have never had a take scored (the emulated kit doesn't play on the
+  YouTube clock): owner checks with the kit.
+- **N1 camera pose tracking and G4 sampled sounds** were skipped (they need downloads the owner declined).
+- **The grip and kick-foot drawings** in How it moves read poorly for a beginner (D10, waiting for a mockup).
 
-### Round 7 (N11: the first automated play test, `npm run playtest`), 2026-10-26
+### Round 8 (N11: the first automated play test, `npm run playtest`), 2026-10-26
 Headless Chrome, a fresh data folder, the coach off; the emulated MPS-150 as a Beginner (count-8ths, Your first beat) and
 a Solid player (hi-hat 8ths, the flam, 7/8, trade bars), 2 takes each.
 
@@ -214,6 +205,28 @@ a Solid player (hi-hat 8ths, the flam, 7/8, trade bars), 2 takes each.
 |---|---|---|---|
 | 20 | "The flam" for a Solid player: "6 extra hits". The bounce filter remembered a *dropped* retrigger (the grace stroke's, velocity 18) as the last stroke, so the main stroke's own retrigger (44) passed as a new hit. Flams and drags on the real kit would have shown phantom extras. | Bug | A dropped bounce is never remembered (`src/input/hits.ts`); test + an emulated flam fixture (`src/input/fixtures/emulated-flam-taps.json`). |
 | – | Trade bars takes aren't saved: every note is in your own bars, so the take has 0 scored notes and `saveRun` skips it. Its minutes don't count towards the day or the streak. | Observation | Not changed; the runner only checks saving for takes with notes. |
+
+### Round 9 (review of main d38244f, fixes D2–D15), 2026-10-26
+The reviewer played main with the emulated kit (Beginner and Solid), took screenshots in headless Chrome, and ran the
+full Solid path to stage 12 (166 takes). Findings and fixes:
+
+| # | Finding | Kind | Fix |
+|---|---|---|---|
+| D2 | A beginner with a steady lag heard "All the notes are there. Dragging by 50.8 ms" 8 takes in a row, always "▶ Again" (the owner's data: 28 takes on one step). The timing-only hold reset the fail count. | Teaching bug | `LessonProgress.stuck` counts failed takes on a step; after 3 the big move becomes the latency test (steady lag, latency never measured), count along or "hear mine, then the right way"; from 5 "something different" from the coach. |
+| D3 | Trade bars: a perfect player got 1★ and the takes were never saved (0 scored notes). | Bug | Stars from on-beat % (`freeStars`); such takes are saved with on-beat % as accuracy. |
+| D4 | Practice "For you" offered 100 BPM step-ups to a student landing 34%. | Teaching | Follows the student read: no step up while struggling, first tempo from `practiceStart`. |
+| D5 | Skill map counted lanes the app plays. | Bug | Skills from the lanes the student plays. (Most grooves really are hands-and-feet, so the count stays high.) |
+| D6 | The stage song was a YouTube upload with no notes; Journey said "add its notes in Songs". | UX | The built-in stage song stays the goal until the real song has 16 bars of part; the line says what's missing. Song titles lose "(Official Video…)". |
+| D7 | Tester leftovers F2, F4, F6, F8. | Bugs | First-week recap, "▶ Next step", takes per lesson in the student read, no repeated coach titles. |
+| D8 | "Dragging by 50.8 ms" for a beginner. | UX | "You're behind the click (about 51 ms). Lock onto it." |
+| D9 | Trail labels overlapped; three notices above the greeting; ruler label on top of "30 cm"; "Starting…" with no hint. | UI bugs | Labels never wider than the stop gap; one notice at a time; label moved; MIDI hint after 3 s. |
+| D11, D13 | The play test drove another session's app when its ports were taken, and counted N10's break as a take. | Test tool | Free ports, readiness wait, breaks and help moves skipped; `PLAYTEST_ONLY=solid|beginner`. |
+| D14 | The emulated kit ignored volume marks and feel targets, so stage 8's song could never pass. | Test tool | Velocity follows p / mf / f; timing aims at the feel target. |
+| D15 | How it moves was silent. | Owner ask | The coach reads the description, then the cue words for two loops. |
+
+Testing lesson: when the shared `/tmp` quota fills, SQLite writes fail ("disk I/O error") and the play test reports
+"the take was not saved". Run it with a short temp path on the real disk: `TMPDIR=~/.cache/dpt npm run playtest`
+(Chrome needs a short path for its socket).
 
 ## Instructor's review: the whole app, as a critical drum teacher sees it
 

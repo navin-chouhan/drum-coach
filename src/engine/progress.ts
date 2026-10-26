@@ -131,7 +131,7 @@ export function barsReady(runs: RunRow[], songId: string, totalBars: number): nu
 }
 
 /** Practice's "For you": what you played lately, then the coach's drills, a warm-up rudiment, your level, a step up. */
-export function forYou<C extends { id: string; kind?: string; level?: number; source?: string }>(charts: C[], runs: RunRow[], level: number, n = 8) {
+export function forYou<C extends { id: string; kind?: string; level?: number; source?: string }>(charts: C[], runs: RunRow[], level: number, n = 8, pace?: string) {
   const out: { chart: C; why: string }[] = [], has = (c: C) => out.some(o => o.chart === c);
   const add = (c: C | undefined, why: string) => { if (c && !has(c) && out.length < n) out.push({ chart: c, why }); };
   const recent = [...new Set([...runs].reverse().map(r => r.chartId))];
@@ -141,8 +141,18 @@ export function forYou<C extends { id: string; kind?: string; level?: number; so
   // The library can stop below the path's last stage: then the highest level under yours stands in.
   const at = Math.max(-1, ...charts.map(c => c.level ?? -1).filter(l => l <= level));
   charts.filter(c => c.level === at).forEach(c => add(c, 'at your level'));
-  charts.filter(c => c.level === level + 1).forEach(c => add(c, 'a step up'));
+  if (pace !== 'struggling') charts.filter(c => c.level === level + 1).forEach(c => add(c, 'a step up')); // D4: not while it's hard
   return out;
+}
+
+/**
+ * Practice's first tempo for a chart: where you left off (10 slower if last time was rough); never played, a
+ * struggling student starts at their comfortable tempo (or 20 under the chart), not at the chart's own (D4).
+ */
+export function practiceStart(chartBpm: number, last: Pick<RunRow, 'bpm' | 'accuracy'> | undefined, read: { pace: string; comfortableBpm?: number }) {
+  if (last) return Math.max(40, Math.round(last.bpm) - (last.accuracy < 60 ? 10 : 0));
+  if (read.pace !== 'struggling') return chartBpm;
+  return Math.min(chartBpm, read.comfortableBpm ?? Math.max(40, chartBpm - 20));
 }
 
 const THEME_WORDS: Record<string, string> = {

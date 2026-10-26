@@ -3,6 +3,8 @@ import { getSettings, subscribeSettings } from '../input/settings';
 import { mirrorHands } from '../engine/padCal';
 import { ARM, armPoints, legPoints, PAD_Y, PX_PER_CM, type Pt } from '../engine/demoPose';
 import { DEMOS, poseAt, type DemoId } from '../content/demos';
+import { say } from '../voice/voice';
+import { player } from '../play/player';
 
 // "How it moves" (R5): the animated diagram of a technique at the lesson's tempo, with the usual mistake one tap away.
 // Drawn into an SVG each frame (imperatively: a React render per frame isn't needed).
@@ -70,7 +72,8 @@ function draw(root: SVGGElement, id: DemoId, beat: number, wrong: boolean, trail
     el('text', { x: x + 14, y: y + 5, fill: '#aaa', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = `${cm} cm`;
   }
   el('line', { x1: x - 14, y1: right.tip[1], x2: x + 14, y2: right.tip[1], stroke: '#FFE14D', 'stroke-width': 4 });
-  el('text', { x: x + 14, y: right.tip[1] - 8, fill: '#FFE14D', 'font-size': 17, 'font-weight': 800, 'font-family': 'system-ui' }).textContent = `${Math.round(Math.max(0, (PAD_Y - right.tip[1]) / PX_PER_CM))} cm`;
+  // the live height sits right of the fixed marks' labels, so "29 cm" never lands on "30 cm" (D9)
+  el('text', { x: x + 72, y: right.tip[1] + 6, fill: '#FFE14D', 'font-size': 17, 'font-weight': 800, 'font-family': 'system-ui' }).textContent = `${Math.round(Math.max(0, (PAD_Y - right.tip[1]) / PX_PER_CM))} cm`;
   if (arms.length > 1) el('text', { x: 40, y: 500, fill: '#9ec5ff', 'font-size': 15, 'font-weight': 700, 'font-family': 'system-ui' }).textContent = `blue = ${mirror ? 'right' : 'left'} hand (behind)`;
   // left-handed: the drawing is mirrored by its group; the words are flipped back so they read normally
   if (mirror) root.querySelectorAll('text').forEach(t => { const x = Number(t.getAttribute('x')); t.setAttribute('transform', `translate(${2 * x} 0) scale(-1 1)`); t.setAttribute('text-anchor', 'end'); });
@@ -82,14 +85,22 @@ export function TechniqueDemo({ id, bpm = 70, compact }: { id: DemoId; bpm?: num
   const g = useRef<SVGGElement>(null), wordRef = useRef<HTMLDivElement>(null), countRef = useRef<HTMLDivElement>(null);
   const [wrong, setWrong] = useState(false), [speed, setSpeed] = useState(compact ? 0.5 : 1), [joints, setJoints] = useState(false);
   const mirror = !!useSyncExternalStore(subscribeSettings, getSettings).leftHanded; // N9: drawn for a left-handed player
+  // D15: the coach talks you through it: the description (or the mistake), then the cue words in time for two loops.
+  // On by default in the full view, one tap in the lesson's small panel; never during a take or with the voice off.
+  const [talk, setTalk] = useState(!compact);
+  const canTalk = () => talk && getSettings().voice !== false && player.phase !== 'playing';
+  useEffect(() => { if (canTalk()) void say(wrong ? `The mistake: ${d.mistake}` : d.what, true); }, [id, wrong, talk]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
   useEffect(() => {
     if (!('right' in d) && !('leg' in d)) return;
-    let beat = 0, last = performance.now(), raf = 0;
+    let beat = 0, last = performance.now(), raf = 0, said: string | undefined;
     const trail: Pt[] = [];
     const frame = (now: number) => {
       beat += ((now - last) / 60000) * bpm * speed; last = now;
       if (g.current) draw(g.current, id, beat, wrong, trail, joints, mirror);
-      if (wordRef.current) wordRef.current.textContent = poseAt(id, beat, wrong).word ?? '';
+      const word = poseAt(id, beat, wrong).word;
+      if (wordRef.current) wordRef.current.textContent = word ?? '';
+      if (word && word !== said && beat < 2 * d.beats && canTalk()) void say(word.toLowerCase()); // skipped while the intro still talks
+      said = word;
       if (countRef.current && d.counts.length) {
         const k = Math.floor(((beat % d.beats) / d.beats) * d.counts.length);
         countRef.current.innerHTML = d.counts.map((c, i) => `<span class="${i === k ? 'on' : ''}">${mirror ? mirrorHands(c) : c}</span>`).join('');
@@ -98,7 +109,7 @@ export function TechniqueDemo({ id, bpm = 70, compact }: { id: DemoId; bpm?: num
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [id, bpm, speed, wrong, joints, d, mirror]);
+  }, [id, bpm, speed, wrong, joints, d, mirror, talk]); // eslint-disable-line react-hooks/exhaustive-deps -- canTalk reads live settings
 
   return (
     <div className={`technique ${compact ? 'compact' : ''}`}>
@@ -107,11 +118,14 @@ export function TechniqueDemo({ id, bpm = 70, compact }: { id: DemoId; bpm?: num
         <div className={`techWord ${wrong ? 'wrong' : ''}`} ref={wordRef} aria-live="off" />
         <div className="techCount" ref={countRef} aria-hidden />
       </div>
-      {id !== 'grip' && <div className="actions techBar">
-        <span className="seg"><button className={wrong ? '' : 'on'} onClick={() => setWrong(false)}>✓ Right</button><button className={wrong ? 'on bad' : ''} onClick={() => setWrong(true)}>✗ Wrong</button></span>
-        <span className="seg">{([[1, '1×'], [0.5, '½×'], [0.25, '¼×']] as const).map(([v, l]) => <button key={v} className={speed === v ? 'on' : ''} onClick={() => setSpeed(v)}>{l}</button>)}</span>
-        {!compact && <label className="check"><input type="checkbox" checked={joints} onChange={e => setJoints(e.target.checked)} /> Joints</label>}
-      </div>}
+      <div className="actions techBar">
+        {id !== 'grip' && <>
+          <span className="seg"><button className={wrong ? '' : 'on'} onClick={() => setWrong(false)}>✓ Right</button><button className={wrong ? 'on bad' : ''} onClick={() => setWrong(true)}>✗ Wrong</button></span>
+          <span className="seg">{([[1, '1×'], [0.5, '½×'], [0.25, '¼×']] as const).map(([v, l]) => <button key={v} className={speed === v ? 'on' : ''} onClick={() => setSpeed(v)}>{l}</button>)}</span>
+          {!compact && <label className="check"><input type="checkbox" checked={joints} onChange={e => setJoints(e.target.checked)} /> Joints</label>}
+        </>}
+        <button className={talk ? 'on' : ''} aria-pressed={talk} onClick={() => setTalk(!talk)}>{talk ? '🔊 Talking you through it' : '🔈 Talk me through it'}</button>
+      </div>
       {!compact && <>
         <p className="techWhat">{d.what}</p>
         <ul className="techWatch">{d.watch.map(w => <li key={w}>{w}</li>)}</ul>

@@ -21,11 +21,14 @@ subscribePlayer(() => {
   const o = player.options;
   if (!run || !emu.on || !o || o.wait || o.external || o.demo) return; // wait mode and songs have no fixed note times
   // Real hits arrive latencyMs late (that's what the latency test measures), so the emulated ones do too.
-  const at = (t: number) => player.zero + t * player.beatMs + getSettings().latencyMs;
-  const notes = run.notes.filter((_, i) => !player.auto[i]).map(n => ({ time: at(n.t), drum: n.drum, accent: n.accent, ghost: n.ghost, grace: n.grace, buzz: n.buzz }));
+  // A step that asks for behind / on top of the beat: the player aims there (D14).
+  const at = (t: number) => player.zero + t * player.beatMs + getSettings().latencyMs + (o.feelTarget?.ms ?? 0);
+  // The chart's volume marks per run bar (the section repeats), as the player reads them (D14).
+  const marks = player.chart?.dyn, sec = o.toBar - o.fromBar + 1, level = (bar: number) => marks?.[o.fromBar - 1 + (bar % sec)] as 1 | 2 | 3 | undefined;
+  const notes = run.notes.filter((_, i) => !player.auto[i]).map(n => ({ time: at(n.t), drum: n.drum, accent: n.accent, ghost: n.ghost, grace: n.grace, buzz: n.buzz, level: level(n.bar) }));
   // free bars (trade, own fill, solos): the emulated player fills them with 8ths on the snare and toms, so they're not silent
   if (o.freeBars) for (let b = 0; b < run.beats; b += 0.5)
-    if (inFreeBar(b, run.beatsPerBar, o.fromBar, o.toBar - o.fromBar + 1, o.freeBars)) notes.push({ time: at(b), drum: (['snare', 'tom1', 'tom2', 'floor'] as const)[Math.floor((b % run.beatsPerBar) / (run.beatsPerBar / 4))], accent: undefined, ghost: undefined, grace: undefined, buzz: undefined });
+    if (inFreeBar(b, run.beatsPerBar, o.fromBar, o.toBar - o.fromBar + 1, o.freeBars)) notes.push({ time: at(b), drum: (['snare', 'tom1', 'tom2', 'floor'] as const)[Math.floor((b % run.beatsPerBar) / (run.beatsPerBar / 4))], accent: undefined, ghost: undefined, grace: undefined, buzz: undefined, level: undefined });
   const kit = { ...MPS150, retrigger: emu.retriggers ? MPS150.retrigger : {}, crosstalk: emu.crosstalk ? MPS150.crosstalk : 0 };
   for (const m of emulateKit(playNotes(notes, emu), getNoteMap(), kit))
     timers.push(window.setTimeout(() => receiveMidi(m.data, m.timeStamp), m.timeStamp - performance.now())); // delivered after its timestamp, like Web MIDI

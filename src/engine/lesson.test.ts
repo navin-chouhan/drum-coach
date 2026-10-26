@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, afterReview, floorLine, lateNote, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
+import { addDays, afterReview, floorLine, stuckMove, stuckLine, freeStars, lateNote, isProven, proveOnAnotherDay, nextStepInfo, autoProbe, checkPass, clickOnBeat, probeTempo, copyChart, countPlan, pickVariant, playChart, recordTarget, dueReviews, ladderStep, lanesNow, starsFor, startProgress, type Lesson, type LessonProgress } from './lesson';
 import type { RunStats } from './scoring';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
@@ -24,7 +24,8 @@ describe('checkPass', () => {
     expect(checkPass(stats({ accuracy: 50, perDrum: { snare: { ...snare, accuracy: 50, meanOffset: -25 } } })).reason)
       .toMatch(/^(?!.*weakest).*early by 25/); // one drum: no "weakest"
     expect(checkPass(stats({ extra: 5 })).ok).toBe(false);
-    expect(checkPass(stats({ meanOffset: -40 }), { maxAbsOffsetMs: 30 }).reason).toMatch(/Rushing by 40/);
+    expect(checkPass(stats({ meanOffset: -40.4 }), { maxAbsOffsetMs: 30 }).reason).toBe("You're ahead of the click (about 40 ms). Let it come to you."); // D8: words first, whole ms
+    expect(checkPass(stats({ meanOffset: 95 }), { maxAbsOffsetMs: 30 }).reason).toMatch(/well behind the click/);
     expect(checkPass(stats(), { maxVelocityCv: 5 }).ok).toBe(false);
     expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: null, pairDrop: null } }), { maxGhostToAccent: 0.8 }).ok).toBe(true);
     expect(checkPass(stats({ velocity: { normalMean: 96, normalCv: 0, accentMean: 127, ghostMean: 96, pairDrop: null } }), { maxGhostToAccent: 0.6 }).ok).toBe(false);
@@ -50,6 +51,38 @@ describe('checkPass', () => {
     expect(checkPass(stats(), { maxFlamMs: 25 }).ok).toBe(true); // nothing landing together: no check
     const v = stats().velocity;
     expect(checkPass(stats({ velocity: { ...v, pairDrop: 30 } }), { maxPairDropPct: 15 }).reason).toMatch(/30% softer/);
+  });
+});
+
+describe('stars for a step that is all your own bars (D3)', () => {
+  it('come from how well your bars stayed on the beat', () => {
+    expect(freeStars(96)).toBe(3);
+    expect(freeStars(80)).toBe(2);
+    expect(freeStars(50)).toBe(1);
+  });
+});
+
+describe('a student stuck on one step (D2)', () => {
+  const p0 = startProgress(lesson);
+  it('counts failed takes in a row on the step, also when the tempo holds, and forgets them on a pass', () => {
+    let p = p0;
+    for (let i = 0; i < 4; i++) p = ladderStep(p, lesson, false, '2026-10-26', 100, false, true).next; // every note there, timing off
+    expect(p.stuck).toBe(4);
+    expect(p.bpm).toBe(60); // the tempo held
+    expect(ladderStep(p, lesson, true, '2026-10-26', 100).next.stuck).toBe(0);
+    expect(ladderStep({ ...p, stuck: 2 }, lesson, false, '2026-10-26', 40).next.stuck).toBe(3); // a rough take counts too
+  });
+  it('after 3 the big move changes: latency first for a steady timing fault, then a tool, then the coach', () => {
+    expect(stuckMove(2, "You're behind the click (about 45 ms). Lock onto it.", false)).toBeUndefined();
+    expect(stuckMove(3, "You're behind the click (about 45 ms). Lock onto it.", false)).toBe('latency');
+    expect(stuckMove(3, "You're behind the click (about 45 ms). Lock onto it.", true)).toBe('count');
+    expect(stuckMove(3, 'Volume varies by 30%. Aim for every stroke the same height.', true)).toBe('listen');
+    expect(stuckMove(5, 'Volume varies by 30%. Aim for every stroke the same height.', true)).toBe('coach');
+    expect(stuckMove(6, "You're ahead of the click (about 40 ms). Let it come to you.", false)).toBe('latency'); // a setup problem first, however long
+  });
+  it('names the cause in plain words', () => {
+    expect(stuckLine('latency')).toMatch(/setup, not you/);
+    expect(stuckLine('coach')).toMatch(/something different/);
   });
 });
 

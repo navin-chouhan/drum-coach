@@ -82,6 +82,7 @@ export type LessonProgress = {
   layer?: number; // index into the step's `layers` (older saves: none = 0)
   bestStreak?: number; // best "in a row" on a streak challenge's record take
   provenAt?: string; // passed again at its target on a later day than completedAt (R7: a rank's ✓ proven)
+  stuck?: number; // failed takes in a row on this step, whatever the tempo did (D2: after 3 the big move changes)
 };
 
 /** Proven: passed again on a later day. Old saves count a passed review (reviewStage ≥ 1, always a later day). */
@@ -194,7 +195,7 @@ export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number, free?:
     if (!t.ok) return { ok: false, reason: t.offset < c.offsetTarget.ms ? 'Sit a little behind the click: let it land just after.' : 'A touch too far behind: bring it closer to the click.' };
   }
   if (c.maxAbsOffsetMs !== undefined && Math.abs(s.meanOffset) > c.maxAbsOffsetMs)
-    return { ok: false, reason: `${s.meanOffset < 0 ? 'Rushing' : 'Dragging'} by ${Math.abs(s.meanOffset)} ms. Lock onto the click.` };
+    return { ok: false, reason: offsetWords(s.meanOffset) };
   if (c.maxVelocityCv !== undefined && s.velocity.normalCv > c.maxVelocityCv)
     return { ok: false, reason: `Volume varies by ${s.velocity.normalCv}%. Aim for every stroke the same height.` };
   if (c.maxGhostToAccent !== undefined) {
@@ -202,7 +203,7 @@ export function checkPass(s: RunStats, p?: Partial<Pass>, level?: number, free?:
     if (loud && soft / loud > c.maxGhostToAccent) return { ok: false, reason: 'Make the accents louder and the other notes softer.' };
   }
   if (c.maxSpreadMs !== undefined && s.spread > c.maxSpreadMs)
-    return { ok: false, reason: `Your hits wander ±${s.spread} ms. Keep each one the same distance from the click.` };
+    return { ok: false, reason: `Your hits wander ±${Math.round(s.spread)} ms. Keep each one the same distance from the click.` };
   if (c.maxFlamMs !== undefined && s.flam !== null && s.flam > c.maxFlamMs)
     return { ok: false, reason: `Hands and feet split by ${s.flam} ms. Make them land as one sound.` };
   if (c.maxPairDropPct !== undefined && s.velocity.pairDrop !== null && s.velocity.pairDrop > c.maxPairDropPct)
@@ -215,7 +216,7 @@ function worstDrum(s: RunStats) {
   if (!worst || worst[1].accuracy >= 90) return '';
   const name = worst[0] === 'hhOpen' ? 'open hi-hat' : worst[0] === 'hhPedal' ? 'hi-hat foot' : worst[0] === 'hihat' ? 'hi-hat' : worst[0];
   const t = worst[1].meanOffset;
-  const when = Math.abs(t) >= 15 ? `${t < 0 ? 'early' : 'late'} by ${Math.abs(t)} ms` : '';
+  const when = Math.abs(t) >= 15 ? `${t < 0 ? 'early' : 'late'} by ${Math.round(Math.abs(t))} ms` : '';
   // One drum only: "weakest" means nothing, the timing hint is the useful part.
   if (Object.keys(s.perDrum).length === 1) return when ? `On average you were ${when}.` : '';
   return `The ${name} was weakest${when ? ` (${when})` : ''}.`;
@@ -232,6 +233,9 @@ export function starsFor(s: RunStats): 1 | 2 | 3 {
   return 1;
 }
 
+/** Stars for a take with no written notes (trade bars, solo bars): how well your own bars stayed on the beat (D3). */
+export const freeStars = (onGridPct: number): 1 | 2 | 3 => (onGridPct >= 90 ? 3 : onGridPct >= 75 ? 2 : 1);
+
 /**
  * The line at the slowest tempo. Wait mode ("Learn it slowly") helps you find the notes; when they all landed and a
  * timing or volume limit failed, waiting can't fix that, so the line names the fix instead.
@@ -239,6 +243,33 @@ export function starsFor(s: RunStats): 1 | 2 | 3 {
 export const floorLine = (notesLanded: boolean, reason?: string) => (notesLanded
   ? `All the notes are there. ${reason ?? 'One small thing left: see the tip.'}`
   : 'This one is tricky. Try "Learn it slowly": the music waits for each note.');
+
+/** A beginner's words for a steady timing fault, the number second and whole (D8). */
+export function offsetWords(meanOffsetMs: number) {
+  const ms = Math.round(Math.abs(meanOffsetMs)), how = ms < 35 ? 'a little ' : ms > 80 ? 'well ' : '';
+  return meanOffsetMs < 0 ? `You're ${how}ahead of the click (about ${ms} ms). Let it come to you.` : `You're ${how}behind the click (about ${ms} ms). Lock onto it.`;
+}
+
+/** When the same step keeps failing, a teacher changes the approach instead of saying "again" (D2). */
+export type StuckMove = 'latency' | 'count' | 'listen' | 'coach';
+/**
+ * The big move after `stuck` failed takes in a row: a steady rushing/dragging fault with no latency test saved is
+ * usually the setup, so check it first; then a different tool (count along for timing, hear it for the rest);
+ * from 5, the coach writes something different.
+ */
+export function stuckMove(stuck: number, reason: string | undefined, latencyChecked: boolean): StuckMove | undefined {
+  if (stuck < 3) return undefined;
+  const steady = /(behind|ahead of) the click/.test(reason ?? ''), timing = steady || /wander/.test(reason ?? '');
+  if (steady && !latencyChecked) return 'latency';
+  if (stuck >= 5) return 'coach';
+  return timing ? 'count' : 'listen';
+}
+export const stuckLine = (m: StuckMove) => ({
+  latency: 'Every take lands about the same amount off the click: that is usually the setup, not you. Two minutes to check the latency?',
+  count: "Let's change it up: one take where I count out loud with you.",
+  listen: "Let's hear it: your take first, then how it should sound.",
+  coach: 'This one keeps fighting back. Let the coach write you something different.',
+})[m];
 
 /** Levels 0–1 pass a take well off the click (Good is ±150 ms); the verdict still says so, gently. */
 export const lateNote = (level: number, meanOffsetMs: number) => (level > 1 || Math.abs(meanOffsetMs) <= 50 ? ''
@@ -260,26 +291,28 @@ export function ladderStep(p: LessonProgress, lesson: Lesson, passed: boolean, t
   const step = lesson.steps[Math.min(p.step, lesson.steps.length - 1)];
   const last = p.step >= lesson.steps.length - 1;
   if (step.jam || step.rest || step.look || step.quiz || step.transcribe || step.listen || ((step.freeBars?.length || step.trade) && !step.pass)) passed = true; // improvising has no wrong notes; a rest is a rest
-  if (!passed && notesLanded) return { next: { ...p, clean: 0, fails: 0 }, event: 'hold' };
+  const stuck = passed ? 0 : (p.stuck ?? 0) + 1;
+  const out = (next: LessonProgress, event: LadderEvent) => ({ next: { ...next, stuck }, event });
+  if (!passed && notesLanded) return out({ ...p, clean: 0, fails: 0 }, 'hold');
   if (!passed) {
     const fails = p.fails + 1, rough = accuracy !== undefined && accuracy < ROUGH_ACCURACY;
-    if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return { next: { ...p, clean: 0, fails }, event: 'hold' };
-    if (p.bpm <= MIN_BPM) return { next: { ...p, clean: 0, fails: 0 }, event: 'atFloor' };
-    return { next: { ...p, clean: 0, fails: 0, bpm: Math.max(MIN_BPM, p.bpm - (rough ? 2 * BPM_STEP : BPM_STEP)) }, event: 'slowDown' };
+    if (!rough && fails < FAILS_BEFORE_SLOWDOWN) return out({ ...p, clean: 0, fails }, 'hold');
+    if (p.bpm <= MIN_BPM) return out({ ...p, clean: 0, fails: 0 }, 'atFloor');
+    return out({ ...p, clean: 0, fails: 0, bpm: Math.max(MIN_BPM, p.bpm - (rough ? 2 * BPM_STEP : BPM_STEP)) }, 'slowDown');
   }
   const eased = p.bpm < step.bpm.start;
-  if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return { next: { ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, event: 'layerUp' };
+  if (step.layers && (p.layer ?? 0) < step.layers.length - 1) return out({ ...p, layer: (p.layer ?? 0) + 1, clean: 0, fails: 0 }, 'layerUp');
   const clean = p.clean + 1;
   const bestBpm = last ? Math.max(p.bestBpm, p.bpm) : p.bestBpm;
   if (step.jam || step.rest || step.look || step.quiz || step.transcribe || step.listen) { // any take (or the end of a rest or a look) finishes the step
-    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
+    if (!last) return out({ ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, 'stepDone');
   } else {
-    if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return { next: { ...p, clean, fails: 0, bestBpm }, event: 'hold' };
-    if (p.bpm < step.bpm.target) return { next: { ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + (eased ? 2 : 1) * BPM_STEP) }, event: 'up' };
-    if (!last) return { next: { ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, event: 'stepDone' };
+    if (clean < (strong || step.pass?.streak ? 1 : CLEAN_TAKES) && !eased) return out({ ...p, clean, fails: 0, bestBpm }, 'hold');
+    if (p.bpm < step.bpm.target) return out({ ...p, clean: 0, fails: 0, bestBpm, bpm: Math.min(step.bpm.target, p.bpm + (eased ? 2 : 1) * BPM_STEP) }, 'up');
+    if (!last) return out({ ...p, step: p.step + 1, bpm: lesson.steps[p.step + 1].bpm.start, clean: 0, fails: 0, bestBpm, layer: 0 }, 'stepDone');
   }
   const done = p.completedAt ? {} : { completedAt: today, reviewStage: 0, reviewDue: addDays(today, REVIEW_DAYS[0]) };
-  return { next: { ...p, clean: 0, fails: 0, bestBpm, ...done }, event: 'lessonDone' };
+  return out({ ...p, clean: 0, fails: 0, bestBpm, ...done }, 'lessonDone');
 }
 
 /** Spaced review: a pass pushes the next review further out (2, 5, 12, 30 days); a fail brings it back tomorrow. */

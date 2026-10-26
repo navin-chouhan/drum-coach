@@ -15,6 +15,10 @@ describe('skills (N5)', () => {
     expect(skillsOf(LESSON_BY_ID['fill-8ths'])).toContain('fills');
     for (const l of CURRICULUM.filter(x => !x.routine)) expect(skillsOf(l).length, l.id).toBeGreaterThan(0);
   });
+  it('only the lanes the student plays count, not the ones the app plays (D5)', () => {
+    const money = LESSON_BY_ID['money-8ths'];
+    expect(skillsOf({ ...money, steps: [money.steps[0]] })).not.toContain('independence'); // hi-hat only, app plays kick + snare
+  });
   it('mastery from finished lessons and their stars; a mastered skill not played for a while is due for review', () => {
     const p = (stars: number, completedAt: string) => ({ ...startProgress(CURRICULUM[1]), completedAt, stars });
     const map = skillMap(CURRICULUM, { 'count-8ths': p(3, '2026-10-01'), 'count-quarters': p(3, '2026-10-01'), rests: p(2, '2026-10-01') }, '2026-10-26');

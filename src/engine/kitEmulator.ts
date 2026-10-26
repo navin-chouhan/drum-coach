@@ -29,14 +29,15 @@ export const STEADY_PLAYER: Human = { lateMs: 20, jitterMs: 15, weakHand: 0.87 }
 export const MPS150: KitProfile = { retrigger: { snare: 0.4, tom1: 0.3, tom2: 0.3, floor: 0.3 }, crosstalk: 0.3, usbJitterMs: 1, clockBpm: 120 };
 
 const FEET = new Set<PadId>(['kick', 'hhPedal']);
+const LEVEL = { 1: 0.6, 2: 0.8, 3: 1 } as const; // a chart's p / mf / f bar marks (R4 `dyn`)
 
 /** The strokes a player makes for these notes (time in ms): hands alternate R L on hand pads, the weak hand plays softer. */
-export function playNotes(notes: { time: number; drum: ChartDrum; accent?: boolean; ghost?: boolean; grace?: number; buzz?: boolean }[], human: Human, rnd = Math.random): Stroke[] {
+export function playNotes(notes: { time: number; drum: ChartDrum; accent?: boolean; ghost?: boolean; grace?: number; buzz?: boolean; level?: 1 | 2 | 3 }[], human: Human, rnd = Math.random): Stroke[] {
   let hand = 0, last = -Infinity;
   const accented = notes.some(n => n.accent); // around accents the other strokes are low taps, as a drummer plays them
   return [...notes].sort((a, b) => a.time - b.time).flatMap(n => {
     const pad = DRUM_PAD[n.drum][0];
-    let velocity = n.accent ? 115 : n.ghost ? 35 : accented ? 70 : 92;
+    let velocity = (n.accent ? 115 : n.ghost ? 35 : accented ? 70 : 92) * (n.level ? LEVEL[n.level] : 1); // the bar's volume mark (D14)
     if (!FEET.has(pad)) {
       if (n.time - last > 1e-6) hand ^= 1; // notes together (e.g. hi-hat + snare) are two hands, not one alternation step
       if (hand === 0) velocity *= human.weakHand;
