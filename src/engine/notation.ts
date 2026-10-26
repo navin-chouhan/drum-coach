@@ -8,7 +8,7 @@ export const STAFF: Record<ChartDrum, { key: string; voice: 'hands' | 'feet' }> 
   floor: { key: 'a/4', voice: 'hands' }, kick: { key: 'f/4', voice: 'feet' }, hhPedal: { key: 'd/4/x2', voice: 'feet' },
 };
 
-export type NoteHead = { key: string; drum: ChartDrum; accent: boolean; ghost: boolean; open: boolean; i?: number; grace?: number }; // i = index of the source note, when given; grace = grace strokes before it
+export type NoteHead = { key: string; drum: ChartDrum; accent: boolean; ghost: boolean; open: boolean; i?: number; grace?: number; buzz?: boolean }; // i = index of the source note, when given; grace = grace strokes before it
 /** One note/chord or rest. `slots` = length in grid steps of its beat (16ths, or 8th-triplets when `triplet`). */
 export type NotationEvent = { heads: NoteHead[]; slots: number; triplet: boolean; beat: number }; // beat = where it starts (same clock as the notes' t)
 export type Measure = { index: number; hands: NotationEvent[]; feet: NotationEvent[] };
@@ -40,7 +40,7 @@ export function layoutMeasures(notes: (ChartNote & { i?: number })[], beatsPerBa
           const s = Math.min(slotsInBeat - 1, Math.round(rel[i] * steps));
           const heads = bySlot.get(s) ?? [];
           if (!heads.some(h => h.key === STAFF[n.drum].key)) {
-            heads.push({ key: STAFF[n.drum].key, drum: n.drum, accent: !!n.accent, ghost: !!n.ghost, open: n.drum === 'hhOpen', ...(n.i !== undefined && { i: n.i }), ...(n.grace && { grace: n.grace }) });
+            heads.push({ key: STAFF[n.drum].key, drum: n.drum, accent: !!n.accent, ghost: !!n.ghost, open: n.drum === 'hhOpen', ...(n.i !== undefined && { i: n.i }), ...(n.grace && { grace: n.grace }), ...(n.buzz && { buzz: true }) });
           } else if (n.i !== undefined) {
             const h = heads.find(x => x.key === STAFF[n.drum].key)!; // e.g. hi-hat closed + open on one spot: keep both sources
             h.i ??= n.i;

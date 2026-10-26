@@ -356,6 +356,16 @@ sounds). Takes ~20 minutes. Write the numbers into the table at the end; the imp
 2. In the intro slides: hi-hat × 1 = forward, snare × 1 = back.
 3. At 40 BPM after a rough take: floor × 2 should now start **wait mode** ("Learn it slowly"), not a scored take.
 
+**F. Flams, drags, buzz rolls** (pad retriggers are 29–56 ms, close to flam spacing)
+1. Stage 4 "The flam": one take. Does the result say the flams came out as two notes? Any "came out as one note"
+   when you clearly played two?
+2. Stage 5 "The drag" and stage 6 "Buzz roll": one take each. Note extras and misses.
+
+**G. The band and the camera**
+1. A groove lesson with 🎸 Band on: set the Band slider (Setup → Sound check) so it sits under the click and the kit.
+2. A lesson with "How it moves" (e.g. Single strokes): press C, allow the camera, record 10 s (hi-hat × 1), replay
+   (snare × 1). Nothing is saved.
+
 **Write down**
 | Check | Your number / note |
 |---|---|
@@ -368,3 +378,6 @@ sounds). Takes ~20 minutes. Write the numbers into the table at the end; the imp
 | Retrigger extras (snare / toms) | |
 | Softest ghost that counts | |
 | Gestures that didn't work | |
+| Flams read as one note / extras | |
+| Drag, buzz: extras / misses | |
+| Band level that works | |

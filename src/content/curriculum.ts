@@ -372,6 +372,11 @@ export const CURRICULUM: Lesson[] = [
       crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 4), [0]), crashOn(P(3, SHUFFLE, 3), [0]), P(3, TRIP_FILL),
     ]), [70, 92])]),
 
+  lesson(5, 'buzz-roll', 'rudiment', 'Buzz roll',
+    'Press each stroke into the pad so the stick buzzes, R L R L: a smooth "zzzz" instead of single notes.',
+    'The buzz (press) roll is the long soft roll of ballads and marching snares, and a building block of crescendos.',
+    'Press down a little with the fingers so the stick bounces fast on its own. Best felt on the real kit: e-drum pads catch some of the buzz.',
+    [step('Buzz 8ths', 'R L R L, each one a short buzz.', P(2, { snare: 'zzzzzzzz' }), [50, 70])]),
   lesson(5, 'read-triplets', 'exercise', 'Read triplets',
     'Rhythm cards with 8th-note triplets mixed with quarters, no hints.',
     'Triplets are written with a little 3 over the notes. Reading them is the key to shuffles and swing charts.',

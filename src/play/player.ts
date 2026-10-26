@@ -183,12 +183,13 @@ export function start(chart: Chart, options: PlayOptions) {
   }
 
   // Each note's Good window comes from its own drum's spacing (noteWindows), not the tightest gap in the take.
-  const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum, grace: n.grace })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
+  const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: player.zero + n.t * beatMs, drum: n.drum, grace: n.grace, buzz: n.buzz })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   if (!options.demo) cleanup.push(onHit(h => {
     const hit = { time: h.time - latency - drift, pad: h.pad, velocity: h.velocity };
     const m = match(hit);
     if (!m && hit.time < player.zero) return; // count-in noodling isn't scored (an early first note still matches)
     hits.push(hit);
+    if (m?.bounce) return; // a bounce of a buzz note: neither a note nor an extra
     if (m) {
       const i = scored.notes[m.index].i;
       player.results[i] = toResult(m, h.velocity, h.pad);
@@ -299,12 +300,13 @@ function startExternal(chart: Chart, run: Run, options: PlayOptions, beatMs: num
   } satisfies Partial<State>);
   const hits: PlayedHit[] = [], extras: PlayedHit[] = [];
   const laneOf = (d: string) => (d.startsWith('hh') ? 'hihat' : d);
-  const match = createMatcher(noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum, grace: n.grace })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
+  const match = createMatcher(noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum, grace: n.grace, buzz: n.buzz })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
   cleanup.push(onHit(h => {
     const hit = { time: ext.position(h.time - latency) * beatMs, pad: h.pad, velocity: h.velocity };
     const m = match(hit);
     if (!m && hit.time < 0) return; // pre-roll noodling isn't scored (an early first note still matches)
     hits.push(hit);
+    if (m?.bounce) return;
     if (m) {
       player.results[m.index] = toResult(m, h.velocity, h.pad);
       player.feedback.push({ lane: laneOf(run.notes[m.index].drum), judgement: m.judgement, time: h.time });

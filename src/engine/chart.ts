@@ -12,6 +12,7 @@ export const ChartNoteSchema = z.object({
   ghost: z.boolean().optional(),
   auto: z.boolean().optional(), // played by the app, not the student (the "call" of a copy-me step)
   grace: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(), // grace strokes before the note: 1 flam, 2 drag, 3 ruff
+  buzz: z.boolean().optional(), // a buzz (press) stroke: the stick presses into the pad and its bounces belong to the note
 });
 
 export const ChartSchema = z.object({
@@ -49,9 +50,9 @@ export function pattern(lines: Partial<Record<ChartDrum, string>>, stepsPerBeat:
   for (let b = 0; b < bars; b++) {
     for (const [drum, line] of Object.entries(lines) as [ChartDrum, string][]) {
       [...line].forEach((ch, i) => {
-        if (!'xXgfFdDr'.includes(ch)) return;
+        if (!'xXgfFdDrz'.includes(ch)) return;
         const grace = ({ f: 1, F: 1, d: 2, D: 2, r: 3 } as const)[ch as 'f'];
-        notes.push({ t: offsetBeats + b * barBeats + i / stepsPerBeat, drum, ...('XFD'.includes(ch) && { accent: true }), ...(ch === 'g' && { ghost: true }), ...(grace && { grace }) });
+        notes.push({ t: offsetBeats + b * barBeats + i / stepsPerBeat, drum, ...('XFD'.includes(ch) && { accent: true }), ...(ch === 'g' && { ghost: true }), ...(grace && { grace }), ...(ch === 'z' && { buzz: true }) });
       });
     }
   }

@@ -14,7 +14,7 @@ export function windowsFor(beatMs: number, gapMs = Infinity, goodMs = WINDOWS.go
 }
 export type Judgement = 'perfect' | 'good' | 'miss';
 /** time = ms on the performance.now() clock (latency already removed for hits). */
-export type Expected = { time: number; drum: ChartDrum; good?: number; grace?: number }; // good: this note's own Good window (noteWindows); grace: chart grace strokes
+export type Expected = { time: number; drum: ChartDrum; good?: number; grace?: number; buzz?: boolean }; // buzz: a buzz (press) stroke, its bounces belong to it // good: this note's own Good window (noteWindows); grace: chart grace strokes
 /**
  * Per-note Good windows: 40% of the gap to the nearest note on the same drum, capped at `goodMs`. Fast 16ths on the
  * snare are judged tighter without shrinking the 8ths on the hi-hat beside them (a take-wide window did).
@@ -32,7 +32,7 @@ export function noteWindows(expected: Expected[], goodMs = WINDOWS.good): Expect
 export type PlayedHit = { time: number; pad?: PadId; velocity: number };
 /** How a grace note came out: grace strokes before the main one, first stroke → main stroke ms, first / main velocity. */
 export type GraceResult = { strokes: number; gapMs: number; ratio: number };
-export type Match = { index: number; offset: number; judgement: Judgement; grace?: GraceResult }; // 'miss' = claimed by an off-time stroke
+export type Match = { index: number; offset: number; judgement: Judgement; grace?: GraceResult; bounce?: boolean }; // 'miss' = claimed by an off-time stroke; bounce = part of a buzz note, neither a hit nor an extra
 export type NoteResult = { judgement: Judgement; offset?: number; velocity?: number; pad?: PadId; off?: number; grace?: GraceResult }; // off: ms of an off-time stroke (not a hit)
 
 /** What a match means for its note: a hit with its offset, or a miss that remembers how far off the stroke was. */
@@ -43,6 +43,7 @@ export const toResult = (m: Match, velocity: number, pad?: PadId): NoteResult =>
 
 // Grace chain: a later stroke on the same pad within GRACE_STEP_MS, at least GRACE_VEL × the stroke before it, takes a
 // grace note over (the grace stroke came first, the main stroke counts). A softer stroke is a bounce, not the main one.
+const BUZZ_MAX_MS = 400; // a buzz stroke rings this long at most
 const GRACE_STEP_MS = 60, GRACE_SPAN_MS = 120, GRACE_MAX_MOVES = 3, GRACE_VEL = 0.9;
 
 /**
@@ -97,6 +98,11 @@ export function createMatcher(expected: Expected[], w = WINDOWS) {
         if (a < nearAbs) { near = k; nearAbs = a; }
         if (!taken[k] && expected[k].time <= hit.time) past = k;
       }
+      // a bounce of a buzz stroke: same pad, after a played buzz note and before the next note on that pad
+      // shortcut: two linear scans per stray stroke; fine for lesson-size charts, index notes by pad if songs get buzz notes
+      const buzz = expected.findLastIndex((e, j) => taken[j] && e.buzz && e.time <= hit.time && padMatches(e.drum, hit.pad!));
+      if (buzz >= 0 && !expected.some((e, j) => j > buzz && e.time <= hit.time - 1e-6 && padMatches(e.drum, hit.pad!)) && hit.time - expected[buzz].time < BUZZ_MAX_MS)
+        return { index: buzz, offset: 0, judgement: 'miss', bounce: true };
       if (near < 0 || taken[near]) return null; // nothing close, or that note was already played: a real extra
       const idx = past >= 0 ? past : near;
       taken[idx] = 1;
@@ -115,6 +121,7 @@ export function scoreRun(expected: Expected[], hits: PlayedHit[]) {
   const extras: PlayedHit[] = [];
   for (const h of hits) {
     const m = match(h);
+    if (m?.bounce) continue; // part of a buzz note
     if (m) results[m.index] = toResult(m, h.velocity);
     else extras.push(h);
   }

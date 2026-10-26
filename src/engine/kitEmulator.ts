@@ -31,7 +31,7 @@ export const MPS150: KitProfile = { retrigger: { snare: 0.4, tom1: 0.3, tom2: 0.
 const FEET = new Set<PadId>(['kick', 'hhPedal']);
 
 /** The strokes a player makes for these notes (time in ms): hands alternate R L on hand pads, the weak hand plays softer. */
-export function playNotes(notes: { time: number; drum: ChartDrum; accent?: boolean; ghost?: boolean; grace?: number }[], human: Human, rnd = Math.random): Stroke[] {
+export function playNotes(notes: { time: number; drum: ChartDrum; accent?: boolean; ghost?: boolean; grace?: number; buzz?: boolean }[], human: Human, rnd = Math.random): Stroke[] {
   let hand = 0, last = -Infinity;
   const accented = notes.some(n => n.accent); // around accents the other strokes are low taps, as a drummer plays them
   return [...notes].sort((a, b) => a.time - b.time).flatMap(n => {
@@ -46,7 +46,9 @@ export function playNotes(notes: { time: number; drum: ChartDrum; accent?: boole
     const main = { time, pad, velocity: Math.max(1, Math.min(127, Math.round(velocity * (0.95 + rnd() * 0.1)))) };
     // grace strokes (flam, drag, ruff): soft, 25 ms apart before the main stroke, from the other hand
     const graces = Array.from({ length: n.grace ?? 0 }, (_, k) => ({ time: time - 25 * ((n.grace ?? 0) - k), pad, velocity: Math.round(35 * (hand === 1 ? human.weakHand : 1)) }));
-    return [...graces, main];
+    // a buzz stroke: the stick presses and bounces a few times (kept by the input's bounce filter: ≥ 0.7 of the stroke)
+    const bounces = n.buzz ? [1, 2, 3].map(k => ({ time: time + 22 * k, pad, velocity: Math.round(main.velocity * (0.9 - 0.05 * k)) })) : [];
+    return [...graces, main, ...bounces];
   });
 }
 
