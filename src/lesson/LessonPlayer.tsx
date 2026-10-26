@@ -316,8 +316,8 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     : resting ? { label: '✓ Done, next step', run: finishRest }
     : flow ? { label: '🌊 Flow ▶', run: () => { setDetails(false); start(chart, { ...options(false), endless: true, fadeClick: 8 }); } }
     : coachAct && canRunAction(coachAct) ? { label: coachAct.label, run: () => void runAction(coachAct) }
+    : outcome?.slowly ? { label: '🐢 Learn it slowly', run: () => play(false, bpm, true) } // at the floor a zoom can't go slower
     : outcome?.fixBar && !outcome.zoomed ? { label: `🔍 Fix bar ${outcome.fixBar}`, run: () => zoomIn(outcome.fixBar!) }
-    : outcome?.slowly ? { label: '🐢 Learn it slowly', run: () => play(false, bpm, true) }
     : itemDone && (oneTake || outcome?.event === 'lessonDone') ? { label: onNext ? 'Next ▶' : '← Journey', run: goNext }
     : { label: outcome ? '▶ Again' : '▶ Play', run: () => play(false) };
   const listen = () => (f && f.hits.length ? hearTake(f) : play(true));
