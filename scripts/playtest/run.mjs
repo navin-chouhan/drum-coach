@@ -10,7 +10,7 @@
 // and the page must not throw. Prints a report; exits 1 on any problem.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtempSync, openSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, openSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 

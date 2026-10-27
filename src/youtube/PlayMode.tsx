@@ -24,7 +24,7 @@ export function PlayMode({ song, videoId, yt, rate, bars }: ModeProps) {
   const [stage, setStage] = useState(concert.queue.length > 0); // Stage mode: for playing in front of friends (always in a concert)
   const next = concert.queue[0];
   const encore = stage && player.phase === 'done' ? player.finished : undefined;
-  useEffect(() => { if (encore) { saveRun(encore); coachTake(encore); flourish(true); } }, [encore]); // the coach must hear this take, or it answers an older one
+  useEffect(() => { if (encore) { void saveRun(encore); coachTake(encore); flourish(true); } }, [encore]); // the coach must hear this take, or it answers an older one
   useEffect(() => { preloadSheet(); return () => stop(); }, []);
 
   const chart: Chart & { id: string } = { id: song.id, title: song.title, kind: 'song', bpm: grid.bpm, timeSignature: song.timeSignature, bars: lastBar, notes };

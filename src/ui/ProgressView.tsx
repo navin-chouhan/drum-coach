@@ -123,7 +123,7 @@ export function ProgressView() {
                 <span className="done" style={{ width: `${(100 * k.lessons.done) / Math.max(1, k.lessons.all)}%` }} />
                 {k.started > 0 && <span className="started" style={{ width: `${Math.max(2, (100 * k.started) / Math.max(1, k.lessons.all))}%` }} />}</span>
               <span className="n">{k.lessons.done} of {k.lessons.all} lessons{k.started ? ` · ${k.started} started` : ''}<em>{k.takes ? `${k.takes} take${k.takes === 1 ? '' : 's'} so far` : 'not started'}</em>
-                {k.due && k.reviewLesson && <button className="link" onClick={() => requestLesson(k.reviewLesson!)}>🔁 Refresh</button>}</span>
+                {k.due && k.reviewLesson && <button className="link" onClick={() => requestLesson(k.reviewLesson)}>🔁 Refresh</button>}</span>
             </div>
           ))}
         </div>)}

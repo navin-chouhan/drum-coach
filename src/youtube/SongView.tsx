@@ -48,7 +48,7 @@ export function SongView({ song, onBack, bars }: { song: YtSong; onBack: () => v
     host.current!.replaceChildren(el);
     const p = new YtPlayer(el, latest.current.videoId);
     setYt(p);
-    p.ready.then(() => {
+    void p.ready.then(() => {
       const { title, id } = latest.current;
       if (title.startsWith('YouTube video ') && p.title) void patchSong(id, { title: p.title });
     });
@@ -133,7 +133,7 @@ export function SongView({ song, onBack, bars }: { song: YtSong; onBack: () => v
                   "Also share tab audio" on. Nothing is recorded or saved.</p>
                 {link.waiting
                   ? <p className="thinking" role="status"><span className="spinner" aria-hidden /> Waiting for you to pick <b>Drum Coach – song player</b> in Chrome's share prompt…</p>
-                  : <div className="actions"><button onClick={connectAudio}>Connect song audio</button></div>}
+                  : <div className="actions"><button onClick={() => void connectAudio()}>Connect song audio</button></div>}
               </>
             ) : (
               <div className="form">
@@ -183,10 +183,10 @@ function Versions({ song, version, onVersion }: { song: YtSong; version: Version
       <div className="actions">
         {(Object.keys(VERSION_NAMES) as Version[]).map(v => (
           <button key={v} className={version === v ? 'on' : ''} disabled={!song[v]} onClick={() => onVersion(v)}>
-            {VERSION_NAMES[v]}{song[v] && song.grids[song[v]!] ? '' : song[v] ? ' (no tempo)' : ''}
+            {VERSION_NAMES[v]}{song[v] && song.grids[song[v]] ? '' : song[v] ? ' (no tempo)' : ''}
           </button>
         ))}
-        <button onClick={find} disabled={busy}>{busy ? 'Searching…' : 'Find drumless & covers'}</button>
+        <button onClick={() => void find()} disabled={busy}>{busy ? 'Searching…' : 'Find drumless & covers'}</button>
       </div>
       <p className="small">Learn by ear on the original (or a drum cover), then play along on the drumless version.</p>
       <form className="row2" onSubmit={e => { e.preventDefault(); const id = parseYouTubeId(link); if (id) { void use('drumlessId', id); setLink(''); } else setError('That is not a YouTube link.'); }}>
@@ -202,7 +202,7 @@ function Versions({ song, version, onVersion }: { song: YtSong; version: Version
               <li key={r.id}>
                 <img src={r.thumbnail} alt="" width={80} height={45} loading="lazy" />
                 <span className="grow small"><b>{r.title}</b><br />{r.channel}</span>
-                <button onClick={() => use(kind === 'drumless' ? 'drumlessId' : 'coverId', r.id)}>Use</button>
+                <button onClick={() => void use(kind === 'drumless' ? 'drumlessId' : 'coverId', r.id)}>Use</button>
               </li>
             ))}
           </ul>

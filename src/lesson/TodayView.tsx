@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useEffectEvent, useMemo, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { PlanCard } from '../coach/CoachView';
 import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
@@ -33,6 +33,19 @@ import { addDays } from '../engine/lesson';
 const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
 type Open = { lessonId: string; item?: number; role?: SessionRole; flow?: boolean; arcade?: boolean };
 
+/**
+ * Journey's moves from the kit while the home screen is up, as on the lesson screen: hi-hat pedal × 3 starts,
+ * ride × 2 is something else, tom 2 × 2 hears it.
+ */
+function KitMoves({ main, next, listen }: { main: () => void; next?: () => void; listen?: () => void }) {
+  const move = useEffectEvent((kind: string) => {
+    const run = kind === 'main' ? main : kind === 'next' ? next : kind === 'listen' ? listen : undefined;
+    run?.(); return !!run;
+  });
+  useEffect(() => onCoachAction(a => move(a.kind)), []);
+  return null;
+}
+
 export function TodayView({ openLessonId, device }: { openLessonId?: string; device?: string }) {
   const s = useSyncExternalStore(subscribeSettings, getSettings);
   const lessons = useLessons();
@@ -54,10 +67,6 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const [asks, setAsks] = useState(0); // each "new lesson" click is a new request
   const [swap, setSwap] = useState(0); // "Something else" steps through other lessons of this stage
   useSyncExternalStore(subscribePlayer, playerVersion); // "Hear it" shows Stop while it plays
-  // Journey's moves from the kit, as on the lesson screen: hi-hat pedal × 3 starts, ride × 2 is something else, tom 2 × 2 hears it.
-  const homeMoves = useRef<Partial<Record<'main' | 'next' | 'listen', () => void>>>({});
-  const atHome = s.profile.onboarded && !editing && !kitStep && !technique && !placing && !skills && !open;
-  useEffect(() => (atHome ? onCoachAction(a => { const run = homeMoves.current[a.kind as 'main']; run?.(); return !!run; }) : undefined), [atHome]);
   useEffect(() => { fetch('/api/runs').then(r => r.json()).then((runs: RunRow[]) => { setRuns(runs); setDash(dashboard(runs)); }).catch(() => {}); }, [open]);
   useEffect(() => { if (dash?.totalRuns && getSettings().hearingTipWeek !== isoWeek(new Date())) { const w = isoWeek(new Date()); const t = setTimeout(() => setSettings({ hearingTipWeek: w }), 60_000); return () => clearTimeout(t); } }, [dash]); // the ear tip shows for a minute, once a week
 
@@ -73,27 +82,32 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   useEffect(() => { if (played && s.liveCoach && s.profile.onboarded) void ensureWeekPlan(); }, [played, s.liveCoach, s.profile.onboarded]);
   useEffect(() => {
     if (s.liveCoach && s.profile.onboarded && played && milestone && aiLessonsLoaded() && !coachOpen.length && studentRead(s.lessons, runs).pace !== 'flying') requestCoachLesson(coachKey);
-  }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons, runs]);
-
-  // The Monday recap: on the first visit of a week (with some playing behind you), once, spoken if the voice is on.
-  useEffect(() => {
-    const wk = isoWeek(new Date());
-    // F2: only with playing from before this week, or "last week" means today
-    if (!dash?.totalRuns || getSettings().lastRecapWeek === wk || !runs.some(r => isoWeek(new Date(r.startedAt)) !== wk)) return;
-    const text = weekRecap(dash, newBadges.length ? BADGES.find(b => b.id === newBadges[newBadges.length - 1])?.name : undefined); // only a badge earned just now
-    setSettings({ lastRecapWeek: wk }); setRecap(text);
-    if (getSettings().voice) void say(text);
-  }, [dash]);
+  }, [s.liveCoach, s.profile.onboarded, played, milestone, coachOpen.length, coachKey, lessons, runs, s.lessons]);
 
   // A badge earned since last time is announced once on Journey (with a fill), then kept in settings.
-  useEffect(() => {
-    if (!runs.length) return;
+  const unseenBadges = useMemo(() => {
+    if (!runs.length) return [];
     const ready = songs.filter(x => songVerified(x) && songReady(runs, x.id, songBarCount(x))).map(x => x.id); // N4: checked by ear
-    const earned = earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, ready), fresh = earned.filter(id => !s.badges?.includes(id));
-    if (!fresh.length) return;
-    setSettings({ badges: [...(s.badges ?? []), ...fresh] });
-    setNewBadges(fresh); flourish(false);
+    return earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, ready).filter(id => !s.badges?.includes(id));
   }, [runs, s.lessons, s.badges, songs]);
+  if (unseenBadges.length && unseenBadges.join() !== newBadges.join()) setNewBadges(unseenBadges);
+  useEffect(() => {
+    const kept = getSettings().badges ?? [], add = newBadges.filter(id => !kept.includes(id));
+    if (!add.length) return;
+    setSettings({ badges: [...kept, ...add] }); flourish(false);
+  }, [newBadges]);
+
+  // The Monday recap: on the first visit of a week (with some playing behind you), once, spoken if the voice is on.
+  // F2: only with playing from before this week, or "last week" means today.
+  const week = isoWeek(new Date()), justEarned = unseenBadges.length ? unseenBadges : newBadges;
+  if (!recap && dash?.totalRuns && s.lastRecapWeek !== week && runs.some(r => isoWeek(new Date(r.startedAt)) !== week))
+    setRecap(weekRecap(dash, justEarned.length ? BADGES.find(b => b.id === justEarned[justEarned.length - 1])?.name : undefined)); // only a badge earned just now
+  useEffect(() => {
+    const wk = isoWeek(new Date());
+    if (!recap || getSettings().lastRecapWeek === wk) return;
+    setSettings({ lastRecapWeek: wk });
+    if (getSettings().voice) void say(recap);
+  }, [recap]);
 
   // The stage's song becomes a lesson once every bar is ready (so the trail and the lesson player know it).
   const pSong = songs.find(x => x.id === (s.profile.song?.stage === milestone?.level ? s.profile.song?.id : undefined));
@@ -194,7 +208,6 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const askNew = () => { requestCoachLesson(coachKey.replace(/-\d+$/, `-${asks + 1}`)); setAsks(asks + 1); };
   // Today's set done: the next lesson on the trail leads, and the 2-minute challenge and Beat your best join the moves.
   const afterSet = !!hero && heroItem < 0 && setDone && !swap;
-  homeMoves.current = { main: go, next: others.length ? () => setSwap(swap + 1) : undefined, listen: hero ? () => hear(hero) : undefined };
   const heroStep = hero && hero.steps[Math.min(s.lessons[hero.id]?.step ?? 0, hero.steps.length - 1)];
   const heroBpm = hero && heroStep && !heroStep.rest && !heroStep.look ? s.lessons[hero.id]?.bpm ?? heroStep.bpm.start : undefined;
   const heroTarget = hero?.steps[hero.steps.length - 1].bpm.target;
@@ -222,6 +235,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
     next: hero && { tool: toolOf(hero.steps[0]) }, setDone: afterSet, minutesToday: dash?.minutesToday, pathDone: pathDone && !hero });
   return (
     <div className="today home2">
+      <KitMoves main={go} next={others.length ? () => setSwap(swap + 1) : undefined} listen={hero ? () => hear(hero) : undefined} />
       {notice === 'recap' && <div className="notice"><span className="ic" aria-hidden>📅</span><p>{recap}</p></div>}
       {notice === 'health' && <div className="notice"><span className="ic" aria-hidden>🌱</span><p>{healthLine}</p></div>}
       {notice === 'sore' && <div className="notice"><span className="ic" aria-hidden>🩹</span><p>Quick check: anything sore after drumming (wrists, forearms, back)?</p>
@@ -321,7 +335,7 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
           {songStop && <>
             <div className="songTop"><div className="ring" style={{ '--p': `${Math.round(songReadyFrac * 100)}%` } as React.CSSProperties}><div>{songStop.readyBars} / {songStop.bars}<br />bars</div></div>
               <div><b>{songStop.title}</b><p className="small">{songStop.bars} bars{'lesson' in songStop ? ' with the band' : ''}. Fill the ring, then play it for a friend.</p></div></div>
-            <div className="actions">{'lesson' in songStop && songStop.lesson && <button onClick={() => hear(songStop.lesson!)}>{hearing ? '■ Stop' : '👂 Hear it'}</button>}
+            <div className="actions">{'lesson' in songStop && songStop.lesson && <button onClick={() => hear(songStop.lesson)}>{hearing ? '■ Stop' : '👂 Hear it'}</button>}
               <button onClick={songStop.onOpen}>▶ Play it</button></div>
             {projectIsStop && projectSong && !songVerified(projectSong) && <p className="small">Check the part by ear in Songs before you show it off.</p>}
           </>}

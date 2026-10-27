@@ -242,6 +242,7 @@ function burst(layer: HTMLElement, origin: { x: number; y: number }, g: NoteGrou
   const b = document.createElement('div');
   b.className = `sheetBurst ${j}`;
   b.style.cssText = `width:${size}px;height:${size}px;transform:translate(${cx - size / 2}px,${cy - size / 2}px)`;
+  // eslint-disable-next-line no-restricted-syntax -- constant markup: the star shape and a fixed colour
   b.innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%"><polygon points="${STAR}" fill="${COLORS[j]}" stroke="#141414" stroke-width="5" stroke-linejoin="round"/></svg>`;
   layer.appendChild(b);
   if (!reduceMotion) b.firstElementChild!.animate([{ transform: 'scale(0) rotate(-40deg)' }, { transform: 'scale(1.3) rotate(8deg)', offset: 0.6 }, { transform: 'scale(1) rotate(0)' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.25,1)' });
@@ -286,7 +287,7 @@ export function SheetPlayer() {
     };
     // The next page is engraved in idle time while this one plays: a full render at the turn would stall the downbeat.
     let next: { p: number; layout?: ReturnType<typeof renderSheet> } | undefined;
-    const idle = window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 0));
+    const idle = window.requestIdleCallback?.bind(window) ?? ((f: () => void) => setTimeout(f, 0));
     const draw = (p: number) => {
       page = p; done.clear(); shownX.clear(); marks.current!.replaceChildren(); bursts.current!.replaceChildren();
       if (next?.p === p && next.layout) { paper.current!.replaceChildren(...pre.current!.childNodes); layout = next.layout; }

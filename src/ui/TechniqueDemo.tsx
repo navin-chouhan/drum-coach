@@ -97,7 +97,7 @@ export function TechniqueDemo({ id, bpm = 70, compact, heelUp }: { id: DemoId; b
     const counts = (el: HTMLDivElement | null, cs: string[]) => {
       if (!el || !cs.length) return;
       const k = Math.floor(((beat % d.beats) / d.beats) * cs.length);
-      el.innerHTML = cs.map((c, i) => `<span class="${i === k ? 'on' : ''}">${mirror ? mirrorHands(c) : c}</span>`).join('');
+      el.replaceChildren(...cs.map((c, i) => Object.assign(document.createElement('span'), { className: i === k ? 'on' : '', textContent: mirror ? mirrorHands(c) : c })));
     };
     const frame = (now: number) => {
       beat += ((now - last) / 60000) * bpm * speed; last = now;

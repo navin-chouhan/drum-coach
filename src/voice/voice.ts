@@ -31,7 +31,7 @@ export function onsetOf(buf: AudioBuffer) {
 }
 
 export function voiceEngine() {
-  engine ??= fetch('/api/tts/status').then(r => r.json()).then(s => (s.engine === 'piper' ? 'piper' : 'browser') as 'piper' | 'browser').catch(() => 'browser' as const);
+  engine ??= fetch('/api/tts/status').then(r => r.json()).then(s => (s.engine === 'piper' ? 'piper' : 'browser')).catch(() => 'browser' as const);
   return engine;
 }
 

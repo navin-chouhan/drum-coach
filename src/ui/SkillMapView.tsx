@@ -31,7 +31,7 @@ export function SkillMapView({ onBack, onOpen }: { onBack: () => void; onOpen: (
             <div className="skillBar" aria-label={`${Math.round(k.mastery * 100)}%`}><i style={{ width: `${Math.max(2, k.mastery * 100)}%` }} /></div>
             <span className="small">{k.lessons.done} of {k.lessons.all} lessons</span>
             <Spark values={growth[k.id].map(v => Math.round(v * 100))} min={0} max={100} unit="%" label={`${k.name}, the last 6 months`} />
-            {k.due && k.reviewLesson ? <button onClick={() => onOpen(k.reviewLesson!)}>🔁 Refresh</button> : <span />}
+            {k.due && k.reviewLesson ? <button onClick={() => onOpen(k.reviewLesson)}>🔁 Refresh</button> : <span />}
           </div>
         ))}
       </div>

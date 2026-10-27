@@ -29,23 +29,28 @@ export function Move({ label, gesture, sub, go, alt, dark, onClick }: { label: s
   );
 }
 
+/** The clock, re-read every `ms` (in state: a render that read it itself would show a different time each re-render). */
+function useNow(ms: number) {
+  const [now, setNow] = useState(() => performance.now());
+  useEffect(() => { const t = setInterval(() => setNow(performance.now()), ms); return () => clearInterval(t); }, [ms]);
+  return now;
+}
+
 /** While you play: the live tip, big enough to read from the throne. */
 export function LiveHint() {
   useSyncExternalStore(subscribePlayer, playerVersion);
-  const [, tick] = useState(0);
-  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 500); return () => clearInterval(t); }, []);
-  const c = player.cue, show = c && performance.now() - c.at < 3000;
-  return <div className={`liveHint ${show ? 'on' : ''}`} role="status">{show ? `💡 ${c!.cue.text}` : ' '}</div>;
+  const now = useNow(500);
+  const c = player.cue, show = c && now - c.at < 3000;
+  return <div className={`liveHint ${show ? 'on' : ''}`} role="status">{show ? `💡 ${c.cue.text}` : ' '}</div>;
 }
 
 /** Flow mode's live line: how many of the notes in the last 4 bars landed. */
 export function FlowMeter() {
-  const [, tick] = useState(0);
-  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 500); return () => clearInterval(t); }, []);
+  const now = useNow(500);
   const run = player.run, pos = position(), bpb = run?.beatsPerBar ?? 4;
   const mine = run ? run.notes.flatMap((_, i) => (player.auto[i] ? [] : [i])) : []; // your notes, not the app's
   const pct = run && pos > bpb ? recentAccuracy(mine.map(i => player.results[i]), { ...run, notes: mine.map(i => run.notes[i]) }, Math.max(0, pos - 4 * bpb), pos - 0.5) : null;
-  const left = player.options?.seconds ? Math.max(0, Math.ceil(player.options.seconds - (performance.now() - player.zero) / 1000)) : undefined;
+  const left = player.options?.seconds ? Math.max(0, Math.ceil(player.options.seconds - (now - player.zero) / 1000)) : undefined;
   return <div className="liveHint on">{left !== undefined ? `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left · ` : '🌊 '}{Math.max(0, Math.floor(pos / bpb))} bars{left === undefined ? ' in the flow' : ''}{pct !== null ? ` · last 4 bars: ${pct}% landed` : ''}</div>;
 }
 

@@ -44,8 +44,9 @@ export function studentProfile(runs: RunRow[], now = new Date()): StudentProfile
   // timing: is the average offset closer to the click lately?
   const meanOff = (rs: RunRow[]) => (rs.length ? rs.reduce((a, r) => a + r.meanOffset, 0) / rs.length : null);
   const all = meanOff(inWindow), late = meanOff(inWindow.filter(recent)), early = meanOff(inWindow.filter(r => !recent(r)));
-  const timing = all === null ? null : { offset: r1(all), trend: (late === null || early === null ? null
-    : Math.abs(early) - Math.abs(late) >= MIN_MS ? 'better' : Math.abs(late) - Math.abs(early) >= MIN_MS ? 'worse' : 'same') as Trend };
+  const trend: Trend = late === null || early === null ? null
+    : Math.abs(early) - Math.abs(late) >= MIN_MS ? 'better' : Math.abs(late) - Math.abs(early) >= MIN_MS ? 'worse' : 'same';
+  const timing = all === null ? null : { offset: r1(all), trend };
 
   const tips = new Map<string, number>();
   for (const r of inWindow) for (const id of r.tips ?? []) if (id !== 'praise') tips.set(id, (tips.get(id) ?? 0) + 1);

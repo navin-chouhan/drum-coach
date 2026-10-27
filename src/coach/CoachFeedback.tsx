@@ -40,7 +40,7 @@ export function CoachFeedback({ f }: { f: Finished }) {
           <div className="drill">
             <b>Drill: {e.data.drill.title}</b>{e.data.drill.bpm && <> · {e.data.drill.bpm} BPM</>}
             <p>{e.data.drill.instructions}</p>
-            {(e.data.drill.chart || e.data.drill.chartId) && <button onClick={() => playDrill(e.data!.drill)}>Play this drill</button>}
+            {(e.data.drill.chart || e.data.drill.chartId) && <button onClick={() => void playDrill(e.data!.drill)}>Play this drill</button>}
           </div>
           {e.cached && <p className="small">(saved answer)</p>}
         </>

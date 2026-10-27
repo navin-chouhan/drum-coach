@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useEffectEvent, useState, useSyncExternalStore } from 'react';
 import { PAD_INFO, type PadId } from '../engine/kit';
 import { measurePad, type KitCalibration } from '../engine/padCal';
 import { parseMidiMessage } from '../engine/midi';
@@ -22,8 +22,7 @@ export function VelocityWizard({ device }: { device: string }) {
   const pad = PADS[i];
   const mains = (xs: { time: number; velocity: number }[]) => xs.filter((h, k) => !k || h.time - xs[k - 1].time >= GAP_MS).length;
 
-  const take = useRef<(note: number, velocity: number, time: number) => void>(() => {});
-  take.current = (note, velocity, time) => {
+  const take = useEffectEvent((note: number, velocity: number, time: number) => {
     if (!on || !pad || note !== getNoteMap()[pad] || !velocity) return;
     if (phase === 'soft') {
       const next = [...softs, velocity];
@@ -34,12 +33,12 @@ export function VelocityWizard({ device }: { device: string }) {
       setLouds(next);
       if (mains(next) >= STROKES) setTimeout(() => finishPad([...next]), 300); // wait a moment: its last retrigger
     }
-  };
+  });
   useEffect(() => {
     const kit = device !== 'keyboard';
     // the kit: raw MIDI, so the retriggers the input filter would drop are seen too; no kit: the keyboard's hits
-    const offRaw = onRawMidi((data, time) => { const n = kit && parseMidiMessage(data); if (n) take.current(n.note, n.velocity, time); });
-    const offHit = onHit(h => { if (!kit) take.current(h.note, h.velocity, h.time); });
+    const offRaw = onRawMidi((data, time) => { const n = kit && parseMidiMessage(data); if (n) take(n.note, n.velocity, time); });
+    const offHit = onHit(h => { if (!kit) take(h.note, h.velocity, h.time); });
     return () => { offRaw(); offHit(); };
   }, [device]);
 
@@ -76,7 +75,7 @@ export function VelocityWizard({ device }: { device: string }) {
           <button onClick={() => nextPad()}>Skip this pad</button>
           <button className="link" onClick={stop}>Stop (keeps what's done)</button>
         </div>
-        <ol className="captured">{PADS.map((p, k) => <li key={p} className={k === i ? 'current' : ''}>{PAD_INFO[p].name}: {done[p] ? `soft ${Math.round(done[p]!.soft)} · loud ${Math.round(done[p]!.loud)}` : k < i ? 'skipped' : '…'}</li>)}</ol>
+        <ol className="captured">{PADS.map((p, k) => <li key={p} className={k === i ? 'current' : ''}>{PAD_INFO[p].name}: {done[p] ? `soft ${Math.round(done[p].soft)} · loud ${Math.round(done[p].loud)}` : k < i ? 'skipped' : '…'}</li>)}</ol>
       </>}
     </section>
   );

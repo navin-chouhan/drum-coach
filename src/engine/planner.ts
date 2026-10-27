@@ -54,7 +54,8 @@ const STRUGGLE_TAKES = 12; // takes per finished lesson above which it reads as 
 export function studentRead(progress: Progress, runs: { accuracy: number; spread?: number; bpm: number; chartId?: string }[] = []) {
   // completedAt is a day: lessons finished on the same day as the 4th newest all count (no arbitrary pick among them)
   const finished = Object.values(progress).filter(p => p.completedAt && p.stars).sort((a, b) => b.completedAt!.localeCompare(a.completedAt!));
-  const stars = finished.filter(p => p.completedAt! >= (finished[3] ?? finished.at(-1))?.completedAt!).map(p => p.stars!);
+  const since = (finished[3] ?? finished.at(-1))?.completedAt ?? '';
+  const stars = finished.filter(p => p.completedAt! >= since).map(p => p.stars!);
   const recent = runs.slice(-12), spreads = recent.flatMap(r => r.spread ?? []);
   const accuracy = recent.length ? Math.round(avg(recent.map(r => r.accuracy))) : undefined;
   const spread = spreads.length ? Math.round(avg(spreads)) : undefined;

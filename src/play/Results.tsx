@@ -43,7 +43,7 @@ export function LatencyHint({ f }: { f: Finished }) {
 
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
   const s = f.stats, wait = f.options.wait;
-  useEffect(() => { saveRun(f); coachTake(f); }, [f]);
+  useEffect(() => { void saveRun(f); coachTake(f); }, [f]);
   const slotLabel = (i: number) => { const [, beat, count] = heatSlotName(i, f.stats.heat.length, f.run.beatsPerBar).split(' '); return count ?? beat; }; // "2", "&", "let"
   return (
     <div className="results">
