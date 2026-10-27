@@ -522,7 +522,7 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
             <p><a className="button primary" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(step.listen.song)}`} target="_blank" rel="noreferrer">▶ Find it on YouTube</a></p>
             <p className="small">Listen two or three times, eyes closed, then tap along on your knee before you come back.</p>
           </div>
-          : step.look && demo ? <div className="card lookStep"><TechniqueDemo id={demo} bpm={bpm} /></div> : <RestCountdown key={stepIdx} seconds={step.rest!} />}
+          : step.look && demo ? <div className="card lookStep"><TechniqueDemo id={demo} bpm={bpm} heelUp={lesson.level >= 2} /></div> : <RestCountdown key={stepIdx} seconds={step.rest!} />}
       </> : playing ? (player.options?.endless ? <FlowMeter /> : <LiveHint />) : <>
         <CoachLine line={autoIn ? `${line} (${main.label.replace(/^\W+/, '')} in ${autoIn}… hit any pad to wait)` : line} under={said.under} thinking={!fresh2 && thinkingAbout(coach, f)} />
         <div className="moves">
@@ -584,13 +584,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
             (⚙ Setup → Your kit → Latency), or "behind the beat" may just be your speakers.</p></div>}
           {demo && <div className="card howItMoves">
             <h3>How it moves <button className="link" onClick={() => setBigDemo(true)}>⤢ Bigger</button></h3>
-            <TechniqueDemo id={demo} bpm={bpm} compact />
+            <TechniqueDemo id={demo} bpm={bpm} compact heelUp={lesson.level >= 2} />
             <button className="primary" onClick={() => setChecking(true)}>📷 Check yourself <small>(key C)</small></button>
           </div>}
           {demo && bigDemo && <div className="demoOverlay" role="dialog" aria-label="How it moves" onClick={e => { if (e.target === e.currentTarget) setBigDemo(false); }}>
             <div className="card">
               <h3>How it moves <button className="link" autoFocus onClick={() => setBigDemo(false)}>✕ Close (Esc)</button></h3>
-              <TechniqueDemo id={demo} bpm={bpm} />
+              <TechniqueDemo id={demo} bpm={bpm} heelUp={lesson.level >= 2} />
             </div>
           </div>}
           {timeUp && !outcome?.itemDone && <p className="small">That's your {minutes} minutes for this one.</p>}

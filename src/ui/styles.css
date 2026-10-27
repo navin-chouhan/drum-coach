@@ -757,3 +757,8 @@ svg.kitMap{width:100%;max-width:620px;height:auto;margin:10px auto 0;display:blo
 .claudeOk{padding:8px 12px;background:#E3F5EA;border:2px solid var(--line);font-weight:700;margin:0 0 6px}
 @media (max-width:1100px){ .wiz,.groups{grid-template-columns:1fr} .setup{padding:18px 18px 96px} .noteGrid{grid-template-columns:repeat(2,1fr)} }
 @media (max-width:700px){ .setupStatus{grid-template-columns:1fr} .setupStatus .lastHit{text-align:left} .chk{grid-template-columns:44px 1fr} .chk>button,.chk>.seg{grid-column:2;justify-self:start} .wizMoves{grid-template-columns:1fr} }
+/* D10 v2: the grip from two sides, the kick on a real pedal */
+.techPair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.technique .techView{position:absolute;top:50px;right:14px;font:800 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:#9a9a9a}
+.technique .techTitle{margin:12px 0 0;font-size:18px}
+@media (max-width:1000px){ .techPair{grid-template-columns:1fr} }

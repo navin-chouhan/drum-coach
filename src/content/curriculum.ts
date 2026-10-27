@@ -707,7 +707,7 @@ const SONG_DYN: Record<string, number[]> = { 'song-pocket': [...Array(8).fill(1)
 for (const l of CURRICULUM) if (SONG_DYN[l.id]) l.steps.forEach(st => { if (st.chart.bars === SONG_DYN[l.id].length) st.chart.dyn = SONG_DYN[l.id]; });
 // How the body moves (content/demos.ts): shown on the lesson card, as the 4th intro slide and in the self-check.
 const LESSON_DEMOS: Record<string, DemoId> = {
-  posture: 'rebound', 'count-quarters': 'rebound', singles: 'rebound', 'hh-quarters': 'rebound', accents: 'accent-tap', doubles: 'doubles',
+  posture: 'grip', 'count-quarters': 'rebound', singles: 'grip', 'hh-quarters': 'rebound', accents: 'accent-tap', doubles: 'doubles',
   'kick-quarters': 'kick', paradiddle: 'accent-tap', 'ghost-notes': 'accent-tap', flam: 'flam', 'flam-tap': 'flam', drag: 'drag',
 };
 CURRICULUM.sort((a, b) => a.level - b.level); // lessons added later (N7) join the end of their level; the sort is stable

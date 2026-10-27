@@ -26,10 +26,11 @@ export type Demo = {
 
 export const DEMOS = {
   grip: {
-    title: 'The grip', beats: 1, counts: [],
-    what: 'The stick pivots between the thumb pad and the index finger, a third up from the end. The back fingers wrap loosely; the palm faces the floor.',
-    watch: ['Thumb along the side of the stick, not on top.', 'A small gap between palm and stick.', 'Back fingers guide, they never squeeze.'],
-    mistake: 'A fist round the stick: it can\'t bounce, and your forearm tires in minutes.',
+    title: 'The grip', beats: 2, counts: ['1', '&', '2', '&'],
+    what: 'The stick rocks at one point: the thumb pad on top and the first joint of the index finger under it, a third up from the end. The wrist turns; the back fingers guide loosely.',
+    watch: ['The stick rocks in the hand at one point: thumb pad + first joint of the index finger, a third up from the end.', 'The wrist turns; the forearm hardly moves.',
+      'A small gap between the palm and the stick: the back fingers guide, they never squeeze.', 'From above: back of the hand up, thumbs along the sides, the butt end showing behind the hand.'],
+    mistake: 'A fist, thumb on top: the stick can\'t bounce and the arm has to lift it. Or holding the very end: no balance point, and the stick dies on the pad.',
   },
   rebound: {
     title: 'Full stroke', beats: 2, counts: ['1', '&', '2', '&'],
@@ -76,10 +77,10 @@ export const DEMOS = {
     leftWrong: [K(0, 'low', 'out'), K(1.5, 'mid', 'io', 'TWO STROKES'), K(1.7, 'contact', 'in'), K(1.8, 'mid', 'out'), K(1.92, 'contact', 'in'), K(1.98, 'low', 'out')],
   },
   kick: {
-    title: 'Kick: heel down / heel up', beats: 2, counts: ['1', '&', '2', '&'],
+    title: 'Kick: heel down / heel up', beats: 2, counts: ['1', '&', '2', '&'], // drawn on a real pedal (ui/demoArt.ts); these leg keys still give poseAt its words
     what: 'Heel down: the ankle does the work, soft and controlled. Heel up: the whole leg drops onto the ball of the foot, for volume. Both let the beater come back off the head.',
     watch: ['Heel down: the heel stays on the plate, only the foot rocks.', 'Heel up: the heel floats, the knee lifts a little before each note.', 'The beater bounces back off the head.'],
-    mistake: 'Burying: the foot stays pressed after the note, the beater rests on the head and kills the sound.',
+    mistake: 'Burying: the foot stays pressed after the note, so the beater rests on the pad and chokes the sound. Let the pedal push your foot back up.',
     leg: {
       right: [L(0, -8, 0, 'in', 'ANKLE'), L(0.3, -24, 0, 'out'), L(0.7, -24, 0), L(1, -8, 30, 'in', 'WHOLE LEG'), L(1.3, -26, 38, 'out'), L(1.7, -26, 38)],
       wrong: [L(0, -6, 0, 'in', 'BURIED'), L(0.6, -6, 0, 'lin'), L(0.9, -24, 0), L(1, -6, 0, 'in', 'BURIED'), L(1.6, -6, 0, 'lin'), L(1.9, -24, 0)],
