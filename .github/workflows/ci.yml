@@ -1,0 +1,47 @@
+# Quality gate: the same checks as `npm run check`, on the oldest Node we support and the one we develop on.
+name: CI
+
+on:
+  push:
+    branches-ignore: ['dependabot/**'] # Dependabot's branches are checked by their pull request
+  pull_request:
+  schedule:
+    - cron: '17 4 * * 1' # Mondays: dependency age, deprecations and audits change without a push
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check (Node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.18', '24'] # package.json "engines" floor, and .nvmrc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install (lockfile only, no install scripts)
+        run: npm ci
+      - name: Dependencies are stable, aged and from the registry
+        run: npm run deps:check
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Tests with coverage thresholds
+        run: npm run test:coverage
+      - name: Build
+        run: npm run build

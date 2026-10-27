@@ -1,0 +1,49 @@
+# Static security analysis of the app (TypeScript), the Piper/Whisper helpers (Python) and these workflows.
+# Every alert fails the job: there is no pull-request review step here to catch it later.
+name: CodeQL
+
+on:
+  push:
+    branches-ignore: ['dependabot/**'] # Dependabot's branches are checked by their pull request
+  pull_request:
+  schedule:
+    - cron: '41 4 * * 3' # Wednesdays: new queries arrive without a push
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # upload the results to the Security tab
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: /language:${{ matrix.language }}
+          output: sarif
+      - name: Fail on any alert
+        run: |
+          n=$(jq '[.runs[].results[]] | length' sarif/*.sarif)
+          jq -r '.runs[].results[] | "::error file=\(.locations[0].physicalLocation.artifactLocation.uri),line=\(.locations[0].physicalLocation.region.startLine // 1)::\(.ruleId): \(.message.text)"' sarif/*.sarif
+          echo "CodeQL alerts: $n"
+          test "$n" -eq 0
