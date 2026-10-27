@@ -2,7 +2,7 @@ import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    exclude: [...configDefaults.exclude, '.claude/**', 'data/**'],
+    exclude: [...configDefaults.exclude, '.claude/**', 'data/**', 'spikes/**'],
     setupFiles: ['./vitest.setup.ts'], // a temporary DATA_DIR per test file: your practice data is never touched
     // `npm run test:coverage`: the input → scoring path (src/engine) and the server's modules are unit-tested and must
     // stay that way; the screens are covered by the play test instead. Thresholds sit just under today's numbers: raise

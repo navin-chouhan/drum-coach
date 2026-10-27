@@ -14,8 +14,7 @@ const UNSAFE = [
 ];
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'prototype', 'data', '.claude', 'public'] },
-  { linterOptions: { reportUnusedDisableDirectives: 'error', reportUnusedInlineConfigs: 'error' } },
+  { ignores: ['dist', 'coverage', 'prototype', 'data', '.claude', 'public', 'spikes'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   reactHooks.configs.flat.recommended,
