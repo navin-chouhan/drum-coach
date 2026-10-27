@@ -1,4 +1,6 @@
-# Gate 0 checklist (owner, on the MacBook + iPad, then iPhone)
+# Gate 0 checklist (owner, on the MacBook + iPad)
+
+> **v1 is iPad only (owner decision D0).** Skip M7 (iPhone) and the iPhone fields.
 
 Print this, fill in the blanks, and paste the numbers back with the "Copy results" JSON. One sitting: about 60–90
 minutes the first time (most of it is the one-time setup). Background and design: [GATE0.md](GATE0.md).
@@ -142,7 +144,7 @@ module on.
 - [ ] **p95 (JS − host) < 20 ms.** (Visual feedback only: scoring uses the host timestamps.)
 - [ ] events ____ ≈ native packets ____ (no events lost across the bridge).
 
-### M7. Kit → iPhone (USB-C, or Lightning via the camera adapter)
+### M7. Kit → iPhone (USB-C, or Lightning via the camera adapter): **SKIPPED, v1 is iPad only**
 Install on the iPhone (`npx expo run:ios --device`, the same steps as section A). Connection used: USB-C direct /
 Lightning to USB 3 Camera Adapter / other: ____________. Then do **all of M2** on the iPhone.
 
@@ -188,7 +190,7 @@ Settings → Advanced → Bluetooth MIDI Devices); once connected it shows up as
 
 ## D. Paste back
 
-- [ ] The **Copy results** JSON for M2, M3, M4, M5, M6, M7 (iPhone), M8 (and M9 / X1 if done).
+- [ ] The **Copy results** JSON for M2, M3, M4, M5, M6, M8 (and M9 / X1 if done).
 - [ ] This sheet's numbers (a photo is fine).
 - [ ] Any Xcode compile errors, verbatim, and whether you needed the start-up fallback.
 - [ ] Optional: a tap-test fixture JSON.

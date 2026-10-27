@@ -16,7 +16,8 @@ session. The decisions it needs are D1–D5, below.
 | 0 | A0 Recon, S1 MIDI spike | **built; waiting for the owner's device run** | GATE0.md GO + owner decisions D1–D5 |
 | 1 | A1 core, A2 Expo shell, A3 MIDI module, A9 harness skeleton | not started (waits for the gate) | T0 green; core tests green; app on simulator + iPad; kit logs hits |
 | 2 | A4 audio/clock, A5 data/backend, A6 play surfaces (+A7 mockups) | not started | Lesson plays + scores + saves on iPad, offline, T6 timing |
-| 3 | A7 screens, A8 songs, A6 rest | not started | All v1 screens on iPad landscape + iPhone, with touch pads and kit |
+| 3 | A7 screens, A6 rest | not started | All v1 screens on iPad landscape, with touch pads and kit |
+| 3b | A8 Songs (inline YouTube) | not started (the phase right after v1, D5) | Songs on iPad landscape |
 | 4 | A10 QA, then fixes | not started | §8 checklist green or every red item is a blocker |
 
 ## Agents
@@ -32,11 +33,12 @@ results.
 ## Decisions (asked after Gate 0)
 | ID | Question | Default / recommendation | Answer |
 |---|---|---|---|
-| D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | — |
-| D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | — |
-| D3 | Data | one-time import of `data/`, then the device is the source of truth | — |
-| D4 | Mockups | list + designs before A6/A7 build screens | — |
-| D5 | v1 scope | Journey, lesson player, Practice, Progress, Setup, Songs with inline YouTube | — |
+| D0 | Devices | — | **iPad only, landscape locked** (`ios.isTabletOnly`). Layouts are width-based so iPhone can be added later. iPhone joins Android under "later". M7 skipped. |
+| D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | — (waits for the run) |
+| D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
+| D3 | Data | one-time import of `data/`, then the device is the source of truth | **Start fresh on the iPad.** No import tool. `data/` untouched. No sync. |
+| D4 | Mockups | list + designs before A6/A7 build screens | **Fresh iPad-native designs** (iPad conventions: sidebar, sheets, native controls) at 1194×834 for: Journey, lesson player (take + results), Practice, Progress, Setup (kit, pads, latency, coach), coach panel, touch pad kit, first run. The owner approves them before screens are built. |
+| D5 | v1 scope | Journey, lesson player, Practice, Progress, Setup, Songs with inline YouTube | **Lean v1**: Journey, lesson player, Practice, Progress, Setup, coach, "Share take" (MIDI export via the share sheet). Songs is the next phase. Later: camera self-check, ear quiz, transcribe, teacher view. |
 
 ## Blocker register
 | ID | Blocker | State |
@@ -48,13 +50,15 @@ results.
 | B4 | MIDI clock vs audio clock | Unknown until M5. `react-native-audio-api` 0.13.6 has no host-time mapping (S1), so A4 plans native host-time scheduling |
 | B5 | Expo Go can't load the module | Mitigated: dev client only |
 | B6 | One USB-C port on the iPad | Wi-Fi debugging + Metro; maybe a hub |
-| B7 | Free Apple ID builds expire in 7 days | Needs the owner: account choice |
+| B7 | Free Apple ID builds expire in 7 days | **Decided: free Apple ID for now**, reinstall weekly. Revisit (paid, TestFlight) once in daily use |
 | B8 | The simulator can't see the USB kit | Network MIDI (M8), touch pads, fixtures |
 | B23 | The probe's Swift has never been compiled; a possible start-up hang (`DispatchQueue.main.sync`) | Open. GATE0.md §5.1 has the fallbacks. The owner pastes back any Xcode errors |
 | B9–B19 | see the orchestrator prompt §10 | not yet reached |
 | B20 | The server binds 127.0.0.1 and returns 403 for any Host that isn't localhost (`server/index.ts:33-38,425`) | Known (A0). A5 adds a LAN/token mode if D2 = a/c |
 | B21 | The take engine (`src/play/player.ts`) isn't in the core, so iOS scoring could drift from web scoring | Known (A0). Phase 1/2 needs a clock-agnostic `createTake` in core with an injected audio interface. Added to A1/A4 scope |
-| B22 | The AI routes read the server's own SQLite. With the device as source of truth (D3), the coach sees stale data | Known (A0). Ask with D2/D3: sync runs to the server, or send context with each request |
+| B22 | The AI routes read the server's own SQLite. With the device as source of truth (D3), the coach sees stale data | **Resolved by D2**: the iPad sends compact context with each coach request (the same payload for the server and API-key paths). A5 adds request-context support to the coach routes |
+| B18 | Data migration from `data/` | **Closed by D3** (start fresh) |
+| B16 | Screen rewrite size | Reduced by D0 (one layout) + D5 (lean v1). Fresh iPad-native mockups (D4) add review rounds |
 
 ## Event log
 - 2026-10-27: Board created. Expo `latest` on npm is **58.0.19**. Baseline T0 is running. Root lint/Vitest ignore
@@ -67,3 +71,6 @@ results.
   `MIDIInputPortCreateWithProtocol(._1_0)`, host-time clock, Network MIDI, native host-time clicks). Expo SDK 58.0.19,
   RN 0.88.0. Spike: tsc clean, 47/47 tests; prebuild + autolinking OK. **T0 after the merge: 349/349 tests, build OK,
   lint 310 (the same as the baseline).** Run stopped at Gate 0: waiting for the owner's device run and D1–D5.
+- 2026-10-27: Owner decisions: iPad only + landscape (D0), free Apple ID (B7), coach = home server first with an
+  API-key fallback (D2), start fresh (D3), fresh iPad-native mockups (D4), lean v1 + Share take with Songs next
+  (D5). D1 waits for the device run. M7 is marked skipped in the checklist.
