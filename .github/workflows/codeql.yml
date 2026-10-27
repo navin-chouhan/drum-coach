@@ -42,11 +42,17 @@ jobs:
           category: /language:${{ matrix.language }}
           output: sarif
       - name: Fail on any alert
-        # Open alerts are all of them but the few suppressed on purpose, with a `// codeql[rule-id] why` comment above the line.
+        # Every alert fails the job, except one marked on purpose: a `// codeql[rule-id] why` comment on the line above it.
         run: |
-          open='[.[].runs[].results[] | select((.suppressions // []) | length == 0)]'
-          jq -r -s "$open | .[] | (.locations[0].physicalLocation | [.artifactLocation.uri, (.region.startLine // 1 | tostring)]) as [\$f, \$l]
-            | \"\(\$f):\(\$l) \(.ruleId): \(.message.text)\", \"::error file=\(\$f),line=\(\$l)::\(.ruleId): \(.message.text)\"" sarif/*.sarif
-          n=$(jq -s "$open | length" sarif/*.sarif)
-          echo "Open CodeQL alerts: $n (suppressed on purpose: $(jq -s '[.[].runs[].results[] | select((.suppressions // []) | length > 0)] | length' sarif/*.sarif))"
-          test "$n" -eq 0
+          open=0
+          while IFS=$'\t' read -r rule file line msg; do
+            if [ "$line" -gt 1 ] && sed -n "$((line - 1))p" "$file" | grep -qF "codeql[$rule]"; then
+              echo "marked on purpose: $file:$line $rule"
+            else
+              echo "$file:$line $rule: $msg"
+              echo "::error file=$file,line=$line::$rule: $msg"
+              open=$((open + 1))
+            fi
+          done < <(jq -r -s '.[].runs[].results[] | [.ruleId, .locations[0].physicalLocation.artifactLocation.uri, (.locations[0].physicalLocation.region.startLine // 1), .message.text] | @tsv' sarif/*.sarif)
+          echo "Open CodeQL alerts: $open"
+          test "$open" -eq 0

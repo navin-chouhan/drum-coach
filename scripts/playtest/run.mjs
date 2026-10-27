@@ -172,6 +172,6 @@ if (!placeOk) report.push({ who: 'Solid', id: 'placement', problem: placed });
 
 const failed = report.filter(r => r.problem || r.problems?.length);
 console.log(`\n${report.length} takes, ${failed.length} with problems, ${pageErrors.length} page errors`);
-pageErrors.slice(0, 10).forEach(e => console.log('  page error: ' + e.split('\n')[0]));
+pageErrors.slice(0, 10).forEach(e => console.log('  page error: ' + JSON.stringify(e.split('\n')[0]))); // escaped: no terminal codes from the page
 ws.close();
 process.exit(failed.length || pageErrors.length ? 1 : 0);
