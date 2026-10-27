@@ -1,0 +1,20 @@
+#!/bin/sh
+# Fast checks on what you're about to commit. `npm run hooks:install` turns the hooks on; `git commit --no-verify` skips.
+set -eu
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -n "$staged" ] || exit 0
+
+# Never commit secrets: your .env (API keys), or anything shaped like an API key or a private key.
+if printf '%s\n' "$staged" | grep -E '(^|/)\.env(\..+)?$' | grep -qv '\.env\.example$'; then
+  echo "✖ pre-commit: a .env file is staged; your API keys live there. Unstage it: git restore --staged <file>" >&2
+  exit 1
+fi
+if git diff --cached -U0 --diff-filter=ACMR | grep -E '^\+' \
+  | grep -qE 'AIza[0-9A-Za-z_-]{35}|sk-ant-[A-Za-z0-9_-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{36}'; then
+  echo "✖ pre-commit: a staged change looks like a secret (API key or private key). Put it in .env instead." >&2
+  exit 1
+fi
+if command -v gitleaks >/dev/null 2>&1; then gitleaks git --pre-commit --staged --redact --no-banner; fi
+
+# Dependency changes must pass the stable-dependency gate (scripts/check-deps.mjs).
+if printf '%s\n' "$staged" | grep -qE '^(package(-lock)?\.json|\.npmrc)$'; then npm run -s deps:check; fi

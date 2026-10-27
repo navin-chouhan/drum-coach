@@ -1,0 +1,4 @@
+#!/bin/sh
+# The full gate before anything leaves this laptop: the same checks as CI. `git push --no-verify` skips it.
+set -eu
+npm run -s check

@@ -9,9 +9,14 @@
     "server": "node --watch --env-file-if-exists=.env server/index.ts",
     "build": "tsc && vite build",
     "test": "vitest run",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "playtest": "node scripts/playtest/run.mjs",
-    "deps:check": "node scripts/check-deps.mjs"
+    "deps:check": "node scripts/check-deps.mjs",
+    "typecheck": "tsc -p .",
+    "test:coverage": "vitest run --coverage",
+    "audit:deps": "npm audit --audit-level=low && npm audit signatures",
+    "check": "npm run deps:check && npm run audit:deps && npm run typecheck && npm run lint && npm run test:coverage && npm run build",
+    "hooks:install": "git config core.hooksPath .githooks && echo \"Git hooks on: secret check before each commit, npm run check before each push.\""
   },
   "type": "module",
   "dependencies": {
@@ -31,6 +36,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/coverage-v8": "^5.0.5",
     "concurrently": "^10.0.6",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
