@@ -1,13 +1,16 @@
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DATA_DIR } from './db.ts';
+import { childEnv } from './guard.ts';
 
 // Talk to the coach: offline speech-to-text with faster-whisper, run through `uv` (no global install needed;
 // the first start downloads the package and the model into uv's cache and data/whisper). Audio is deleted after use.
 const MODEL = () => process.env.WHISPER_MODEL || 'base.en';
+// The Python side, pinned: this faster-whisper, and its dependencies as they were on this date (nothing newer from PyPI).
+const WHISPER_PKG = 'faster-whisper==1.2.1', PYPI_DATE = '2026-10-20';
 
 export function findUv(): string | null {
   for (const bin of [process.env.UV_BIN, 'uv', join(homedir(), '.local', 'bin', 'uv')]) {
@@ -22,8 +25,8 @@ let nextId = 1, loaded = false;
 function startHelper(uv: string) {
   const root = join(DATA_DIR, 'whisper');
   mkdirSync(root, { recursive: true });
-  const args = process.env.UV_BIN?.includes('fake') ? [] : ['run', '--quiet', '--with', 'faster-whisper', 'python'];
-  const proc = spawn(uv, [...args, join(import.meta.dirname, 'whisper_helper.py'), MODEL(), root], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const args = process.env.UV_BIN?.includes('fake') ? [] : ['run', '--quiet', '--exclude-newer', PYPI_DATE, '--with', WHISPER_PKG, 'python'];
+  const proc = spawn(uv, [...args, join(import.meta.dirname, 'whisper_helper.py'), MODEL(), root], { env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
   const waiting = new Map<number, (r: { text?: string; error?: string }) => void>();
   let readyFn!: () => void, failFn!: (e: Error) => void;
   const ready = new Promise<void>((res, rej) => { readyFn = res; failFn = rej; });
@@ -54,8 +57,9 @@ export async function transcribe(audio: Buffer): Promise<string> {
   helper ??= startHelper(uv);
   const h = helper;
   await h.ready;
-  const id = nextId++, file = join(tmpdir(), `drum-coach-q-${process.pid}-${id}.wav`);
-  writeFileSync(file, audio);
+  // A private folder (0700, unguessable name) and an owner-only file: another account on this laptop can't read it.
+  const id = nextId++, dir = mkdtempSync(join(tmpdir(), 'drum-coach-q-')), file = join(dir, 'question.wav');
+  writeFileSync(file, audio, { mode: 0o600 });
   try {
     const r = await new Promise<{ text?: string; error?: string }>(resolve => {
       h.waiting.set(id, resolve);
@@ -63,7 +67,7 @@ export async function transcribe(audio: Buffer): Promise<string> {
     });
     if (r.error !== undefined) throw new Error(r.error);
     return fixCounts(r.text!);
-  } finally { rmSync(file, { force: true }); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 
 export const sttStatus = () => ({ available: !!findUv(), loaded, model: MODEL() });

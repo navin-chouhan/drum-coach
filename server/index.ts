@@ -21,6 +21,7 @@ import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
 import { AUDIO_DIR, db } from './db.ts';
+import { allowedRequest } from './guard.ts';
 import { sameSong, searchYouTube, YtError } from './youtube.ts';
 import { speech, ttsStatus } from './tts.ts';
 import { sttStatus, transcribe } from './stt.ts';
@@ -29,13 +30,9 @@ import { GridSchema, GrooveRequestSchema, YtSongCreateSchema, YtSongPatchSchema,
 const PORT = Number(process.env.PORT || 8787);
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 1_000_000 });
 
-// Only the local app may call this API: blocks DNS rebinding (Host) and other websites (Origin).
+// Only the local app may call this API (guard.ts): not other websites, not pages on other local ports, no DNS rebinding.
 app.addHook('onRequest', async (req, reply) => {
-  const host = (req.headers.host ?? '').replace(/:\d+$/, '');
-  const origin = req.headers.origin;
-  if (!['localhost', '127.0.0.1'].includes(host) || (origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
-    return reply.code(403).send({ error: 'Forbidden' });
-  }
+  if (!allowedRequest(req.headers)) return reply.code(403).send({ error: 'Forbidden' });
 });
 
 const bad = (reply: FastifyReply, error: z.ZodError | string) =>
