@@ -153,6 +153,7 @@ const only = new URLSearchParams(location.search).get('only');
 if (only) { document.body.classList.add('only'); document.querySelectorAll('.state').forEach(el => el.classList.toggle('keep', el.id === only)); }
 else document.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
 
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // ---------- the real lesson (from your data) ----------
 const L = {
   title: 'From quarters to 8ths: hear the "&"',
@@ -179,8 +180,8 @@ const header = `<header>
 const rungs = [40, 45, 50, 55, 60, 65, 70].map((b, k) => `<i style="--k:${k}" class="${b === 40 ? 'at' : ''} ${b === 60 ? 'start' : ''} ${b === 70 ? 'goal' : ''}" title="${b} BPM"></i>`).join('');
 const lbar = s => `<div class="lbar2 card ${s === 'a' ? 'rel new' : ''}">
   <button class="link back">← Journey</button>
-  <h2>${L.title.replace('&', '&amp;')}<small>✍ your coach wrote this one · Practice</small></h2>
-  <div class="steps">${L.steps.map((t, i) => `<span class="stepPill ${i === 0 ? 'now' : ''}" title="Step ${i + 1}: ${t.replace('&', '&amp;')}"><i>${i + 1}</i>${i === 0 ? `<span>${t.replace('&', '&amp;')}</span>` : ''}</span>`).join('')}</div>
+  <h2>${esc(L.title)}<small>✍ your coach wrote this one · Practice</small></h2>
+  <div class="steps">${L.steps.map((t, i) => `<span class="stepPill ${i === 0 ? 'now' : ''}" title="Step ${i + 1}: ${esc(t)}"><i>${i + 1}</i>${i === 0 ? `<span>${esc(t)}</span>` : ''}</span>`).join('')}</div>
   <div class="tempo2"><span class="n">40 <small>BPM</small></span>
     <span class="ladder"><span class="rungs">${rungs}</span><span>start 60 · goal 70</span></span></div>
   <button class="tog on">💡 Hints <kbd>H</kbd></button>
@@ -205,7 +206,7 @@ function screen(s) {
     : after
       ? say('11 of 16 landed, and every one a little after the click.', 'When every note is late by the same amount, check the latency first: it may be your speakers, not you.')
         + `<div class="moves">${move('go', '⏱ Check my latency', '<i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"')}${move('', '🎧 Hear your take', '<i>tom 2 × 2</i>')}${move('alt', '🐢 Learn it slowly', '<i>floor × 2</i>')}${move('alt', '⏭ Skip to next', '<i>ride × 2</i>')}</div>`
-      : say(L.text.replace('&', '&amp;'))
+      : say(esc(L.text))
         + `<div class="moves">${move('go', '▶ Play', '<i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"')}${move('', '👂 Hear it', '<i>tom 2 × 2</i>')}${move('alt', '🐢 Learn it slowly', '<i>floor × 2</i>')}${move('alt', '⏭ Skip to next', '<i>ride × 2</i>')}</div>`;
 
   const goal = `<div class="goal">
@@ -230,7 +231,7 @@ function screen(s) {
     ${top}
     <div class="lm">
       <section class="music ${s === 'a' ? 'rel new' : ''}">
-        <div class="musicTop"><span class="lbl">Step 1 · ${L.steps[0].replace('&', '&amp;')}</span>${playing ? '' : '<span>· round 2 of 2</span>'.repeat(after ? 1 : 0)}
+        <div class="musicTop"><span class="lbl">Step 1 · ${esc(L.steps[0])}</span>${playing ? '' : '<span>· round 2 of 2</span>'.repeat(after ? 1 : 0)}
           <span class="seg"><button class="on">Sheet</button><button>Highway</button></span></div>
         <div class="paper"><svg data-sheet="${s}"></svg>
           <div class="legend"><span>● black: hit it and say it</span><span class="say">◌ blue: say it, don't hit</span>${after ? '<span style="color:var(--good)">on it</span><span style="color:var(--ok)">late / early</span><span style="color:var(--bad)">missed</span><span style="color:#888">× extra hit</span>' : ''}</div></div>

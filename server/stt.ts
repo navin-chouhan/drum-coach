@@ -59,6 +59,7 @@ export async function transcribe(audio: Buffer): Promise<string> {
   await h.ready;
   // A private folder (0700, unguessable name) and an owner-only file: another account on this laptop can't read it.
   const id = nextId++, dir = mkdtempSync(join(tmpdir(), 'drum-coach-q-')), file = join(dir, 'question.wav');
+  // codeql[js/http-to-file-access] Whisper reads your question from a file: a checked WAV, private, deleted right after.
   writeFileSync(file, audio, { mode: 0o600 });
   try {
     const r = await new Promise<{ text?: string; error?: string }>(resolve => {

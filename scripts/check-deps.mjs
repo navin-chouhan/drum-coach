@@ -84,7 +84,7 @@ async function checkName(name, entries) {
   let doc;
   for (let attempt = 0; ; attempt++) {
     try {
-      const r = await fetch(REGISTRY + name.replace('/', '%2F'), { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(60000) });
+      const r = await fetch(REGISTRY + name.replaceAll('/', '%2F'), { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(60000) });
       if (r.status === 404) { problems.push(`${name}: not on the registry`); return; }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       doc = await r.json();

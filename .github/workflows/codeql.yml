@@ -42,8 +42,11 @@ jobs:
           category: /language:${{ matrix.language }}
           output: sarif
       - name: Fail on any alert
+        # Open alerts are all of them but the few suppressed on purpose, with a `// codeql[rule-id] why` comment above the line.
         run: |
-          n=$(jq '[.runs[].results[]] | length' sarif/*.sarif)
-          jq -r '.runs[].results[] | "::error file=\(.locations[0].physicalLocation.artifactLocation.uri),line=\(.locations[0].physicalLocation.region.startLine // 1)::\(.ruleId): \(.message.text)"' sarif/*.sarif
-          echo "CodeQL alerts: $n"
+          open='[.[].runs[].results[] | select((.suppressions // []) | length == 0)]'
+          jq -r -s "$open | .[] | (.locations[0].physicalLocation | [.artifactLocation.uri, (.region.startLine // 1 | tostring)]) as [\$f, \$l]
+            | \"\(\$f):\(\$l) \(.ruleId): \(.message.text)\", \"::error file=\(\$f),line=\(\$l)::\(.ruleId): \(.message.text)\"" sarif/*.sarif
+          n=$(jq -s "$open | length" sarif/*.sarif)
+          echo "Open CodeQL alerts: $n (suppressed on purpose: $(jq -s '[.[].runs[].results[] | select((.suppressions // []) | length > 0)] | length' sarif/*.sarif))"
           test "$n" -eq 0

@@ -1,4 +1,5 @@
 import Fastify, { type FastifyReply } from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 import { spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -21,7 +22,7 @@ import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
 import { AUDIO_DIR, db } from './db.ts';
-import { allowedRequest } from './guard.ts';
+import { allowedRequest, looksLikeAudio } from './guard.ts';
 import { sameSong, searchYouTube, YtError } from './youtube.ts';
 import { speech, ttsStatus } from './tts.ts';
 import { sttStatus, transcribe } from './stt.ts';
@@ -33,6 +34,14 @@ const app = Fastify({ logger: { level: 'info' }, bodyLimit: 1_000_000 });
 // Only the local app may call this API (guard.ts): not other websites, not pages on other local ports, no DNS rebinding.
 app.addHook('onRequest', async (req, reply) => {
   if (!allowedRequest(req.headers)) return reply.code(403).send({ error: 'Forbidden' });
+});
+// Everyone is 127.0.0.1, so these are totals: plenty for the app, a stop for a runaway loop. What spends your Claude
+// usage, the YouTube quota or a speech model's CPU gets its own, smaller budget.
+const COSTLY = /^\/api\/(coach\/(?!status)|stt$|youtube\/)/;
+await app.register(rateLimit, {
+  timeWindow: '1 minute',
+  keyGenerator: req => (COSTLY.test(req.url) ? 'costly' : 'all'),
+  max: (_req, key) => (key === 'costly' ? 60 : 1200),
 });
 
 const bad = (reply: FastifyReply, error: z.ZodError | string) =>
@@ -91,9 +100,10 @@ app.addContentTypeParser(/^audio\//, { parseAs: 'buffer', bodyLimit: 80_000_000 
 app.put('/api/charts/:id/audio', async (req, reply) => {
   const p = IdParam.safeParse(req.params);
   const ext = AUDIO_TYPES[(req.headers['content-type'] ?? '').split(';')[0]];
-  if (!p.success || !ext || !Buffer.isBuffer(req.body)) return bad(reply, 'Send an MP3, OGG, WAV, FLAC or M4A file');
+  if (!p.success || !ext || !Buffer.isBuffer(req.body) || !looksLikeAudio(req.body, ext)) return bad(reply, 'Send an MP3, OGG, WAV, FLAC or M4A file');
   if (!db.prepare('SELECT 1 FROM charts WHERE id = ?').get(p.data.id)) return reply.code(404).send({ error: 'Not found' });
   const file = `${p.data.id}.${ext}`; // id is validated, so the path stays inside AUDIO_DIR
+  // codeql[js/http-to-file-access] Saving your backing track is the feature: checked to be audio, under a name we chose.
   writeFileSync(join(AUDIO_DIR, file), req.body);
   db.prepare('UPDATE charts SET audio_file = ? WHERE id = ?').run(file, p.data.id);
   return { ok: true };
@@ -288,7 +298,7 @@ app.get('/api/tts', async (req, reply) => {
 // ---------- talk to the coach (offline speech-to-text) ----------
 app.get('/api/stt/status', async () => sttStatus());
 app.post('/api/stt', async (req, reply) => {
-  if (!Buffer.isBuffer(req.body) || req.body.length < 200 || req.body.length > 10_000_000) return bad(reply, 'Send a short WAV recording');
+  if (!Buffer.isBuffer(req.body) || req.body.length < 200 || req.body.length > 10_000_000 || !looksLikeAudio(req.body, 'wav')) return bad(reply, 'Send a short WAV recording');
   try { return { text: await transcribe(req.body) }; } catch (e) { return reply.code(503).send({ error: (e as Error).message }); }
 });
 

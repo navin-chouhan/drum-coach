@@ -15,6 +15,19 @@ export function allowedRequest(headers: { host?: string; origin?: string; 'sec-f
     && (site === undefined || (typeof site === 'string' && OWN_SITE.has(site)));
 }
 
+// Uploads are stored (backing tracks) or handed to Whisper (questions) only when their first bytes are the audio format
+// they claim to be, not just their Content-Type.
+const AUDIO_MAGIC: Record<string, (b: Buffer) => boolean> = {
+  mp3: b => b.toString('latin1', 0, 3) === 'ID3' || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0),
+  ogg: b => b.toString('latin1', 0, 4) === 'OggS',
+  wav: b => b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WAVE',
+  flac: b => b.toString('latin1', 0, 4) === 'fLaC',
+  m4a: b => b.toString('latin1', 4, 8) === 'ftyp',
+  aac: b => b[0] === 0xff && (b[1] & 0xf6) === 0xf0,
+  webm: b => b.readUInt32BE(0) === 0x1a45dfa3,
+};
+export const looksLikeAudio = (body: Buffer, ext: string) => body.length >= 12 && !!AUDIO_MAGIC[ext]?.(body);
+
 // The helpers this server starts (the claude CLI, Piper, Whisper through uv) get its environment without its secrets:
 // none of them needs the keys, and a bad release of one of their Python packages would otherwise get both.
 const SECRETS = ['ANTHROPIC_API_KEY', 'YOUTUBE_API_KEY'];
