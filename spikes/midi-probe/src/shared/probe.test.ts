@@ -56,6 +56,8 @@ describe('probe: counters are computed in JS from raw bytes', () => {
     expect(c.filtered).toBeGreaterThan(0);
     expect(c.hits + c.filtered).toBe(c.noteOn);
     expect(c.offChannel).toBe(0);
+    // The numbers GATE0-CHECKLIST.md M8 expects when the Mac replays this fixture to the iPad (one pass).
+    expect(c).toMatchObject({ clock: 1192, activeSensing: 83, noteOn: 153, noteOff: 153, hits: 136, filtered: 17 });
   });
 
   it('notifies hit listeners', () => {
