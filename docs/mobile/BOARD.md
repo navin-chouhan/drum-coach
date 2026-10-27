@@ -22,7 +22,7 @@ session. The decisions it needs are D1–D5, below.
 ## Agents
 | ID | Status | Owns (exclusive) | Brief | Output |
 |---|---|---|---|---|
-| A0 Recon | running | `docs/mobile/RECON.md` only (read-only otherwise) | [briefs/A0.md](briefs/A0.md) | RECON.md |
+| A0 Recon | **done, merged** (17ff0c6) | `docs/mobile/RECON.md` only (read-only otherwise) | [briefs/A0.md](briefs/A0.md) | RECON.md |
 | S1 MIDI spike | running | `spikes/midi-probe/**`, `docs/mobile/GATE0.md`, `docs/mobile/GATE0-CHECKLIST.md` | [briefs/S1.md](briefs/S1.md) | GATE0.md, probe app |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
@@ -51,7 +51,13 @@ results.
 | B7 | Free Apple ID builds expire in 7 days | Needs the owner: account choice |
 | B8 | The simulator can't see the USB kit | Network MIDI (M8), touch pads, fixtures |
 | B9–B19 | see the orchestrator prompt §10 | not yet reached |
+| B20 | The server binds 127.0.0.1 and returns 403 for any Host that isn't localhost (`server/index.ts:33-38,425`) | Known (A0). A5 adds a LAN/token mode if D2 = a/c |
+| B21 | The take engine (`src/play/player.ts`) isn't in the core, so iOS scoring could drift from web scoring | Known (A0). Phase 1/2 needs a clock-agnostic `createTake` in core with an injected audio interface. Added to A1/A4 scope |
+| B22 | The AI routes read the server's own SQLite. With the device as source of truth (D3), the coach sees stale data | Known (A0). Ask with D2/D3: sync runs to the server, or send context with each request |
 
 ## Event log
 - 2026-10-27: Board created. Expo `latest` on npm is **58.0.19**. Baseline T0 is running. Root lint/Vitest ignore
   `spikes/`. A0 and S1 briefed and started in parallel.
+- 2026-10-27: A0 finished. RECON.md was reviewed (docs only) and merged. Core = 44 TS files + 2 fixtures; 39 test
+  files move with it. Blockers live in `src/input` (store/settings use localStorage and fetch; `performance.now()`
+  default) and `content/charts.ts`. Three new blockers are logged (B20–B22).
