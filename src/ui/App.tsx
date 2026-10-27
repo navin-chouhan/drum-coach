@@ -144,7 +144,7 @@ export function App() {
       {tab === 'play' && <PlayView pending={pending} />}
       {tab === 'songs' && <SongsPage key={song?.n} openId={song?.id} bars={song?.bars} />}
       {tab === 'progress' && <ProgressView />}
-      {tab === 'setup' && setup === 'pads' && <Calibrate device={midi.device ?? 'keyboard'} />}
+      {tab === 'setup' && setup === 'pads' && <Calibrate device={midi.device} soundOn={!soundLocked} />}
       {tab === 'setup' && setup === 'coach' && <CoachSettings />}
       <TalkToCoach />
     </div>

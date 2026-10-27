@@ -493,7 +493,7 @@ function KitSetup({ device, onDone }: { device?: string; onDone: () => void }) {
         <p>{part === 'pads' ? 'So I know your kit: hit the pad I name. If one is wrong you can fix it right here.'
           : "I'm measuring how late the sound reaches you, not how well you play. Then on time is on time."}</p>
         {!device && <p className="warn">No kit plugged in. Plug it in over USB, or use the keyboard for now.</p>}
-        {part === 'pads' ? <PadWizard device={device ?? 'keyboard'} autoStart={!!device} onSaved={() => setPart('latency')} />
+        {part === 'pads' ? <PadWizard big device={device ?? 'keyboard'} autoStart={!!device} onSaved={() => setPart('latency')} />
           : <LatencyCard onSaved={() => finish(true)} />}
         <div className="actions">
           {part === 'pads' && <button onClick={() => setPart('latency')}>Pads are fine → latency</button>}

@@ -198,3 +198,14 @@ export function weekRecap(d: Pick<Dashboard, 'minutesWeek' | 'landedWeek' | 'lan
   const third = newBadge ? `New on your shelf: ${newBadge}.` : 'This week, one small thing at a time.';
   return `${first} ${second} ${third}`;
 }
+
+/**
+ * Your recent takes all leaning late by about the same amount: usually the speakers or headphones, not you (Setup's
+ * latency check says so). At least 4 of the last 6 takes 60 ms or more behind; returns how many, and the typical lag.
+ */
+export function lateTakes(runs: RunRow[]): { takes: number; of: number; ms: number } | null {
+  const last = runs.slice(-6), late = last.filter(r => r.meanOffset >= 60);
+  if (last.length < 4 || late.length < 4) return null;
+  const ms = [...late.map(r => r.meanOffset)].sort((a, b) => a - b)[Math.floor(late.length / 2)];
+  return { takes: late.length, of: last.length, ms: Math.round(ms) };
+}

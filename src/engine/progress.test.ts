@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, songReady, forYou, practiceStart, isoWeek, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
+import { barsReady, dashboard, earnedBadges, songReady, forYou, practiceStart, isoWeek, lateTakes, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -139,5 +139,14 @@ describe('weekly recap', () => {
     expect(weekRecap({ minutesWeek: 42.4, landedWeek: 81, landedLastWeek: 74 }, '7-day streak'))
       .toBe('Last week you played 42 minutes. Your notes landed 81% of the time, up from 74%. New on your shelf: 7-day streak.');
     expect(weekRecap({ minutesWeek: 0, landedWeek: null, landedLastWeek: null })).toMatch(/^Last week was a quiet one/);
+  });
+});
+
+describe('lateTakes', () => {
+  it('spots recent takes that all lean late, and nothing for a mixed or short history', () => {
+    const late = [95, 110, 102, 120, 99, 105].map(meanOffset => run({ meanOffset }));
+    expect(lateTakes(late)).toEqual({ takes: 6, of: 6, ms: 105 });
+    expect(lateTakes([...late.slice(0, 3), ...[5, -10, 20].map(meanOffset => run({ meanOffset }))])).toBeNull();
+    expect(lateTakes(late.slice(0, 3))).toBeNull();
   });
 });
