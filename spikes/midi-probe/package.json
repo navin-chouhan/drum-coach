@@ -4,9 +4,9 @@
   "description": "Gate 0 MIDI spike: proves the MPS-150 delivers correct, well-timed MIDI into an Expo dev build on iPad/iPhone",
   "main": "index.ts",
   "dependencies": {
-    "expo": "58.0.19",
+    "expo": "58.0.20",
     "expo-clipboard": "58.0.4",
-    "expo-dev-client": "58.0.15",
+    "expo-dev-client": "58.0.16",
     "expo-status-bar": "58.0.4",
     "react": "19.3.0",
     "react-native": "0.88.0"
