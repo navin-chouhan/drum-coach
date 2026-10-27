@@ -188,7 +188,7 @@ Fixed since they were written (rounds 6–9): weekly theme forgets (M12), trophi
 path (M11), invented coach buttons (M5), big moments keep their verdict (M4), song groove confidence and "ask again"
 (M17), show-off songs ≥ 16 bars (M18), Practice library 3+ charts per level (G3), probe tries the target (M8), no
 slides after a probe (M9), lesson writing on Sonnet (M16), next lesson when the set is done (M11), the verdict stays
-while the coach thinks (M3), new-step tempo explained to the coach (M7).
+while the coach thinks (M3), new-step tempo explained to the coach (M7), one rank up per stage with style tracks (D16).
 
 Still open:
 - **Song audio (tab capture) and voice talk-back** need Chrome's share-a-tab prompt or the microphone: owner checks.
@@ -197,7 +197,6 @@ Still open:
 - **N1 camera pose tracking and G4 sampled sounds** were skipped (they need downloads the owner declined).
 - **The UI/UX revamp and D10 v2 are built** (2026-10-27, see below); the owner's first session on them at the kit is
   the real check: the beat ball, the count you say, results on the notes, Climb and the warm-up.
-- **Repeated rank-up** at stage 8 with several style tracks (D16).
 
 ### Round 8 (N11: the first automated play test, `npm run playtest`), 2026-10-26
 Headless Chrome, a fresh data folder, the coach off; the emulated MPS-150 as a Beginner (count-8ths, Your first beat) and
@@ -231,7 +230,7 @@ Time Lord; stage 8's "song-pocket" passes now that the emulated kit follows volu
 
 | # | Finding | Kind | Fix |
 |---|---|---|---|
-| D16 | Stage 8 with all style tracks: "Rank up: you're now a Pocket Pro!" four times (rock-drive, open-hat-funk, jazz-tempo, bossa). The rank-up test in `LessonPlayer` asks "are all the stage's checkpoints done?" after saving, and the other tracks' checkpoints are new lessons, so each one passes it again. | Bug | Open: only rank up when the stage wasn't passed before this take. |
+| D16 | Stage 8 with all style tracks: "Rank up: you're now a Pocket Pro!" four times (rock-drive, open-hat-funk, jazz-tempo, bossa). The rank-up test in `LessonPlayer` asks "are all the stage's checkpoints done?" after saving, and the other tracks' checkpoints are new lessons, so each one passes it again. | Bug | Fixed 2026-10-27: a rank up needs the stage locked before the take and earned after it (`rankedUp` in `src/engine/planner.ts`, tested), so another track's checkpoint on an earned stage is just "Lesson complete". |
 
 D10 (grip and kick foot) has a v2 mockup with animation: `docs/mockups/d10-grip-foot.html`.
 
