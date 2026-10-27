@@ -195,8 +195,8 @@ Still open:
 - **N3 song bites over a drumless video** have never had a take scored (the emulated kit doesn't play on the
   YouTube clock): owner checks with the kit.
 - **N1 camera pose tracking and G4 sampled sounds** were skipped (they need downloads the owner declined).
-- **The grip and kick-foot drawings** in How it moves read poorly for a beginner (D10: animated v2 mockup waiting for "build it").
-- **UI/UX revamp** of Journey, the lesson screen, Progress, Setup and Practice: mockups waiting for "build it" (see below).
+- **The UI/UX revamp and D10 v2 are built** (2026-10-27, see below); the owner's first session on them at the kit is
+  the real check: the beat ball, the count you say, results on the notes, Climb and the warm-up.
 - **Repeated rank-up** at stage 8 with several style tracks (D16).
 
 ### Round 8 (N11: the first automated play test, `npm run playtest`), 2026-10-26
@@ -235,7 +235,7 @@ Time Lord; stage 8's "song-pocket" passes now that the emulated kit follows volu
 
 D10 (grip and kick foot) has a v2 mockup with animation: `docs/mockups/d10-grip-foot.html`.
 
-### UI/UX revamp mockups, 2026-10-27 (waiting for "build it")
+### UI/UX revamp mockups, 2026-10-27 (built the same day, see "UI/UX revamp built")
 Built on a read-only copy of the owner's data, so each screen shows the real state: stage 1, "From quarters to 8ths"
 step 1 at 40 BPM, 38 takes over 2 days.
 - `revamp-journey.html`: one next move with kit gestures, today's set as a strip, the stage trail and its song side by
@@ -257,6 +257,42 @@ first thing to run at the kit (M2 below).
 Testing lesson: when the shared `/tmp` quota fills, SQLite writes fail ("disk I/O error") and the play test reports
 "the take was not saved". Run it with a short temp path on the real disk: `TMPDIR=~/.cache/dpt npm run playtest`
 (Chrome needs a short path for its socket).
+
+### UI/UX revamp built, 2026-10-27
+The owner said "build it" for all five revamp mockups and D10 v2, beginner screens first. Built in that order, each
+checked in headless Chrome at 1440 and 768 px on a fresh copy of the owner's data (API on 8791 with the Claude CLI
+switched off, so no subscription calls), and committed one screen at a time:
+- **Journey** (de44f60): the next lesson as a big card with the moves and their kit gestures (they now work on Journey:
+  checked ride × 2 → something else, hi-hat pedal × 3 → opens it), you in three numbers, the set strip, the trail from
+  done to now (started lessons first, ✍ on coach lessons), the stage song card, one kit chip with a popover.
+- **Lesson screen** (c31d05a): step pills, the tempo ladder, the count with blue "&"s, the goal bar with the mini kit,
+  the beat ball, results on the notes and the timing line. Checked with a take played like the owner's (0.1 s late):
+  every note says "late", the timing line shows all 16 hits about 109 ms after the click.
+- **Setup** (e83ee52): Your kit as a checklist; latency marked "do this first" with "Your last 6 takes landed about 0.1 s
+  after the click" from the real runs; the big pad wizard checked with keyboard hits (pads go green, tom 1 pulses).
+- **D10 v2** (8d4da29): the grip from the side and from above, the kick on a real pedal heel down / heel up; posture and
+  single-stroke lessons open the grip.
+- **Progress** (f7cd1c0): getting better with the real days (Saturday 1 in 13, Sunday 4 in 10), this week, the skill
+  map in three groups, trophies with how far, your time, your lessons.
+- **Practice** (85b4efe): the ring moved with ride × 2 and played with hi-hat pedal × 3; Climb went 40 → 45 after two
+  clean takes; the warm-up chained exercise 1 → 2 by itself with no slides.
+
+Found and fixed while building (no separate finding numbers, all in the commits above):
+- The sheet repeated the title and tempo inside the paper; the lesson sheet now fits two bars a row.
+- The 16th-note count ran together at the new big size: bars now get wider when there's more to count, and 16ths keep
+  the smaller font.
+- A take's words above the notes ran into each other on 8th-note charts ("latemissedlate"): a word is drawn only where it
+  fits; every note keeps its colour.
+- Practice's results didn't show: the take's chart is a copy, so it's matched by its notes, as in lessons.
+- Practice's ring started on the first card: the cards render before the takes load; it now starts on "pick up where
+  you left off" until moved.
+- "First ★★★" showed a full bar from one 100% take although no lesson was finished: its progress is now your best stars.
+- The pad wizard's current pad label had the circle's white outline.
+
+Testing lessons: the Claude temp folder's 2 GB quota filled up (another session's 1.2 GB `cdp` folder), which made
+every command lose its output and the test API fail its SQLite writes. My scratch Chrome profile and old screenshots
+went; the test data copy and the headless Chrome profile now live in `~/.cache/dpt`. After editing a module, Vite
+serves it under a `?t=` URL: page scripts import the URL the page loaded (from `performance.getEntriesByType`).
 
 ## Instructor's review: the whole app, as a critical drum teacher sees it
 
