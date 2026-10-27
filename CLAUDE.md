@@ -70,3 +70,9 @@ metronome with timing scoring). Reuse its ideas and code; don't throw away what 
   (Space kick, S snare, A/Q hi-hat closed/open, Z pedal, E/R/F toms, W crash, T ride).
 - After changing UI, run the dev server and check it in the browser; after changing engine code, run tests.
 - Small, frequent commits with clear messages.
+- `npm run check` must pass before you push (CI runs the same, plus CodeQL, gitleaks and zizmor). Never weaken a check
+  to get green: no lowering coverage thresholds, no blanket `eslint-disable`, no skipping tests.
+- Dependencies: stable releases only, at least 7 days old, from the npm registry, no install scripts
+  (`scripts/check-deps.mjs` enforces it). An exception is an exact `name@version` in its allowlists, with a reason.
+- Security: render text through React (no HTML strings, `eval`, `shell: true`; lint enforces it), spawn helpers with
+  `childEnv()` (no API keys), and keep the API behind `server/guard.ts`.

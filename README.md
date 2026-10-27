@@ -30,7 +30,8 @@ TypeScript files directly. You also need the drum kit on USB, or just the keyboa
 install Claude Code and log in once with `claude`.
 
 ```bash
-npm install
+npm ci                  # exactly the checked lockfile; packages' install scripts never run (.npmrc)
+npm run hooks:install   # once: a secret check before each commit, the full check before each push
 ```
 ```bash
 npm run dev
@@ -169,6 +170,7 @@ are grey, and the page turns after each page of bars. Before you press Start it 
   - *The coach writes the tips*: once per exercise it writes its own wording for the live tips; the rules still
     decide when they fire.
   - Speech-to-text needs `uv`; the speech model (~140 MB) is downloaded into `data/whisper` the first time.
+    The Python side is pinned (`faster-whisper==1.2.1`, and its dependencies as of a fixed date: `server/stt.ts`).
 
 **Voice setup (offline, one time):**
 ```bash
@@ -333,8 +335,9 @@ on the same clock as `MIDIMessageEvent.timeStamp`. YouTube runs use the video's 
 
 ## Development
 ```bash
+npm run check   # everything CI checks: run it before you push (the pre-push hook does)
 npm test        # Vitest: engine, curriculum, coach, YouTube
-npm run lint    # ESLint
+npm run lint    # ESLint, zero warnings
 npm run build   # type-check + production build
 ```
 - **Rules.** Read `CLAUDE.md` first: it has the project rules and the verified kit facts.
@@ -349,6 +352,32 @@ npm run build   # type-check + production build
   `checkpoints`.
 - **Changing what the coach writes.** Edit `server/prompts/lesson.md`. The answer must match
   `AiLessonSchema`.
+
+### Security and quality checks
+`npm run check` runs, in order (each step fails the whole check):
+
+| Step | What it guarantees |
+|---|---|
+| `deps:check` | Every dependency is a stable release (no beta/rc/canary, 1.0+ for direct ones), comes from registry.npmjs.org with a hash that matches the registry's, is at least **7 days old** (a hijacked release is usually pulled by then), isn't deprecated, and has no install script nobody looked at. `scripts/check-deps.mjs`. |
+| `audit:deps` | No known vulnerability of any severity (`npm audit`, dev tools included), and every package's registry signature checks out. |
+| `typecheck`, `lint` | Strict TypeScript; ESLint with zero warnings: React's rules of hooks, promises that fail silently, and no HTML strings, `eval` or shell commands. |
+| `test:coverage` | All tests pass, and `src/engine` and `server` stay covered (thresholds in `vitest.config.ts`). |
+| `build` | The production build works. |
+
+Installs are locked down in `.npmrc`: no install scripts, no git or URL dependencies, and (npm 11.10+) only
+versions published 7+ days ago. GitHub runs the same checks on every push (`.github/workflows/ci.yml`, on Node 22.18
+and 24), plus `security.yml` (npm audit, a gitleaks secret scan of the whole history, actionlint and zizmor on the
+workflows, dependency review on pull requests) and `codeql.yml` (CodeQL on the TypeScript, Python and workflows; any
+alert fails it). Every action is pinned to a commit, every downloaded tool to a checksum. Dependabot proposes updates
+weekly, only for releases at least 7 days old (security fixes right away).
+
+The running app is locked down too: the API refuses other websites and pages on other local ports, and DNS rebinding
+(`server/guard.ts`); Vite never serves `.env` or your data folder; the helpers it starts (claude, Piper, Whisper) get
+none of your API keys; voice recordings live in a private temp folder until they're transcribed.
+
+**A dependency check fails?** "published 3 days ago": wait, or pin the previous release. A prerelease, deprecated or
+young version you really need (say an urgent security fix): add its exact `name@version` with the reason to the
+allowlists at the top of `scripts/check-deps.mjs`. **Raising coverage?** Raise the thresholds with it.
 
 ## Troubleshooting
 - **"MIDI blocked".** Click the icon left of the address bar, allow MIDI, then click the status chip.
