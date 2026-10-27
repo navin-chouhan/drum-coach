@@ -282,3 +282,18 @@ optional.
    single clock. If `manufacturer` comes back empty on the device, read it from the source's entity/device
    (`MIDIEndpointGetEntity` → `MIDIEntityGetDevice`).
 4. **A4:** react-native-audio-api 0.13.6 has no output timestamp; budget for native host-time scheduling (§3.4).
+
+## 9. Device run results (owner, 2026-10-27/28)
+
+Setup: MacBook Air, macOS 27.2, Xcode 27.1 (27A9275), Node 24.22.1, CocoaPods 1.17.0, free Apple ID (Personal Team).
+iPad with an Apple M1 (device id 00008103-…), iPadOS 26.5. Debug build, Metro on the Mac over Wi-Fi.
+
+| Row | Result | Evidence |
+|---|---|---|
+| Step 0 | **PASS** after one fix. The first launch aborted in dyld: "Symbol not found" in ExpoModulesCore, referenced from ExpoFileSystem. expo 58.0.19 allowed expo-file-system 58.0.12, whose prebuilt framework needs expo-modules-core 58.0.27, but 58.0.19 pins 58.0.26. Fixed by expo 58.0.20 (4ff7140). Our Swift compiled first time. No start-up hang (§5.1 fallback not needed). | timebase 125/3, module available |
+| M1 | not reported | — |
+| M2 | **PASS** | `e-Drum` (manufacturer `Medeli`) listed, online, auto-selected. Every pad on ch10 with the KIT.md note: kick 36, snare 38, hi-hat open 46 (pedal up), pedal 44 + poly AT 127 on 44/42/46 (3× choke, never a hit), hi-hat closed 42 (pedal held), tom 1 48, tom 2 45, floor 43, crash 49, ride 51. Every note-off is a note-on vel 0. 30 strokes → hits 30, plus 5 retriggers filtered as bounces (30–40 ms after the stroke, ~45 % velocity, as KIT.md says). Velocity 17–127 seen. Clock F8 every 24.2–24.4 ms and FE ~250 ms, counted and never hits. 0 dropped bytes, 0 off-channel, 0 time-went-back, ts=0 packets 0. |
+| M6 (early look, debug build) | p95 **40–59 ms** (target < 20) | JS − host median 0.4 ms, p95 40–59 ms; native − host median 0.05 ms, p95 0.08 ms. The JS thread redraws on every clock message (~41/s) in a debug build. To be re-measured in a Release build; batching events per frame is the planned fix (A3). Scoring uses host time, unaffected. |
+| Note for A3 | Packets queued while the app is backgrounded arrive on resume with their old timestamps (native − host max 48.7 s). The real app must ignore stale messages after a resume (e.g. drop anything older than ~250 ms when no take is running). | lifecycle backgrounded 5 / foregrounded 8 |
+
+Audio (first look): output latency 5.7 ms, IO buffer 21.3 ms (1024 frames at 48 kHz), route Speaker.
