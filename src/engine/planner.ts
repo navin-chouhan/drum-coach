@@ -28,6 +28,11 @@ export function rankState(m: Milestone, lessons: Lesson[], progress: Progress, p
   return { state, proven, total: cps.length };
 }
 
+/** A rank up: the stage was locked before this take and isn't after it. Passing another style track's checkpoint on an
+ * already earned stage isn't one (D16). */
+export const rankedUp = (m: Milestone, lessons: Lesson[], before: Progress, after: Progress, profile: Profile) =>
+  rankState(m, lessons, before, profile).state === 'locked' && rankState(m, lessons, after, profile).state !== 'locked';
+
 /** Checkpoints passed but not yet proven on another day (R7), easiest stage first. */
 const unproven = (milestones: Milestone[], lessons: Lesson[], progress: Progress, profile: Profile) =>
   milestones.flatMap(m => checkpointsOf(m, lessons, profile)).filter(l => done(progress, l.id) && !isProven(progress[l.id])).map(l => l.id);

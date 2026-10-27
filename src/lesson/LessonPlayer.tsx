@@ -6,7 +6,7 @@ import { lastRound } from '../engine/takeMarks';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
 import { afterReview, autoProbe, floorLine, freeStars, stuckMove, stuckLine, type StuckMove, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
-import { checkpointsOf, studentRead } from '../engine/planner';
+import { checkpointsOf, rankedUp, studentRead } from '../engine/planner';
 import { praise } from '../engine/greeting';
 import { breakDue } from '../engine/health';
 import { bandFor } from '../engine/band';
@@ -201,16 +201,15 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
       const { next, event } = emptyBars ? { next: p, event: 'hold' as const } : ladderStep(p, lesson, check.ok, today(), st.accuracy, check.ok && starsFor(st) === 3, notesLanded);
       // A take that is all your own bars has no written notes to score: its stars come from staying on the beat (D3).
       const stars = event !== 'lessonDone' ? undefined : !st.total && fs?.stats.hits ? freeStars(fs.stats.onGridPct) : starsFor(f.stats);
-      // The checkpoint this lesson proves (itself, or the one a coach lesson stands in for) was it already passed?
-      const provedBefore = !!getSettings().lessons[lesson.checkpoint ?? lesson.id]?.completedAt;
+      const before = getSettings().lessons;
       saveProgress(lesson.id, prove(stars ? { ...next, stars: Math.max(p.stars ?? 0, stars) } : next));
       // A coach lesson standing in for a checkpoint passes it; the checkpoint itself comes back for review.
       const cp = lesson.checkpoint && LESSON_BY_ID[lesson.checkpoint];
       if (event === 'lessonDone' && cp && !getSettings().lessons[cp.id]?.completedAt)
         saveProgress(cp.id, { ...startProgress(cp), bestBpm: next.bestBpm, completedAt: next.completedAt, reviewDue: next.reviewDue, stars });
-      // Rank up: this was the last open checkpoint of its stage (a coach lesson for an already passed checkpoint isn't).
+      // Rank up: this take earned its stage (a coach lesson for an already passed checkpoint, or another style track, doesn't).
       const stage = MILESTONES.find(m => m.checkpoints.includes(cp ? cp.id : lesson.id)), s = getSettings();
-      const rankUp = event === 'lessonDone' && !provedBefore && !!stage && checkpointsOf(stage, allLessons(), s.profile).every(l => s.lessons[l.id]?.completedAt);
+      const rankUp = event === 'lessonDone' && !!stage && rankedUp(stage, allLessons(), before, s.lessons, s.profile);
       const ok = !emptyBars && (check.ok || !!step.jam || (free.length > 0 && !step.pass));
       const msg: Record<LadderEvent, string> = {
         hold: emptyBars ? 'Once more, and fill your bars this time.' : ok ? `Clean take (${next.clean}/${cleanNeeded(step)}). Once more at ${next.bpm} BPM.` : notesLanded ? floorLine(true, check.reason) : 'Same tempo, once more. You are close.',

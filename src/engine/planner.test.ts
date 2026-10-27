@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { startProgress, type Lesson, type LessonKind, type LessonProgress, type Milestone, type Profile } from './lesson';
-import { buildSession, candidates, checkpointsOf, currentMilestone, rankState, studentRead } from './planner';
+import { buildSession, candidates, checkpointsOf, currentMilestone, rankedUp, rankState, studentRead } from './planner';
 
 const chart = { title: 't', bpm: 80, timeSignature: [4, 4] as [number, 4], bars: 1, notes: [{ t: 0, drum: 'snare' as const }] };
 const L = (id: string, level: number, kind: LessonKind, o: Partial<Lesson> = {}): Lesson =>
@@ -91,6 +91,18 @@ describe('rankState (R7)', () => {
     expect(rankState(m, lessons, {}, profile)).toEqual({ state: 'locked', proven: 0, total: 1 });
     expect(rankState(m, lessons, { rests: p({ completedAt: '2026-10-24' }) }, profile)).toEqual({ state: 'earned', proven: 0, total: 1 });
     expect(rankState(m, lessons, { rests: p({ completedAt: '2026-10-24', provenAt: '2026-10-26' }) }, profile)).toEqual({ state: 'proven', proven: 1, total: 1 });
+  });
+});
+
+describe('rankedUp (D16)', () => {
+  const all = [...lessons, L('rock-cp', 3, 'groove', { tags: ['rock'] }), L('funk-cp', 3, 'groove', { tags: ['funk'] })];
+  const m: Milestone = { level: 3, title: 'Tracks', rank: 'R', canDo: [], checkpoints: ['rock-cp', 'funk-cp'], track: { rock: 'Rock', funk: 'Funk' } };
+  it('only the take that completes the stage ranks up, not each style track passed after it', () => {
+    expect(rankedUp(m, all, {}, done('rock-cp'), profile)).toBe(true); // not sure yet: the rock track is the stage
+    expect(rankedUp(m, all, done('rock-cp'), done('rock-cp', 'funk-cp'), profile)).toBe(false); // the funk track afterwards
+    const both: Profile = { ...profile, goals: ['rock', 'funk'] };
+    expect(rankedUp(m, all, {}, done('rock-cp'), both)).toBe(false);
+    expect(rankedUp(m, all, done('rock-cp'), done('rock-cp', 'funk-cp'), both)).toBe(true);
   });
 });
 
