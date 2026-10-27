@@ -167,69 +167,118 @@ first heard click, `latencyMs` = the take's median, `expect` left empty).
 
 ## 5. Unverified (needs the Mac and the devices)
 
-1. **The Swift has never been compiled.** Written against the iOS 16.4+ SDK, CoreMIDI's Swift overlay
-   (`MIDIEventList.unsafeSequence()`, `MIDIInputPortCreateWithProtocol`), `MIDINetworkSession`
-   (`.anyone`/`.noOne`, `isEnabled`, `networkName`) and Expo Modules Core 58.0.26 (checked against its sources in
-   `node_modules`: `Events`, `OnCreate`, `OnAppEntersForeground`, `sendEvent`, `[String: Any]` returns). Expect small
-   compile fixes. Any fix stays inside `modules/drum-midi/ios`.
-2. All device behaviour: enumeration of the MPS-150 ("e-Drum") over USB-C on iPad and iPhone; hot-plug events; whether
-   CoreMIDI delivers packet timestamps of 0; Note Off vs Note On velocity 0 on iOS; bridge delay; the tap-test numbers.
-3. Whether creating the MIDI client with `DispatchQueue.main.sync` from the JS thread can deadlock during app start
-   (it shouldn't: it only runs on the first `listInputs`/`select`, after the UI is up).
-4. `AVAudioTime(hostTime:)` semantics on `AVAudioPlayerNode` (render vs output time): M5 decides.
-5. Network MIDI: the Local Network prompt, Bonjour discovery from the Mac, and the session source appearing in
+1. **The Swift has never been compiled.** See 5.1.
+2. All device behaviour: enumeration of the MPS-150 ("e-Drum") over USB-C on iPad and iPhone (M2, M7); hot-plug
+   events (M3); whether CoreMIDI delivers packet timestamps of 0; Note Off vs Note On velocity 0 on iOS; bridge delay
+   (M6); the tap-test numbers (M5).
+3. `AVAudioTime(hostTime:)` semantics on `AVAudioPlayerNode` (render vs output time): M5 decides.
+4. Network MIDI (M8): the Local Network prompt, Bonjour discovery from the Mac, and the session source appearing in
    `listInputs`.
+5. Bluetooth MIDI (M9, optional): the probe has no pairing UI (`CABTMIDICentralViewController`); an adapter must be
+   paired in another app first.
 6. `replay-fixture.mjs`'s MIDI-out half (no MIDI ports here).
 7. `expo-doctor`'s two network checks.
 
+### 5.1 First compile on the Mac (checklist step 0)
+
+**Compile.** Written against the iOS 16.4+ SDK, CoreMIDI's Swift overlay (`MIDIEventList.unsafeSequence()`,
+`MIDIInputPortCreateWithProtocol`), `MIDINetworkSession` (`.anyone`/`.noOne`, `isEnabled`, `networkName`) and Expo
+Modules Core 58.0.26 (checked against its sources in `node_modules`: `Events`, `OnCreate`, `OnAppEntersForeground`,
+`sendEvent`, `[String: Any]` returns). Expect small compile fixes; any fix stays inside `modules/drum-midi/ios`. The
+owner pastes the errors back verbatim.
+
+**Start-up hang (deadlock risk).** `MidiInputHub.startIfNeeded()` creates the CoreMIDI client and port with
+`DispatchQueue.main.sync` when it is called from the JS thread (the first `listInputs()`/`select()`, which the probe
+calls as soon as its screen mounts). If the main thread is at that moment waiting synchronously on the JS thread,
+both wait forever.
+*Symptom:* the probe's screen appears and then freezes (no scrolling, no button response) right after launch, every
+launch. In Xcode, Debug → Pause shows the main thread blocked and the JS thread inside `startIfNeeded` /
+`DispatchQueue.main.sync`.
+
+*Fallback A (owner, one line):* in `spikes/midi-probe/modules/drum-midi/ios/MidiInputHub.swift`, replace
+
+```swift
+    if Thread.isMainThread { create() } else { DispatchQueue.main.sync(execute: create) }
+```
+with
+```swift
+    create() // created on the calling (JS) thread; no main-thread hop
+```
+then rebuild (`npx expo run:ios --device`). Then run **M3**: if the list still updates on unplug/replug, the notify
+block is delivered without the main run loop and A is the fix.
+
+*Fallback B (A3, if A breaks M3, i.e. no hot-plug updates):* create the client on a dedicated MIDI thread that owns a
+run loop, so notifications have a run loop and nothing ever waits on main:
+
+```swift
+final class MidiRunLoopThread: Thread {
+  private let ready = DispatchSemaphore(value: 0)
+  private var loop: CFRunLoop?
+  override func main() {
+    loop = CFRunLoopGetCurrent()
+    RunLoop.current.add(NSMachPort(), forMode: .default) // keeps the run loop alive
+    ready.signal()
+    while !isCancelled { RunLoop.current.run(mode: .default, before: .distantFuture) }
+  }
+  /// Runs `block` on this thread and waits for it.
+  func sync(_ block: @escaping () -> Void) {
+    if loop == nil { start(); ready.wait() }
+    let done = DispatchSemaphore(value: 0)
+    CFRunLoopPerformBlock(loop, CFRunLoopMode.defaultMode.rawValue) { block(); done.signal() }
+    CFRunLoopWakeUp(loop)
+    done.wait()
+  }
+}
+// in MidiInputHub: private let midiThread = MidiRunLoopThread()
+// in startIfNeeded: midiThread.sync(create)   // instead of the main-thread line
+```
+
 ## 6. Decision tree (after the device run)
 
-```
-M1 build runs on iPad? ── no ─→ compile/signing fix (S1/A3 follow-up). Not a gate failure yet.
-  │yes
-M2 kit listed + online, replug reconnects? ── no ─→ try a powered USB-C hub / Apple USB-C–USB adapter, module on
-  │yes                                          first. Still no → USB path NO-GO on this device; Network MIDI (M8)
-  │                                             or a BLE-MIDI dongle as fallback, owner decides (D1).
-M3 every pad = KIT.md note, ch 10, F8/FE/choke/note-off never a hit, bounces filtered? ── no ─→ fix in TS (core),
-  │yes                                          re-run M3. Not a NO-GO.
-M4 no doubled hits after background/lock/replug (connects == 1 per real change)? ── no ─→ fix idempotency (native
-  │yes                                          reconcile or JS subscription), re-run. Blocks Phase 1 until fixed.
-M5 tap test: spread within ~5 ms of the web's, median stable ±5 ms over 3 runs? ── no ─→ look at
-  │yes                                          zeroTimestampPackets (>0 → timestamps are receive times) and
-  │                                             vs-scheduled vs vs-heard; fix the latency term; re-run. If spread
-  │                                             stays > 2× web: B3/B4 open, NO-GO for scoring on iOS.
-M6 bridge delay p95 ≤ 16 ms, max ≤ 50 ms under a busy groove? ── no ─→ only on-screen feedback is late (scoring uses
-  │yes                                          host times). GO with a note; A3 may batch or move feedback native.
-M7 iPhone repeats M1–M6? ── no ─→ GO for iPad only; iPhone as a later item.
-  │yes
-M8 Mac → iPad Network MIDI works? ── no ─→ simulator/remote testing falls back to fixtures + touch pads (B8). Not a
-  │yes                                     NO-GO.
-M9 10-minute soak: packets == JS events, no time going back, no drift? ── no ─→ investigate before Phase 2.
-  │yes
-GO (D1 = go): A3 productises modules/drum-midi; A1 moves src/shared into @drum-coach/core.
-```
+The plan's rules, with what to look at in the probe's results:
+
+- **All of M2–M6 pass → GO with Expo + our module** (D1 = go). A3 productises `modules/drum-midi`; A1 moves
+  `src/shared` into `@drum-coach/core`.
+- **Only the bridge delay is high (M6: p95 ≥ 20 ms, everything else passes) → GO.** Hit visuals are driven natively or
+  from a Reanimated shared value; scoring is unaffected, because it uses the host timestamps.
+- **Jitter fails (M5: iPad spread > web spread + 3 ms, or the mean offset moves more than ± 5 ms across 3 runs) →
+  investigate, then retry:**
+  - the timestamp source: `zeroTimestampPackets` in the debug info (> 0 means CoreMIDI didn't stamp packets and we
+    used the receive time), and the `native − host` delay spread;
+  - the audio clock mapping: the "vs heard" and "vs scheduled" offsets, and whether `outputLatencyMs` changed between
+    runs (route changes);
+  - the audio-session buffer size: `ioBufferMs` (we ask for 5 ms; iOS may grant more).
+  If it still fails, **STOP and report options**: the click scheduler is already in Swift on host time (the option the
+  plan names), so the remaining ones are a different timestamp source (receive time vs packet time), a fixed
+  IO buffer / sample rate, or another input path (Network MIDI, M8) to separate USB from the app.
+- **Kit doesn't enumerate (M2, or M7 on the iPhone) → check the cable/adapter, power (powered hub or the camera
+  adapter's charging port) and the module's USB mode; STOP and report.**
+
+Rows outside the tree: step 0 (build) and M1 (kit on the Mac) are preconditions: fix and continue. M3 and M4 are
+part of "all of M2–M6": a failure there (no reconnect, doubled hits) is a bug in the module or the JS subscription;
+fix it and re-run the row before deciding. M7 is
+M2 on the iPhone. M8 failing only removes automated device tests (fixtures + touch pads remain, B8). M9 and X1 are
+optional.
 
 ## 7. What the owner pastes back
 
-1. The **"Copy results" JSON** after each device session (iPad, then iPhone): `kind: "drum-coach-gate0-probe"`,
-   device and inputs, counters, framer stats, bridge and native delay stats, audio info, every tap-test run (clicks,
-   taps, both offsets), native debug info (connects, packets, timestamp-0 packets, background/foreground counts) and
-   the last 300 raw messages.
-2. The **filled-in GATE0-CHECKLIST.md** numbers (M1–M9), including the web app's Latency result on Linux Chrome.
+1. The **"Copy results" JSON** after each row (iPad, then iPhone): `kind: "drum-coach-gate0-probe"`, device and
+   inputs, counters, framer stats, bridge and native delay stats, audio info, every tap-test run (clicks, taps, both
+   offsets), native debug info (connects, packets, timestamp-0 packets, background/foreground counts) and the last 300
+   raw messages.
+2. The **filled-in GATE0-CHECKLIST.md** (step 0, M1–M8, M9 and X1 if done), including the web app's Latency results
+   on Linux Chrome for M5.
 3. Optional: one **"Copy last tap test as fixture"** JSON (we add it to `src/input/fixtures/`).
-4. Any Xcode compile errors, verbatim (if M1 needed fixes).
+4. Any Xcode compile errors, verbatim, and whether the start-up fallback (5.1) was needed.
 
 ## 8. Requests to the orchestrator
 
-1. **M1–M9 definitions:** I didn't have the plan text (orchestrator prompt). The checklist rows are inferred from the
-   board (M2/M7 enumeration, M4 background/foreground, M5 latency vs web, M6 jitter, M8 Network MIDI) plus M1 build,
-   M3 note map/filters, M9 soak. Please reconcile the numbering with the plan before handing it to the owner.
-2. **Merge order:** merge after c9d998a (root lint/Vitest ignore `spikes/`). Before it, root `npm run lint` and
+1. **Merge order:** merge after c9d998a (root lint/Vitest ignore `spikes/`). Before it, root `npm run lint` and
    `npm test` would also pick up the spike's files (and its `node_modules` once installed), changing the root results.
-3. **A1:** `spikes/midi-probe/src/shared/{midi,kit,hitFilter,latency}.ts` are copies (headers say so);
+2. **A1:** `spikes/midi-probe/src/shared/{midi,kit,hitFilter,latency}.ts` are copies (headers say so);
    `framing.ts`, `classify.ts`, `probe.ts`, `stats.ts` are new and belong in `@drum-coach/core` too.
    `parity.test.ts` imports the web source directly; drop it once both use the core.
-4. **A3:** start from `modules/drum-midi`; keep the "native forwards bytes + host time" contract and `nowMs()` as the
+3. **A3:** start from `modules/drum-midi`; keep the "native forwards bytes + host time" contract and `nowMs()` as the
    single clock. If `manufacturer` comes back empty on the device, read it from the source's entity/device
    (`MIDIEndpointGetEntity` → `MIDIEntityGetDevice`).
-5. **A4:** react-native-audio-api 0.13.6 has no output timestamp; budget for native host-time scheduling (§3.4).
+4. **A4:** react-native-audio-api 0.13.6 has no output timestamp; budget for native host-time scheduling (§3.4).

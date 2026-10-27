@@ -62,6 +62,7 @@ final class MidiInputHub {
         self?.receive(eventList)
       }
     }
+    // If the app hangs at start (main waiting on JS while JS waits here): docs/mobile/GATE0.md §5.1, fallback A/B.
     if Thread.isMainThread { create() } else { DispatchQueue.main.sync(execute: create) }
     guard status == noErr else {
       throw MidiError(status: status, what: "creating the CoreMIDI client/port")
