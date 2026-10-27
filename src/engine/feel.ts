@@ -16,7 +16,7 @@ export function swingPct(run: Run, results: NoteResult[], beatMs: number): numbe
     while (j < run.notes.length && run.notes[j].t < n.t + 1 - 1e-6 && (run.notes[j].drum !== n.drum || run.notes[j].t <= n.t + 1e-6)) j++;
     const m = run.notes[j];
     if (!m || m.drum !== n.drum || m.t >= n.t + 1 - 1e-6 || results[j].offset === undefined) return;
-    pairs.push(((m.t - n.t) * beatMs + results[j].offset! - results[i].offset!) / beatMs * 100);
+    pairs.push(((m.t - n.t) * beatMs + results[j].offset! - results[i].offset) / beatMs * 100);
   });
   return pairs.length >= 4 ? Math.round((pairs.reduce((a, b) => a + b, 0) / pairs.length) * 10) / 10 : null;
 }

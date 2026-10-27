@@ -34,6 +34,7 @@ export function ensureArtDefs() {
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('id', 'dc-art-defs'); svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.setAttribute('aria-hidden', 'true');
   svg.style.position = 'absolute';
+  // eslint-disable-next-line no-restricted-syntax -- constant markup: the art's gradients
   svg.innerHTML = `<defs>${lin('wood', stop(0, '#F3D9A4') + stop(0.5, '#D9A862') + stop(1, '#A9773A'))}${lin('skin', stop(0, '#F7D0B2') + stop(1, '#E2A683'))}
     ${lin('skinLight', stop(0, '#FDE3CF') + stop(1, '#EFB894'))}${lin('fingerTurn', stop(0, '#E9AE8C') + stop(1, '#B9785A'), true)}${lin('skinDark', stop(0, '#E7B08E') + stop(1, '#C98B68'))}
     ${lin('sleeve', stop(0, '#FF6A5E') + stop(1, '#C92F2C'))}${lin('sleeveL', stop(0, '#5B8FF0') + stop(1, '#2554B8'))}${lin('denim', stop(0, '#4C80E8') + stop(1, '#1F4AA8'))}

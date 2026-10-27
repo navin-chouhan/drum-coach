@@ -24,7 +24,7 @@ const eighths = Array.from({ length: 16 }, (_, i) => i / 2);
 
 describe('emulated MPS-150 through the real input path', () => {
   it('a steady player accents like a drummer: in an accented pattern the other notes are taps', () => {
-    const notes = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ time: i * 250, drum: 'snare' as ChartDrum, accent: i % 4 === 0 }));
+    const notes = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ time: i * 250, drum: 'snare' as const, accent: i % 4 === 0 }));
     const v = playNotes(notes, STEADY_PLAYER, seededRandom(1)).map(s => s.velocity);
     const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
     expect(mean(v.filter((_, i) => i % 4)) / mean(v.filter((_, i) => !(i % 4)))).toBeLessThan(0.7); // passes maxGhostToAccent 0.7
@@ -60,7 +60,7 @@ describe('emulated MPS-150 through the real input path', () => {
 
 describe('emulated dynamics (D14)', () => {
   it('follows the volume marks: soft bars soft, loud bars loud', () => {
-    const notes = [1, 2, 3, 3].flatMap((level, bar) => [0, 1, 2, 3].map(b => ({ time: (bar * 4 + b) * 500, drum: 'snare' as ChartDrum, level: level as 1 | 2 | 3 })));
+    const notes = [1, 2, 3, 3].flatMap((level, bar) => [0, 1, 2, 3].map(b => ({ time: (bar * 4 + b) * 500, drum: 'snare' as const, level: level as 1 | 2 | 3 })));
     const v = playNotes(notes, STEADY_PLAYER, seededRandom(2)).map(s => s.velocity);
     const bar = (i: number) => v.slice(i * 4, i * 4 + 4).reduce((a, b) => a + b, 0) / 4;
     expect(bar(0)).toBeLessThan(bar(1));

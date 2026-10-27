@@ -101,7 +101,7 @@ export function noteHints(notes: { t: number; drum: string; mine?: boolean; grac
     const limbOf = (d: string, i: number, stick?: string) => (d === 'kick' ? 'K' : d === 'hhPedal' ? 'H' : stick ?? (CYMBALS.has(d) ? 'R' : cym ? 'L' : lone ?? (i ? 'L' : 'R')));
     // a grace note: the other hand's grace strokes in small letters first ("lR" flam, "llR" drag)
     const graced = (h: string, g?: number) => (g && (h === 'R' || h === 'L') ? (h === 'R' ? 'l' : 'r').repeat(g) + h : h);
-    const limbs = [...new Set(here.flatMap((n, i) => (n.mine ? [graced(limbOf(n.drum, skins.indexOf(n) < 0 ? 0 : skins.indexOf(n), n.stick), n.grace)] : [])))]
+    const limbs = [...new Set(here.flatMap(n => (n.mine ? [graced(limbOf(n.drum, skins.indexOf(n) < 0 ? 0 : skins.indexOf(n), n.stick), n.grace)] : [])))]
       .sort((x, y) => 'RLKH'.indexOf(x.at(-1)!) - 'RLKH'.indexOf(y.at(-1)!));
     if (!limbs.length) return [];
     return [{ t, count: frac ? SLOT_WORD[String(frac)] ?? '' : String(Math.floor(pos) + 1), limbs: mirror ? mirrorHands(limbs.join('+')) : limbs.join('+') }];

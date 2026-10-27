@@ -135,7 +135,7 @@ export function LearnMode({ song, videoId, yt, rate, tab }: ModeProps) {
         {agree.length > 0 && <button onClick={() => setDraft(d => [...d, ...agree.filter(s => !d.some(n => n.t === s.t && n.drum === s.drum)).map(({ t, drum }) => ({ t, drum }))].sort((a, b) => a.t - b.t))}
           title="Notes heard in the song that the coach's groove also has: the safest place to start">Use what both agree on ({agree.length})</button>}
         <button onClick={() => setDraft([])}>Clear</button>
-        <button className="primary" onClick={save}>Save bars {range.from}–{range.to}</button>
+        <button className="primary" onClick={() => void save()}>Save bars {range.from}–{range.to}</button>
         <button onClick={() => askGroove()} disabled={groove?.status === 'thinking'}>
           Ask coach for the groove</button>
       </div>

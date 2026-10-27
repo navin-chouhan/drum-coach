@@ -250,7 +250,7 @@ export function computeStats(run: Run, results: NoteResult[], extra: number, bea
   for (const d of Object.values(perDrum)) { const k = timed.get(d) ?? 0; d.meanOffset = k ? r1(d.meanOffset / k) : 0; d.accuracy = pct(d.hit, d.total); }
 
   const vel = (f: (n: Run['notes'][number]) => boolean) =>
-    run.notes.flatMap((n, i) => (f(n) && results[i].velocity !== undefined ? [results[i].velocity!] : []));
+    run.notes.flatMap((n, i) => (f(n) && results[i].velocity !== undefined ? [results[i].velocity] : []));
   const normal = vel(n => !n.accent && !n.ghost), accents = vel(n => !!n.accent), ghosts = vel(n => !!n.ghost);
 
   const perBeat = heatGrid(run.notes.map(n => n.pos)), slots = Math.round(run.beatsPerBar * perBeat);
@@ -260,7 +260,7 @@ export function computeStats(run: Run, results: NoteResult[], extra: number, bea
     const s = Math.round(n.pos * perBeat) % slots, c = heat[s];
     c.total++;
     if (results[i].offset === undefined) c.miss++;
-    else { absSum[s] += Math.abs(results[i].offset!); absN[s]++; }
+    else { absSum[s] += Math.abs(results[i].offset); absN[s]++; }
   });
   heat.forEach((c, s) => { c.meanAbsOffset = absN[s] ? r1(absSum[s] / absN[s]) : 0; });
 
@@ -270,7 +270,7 @@ export function computeStats(run: Run, results: NoteResult[], extra: number, bea
   const pairDrop = pairs.length >= 4 ? r1(((mean(pairs.map(p => p[0])) - mean(pairs.map(p => p[1]))) / mean(pairs.map(p => p[0]))) * 100) : null;
 
   const together = new Map<number, number[]>(); // t → offsets of the notes played there
-  run.notes.forEach((n, i) => { if (results[i].offset !== undefined) together.set(n.t, [...(together.get(n.t) ?? []), results[i].offset!]); });
+  run.notes.forEach((n, i) => { if (results[i].offset !== undefined) together.set(n.t, [...(together.get(n.t) ?? []), results[i].offset]); });
   const splits = [...together.values()].filter(o => o.length > 1).map(o => Math.max(...o) - Math.min(...o));
 
   const graceNotes = run.notes.flatMap((n, i) => (n.grace ? [results[i]] : []));

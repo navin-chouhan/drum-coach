@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { onCoachAction } from '../coach/session';
 import { DEMOS, type DemoId } from '../content/demos';
 import { onHit } from '../input/hits';
@@ -16,7 +16,7 @@ export function SelfCheck({ demo, bpm, onClose }: { demo: DemoId; bpm: number; o
   const stream = useRef<MediaStream>(undefined), rec = useRef<MediaRecorder>(undefined), stopTimer = useRef<number>(undefined);
   const [state, setState] = useState<'starting' | 'live' | 'recording' | 'replay' | 'error'>('starting');
   const [clip, setClip] = useState<string>(), [clipS, setClipS] = useState(10); // 10 s to check yourself, 30 s for a teacher (N2)
-  const blob = useRef<Blob>(undefined);
+  const [blob, setBlob] = useState<Blob>(); // the clip itself, for Save
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -33,20 +33,20 @@ export function SelfCheck({ demo, bpm, onClose }: { demo: DemoId; bpm: number; o
     if (rec.current?.state === 'recording') { rec.current.stop(); return; }
     const chunks: Blob[] = [], r = new MediaRecorder(stream.current);
     r.ondataavailable = e => chunks.push(e.data);
-    r.onstop = () => { clearTimeout(stopTimer.current); blob.current = new Blob(chunks, { type: r.mimeType }); setClip(URL.createObjectURL(blob.current)); setState('replay'); };
+    r.onstop = () => { clearTimeout(stopTimer.current); const b = new Blob(chunks, { type: r.mimeType }); setBlob(b); setClip(URL.createObjectURL(b)); setState('replay'); };
     r.start(); rec.current = r; setState('recording');
     stopTimer.current = window.setTimeout(() => r.state === 'recording' && r.stop(), clipS * 1000);
   };
   const toggleReplay = () => setState(s => (s === 'replay' ? 'live' : clip ? 'replay' : s));
-  const actions = useRef({ record, toggleReplay, onClose }); actions.current = { record, toggleReplay, onClose };
+  const onRecord = useEffectEvent(record), onReplay = useEffectEvent(toggleReplay), close = useEffectEvent(onClose);
 
   useEffect(() => {
     const offHit = onHit(h => {
-      if (h.pad === 'hhClosed' || h.pad === 'hhOpen') actions.current.record();
-      if (h.pad === 'snare') actions.current.toggleReplay();
+      if (h.pad === 'hhClosed' || h.pad === 'hhOpen') onRecord();
+      if (h.pad === 'snare') onReplay();
     });
     const offCmd = onCoachAction(() => true); // the kit's taps are ours while this is open
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') actions.current.onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => { offHit(); offCmd(); window.removeEventListener('keydown', onKey); };
   }, []);
@@ -69,7 +69,7 @@ export function SelfCheck({ demo, bpm, onClose }: { demo: DemoId; bpm: number; o
         <ul>{DEMOS[demo].watch.map(w => <li key={w}>{w}</li>)}</ul>
         <p className="small">Only on this laptop: the clip is never sent, and it's gone when you close this, unless you save it yourself (for a teacher).</p>
         <p><label>Clip length <select value={clipS} onChange={e => setClipS(+e.target.value)}><option value={10}>10 s</option><option value={30}>30 s (for a teacher)</option></select></label>
-          {clip && blob.current && <button className="link" onClick={() => saveFile(`self-check ${stamp()}.webm`, blob.current!)}>💾 Save clip</button>}</p>
+          {clip && blob && <button className="link" onClick={() => saveFile(`self-check ${stamp()}.webm`, blob)}>💾 Save clip</button>}</p>
         <div className="actions"><button className="primary" onClick={record} disabled={state === 'starting' || state === 'error'}>{state === 'recording' ? '■ Stop' : '● Record 10 s'}</button>
           <button onClick={toggleReplay} disabled={!clip}>{state === 'replay' ? 'Back to the mirror' : '▶ Replay'}</button></div>
       </div>

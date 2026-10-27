@@ -50,7 +50,7 @@ export const padMatches = (drum: ChartDrum, pad: PadId) => DRUM_PAD[drum].includ
  */
 export function pattern(lines: Partial<Record<ChartDrum, string>>, stepsPerBeat: number, bars = 1, offsetBeats = 0): ChartNote[] {
   const notes: ChartNote[] = [];
-  const barBeats = Math.max(...Object.values(lines).map(l => l!.length)) / stepsPerBeat;
+  const barBeats = Math.max(...Object.values(lines).map(l => l.length)) / stepsPerBeat;
   for (let b = 0; b < bars; b++) {
     for (const [drum, line] of Object.entries(lines) as [ChartDrum, string][]) {
       [...line].forEach((ch, i) => {

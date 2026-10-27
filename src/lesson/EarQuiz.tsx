@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { onCoachAction } from '../coach/session';
 import type { Chart } from '../engine/chart';
 import { kickChart, quizRound, rushedChart, type QuizKind } from '../engine/earQuiz';
@@ -15,12 +15,12 @@ export function EarQuiz({ kind, chart, play, onDone }: { kind: QuizKind; chart: 
   const [round, setRound] = useState(0), [right, setRight] = useState(0), [said, setSaid] = useState<{ ok: boolean; text: string }>();
   const [seed] = useState(() => Math.floor(Date.now() / 86_400_000) * 10); // a new set each day
   const q = quizRound(kind, round + seed);
-  const listen = () => {
-    setSaid(undefined);
+  const playRound = () => {
     if (kind === 'kick') { play(kickChart(q.answer)); return; }
     const [a, b] = q.answer === 0 ? [chart, rushedChart(chart)] : [rushedChart(chart), chart];
     play(a, () => setTimeout(() => play(b), 500));
   };
+  const listen = () => { setSaid(undefined); playRound(); };
   const answer = (i: number) => {
     if (said || i >= q.options.length) return;
     const ok = i === q.answer;
@@ -28,15 +28,15 @@ export function EarQuiz({ kind, chart, play, onDone }: { kind: QuizKind; chart: 
     setSaid({ ok, text: ok ? '✓ Right!' : `Not quite: ${q.options[q.answer].replace(' was steady', '')} was the one.` });
     setTimeout(() => { setSaid(undefined); setRound(r => r + 1); }, 1800);
   };
-  const act = useRef({ listen, answer }); act.current = { listen, answer };
-  useEffect(() => { if (round < ROUNDS) act.current.listen(); }, [round]);
+  const onRound = useEffectEvent(playRound), onListen = useEffectEvent(listen), onAnswer = useEffectEvent(answer);
+  useEffect(() => { if (round < ROUNDS) onRound(); }, [round]); // the verdict is already cleared when a round starts
   useEffect(() => {
     const offHit = onHit(h => {
       const i = ANSWER_PADS.indexOf(h.pad === 'hhOpen' ? 'hhClosed' : (h.pad as (typeof ANSWER_PADS)[number]));
-      if (i >= 0) act.current.answer(i); else if (h.pad === 'tom2') act.current.listen();
+      if (i >= 0) onAnswer(i); else if (h.pad === 'tom2') onListen();
     });
     const offCmd = onCoachAction(() => true); // the kit's taps answer the quiz
-    const onKey = (e: KeyboardEvent) => { if (/^[123]$/.test(e.key)) act.current.answer(Number(e.key) - 1); if (e.key === 'r') act.current.listen(); };
+    const onKey = (e: KeyboardEvent) => { if (/^[123]$/.test(e.key)) onAnswer(Number(e.key) - 1); if (e.key === 'r') onListen(); };
     window.addEventListener('keydown', onKey);
     return () => { offHit(); offCmd(); window.removeEventListener('keydown', onKey); };
   }, []);

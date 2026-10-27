@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { onCoachAction } from '../coach/session';
 import type { ChartNote } from '../engine/chart';
 import { limbPlan, noteHints } from '../engine/notation';
@@ -23,21 +23,20 @@ export function IntroSlides({ title, sub, bpm, what, notes, beatsPerBar, focus, 
   const last = demo ? 3 : 2;
   const next = () => (i >= last ? onDone() : setI(i + 1));
   const back = () => setI(Math.max(0, i - 1));
-  const nav = useRef({ next, back, onClose });
-  nav.current = { next, back, onClose };
+  const goNext = useEffectEvent(next), goBack = useEffectEvent(back), close = useEffectEvent(onClose);
 
   useEffect(() => {
     let at = -Infinity;
     const offHit = onHit(h => {
       if (h.time - at < TAP_GAP_MS) return;
-      if (h.pad === 'hhClosed' || h.pad === 'hhOpen') { at = h.time; nav.current.next(); }
-      else if (h.pad === 'snare') { at = h.time; nav.current.back(); }
+      if (h.pad === 'hhClosed' || h.pad === 'hhOpen') { at = h.time; goNext(); }
+      else if (h.pad === 'snare') { at = h.time; goBack(); }
     });
-    const offAction = onCoachAction(a => { if (a.kind === 'main') nav.current.next(); return true; }); // swallow the rest
+    const offAction = onCoachAction(a => { if (a.kind === 'main') goNext(); return true; }); // swallow the rest
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') nav.current.onClose();
-      else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); nav.current.next(); } // not the focused button behind
-      else if (e.key === 'ArrowLeft') nav.current.back();
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); goNext(); } // not the focused button behind
+      else if (e.key === 'ArrowLeft') goBack();
     };
     window.addEventListener('keydown', onKey, true); // capture: before the screen behind sees it
     return () => { offHit(); offAction(); window.removeEventListener('keydown', onKey, true); };

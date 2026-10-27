@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync } from 'no
 import { basename, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DATA_DIR } from './db.ts';
+import { childEnv } from './guard.ts';
 
 // Offline voice for the coach: Piper (https://github.com/OHF-Voice/piper1-gpl), installed with `uv tool install piper-tts`,
 // voice files in data/voices/. Rendered phrases are cached as WAV in data/tts/.
@@ -26,7 +27,7 @@ let helper: { proc: ChildProcessWithoutNullStreams; ready: Promise<void>; waitin
 let nextId = 1;
 
 function startHelper(p: { python: string; model: string }) {
-  const proc = spawn(p.python, [join(import.meta.dirname, 'piper_helper.py'), p.model], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const proc = spawn(p.python, [join(import.meta.dirname, 'piper_helper.py'), p.model], { env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
   const waiting = new Map<number, (e?: string) => void>();
   let readyFn!: () => void, failFn!: (e: Error) => void;
   const ready = new Promise<void>((res, rej) => { readyFn = res; failFn = rej; });

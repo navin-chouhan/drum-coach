@@ -7,6 +7,7 @@ import { createInterface } from 'node:readline';
 import { CoachReplySchema, type CoachReply } from '../../src/coach/schemas.ts';
 import { extractJson } from './coach.ts';
 import { AiError } from './providers.ts';
+import { childEnv } from '../guard.ts';
 
 // The live coaching conversation: ONE long-running `claude` process per practice session, so the coach remembers
 // every take and question, and answers stream back (no start-up per call). Restarts after IDLE or MAX_TURNS.
@@ -40,9 +41,7 @@ class CliSession {
       '--tools', '', '--safe-mode', '--no-session-persistence', '--system-prompt', SYSTEM()];
     if (process.env.CLAUDE_CLI_MODEL) args.push('--model', process.env.CLAUDE_CLI_MODEL);
     if (process.env.CLAUDE_CLI_EFFORT) args.push('--effort', process.env.CLAUDE_CLI_EFFORT);
-    const env = { ...process.env };
-    delete env.ANTHROPIC_API_KEY; // the subscription, not an API key
-    this.proc = spawn(bin, args, { cwd: this.cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
+    this.proc = spawn(bin, args, { cwd: this.cwd, env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'] }); // the subscription, not an API key
     this.proc.stderr.resume();
     createInterface({ input: this.proc.stdout }).on('line', line => this.onLine(line));
     const fail = (why: string) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useCharts, loadBacking, refreshCharts, type StoredChart } from '../content/charts';
 import { MILESTONES } from '../content/curriculum';
 import { currentMilestone, studentRead } from '../engine/planner';
@@ -23,6 +23,7 @@ const OPTS_KEY = 'drumcoach.playOptions';
 type Saved = Omit<PlayOptions, 'fromBar' | 'toBar' | 'backing'> & { chartId: string; climb?: boolean }; // climb: 2 clean takes → +5 BPM, up to 5 above your best
 const DEFAULTS: Saved = { chartId: 'rock-8ths', speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false, repeats: 4 };
 const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
+const idOf = (t?: Finished) => (t?.chart as { id?: string } | undefined)?.id; // a take's chart
 const TABS = [['foryou', 'For you'], ['groove', 'Grooves'], ['rudiment', 'Rudiments and drills'], ['fill', 'Fills'], ['song', 'Songs'], ['ai', 'From your coach']] as const;
 
 /**
@@ -67,6 +68,8 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   // fetched after the save, so suggestions and trophies include this take.
   // Climb: once your takes include this one, 2 clean takes at this tempo move it up 5, up to 5 above your best.
   const [climbedFor, setClimbedFor] = useState<Finished>();
+  const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
+  const atBpm = (b: number, c: StoredChart = chart) => Math.max(0.5, Math.min(MAX_SPEED, b / c.bpm));
   useEffect(() => {
     void (justDone ? saveRun(justDone) : Promise.resolve()).then(() => fetch('/api/runs')).then(r => r.json()).then((rs: RunRow[]) => {
       setRuns(rs);
@@ -79,14 +82,12 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     if (justDone && !warm) coachTake(justDone);
   }, [justDone]); // eslint-disable-line react-hooks/exhaustive-deps -- once per take
 
-  const chart: StoredChart = charts.find(c => c.id === o.chartId) ?? charts[0];
   const from = Math.min(section?.from ?? 1, chart.bars), to = Math.min(section?.to ?? chart.bars, chart.bars);
   const bpm = Math.round(chart.bpm * o.speed);
   const playing = player.phase === 'playing';
-  const lastTake = useRef<Finished>(undefined);
-  const idOf = (t?: Finished) => (t?.chart as { id?: string } | undefined)?.id;
-  if (justDone && idOf(justDone) === chart.id && !justDone.options.demo) lastTake.current = justDone;
-  const f = playing || idOf(lastTake.current) !== chart.id ? undefined : lastTake.current;
+  const [lastTake, setLastTake] = useState<Finished>();
+  if (justDone && idOf(justDone) === chart.id && !justDone.options.demo && justDone !== lastTake) setLastTake(justDone);
+  const f = playing || idOf(lastTake) !== chart.id ? undefined : lastTake;
   const hints = settings.hints !== false;
 
   async function go(speed = o.speed, extra?: Partial<PlayOptions>, c: StoredChart = chart) {
@@ -107,7 +108,6 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     }
     run();
   }
-  const atBpm = (b: number, c: StoredChart = chart) => Math.max(0.5, Math.min(MAX_SPEED, b / c.bpm));
   // about a minute of one warm-up exercise at its start tempo
   const warmTake = (id: string, at: number) => {
     const c = charts.find(x => x.id === id);
@@ -128,7 +128,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
   const nextChart = () => { const n = charts[charts.findIndex(c => c.id === chart.id) + 1] ?? charts[0]; set({ chartId: n.id }); setSection(null); };
 
   // What next: the coach's suggestion when it answered this take, otherwise the rule (two clean → +5, rough → −10).
-  const coach = useCoach(), opened = useRef(Date.now()).current;
+  const coach = useCoach(), [opened] = useState(Date.now);
   const reply = replyFor(coach, f, opened);
   const mineRuns = runs.filter(r => r.chartId === chart.id);
   const last = mineRuns[mineRuns.length - 1];
@@ -145,6 +145,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
     : next > bpm ? { label: `🐇 Try ${next}`, run: () => playAt(next) }
     : next < bpm ? { label: `🐢 Try ${next}`, run: () => playAt(next) }
     : { label: `▶ Again at ${bpm}`, run: () => void go() };
+  const againIsMain = !warm && !(act && canRunAction(act)) && !!f && next === bpm; // the last move above
   const line = warm ? (playing ? '' : warm.i + 1 < warm.ids.length && justDone ? `Warm-up ${warm.i + 1} of ${warm.ids.length} done. Next: ${charts.find(c => c.id === warm.ids[warm.i + 1])?.title}…` : `Warm-up ${warm.i + 1} of ${warm.ids.length}: ${chart.title} at ${bpm}.`)
     : reply?.show ?? reply?.say ?? (f ? (f === climbedFor ? `Two clean takes in a row! Up to ${bpm}.` : next > bpm ? `Two clean takes in a row! Ready for ${next}?` : next < bpm ? `Let's take it to ${next} and lock it in.` : `${f.stats.accuracy >= 90 ? 'Nice!' : 'Good.'} Once more at ${bpm}?`)
     : last && last.accuracy < 60 ? `Last time ${Math.round(last.bpm)} BPM was tricky. Let's warm up at ${startAt}.`
@@ -212,7 +213,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
         <div className="moves five">
           <Move go label={main.label} onClick={main.run} />
           <Move label={f && f.hits.length ? '🎧 Hear your take' : '👂 Hear it'} gesture="tom 2 × 2" onClick={listen} />
-          {f && !main.label.startsWith('▶ Again') ? <Move alt label={`▶ Again at ${bpm}`} onClick={() => void go()} />
+          {f && !againIsMain ? <Move alt label={`▶ Again at ${bpm}`} onClick={() => void go()} />
             : <Move alt label="🐇 +5 BPM" gesture="tom 1 × 2" onClick={() => playAt(bpm + 5)} />}
           <Move alt label="🐢 −5 BPM" gesture="floor × 2" onClick={() => playAt(bpm - 5)} />
           <Move alt label="⏭ Next one" gesture="ride × 2" onClick={nextChart} />
@@ -271,7 +272,7 @@ export function PlayView({ pending }: { pending?: { chartId: string; bpm?: numbe
             {settings.latencyMs !== 0 && <p className="small">Latency correction: {settings.latencyMs} ms</p>}
             {chart.hasAudio && <>
               <p className="small">Song sync: <b>{chart.syncOffsetMs ?? 0} ms</b>. If the notes arrive before the music, increase it.</p>
-              <div className="actions">{[-50, -10, 10, 50].map(ms => <button key={ms} onClick={() => nudge(ms)}>{ms > 0 ? '+' : ''}{ms}</button>)}</div>
+              <div className="actions">{[-50, -10, 10, 50].map(ms => <button key={ms} onClick={() => void nudge(ms)}>{ms > 0 ? '+' : ''}{ms}</button>)}</div>
             </>}
           </details>
           {error && <p className="warn">{error}</p>}
@@ -305,15 +306,14 @@ function Chooser({ charts, runs, level, onPick, onWarm }: { charts: StoredChart[
   const hearing = player.phase === 'playing' && !!player.options?.demo;
   const hear = (c?: StoredChart) => { if (hearing) { stop(); return; } if (c) start(c, { fromBar: 1, toBar: c.bars, repeats: 1, speed: startOf(c) / c.bpm, metronome: true, subdivision: 1, countInBars: 1, wait: false, demo: true }); };
   const step = () => setFocus(focus + 1 >= cards.length ? (resume ? -1 : 0) : focus + 1);
-  const moves = useRef({ focused, hear, step, warm }); moves.current = { focused, hear, step, warm };
-  useEffect(() => onCoachAction(a => {
-    const m = moves.current;
-    if (a.kind === 'main' && m.focused) { onPick(m.focused.id); return true; }
-    if (a.kind === 'next') { m.step(); return true; }
-    if (a.kind === 'listen') { m.hear(m.focused); return true; }
-    if (a.kind === 'faster') { m.warm(); return true; }
+  const onAction = useEffectEvent((a: Parameters<Parameters<typeof onCoachAction>[0]>[0]) => {
+    if (a.kind === 'main' && focused) { onPick(focused.id); return true; }
+    if (a.kind === 'next') { step(); return true; }
+    if (a.kind === 'listen') { hear(focused); return true; }
+    if (a.kind === 'faster') { warm(); return true; }
     return false;
-  }), [onPick]);
+  });
+  useEffect(() => onCoachAction(a => onAction(a)), []);
   const count = (id: (typeof TABS)[number][0]) => charts.filter(c => (id === 'ai' ? c.source === 'ai' : id === 'rudiment' ? ['rudiment', 'exercise'].includes(c.kind ?? 'exercise') : c.kind === id)).length;
   const list = q.trim() ? charts.filter(c => c.title.toLowerCase().includes(q.trim().toLowerCase())).map(chart => ({ chart, why: '' }))
     : tab === 'foryou' ? []
@@ -326,7 +326,7 @@ function Chooser({ charts, runs, level, onPick, onWarm }: { charts: StoredChart[
       <div className="pickTop">
         <div className={`card resume ${focus < 0 ? 'focus' : ''}`}>
           {resume ? <div className="resumeBig"><span className="ic" aria-hidden>{KIND_ICON[resume.kind ?? 'exercise']}</span>
-            <div className="kicker"><span>Pick up where you left off</span>played {new Date(lastRun!.startedAt).toLocaleDateString('en', { weekday: 'short' })} · {runs.filter(r => r.chartId === resume.id).length} takes</div>
+            <div className="kicker"><span>Pick up where you left off</span>played {new Date(lastRun.startedAt).toLocaleDateString('en', { weekday: 'short' })} · {runs.filter(r => r.chartId === resume.id).length} takes</div>
             <h2>{resume.title}</h2>
             <div>{resume.description && <p>{resume.description}</p>}
               <div className="meta"><span className="pill">starts at {startOf(resume)} today</span>{best(resume.id) > 0 && <span className="pill">best clean: {best(resume.id)} BPM</span>}{resume.source === 'ai' && <span className="pill">✍ by your coach</span>}</div></div>

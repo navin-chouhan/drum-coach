@@ -41,7 +41,7 @@ export function SongsPage({ openId: initial, bars }: { openId?: string; bars?: S
 
   return (
     <div className="ytPage">
-      <form className="ytSearch" onSubmit={search}>
+      <form className="ytSearch" onSubmit={e => void search(e)}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search a song (artist + title) or paste a YouTube link" aria-label="Search YouTube" />
         <button className="primary" disabled={busy}>{busy ? 'Searching…' : 'Search'}</button>
       </form>
@@ -55,7 +55,7 @@ export function SongsPage({ openId: initial, bars }: { openId?: string; bars?: S
               <li key={r.id}>
                 <img src={r.thumbnail} alt="" width={120} height={68} loading="lazy" />
                 <span className="grow"><b>{r.title}</b><br /><span className="small">{r.channel} · {fmt(r.durationSec)}</span></span>
-                <button onClick={() => pick(r)}>Learn this</button>
+                <button onClick={() => void pick(r)}>Learn this</button>
               </li>
             ))}
           </ul>
@@ -72,7 +72,7 @@ export function SongsPage({ openId: initial, bars }: { openId?: string; bars?: S
                 {s.drumlessId ? ' · drumless ✓' : ''}{s.notes.length ? ` · ${s.notes.length} notes transcribed` : ''}</span></span>
               <span className="actions">
                 <button className="primary" onClick={() => setOpenId(s.id)}>Open</button>
-                <button onClick={() => confirm(`Remove "${s.title}"? Your transcription is deleted too.`) && deleteSong(s.id)} aria-label={`Remove ${s.title}`}>Remove</button>
+                <button onClick={() => { if (confirm(`Remove "${s.title}"? Your transcription is deleted too.`)) void deleteSong(s.id); }} aria-label={`Remove ${s.title}`}>Remove</button>
               </span>
             </li>
           ))}

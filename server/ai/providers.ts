@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { childEnv } from '../guard.ts';
 
 /** A task's own model and effort (lesson writing uses a stronger model than the live chat). */
 export type ModelChoice = { model: string; effort: string };
@@ -35,9 +36,7 @@ export function claudeCliProvider(bin = process.env.CLAUDE_BIN || 'claude'): AiP
       if (model) args.push('--model', model);
       if (effort) args.push('--effort', effort); // low = less thinking, faster answers
       // Never hand the CLI an API key: it would bill the key instead of the subscription.
-      const env = { ...process.env };
-      delete env.ANTHROPIC_API_KEY;
-      const child = spawn(bin, args, { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = spawn(bin, args, { cwd, env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'] }); // the subscription, not an API key
       let out = '', err = '', settled = false;
       const done = (e?: AiError, text?: string) => {
         if (settled) return;

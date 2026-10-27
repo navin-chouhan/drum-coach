@@ -62,7 +62,7 @@ export function TempoMode({ song, videoId, yt }: ModeProps) {
       <p className="small">Press <b>Play</b>, then hit any pad (or a key) on every beat, starting on a "1" (the start of a bar).
         {known && !saved ? ' This song already has a tempo from another version, so 2–4 taps are enough.' : ' About 8–16 taps.'} Pause between tries to start over.</p>
       <label className="inline">Time signature
-        <select value={song.timeSignature.join('/')} onChange={e => patchSong(song.id, { timeSignature: SIGS.find(s => s.join('/') === e.target.value) })}>
+        <select value={song.timeSignature.join('/')} onChange={e => void patchSong(song.id, { timeSignature: SIGS.find(s => s.join('/') === e.target.value) })}>
           {SIGS.map(s => <option key={s.join('/')}>{s.join('/')}</option>)}
         </select>
       </label>
@@ -82,7 +82,7 @@ export function TempoMode({ song, videoId, yt }: ModeProps) {
             <button onClick={() => adjust(g => ({ ...g, bpm: g.bpm / 2 }))}>÷2</button>
           </div>
           <label className="check"><input type="checkbox" checked={check} onChange={e => setCheck(e.target.checked)} /> Click along so I can check it (accent = bar start)</label>
-          <div className="actions"><button className="primary" onClick={save}>Save tempo</button><button onClick={() => { setTaps([]); setDraft(null); }}>Clear taps</button></div>
+          <div className="actions"><button className="primary" onClick={() => void save()}>Save tempo</button><button onClick={() => { setTaps([]); setDraft(null); }}>Clear taps</button></div>
         </>
       )}
       {msg && <p className="small">{msg}</p>}
