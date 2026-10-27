@@ -15,6 +15,12 @@ const ROW_H = 120, HINT_H = 44, MIN_BAR_W = 230, FIRST_EXTRA = 70, MARK_H = 26;
 /** How a note went after a take (engine/takeMarks.ts), as a colour. */
 export const TONE = { good: '#1E9E5A', ok: '#C77700', bad: '#E8423F' } as const;
 const SAY = '#2F6FE4'; // a syllable you say but don't play
+/** The narrowest bar with hints: room for every syllable of the count (a bar of 16ths needs more than one of quarters). */
+const hintBarMin = (notes: { t: number }[], bpb: number) => {
+  const per = new Map<number, Set<number>>();
+  for (const n of notes) { const b = Math.floor(n.t / bpb + 1e-6); per.set(b, (per.get(b) ?? new Set()).add(Math.round(n.t * 1000))); }
+  return Math.max(300, 24 * Math.max(0, ...[...per.values()].map(x => x.size)));
+};
 /** Row height: hints (count and hand/foot under each note) need room below the feet's stems. */
 const rowHeight = (hints?: boolean) => ROW_H + (hints ? HINT_H : 0);
 let fontReady: Promise<unknown> | null = null;
@@ -146,20 +152,26 @@ export function renderSheet(el: HTMLElement, o: SheetOptions): { measures: Measu
         const h = hs.find(q => Math.abs(q.t - t) < 1e-3), word = h?.count ?? (t % 1 ? '&' : String(t + 1));
         const hx = xAtBeat(points, barStart + t) + 2;
         ctx.setFillStyle(h ? '#141414' : SAY);
-        ctx.setFont('Arial', 18, 'bold'); ctx.fillText(word, hx - ctx.measureText(word).width / 2, y + ROW_H + 8);
+        ctx.setFont('Arial', say8 ? 18 : 14, 'bold'); ctx.fillText(word, hx - ctx.measureText(word).width / 2, y + ROW_H + 8); // 16ths and triplets need the room
         if (h) { ctx.setFont('Arial', 12, 'bold'); ctx.fillText(h.limbs, hx - ctx.measureText(h.limbs).width / 2, y + ROW_H + 26); }
       }
       ctx.setFillStyle('#000');
     }
-    if (o.marks) ([[m.hands, hands.notes], [m.feet, feet.notes]] as const).forEach(([evs, notes]) => evs.forEach((e, ei) => {
-      // the note's word above the staff (a chord: the worst of its heads)
-      const ms = e.heads.flatMap(h => (h.i === undefined ? [] : [o.marks!(h.i)])).filter(Boolean) as NoteMark[];
-      const w = ms.find(x => x.tone === 'bad') ?? ms.find(x => x.tone === 'ok') ?? ms[0];
-      if (!w) return;
-      const nx = notes[ei].getAbsoluteX() + notes[ei].getGlyphWidth() / 2;
-      ctx.setFillStyle(TONE[w.tone]); ctx.setFont('Arial', 13, 'bold'); ctx.fillText(w.word, nx - ctx.measureText(w.word).width / 2, y - 6);
+    if (o.marks) { // each note's word above the staff (a chord: the worst of its heads), where it fits; the colour is on the note anyway
+      const words = ([[m.hands, hands.notes], [m.feet, feet.notes]] as const).flatMap(([evs, notes]) => evs.flatMap((e, ei) => {
+        const ms = e.heads.flatMap(h => (h.i === undefined ? [] : [o.marks!(h.i)])).filter(Boolean) as NoteMark[];
+        const w = ms.find(x => x.tone === 'bad') ?? ms.find(x => x.tone === 'ok') ?? ms[0];
+        return w ? [{ w, x: notes[ei].getAbsoluteX() + notes[ei].getGlyphWidth() / 2 }] : [];
+      })).sort((a, b) => a.x - b.x);
+      ctx.setFont('Arial', 13, 'bold');
+      let end = -Infinity;
+      for (const { w, x: nx } of words) {
+        const width = ctx.measureText(w.word).width;
+        if (nx - width / 2 < end + 6) continue;
+        ctx.setFillStyle(TONE[w.tone]); ctx.fillText(w.word, nx - width / 2, y - 6); end = nx + width / 2;
+      }
       ctx.setFillStyle('#000');
-    }));
+    }
     for (const b of o.extras ?? []) if (b >= barStart - 1e-6 && b < barStart + bpb - 1e-6) { // an extra hit: a grey ✕ where it landed
       ctx.setFillStyle('#777'); ctx.setFont('Arial', 20, 'bold'); const hx = xAtBeat(points, b); ctx.fillText('×', hx - 6, y + 14);
       ctx.setFont('Arial', 10, 'bold'); ctx.fillText('extra', hx - 12, y + 26); ctx.setFillStyle('#000');
@@ -206,7 +218,7 @@ export function SheetMusic({ notes, timeSignature, fromBar = 1, toBar, title, bp
     fontReady ??= document.fonts.load('30px Bravura');
     void fontReady.then(() => {
       if (cancelled || !host.current) return;
-      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, dyn, form, marks, extras, scale: width < 500 ? 1 : zoom, barMin: hints ? 320 : 250 }); setError(''); } // hints need room at the barlines
+      try { renderSheet(host.current, { notes, timeSignature, fromBar, toBar, title, bpm, width, hints, dim, dyn, form, marks, extras, scale: width < 500 ? 1 : zoom, barMin: hints ? hintBarMin(notes, (timeSignature[0] * 4) / timeSignature[1]) : 250 }); setError(''); } // hints need room at the barlines
       catch (e) { setError(`Couldn't draw this part: ${(e as Error).message}`); }
     });
     return () => { cancelled = true; };
@@ -262,7 +274,7 @@ export function SheetPlayer() {
     let origin = { x: 0, y: 0 }; // where the SVG's (0,0) is inside the stage
     const done = new Set<NoteGroup>(), shownX = new Set<number>();
     const bpb = run.beatsPerBar, totalBars = Math.ceil(run.beats / bpb - 1e-6);
-    const scale = w < 700 ? 1.1 : player.options?.lesson || player.options?.hints ? 1.6 : 1.35, barMin = player.options?.hints ? 320 : 270; // read from the throne
+    const scale = w < 700 ? 1.1 : player.options?.lesson || player.options?.hints ? 1.6 : 1.35, barMin = player.options?.hints ? Math.max(320, hintBarMin(run.notes, run.beatsPerBar)) : 270; // read from the throne
     const perRow = Math.max(1, Math.floor(((w - 16) / scale - FIRST_EXTRA - 10) / barMin));
     const hints = player.options?.hints, rows = Math.max(1, Math.floor((h - 20) / (rowHeight(hints) * scale)));
     const perPage = perRow * rows;

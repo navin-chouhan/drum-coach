@@ -823,3 +823,58 @@ table.lessonsTable td b{font-family:var(--display)}
 .human .ic{font-size:26px}
 @media (max-width:1100px){ .progRow2,.progRow3,.better{grid-template-columns:1fr} .tiles3{grid-template-columns:repeat(3,1fr)} .prog{padding:18px 18px 96px} .skill{grid-template-columns:1fr;gap:6px} }
 @media (max-width:700px){ .better{grid-template-columns:1fr} table.lessonsTable th:nth-child(4),table.lessonsTable td:nth-child(4),table.lessonsTable th:nth-child(6),table.lessonsTable td:nth-child(6){display:none} }
+
+/* --- Practice: pick from the throne (a ring the ride moves), a warm-up, the lesson layout with tempo, Climb and history --- */
+.pickTop{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
+.resume{display:flex;flex-direction:column;gap:14px;padding:18px 20px}
+.resume.focus{outline:5px solid var(--pop);outline-offset:3px}
+.resumeBig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 18px;align-items:center;padding:14px 16px;background:var(--pop);border:3px solid var(--line)}
+.resumeBig .ic{grid-row:span 3;font-size:58px;line-height:1}
+.resumeBig h2{margin:2px 0;font-size:32px;line-height:1.1}
+.resumeBig p{margin:0;font-size:16px}
+.resumeNew{font-size:18px;margin:0}
+.resume .moves{grid-template-columns:2fr 1fr 1fr}
+.warm{display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:var(--night);color:#fff}
+.warm h3{background:var(--pop);color:var(--line)}
+.warm p{margin:0}
+.warm ol{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.warm li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border:2px solid #555;font-weight:700}
+.warm li span{color:var(--pop);white-space:nowrap}
+.warm .move{color:var(--text)}
+.browse{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.browse .lbl{font:800 12px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--line);color:var(--pop);padding:3px 8px}
+.browse .sp{flex:1}
+.browse input{font:inherit;padding:8px 12px;border:3px solid var(--line);border-radius:999px;min-width:220px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.exCard2{position:relative;display:flex;flex-direction:column;gap:6px;text-align:left;padding:16px;border:3px solid var(--line);border-radius:0;background:var(--panel2);box-shadow:4px 4px 0 var(--line);min-height:150px}
+.exCard2.ai{border-style:dashed}
+.exCard2.all{background:var(--panel)}
+.exCard2 .ic{font-size:30px} .exCard2 b{font:800 19px/1.15 var(--display)}
+.exCard2 .tag{align-self:flex-start;background:var(--night);color:var(--nightText);font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.exCard2 .small{font-size:13px}
+.exCard2.focus{background:var(--panel);outline:5px solid var(--pop);outline-offset:3px;box-shadow:0 0 0 11px var(--line)}
+.exCard2.focus::after{content:"hi-hat pedal × 3 to play";position:absolute;right:8px;top:-15px;background:var(--pop);border:2px solid var(--line);font:800 12px var(--display);padding:2px 8px;z-index:2}
+.tabRow{display:flex;gap:8px;flex-wrap:wrap}
+.tabRow button{font-weight:700;border:2px solid var(--line)} .tabRow button.on{background:var(--pop)}
+.tabRow small{color:var(--muted)}
+.tempoBox{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tempoBox .st{width:48px;height:48px;padding:0;font:800 26px var(--display);border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line);background:var(--panel)}
+.tempoBox .n{font:800 44px/1 var(--display);min-width:84px;text-align:center} .tempoBox .n small{display:block;font:700 12px system-ui;color:var(--muted)}
+.bestHere{font-size:13px;font-weight:700;color:var(--muted);max-width:120px;line-height:1.25}
+.climb{display:flex;align-items:center;gap:12px}
+.climb small{display:block;color:#ccc;font-size:13px}
+.goalBar .sw{border-color:#fff;background:#555;flex:none}
+.goalBar .sw.on{background:var(--good)}
+.goalBar .ladder{color:#ccc}
+.goalBar .rungs i{border-color:#fff;background:transparent} .goalBar .rungs i.at{background:var(--pop)} .goalBar .rungs i.goal{background:var(--good)}
+.chipGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chipGrid button{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border:2px solid var(--line);border-radius:0;font-weight:700;font-size:13.5px;background:var(--panel)}
+.chipGrid button.on{background:var(--pop)}
+.chipGrid button small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}
+.hist{display:flex;gap:10px;align-items:center;font-size:14px}
+.hist svg{flex:none}
+.practice .barPick{padding:10px 12px}
+@media (max-width:1100px){ .pickTop{grid-template-columns:1fr} .grid4{grid-template-columns:1fr 1fr} .resume .moves{grid-template-columns:1fr 1fr} }
+@media (max-width:700px){ .grid4{grid-template-columns:1fr} .tempoBox{margin-left:0} .chipGrid{grid-template-columns:1fr} }
+.practice:not(.playing) .lessonMusic .sheetIdle{padding-top:14px}
+.practice:not(.playing) .lessonMusic .viewSwitch{top:-46px}
