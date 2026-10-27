@@ -34,6 +34,7 @@ results.
 | ID | Question | Default / recommendation | Answer |
 |---|---|---|---|
 | D0 | Devices | — | **iPad only, landscape locked** (`ios.isTabletOnly`). Layouts are width-based so iPhone can be added later. iPhone joins Android under "later". M7 skipped. |
+| Dev loop | Where builds and tests run | — | **Build + install on the Mac; Metro and tests on Linux** (owner). Rebuild on the Mac only for native changes or every 7 days. M1 and M8 are done on the Mac during the install session. |
 | D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | — (waits for the run) |
 | D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
 | D3 | Data | one-time import of `data/`, then the device is the source of truth | **Start fresh on the iPad.** No import tool. `data/` untouched. No sync. |
@@ -74,3 +75,4 @@ results.
 - 2026-10-27: Owner decisions: iPad only + landscape (D0), free Apple ID (B7), coach = home server first with an
   API-key fallback (D2), start fresh (D3), fresh iPad-native mockups (D4), lean v1 + Share take with Songs next
   (D5). D1 waits for the device run. M7 is marked skipped in the checklist.
+- 2026-10-27: Owner dev loop: Mac to build/install, Linux for Metro and the kit tests (checklist section A2).

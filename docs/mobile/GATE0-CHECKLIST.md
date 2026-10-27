@@ -37,6 +37,23 @@ iPhone model ______ iOS ______ Apple ID type: free / paid (free builds expire af
 
 ---
 
+## A2. Owner's flow: install from the Mac, then test from Linux
+
+The Mac is only needed to **build and install** (section A, step 0, M1 and M8, about 30 min). Then the kit tests
+run with **Metro on the Linux machine**:
+1. On Linux: `git fetch origin && git checkout claude/drum-coach-expo-ios-x6c1iq && git pull`, then
+   `cd spikes/midi-probe && npm ci && npx expo start --dev-client --lan`.
+2. Note the `exp+...://...` URL or the QR code it prints. Allow TCP port **8081** in the Linux firewall if one is on
+   (e.g. `sudo ufw allow 8081/tcp`).
+3. On the iPad, open MIDI Probe → the dev launcher → **Enter URL manually** with `http://<linux-ip>:8081` (or scan the
+   QR code). The Mac can now be off. The iPad and Linux machine must be on the same Wi-Fi.
+4. Do M2–M6 at the kit, then M5's web half on the same Linux machine.
+
+Rebuild on the Mac only when native code changes (`modules/drum-midi/ios/*.swift`, `app.json`, new native
+libraries), or every 7 days (free Apple ID).
+
+---
+
 ## B. Step 0: the app builds and opens
 
 1. Open MIDI Probe on the iPad (kit not plugged in yet).
