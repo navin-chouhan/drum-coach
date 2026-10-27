@@ -86,7 +86,7 @@ function ThroneCheck({ onDone }: { onDone: () => void }) {
   const act = useRef<{ answer: (a: number) => void }>({ answer: () => {} });
   act.current.answer = (a: number) => {
     if (!step) return;
-    if (a === 1) { const k = i + 1; setI(k); if (k >= STEPS.length) { clearInterval(loop.current); onDone(); } else play(k); return; }
+    if (a === 1) { const k = i + 1; setI(k); if (k >= STEPS.length) { clearInterval(loop.current); setSettings({ soundChecked: true }); onDone(); } else play(k); return; }
     setSettings({ [step.key]: nudgeLevel(getSettings()[step.key] ?? (step.key === 'bandVolume' ? 0.6 : 1), a, step.key) }); applyLevels();
     if (step.key === 'voiceVolume') play(i);
   };

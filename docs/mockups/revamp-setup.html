@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup revamp</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .setup{max-width:1400px;margin:0 auto;padding:22px 32px 96px;display:flex;flex-direction:column;gap:20px}
+  .subTabs2{display:flex;gap:6px;justify-content:flex-end;padding:8px 20px;background:var(--night);border-top:1px solid #333}
+  .subTabs2 button{background:transparent;border-color:transparent;color:#fff;font:700 13.5px var(--display)}
+  .subTabs2 button.on{background:var(--pop);color:var(--line)}
+  .screen header .gearBtn.on{background:var(--pop);color:var(--line);border-radius:999px}
+
+  /* Kit status: one glance, big enough from the throne. */
+  .status{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:center;padding:16px 20px}
+  .status .ring{width:110px;height:110px} .status .ring div{width:78px;height:78px;font-size:15px}
+  .status h2{margin:0 0 6px;font:800 28px var(--display)}
+  .lights{display:flex;gap:10px;flex-wrap:wrap}
+  .light{display:flex;align-items:center;gap:8px;padding:6px 12px;border:2px solid var(--line);font-weight:700;background:var(--panel)}
+  .light i{width:12px;height:12px;border-radius:50%;background:var(--good);border:2px solid var(--line)} .light.warn i{background:var(--ok)}
+  .lastHit{font:800 20px var(--display);text-align:right} .lastHit small{display:block;font:700 13px system-ui;color:var(--muted)}
+
+  /* The checklist: one row per check, what it fixes in plain words, one button. */
+  .checks{display:flex;flex-direction:column}
+  .chk{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 4px;border-top:2px solid #0001}
+  .chk .st{width:46px;height:46px;border-radius:50%;border:3px solid var(--line);display:grid;place-items:center;font:800 22px var(--display);background:var(--panel)}
+  .chk.ok .st{background:var(--good);color:#fff} .chk.todo .st{background:var(--pop)} .chk.first{background:#FFF6CC;outline:3px solid var(--line);outline-offset:-3px;padding:14px 12px}
+  .chk b{font:800 19px var(--display)} .chk .t{font-size:13px;font-weight:700;color:var(--muted);margin-left:8px}
+  .chk p{margin:4px 0 0;font-size:15px}
+  .chk .why{color:var(--bad);font-weight:700}
+  .chk button.primary{font-size:16px;padding:10px 16px}
+  .tag1{display:inline-block;background:var(--bad);color:#fff;font:800 11px var(--display);padding:2px 8px;margin-left:8px;vertical-align:middle}
+  .hand{display:inline-flex;border:2px solid var(--line)} .hand button{border:0;border-radius:0;border-right:2px solid var(--line);font-weight:700}
+  .hand button:last-child{border-right:0} .hand .on{background:var(--pop)}
+  details.adv summary{cursor:pointer;font:800 15px var(--display)}
+  .noteGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:12px}
+  .noteGrid label{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:700}
+  .noteGrid input{font:inherit;padding:6px 8px;border:2px solid var(--line);background:var(--panel2);width:100%}
+
+  /* The pad wizard at the kit: the pad to hit, huge; what it heard so far. */
+  .wiz{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+  .wizBig{background:var(--night);color:#fff;border:3px solid var(--line);box-shadow:6px 6px 0 var(--pop);padding:18px 22px;text-align:center}
+  .wizBig .k{font:800 14px var(--display);letter-spacing:.06em;color:var(--pop);text-transform:uppercase}
+  .wizBig h2{margin:6px 0 4px;font:800 64px/1 var(--display);color:#fff}
+  .wizBig p{margin:0;font-size:20px;color:#ddd}
+  .wizBig svg{width:100%;max-width:620px;height:auto;margin:10px auto 0;display:block}
+  .pulse{animation:pulse 1s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+  @keyframes pulse{50%{transform:scale(1.12)}}
+  @media (prefers-reduced-motion: reduce){.pulse{animation:none}}
+  .heard{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .heard li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border:2px solid var(--line);background:var(--panel);font-weight:700}
+  .heard li.ok{background:#E3F5EA} .heard li.cur{background:var(--pop)} .heard li span{color:var(--muted)}
+  .wizMoves{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+  /* Coach and voice: groups with short toggles instead of eight long checkbox sentences. */
+  .groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+  .tg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:10px 0;border-top:2px solid #0001}
+  .tg b{font:800 16px var(--display)} .tg span.d{grid-column:1;font-size:13.5px;color:var(--muted)}
+  .sw{grid-row:span 2;width:56px;height:30px;border:3px solid var(--line);border-radius:999px;background:#ddd;position:relative}
+  .sw::after{content:"";position:absolute;top:2px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--line)}
+  .sw.on{background:var(--good)} .sw.on::after{left:27px}
+  .sel{grid-row:span 2;display:inline-flex;border:2px solid var(--line)} .sel button{border:0;border-radius:0;border-right:2px solid var(--line);font-weight:700;font-size:12.5px}
+  .sel button:last-child{border-right:0} .sel .on{background:var(--pop)}
+  .gest{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;margin-top:10px;font-size:14px;align-items:center}
+  .gest i{font-style:normal;background:var(--night);color:var(--pop);border-radius:999px;padding:2px 10px;font-weight:700;white-space:nowrap;justify-self:start}
+  .claudeOk{display:flex;gap:10px;align-items:center;padding:8px 12px;background:#E3F5EA;border:2px solid var(--line);font-weight:700}
+  .slider{grid-row:span 2;display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px}
+  .slider input{width:140px;accent-color:var(--accent)}
+
+  @media (max-width:1100px){ .wiz,.groups{grid-template-columns:1fr} .setup{padding:18px 18px 96px} .noteGrid{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:700px){ .status{grid-template-columns:1fr} .lastHit{text-align:left} .chk{grid-template-columns:44px 1fr} .chk>button,.chk>.hand{grid-column:2} .wizMoves{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · Setup revamp</b> "Your kit" becomes a checklist that says what each check fixes, latency first because your takes point at it. Coach and voice in groups. Real data: your settings. Not built.</div>
+
+<section class="state keep" id="a">
+  <h2>A · Your kit, today</h2>
+  <div class="note">From your data: latency never measured (0 ms), "soft, then loud" not done, pads not checked since the tom fix; sound
+    levels set (click 125%, voice 45%); right-handed. Your last 6 takes all landed about 0.1 s late, so the latency check is marked
+    <b>do this first</b>. The red kit chip on every screen opens this page.</div>
+  <div class="screen" data-screen="kit"></div>
+</section>
+
+<section class="state" id="b">
+  <h2>B · "Hit each pad once", readable from the throne</h2>
+  <div class="note">Same wizard, same order and checks (it still stops you if two pads send one note, the way your low tom once sent the
+    crash's 49). New: the pad to hit is huge and pulses on a drawing of your kit, the list shows what each pad sent, and nothing
+    needs the mouse. Hitting the pad is the answer; a wrong pad just shows "that was the snare, hit tom 1".</div>
+  <div class="screen" data-screen="wizard"></div>
+</section>
+
+<section class="state" id="c">
+  <h2>C · Coach and voice</h2>
+  <div class="note">Today: two cards, eight checkbox sentences (one is 60 words long), the weekly plan's goals in a third. Now four groups,
+    each switch with a two-to-five word title and one line under it. The pad gestures are a table, not a sentence. Your real settings shown.</div>
+  <div class="screen" data-screen="coach"></div>
+</section>
+
+<section class="state" id="d">
+  <h2>D · iPad (768 px)</h2>
+  <iframe class="dev" data-src="revamp-setup.html?only=a" width="768" height="1024" title="Setup at iPad width"></iframe>
+</section>
+
+<section class="state" id="map">
+  <h2>Where everything went</h2>
+  <table class="map">
+    <tr><th>In Setup today</th><th>In the revamp</th></tr>
+    <tr><td>Sub-tabs Pads · Kit test · Coach and voice</td><td>Your kit · Kit test · Coach and voice</td></tr>
+    <tr><td>MIDI and sound chips in the header</td><td>The kit status at the top of Your kit (and the one kit chip in the header)</td></tr>
+    <tr><td>Cards: hit each pad, soft then loud, latency, sound check, which hand leads</td><td>One checklist: status, what it fixes, how long, one button; the open one expands in place</td></tr>
+    <tr><td>"Which hand leads": a checkbox in a big empty card</td><td>A Right / Left switch on its checklist row</td></tr>
+    <tr><td>Note map: ten fields down the side</td><td>Under "Advanced", five across</td></tr>
+    <tr><td>Emulated kit (a testing tool)</td><td>Under "Advanced", marked "for testing"</td></tr>
+    <tr><td>AI coach card: two selects, eight long checkboxes; weekly plan card</td><td>Voice · While you play · Sticks in hand · Claude and your plan</td></tr>
+    <tr><td>Pad commands explained in one long sentence</td><td>A gesture table under the switch</td></tr>
+    <tr><td>Kit test tab</td><td>Unchanged</td></tr>
+  </table>
+</section>
+
+<script>
+const only = new URLSearchParams(location.search).get('only');
+if (only) { document.body.classList.add('only'); document.querySelectorAll('.state').forEach(el => el.classList.toggle('keep', el.id === only)); }
+else document.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
+
+const header = sub => `<header>
+  <div class="brand"><span class="logo"></span>Drum Coach</div>
+  <nav class="tabs"><button>Journey</button><button>Songs</button><button>Practice</button><button>Progress</button></nav>
+  <span class="spacer"></span>
+  <button class="chip kitChip bad"><span class="dot"></span><span class="long">Kit: </span>2 things to fix ▾</button>
+  <button class="gearBtn on" aria-label="Setup">⚙</button></header>
+  <nav class="subTabs2">${['Your kit', 'Kit test', 'Coach and voice'].map(t => `<button class="${t === sub ? 'on' : ''}">${t}</button>`).join('')}</nav>`;
+
+// The MPS-150 from above: [id, name, x, y, r, note]
+const PADS = [['hhOpen', 'Hi-hat', 90, 120, 46, 46], ['crash', 'Crash', 170, 60, 44, 49], ['tom1', 'Tom 1', 270, 92, 34, 48], ['tom2', 'Tom 2', 360, 92, 34, 45],
+  ['ride', 'Ride', 470, 70, 50, 51], ['snare', 'Snare', 190, 190, 42, 38], ['floor', 'Floor tom', 430, 196, 44, 43]];
+function kitSvg(cur, done) {
+  let s = `<svg viewBox="0 0 560 300" aria-label="Your kit from above, ${cur} highlighted">`;
+  for (const [id, name, x, y, r] of PADS) {
+    const on = id === cur, ok = done.includes(id);
+    s += `<g class="${on ? 'pulse' : ''}"><circle cx="${x}" cy="${y}" r="${r}" fill="${on ? '#FFE14D' : ok ? '#1E9E5A' : '#333'}" stroke="${on ? '#fff' : '#888'}" stroke-width="${on ? 5 : 2}"/>
+      <text x="${x}" y="${y + 5}" text-anchor="middle" font-size="${on ? 17 : 13}" font-weight="800" fill="${on ? '#141414' : '#fff'}">${ok ? '✓ ' : ''}${name}</text></g>`;
+  }
+  const kOk = done.includes('kick');
+  s += `<rect x="250" y="226" width="110" height="54" rx="8" fill="${kOk ? '#1E9E5A' : '#333'}" stroke="#888" stroke-width="2"/><text x="305" y="258" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">${kOk ? '✓ ' : ''}Kick</text>`;
+  s += `<rect x="40" y="240" width="80" height="34" rx="6" fill="#1E9E5A" stroke="#888" stroke-width="2"/><text x="80" y="262" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">✓ HH pedal</text>`;
+  return s + '</svg>';
+}
+
+const kitPage = () => `${header('Your kit')}<div class="setup">
+  <div class="card status rel new">
+    <div class="ring" style="--p:50%"><div>3 of 6<br>done</div></div>
+    <div><h2>e-Drum MIDI 1</h2>
+      <div class="lights"><span class="light"><i></i>Kit connected</span><span class="light"><i></i>Sound on</span><span class="light warn"><i></i>Latency not measured</span></div></div>
+    <div class="lastHit">Snare · 38<small>last hit, velocity 92</small></div>
+  </div>
+
+  <div class="card checks rel new"><h3>Get your kit ready</h3>
+    <div class="chk todo first"><span class="st">!</span>
+      <span><b>Latency</b><span class="t">1 min</span><span class="tag1">DO THIS FIRST</span>
+        <p>Tap a pad with the click 16 times. The app learns how late your speakers or headphones are and corrects every score.</p>
+        <p class="why">Your last 6 takes all landed about 0.1 s after the click. If that's the setup, this fixes it.</p></span>
+      <button class="primary">Start ▶</button></div>
+    <div class="chk todo"><span class="st">!</span>
+      <span><b>Hit each pad once</b><span class="t">30 s</span>
+        <p>So a hit on tom 1 counts as tom 1. Worth redoing after you change a note on the module.</p></span>
+      <button class="primary">Start ▶</button></div>
+    <div class="chk"><span class="st">3</span>
+      <span><b>Soft, then loud</b><span class="t">2 min</span>
+        <p>Four soft and four loud strokes per pad, so accents and ghost notes are judged fairly on every pad.</p></span>
+      <button>Start ▶</button></div>
+    <div class="chk ok"><span class="st">✓</span>
+      <span><b>Sound levels</b><p>Click and music 125% · coach voice 45% · band 60%. Check them from the throne with a simple beat.</p></span>
+      <button>Check again</button></div>
+    <div class="chk ok"><span class="st">✓</span>
+      <span><b>Which hand leads</b><p>Hints, intro slides and How it moves follow this. Scoring doesn't change.</p></span>
+      <span class="hand"><button class="on">Right-handed</button><button>Left-handed</button></span></div>
+    <div class="chk ok"><span class="st">✓</span>
+      <span><b>Kit connected</b><p>Chrome on Linux, e-Drum MIDI 1. If it ever says "blocked": the icon left of the address bar → allow MIDI.</p></span>
+      <span></span></div>
+  </div>
+
+  <details class="card adv rel new"><summary>Advanced: note map, emulated kit</summary>
+    <p class="small" style="margin-top:10px">The note each pad sends. "Hit each pad once" fills this in; change a number only if you changed it on the module (VOICE → PAGE to Nxx).</p>
+    <div class="noteGrid">${[['Kick', 36], ['Snare', 38], ['Hi-hat closed', 42], ['Hi-hat open', 46], ['Hi-hat pedal', 44], ['Tom 1', 48], ['Tom 2', 45], ['Floor tom', 43], ['Crash', 49], ['Ride', 51]].map(([n, v]) => `<label>${n}<input value="${v}"></label>`).join('')}</div>
+    <p style="margin-top:10px"><button>Reset to MPS-150 defaults</button></p>
+    <p class="small"><b>Emulated kit (for testing the app without playing):</b> plays every take like a steady player. Off.</p>
+  </details>
+</div>`;
+
+const wizardPage = () => `${header('Your kit')}<div class="setup">
+  <div class="card checks"><h3>Get your kit ready</h3>
+    <div class="chk todo"><span class="st">!</span><span><b>Hit each pad once</b><span class="t">step 6 of 10</span></span><button>Cancel (Esc)</button></div></div>
+  <div class="wiz">
+    <div class="wizBig rel new"><div class="k">Pad 6 of 10</div><h2>Hit TOM 1</h2><p>The small tom on the left, above the snare.</p>${kitSvg('tom1', ['kick', 'snare', 'hhOpen'])}</div>
+    <div class="card"><h3>What each pad sent</h3>
+      <ul class="heard">${[['Kick', 36, 'ok'], ['Snare', 38, 'ok'], ['Hi-hat (open)', 46, 'ok'], ['Hi-hat pedal', 44, 'ok'], ['Hi-hat, pedal down', 42, 'ok'], ['Tom 1', '…', 'cur'], ['Tom 2', '', ''], ['Floor tom', '', ''], ['Crash', '', ''], ['Ride', '', '']]
+        .map(([n, v, c]) => `<li class="${c}">${c === 'ok' ? '✓ ' : ''}${n}<span>${v}</span></li>`).join('')}</ul>
+      <p class="small" style="margin-top:10px">If two pads send the same note, it stops and shows how to fix it on the module.</p></div>
+  </div>
+  <div class="wizMoves">
+    <button class="move alt"><b>↶ Back</b><span class="g"><i>key ←</i></span></button>
+    <button class="move alt"><b>Skip this pad</b><span class="g small">keeps 48</span></button>
+    <button class="move alt"><b>✕ Stop</b><span class="g"><i>Esc</i></span></button>
+  </div>
+</div>`;
+
+const sw = on => `<span class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}"></span>`;
+const tg = (b, d, ctl) => `<div class="tg"><b>${b}</b>${ctl}<span class="d">${d}</span></div>`;
+const coachPage = () => `${header('Coach and voice')}<div class="setup">
+  <div class="groups">
+    <div class="card rel new"><h3>Voice</h3>
+      ${tg('Speak the verdicts', 'After each take you hear what the screen says.', sw(true))}
+      ${tg('Count me in out loud', '"One, two, three, four" before each take.', sw(true))}
+      ${tg('Coach voice volume', 'Clear, but not louder than the kit.', '<span class="slider"><input type="range" value="45">45%</span>')}
+      ${tg('Talk back hands-free', 'When the coach asks something, it listens without holding V.', sw(false))}
+      <p style="margin-top:8px"><button>▶ Test the voice</button></p></div>
+
+    <div class="card rel new"><h3>While you play</h3>
+      ${tg('Live tips', 'One short tip during a take when something repeats.', '<span class="sel"><button>Off</button><button class="on">Screen</button><button>+ spoken</button></span>')}
+      ${tg('How much the coach says', 'Short is easier to take in from the throne.', '<span class="sel"><button>Short</button><button class="on">Normal</button><button>More</button></span>')}
+      ${tg('Autopilot', 'After a take, the next move starts by itself in 5 s. Any pad hit waits.', sw(false))}</div>
+
+    <div class="card rel new"><h3>Sticks in hand</h3>
+      ${tg('Pad commands', 'Answer the screen from the kit, between takes.', sw(true))}
+      <div class="gest"><i>hi-hat pedal × 3</i><span>yes / the big blue move (or crash × 2, or say "yes")</span>
+        <i>ride × 2</i><span>next / something else</span><i>tom 2 × 2</i><span>listen</span>
+        <i>floor × 2</i><span>slower</span><i>tom 1 × 2</i><span>faster (Practice)</span><i>crash × 4</i><span>stop, during a take</span></div></div>
+
+    <div class="card rel new"><h3>Claude and your plan</h3>
+      <div class="claudeOk">✓ Claude Code is logged in. Coach calls use your subscription.</div>
+      ${tg('The coach follows my practice', 'Greets each lesson, reacts to takes, suggests the next step. One call each.', sw(true))}
+      ${tg('The coach writes the tips', 'Once per exercise, then saved.', sw(true))}
+      ${tg('Goals', 'What the coach plans towards.', '<span class="sel"><button class="on">Rock</button><button>Funk</button><button>Jazz</button><button>Songs</button></span>')}
+      ${tg('Minutes a day', 'Your daily set and the goal line in Progress.', '<span class="sel"><button>15</button><button class="on">25</button><button>40</button></span>')}</div>
+  </div>
+</div>`;
+
+document.querySelector('[data-screen="kit"]').innerHTML = kitPage();
+document.querySelector('[data-screen="wizard"]').innerHTML = wizardPage();
+document.querySelector('[data-screen="coach"]').innerHTML = coachPage();
+</script>
+</body>
+</html>

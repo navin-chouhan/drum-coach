@@ -78,3 +78,17 @@ export function skillGrowth(lessons: Lesson[], progress: Record<string, LessonPr
   });
   return Object.fromEntries(SKILLS.map((sk, i) => [sk.id, at.map(m => m[i].mastery)])) as Record<SkillId, number[]>;
 }
+
+/**
+ * Progress's skill map in three groups: working on now (a lesson started or played, not mastered), next on your path
+ * (trained by the current stage, not touched yet) and later. `takes`: takes per lesson id.
+ */
+export function skillGroups(lessons: Lesson[], progress: Record<string, LessonProgress>, today: string, takes: Record<string, number>, level?: number) {
+  const rows = skillMap(lessons, progress, today).map(k => {
+    const ls = lessons.filter(l => !l.routine && skillsOf(l).includes(k.id));
+    return { ...k, started: ls.filter(l => progress[l.id] && !progress[l.id].completedAt).length, takes: ls.reduce((a, l) => a + (takes[l.id] ?? 0), 0), here: ls.some(l => l.level === level) };
+  });
+  const now = rows.filter(k => (k.takes > 0 || k.started > 0 || k.lessons.done > 0) && k.mastery < 1);
+  const next = rows.filter(k => !now.includes(k) && k.here && k.mastery < 1);
+  return { now, next, later: rows.filter(k => !now.includes(k) && !next.includes(k)) };
+}

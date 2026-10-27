@@ -3,7 +3,6 @@ import { PAD_INFO, type PadId } from '../engine/kit';
 import { measurePad, type KitCalibration } from '../engine/padCal';
 import { parseMidiMessage } from '../engine/midi';
 import { onHit, onRawMidi } from '../input/hits';
-import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { getNoteMap, getPadCal, setPadCal, subscribeNoteMap } from '../input/store';
 
 // Fair hardware (N9): each pad's soft and loud, and its own retriggers, so dynamics are judged the same on every pad.
@@ -79,18 +78,6 @@ export function VelocityWizard({ device }: { device: string }) {
         </div>
         <ol className="captured">{PADS.map((p, k) => <li key={p} className={k === i ? 'current' : ''}>{PAD_INFO[p].name}: {done[p] ? `soft ${Math.round(done[p]!.soft)} · loud ${Math.round(done[p]!.loud)}` : k < i ? 'skipped' : '…'}</li>)}</ol>
       </>}
-    </section>
-  );
-}
-
-/** Left-handed (N9): hints, intro slides and "How it moves" mirror R and L. Scoring doesn't change. */
-export function LeftHandedCard() {
-  const s = useSyncExternalStore(subscribeSettings, getSettings);
-  return (
-    <section className="card">
-      <h3>Which hand leads</h3>
-      <label className="check"><input type="checkbox" checked={!!s.leftHanded} onChange={e => setSettings({ leftHanded: e.target.checked })} /> I play left-handed (hi-hat on my right, I lead with my left)</label>
-      <p className="small">Every hint, intro slide and "How it moves" drawing swaps R and L. Scoring is the same: the kit tells the app which pad, not which hand.</p>
     </section>
   );
 }

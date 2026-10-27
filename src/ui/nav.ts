@@ -4,7 +4,7 @@ const listeners = new Set<(r: PlayRequest) => void>();
 export const onPlayRequest = (fn: (r: PlayRequest) => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
 export const requestPlay = (r: PlayRequest) => listeners.forEach(l => l(r));
 
-// "Open this YouTube song" from Journey or Trophies.
+// "Open this YouTube song" from Journey or Progress.
 // `bars`: open it in Play mode on those bars (a lesson's song bite).
 export type SongBars = { from: number; to: number };
 const songListeners = new Set<(id: string, bars?: SongBars) => void>();
@@ -15,7 +15,7 @@ export const requestSong = (id: string, bars?: SongBars) => songListeners.forEac
 export const concert: { queue: { id: string; bars: SongBars }[] } = { queue: [] };
 export const startConcert = (songs: { id: string; bars: SongBars }[]) => { concert.queue = songs.slice(1); if (songs[0]) requestSong(songs[0].id, songs[0].bars); };
 
-// "Open this lesson" from Trophies.
+// "Open this lesson" from Progress.
 const lessonListeners = new Set<(id: string) => void>();
 export const onLessonRequest = (fn: (id: string) => void) => { lessonListeners.add(fn); return () => { lessonListeners.delete(fn); }; };
 export const requestLesson = (id: string) => lessonListeners.forEach(l => l(id));

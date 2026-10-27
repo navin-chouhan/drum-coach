@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journey home revamp</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* The app screen inside each state: header + Journey, as it would render. */
+
+  .home2{max-width:1560px;margin:0 auto;padding:22px 32px 96px;display:flex;flex-direction:column;gap:22px}
+
+  /* One notice at a time, as a slim strip, not inside the coach's bubble. */
+  .notice{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--panel2);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);padding:10px 16px;font-size:16px}
+  .notice p{margin:0;flex:1;min-width:240px}
+  .notice .ic{font-size:24px}
+
+  /* The hero: what's next (left), you (right). */
+  .hero2{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:stretch}
+  .nextCard{background:var(--panel);border:3px solid var(--line);box-shadow:6px 6px 0 var(--line);padding:20px 22px;display:flex;flex-direction:column;gap:16px}
+  .coachSays{display:flex;align-items:center;gap:14px;font-size:20px;line-height:1.4}
+  .coachSays .avatar{width:56px;height:56px;flex:none;border-radius:50%;background:var(--cyan);border:3px solid var(--line);display:grid;place-items:center;font-size:28px;box-shadow:3px 3px 0 var(--line)}
+  .coachSays p{margin:0}
+  .lessonBig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 18px;align-items:center;padding:16px 18px;background:var(--pop);border:3px solid var(--line)}
+  .lessonBig .ic{grid-row:span 3;font-size:64px;line-height:1}
+  .kicker{font:800 11.5px var(--display);letter-spacing:.06em;text-transform:uppercase}
+  .kicker span{background:var(--line);color:var(--pop);padding:2px 8px;margin-right:6px}
+  .lessonBig h2{margin:2px 0;font-size:34px;line-height:1.1}
+  .lessonBig p{margin:0;font-size:16px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .meta .pill{background:var(--panel);font-size:13px}
+  .nextCard .moves{grid-template-columns:2fr 1fr 1fr 1fr}
+
+  .you2{display:flex;flex-direction:column;gap:14px;padding:18px 20px}
+  .you2Top{display:flex;gap:16px;align-items:center}
+  .ring.sm{width:104px;height:104px}
+  .ring.sm div{width:74px;height:74px;font-size:12px}
+  .you2Top p{margin:0}
+  .statTiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .statTiles>div{border:3px solid var(--line);background:var(--panel2);padding:8px 10px;display:flex;flex-direction:column}
+  .statTiles b{font:800 28px/1.1 var(--display)}
+  .statTiles b small{font-size:15px;color:var(--muted)}
+  .statTiles span{font-size:12px;color:var(--muted);font-weight:700}
+  .minBar{height:8px;background:#0001;border:1px solid var(--line);margin-top:4px}
+  .minBar i{display:block;height:100%;background:var(--good)}
+  .focus{font-size:15px;border-top:2px dashed var(--line);padding-top:12px}
+  .focus details{display:inline}
+  .focus summary{display:inline;cursor:pointer;color:var(--accent);text-decoration:underline;font-size:13px}
+  .focus details[open] p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+
+  /* Today's set: a slim strip, no longer a second big hero. */
+  .todayStrip{display:flex;flex-direction:column;gap:10px}
+  .todayStrip .head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .todayStrip .head h3{margin:0}
+  .segBar{flex:1;min-width:160px;display:flex;gap:4px}
+  .segBar i{flex:var(--m);height:10px;border:2px solid var(--line);background:var(--panel)}
+  .segBar i.done{background:var(--good)} .segBar i.cur{background:var(--pop)}
+  .strip{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap}
+  .stripItem{flex:1 1 220px;display:flex;align-items:center;gap:12px;padding:10px 14px;border:3px solid var(--line);background:var(--panel2);box-shadow:3px 3px 0 var(--line);text-align:left;border-radius:0;font-size:14px}
+  .stripItem .ic{font-size:28px}
+  .stripItem b{display:block;font:800 16px var(--display)}
+  .stripItem.cur{background:var(--pop)}
+  .stripItem.done{background:#E3F5EA}
+  .stripItem.bonus{background:var(--night);color:var(--nightText)} .stripItem.bonus .small{color:#ddd}
+  .arrowSep{align-self:center;font:800 22px var(--display)}
+
+  /* The stage: trail + its song side by side. */
+  .stageRow{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:stretch}
+  .stageHead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .stageHead h3{margin:0}
+  .canDo2{margin:6px 0 0;font-size:14px}
+  .trail.new{margin-top:30px}
+  .stop.started .dot{border-style:dashed;background:var(--panel2)}
+  .stop.coach .dot::after{content:"✍";position:absolute;transform:translate(22px,-20px);font-size:13px;background:var(--panel);border:2px solid var(--line);border-radius:50%;width:22px;height:22px;display:grid;place-items:center}
+  .songCard{display:flex;flex-direction:column;gap:8px;padding:18px 20px}
+  .songCard h3{margin:0}
+  .songTop{display:flex;gap:14px;align-items:center}
+  .songTop .ring{width:96px;height:96px;background:conic-gradient(var(--cyan) 0 var(--p),var(--panel) var(--p) 100%)}
+  .songTop .ring div{width:66px;height:66px;font-size:13px}
+  .songTop b{font:800 22px/1.15 var(--display)}
+  .songCard p{margin:0}
+  .yourSong{border-top:2px dashed var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+
+  /* More ways to play: small, one row. */
+  .moreRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .moreRow .lbl{font:800 11.5px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--line);color:var(--pop);padding:2px 8px}
+  .tileS{display:flex;align-items:center;gap:8px;padding:8px 14px;border:3px solid var(--line);border-radius:0;background:var(--panel);box-shadow:3px 3px 0 var(--line);font-size:13px;text-align:left}
+  .tileS b{font:800 14px var(--display)}
+  .tileS .ic{font-size:20px}
+
+  .popover{position:absolute;right:58px;top:52px;z-index:5;width:380px;background:var(--panel);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);padding:12px 14px;font-size:14px}
+  .popover ul{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+  .popover li{display:flex;gap:10px;align-items:flex-start}
+  .popover li b{display:block}
+
+
+  @media (max-width:1100px){
+    .hero2,.stageRow{grid-template-columns:1fr}
+    .nextCard .moves{grid-template-columns:1fr 1fr}
+    .home2{padding:18px 18px 96px}
+  }
+  @media (max-width:700px){
+    .nextCard .moves{grid-template-columns:1fr}
+    .lessonBig{grid-template-columns:1fr} .lessonBig .ic{grid-row:auto;font-size:44px}
+    .lessonBig h2{font-size:26px}
+    .arrowSep{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · Journey home revamp</b> One clear next move, the set as a strip, the stage and its song side by side, extras in one small row. Real data: your Stage 1 today. Not built.</div>
+
+<!-- ============ A ============ -->
+<section class="state keep" id="a">
+  <h2>A · Today, with your real data</h2>
+  <div class="screen">
+    <header>
+      <div class="brand"><span class="logo"></span>Drum Coach</div>
+      <nav class="tabs"><button class="on">Journey</button><button>Songs</button><button>Practice</button><button>Progress</button></nav>
+      <span class="spacer"></span>
+      <button class="chip kitChip bad rel new"><span class="dot"></span><span class="long">Kit: </span>2 things to fix ▾</button>
+      <button class="gearBtn" aria-label="Setup">⚙</button>
+    </header>
+
+    <div class="home2">
+      <div class="notice rel new"><span class="ic">🛠</span><p>Two minutes to check your pads and latency makes every timing score fair.</p>
+        <button class="primary">Check my kit ▶</button><button>Not now</button></div>
+
+      <div class="hero2">
+        <div class="nextCard">
+          <div class="coachSays"><div class="avatar">🥁</div><p>Evening! 2 days in a row, love it. This one's about hearing the "&amp;". Ready?</p></div>
+          <div class="lessonBig rel new">
+            <span class="ic">🎯</span>
+            <div class="kicker"><span>Up next · 1 of 2 today</span>✍ your coach wrote this one for you</div>
+            <h2>From quarters to 8ths: hear the "&amp;"</h2>
+            <div><p>Say "1 &amp; 2 &amp; 3 &amp; 4 &amp;" out loud and play the numbers on the snare, then the &amp;s too.</p>
+              <div class="meta"><span class="pill">Practice</span><span class="pill">12 min</span><span class="pill">3 steps</span><span class="pill">60 → 70 BPM</span></div></div>
+          </div>
+          <div class="moves rel new">
+            <button class="move go"><b>▶ Start</b><span class="g"><i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"</span></button>
+            <button class="move alt"><b>↻ Something else</b><span class="g"><i>ride × 2</i></span></button>
+            <button class="move alt"><b>👂 Hear it</b><span class="g"><i>tom 2 × 2</i></span></button>
+            <button class="move alt"><b>🎸 Just jam</b><span class="g small">no score</span></button>
+          </div>
+        </div>
+
+        <div class="card you2">
+          <div class="you2Top">
+            <div class="ring sm" style="--p:0%"><div>Stage 1<br>0/12</div></div>
+            <div><div class="rankSticker small">New drummer</div>
+              <p class="small">Next rank: <b>Stick Rookie</b>. Pass the 2 ★ challenges on the trail.</p></div>
+          </div>
+          <div class="statTiles rel new">
+            <div><b>2</b><span>🔥 day streak</span></div>
+            <div><b>34%</b><span>🎯 landed this week</span></div>
+            <div><b>0<small>/25</small></b><span>⏱ min today</span><div class="minBar"><i style="width:0%"></i></div></div>
+          </div>
+          <div class="focus">🎯 This week: <b>play right on the click, slowly</b>
+            <details open><summary>why?</summary><p>You played 2 days; your snare lands on the click about 4 in 10 times, often a little behind.</p></details></div>
+          <button class="link" style="align-self:flex-start">🗺 Skill map →</button>
+        </div>
+      </div>
+
+      <div class="card todayStrip rel new">
+        <div class="head"><h3>Today's set · 24 min</h3>
+          <div class="segBar"><i class="cur" style="--m:12"></i><i style="--m:12"></i></div><span class="small">0 of 24 min</span></div>
+        <div class="strip">
+          <button class="stripItem cur"><span class="ic">🎯</span><span><b>From quarters to 8ths</b><span class="small">Practice · 12 min · up next</span></span></button>
+          <span class="arrowSep">→</span>
+          <button class="stripItem"><span class="ic">🎸</span><span><b>Your first jam</b><span class="small">Play along · 12 min</span></span></button>
+        </div>
+      </div>
+
+      <div class="stageRow">
+        <div class="card">
+          <div class="stageHead"><h3>Stage 1 · Ready to play</h3><span class="small">0 of 12 lessons · 0 of 2 ★ challenges</span></div>
+          <p class="canDo2"><b>When you finish:</b> you hold the sticks so they bounce, count quarters and 8ths out loud while playing, and count through rests without rushing.</p>
+          <div class="trail rel new" data-trail="a"></div>
+        </div>
+        <div class="card songCard rel new">
+          <h3>Stage song</h3>
+          <div class="songTop"><div class="ring" style="--p:0%"><div>0 / 8<br>bars</div></div>
+            <div><b>First Steps</b><p class="small">8 bars with the band. Fill the ring, then play it for a friend.</p></div></div>
+          <div class="actions"><button>👂 Hear it</button><button>▶ Try bar 1</button></div>
+          <div class="yourSong"><span class="small">Your song</span><b>Queen · Another One Bites the Dust</b>
+            <p class="small">Its drum part isn't in yet. In Songs: tap the tempo, and the coach suggests the part (about 5 minutes).</p>
+            <button>Set it up in Songs ▶</button></div>
+        </div>
+      </div>
+
+      <div class="moreRow rel new"><span class="lbl">More ways to play</span>
+        <button class="tileS"><span class="ic">🌊</span><span><b>Flow</b> · play along, no score</span></button>
+        <button class="tileS"><span class="ic">🥢</span><span><b>Stick technique</b> · how it moves</span></button>
+        <button class="tileS"><span class="ic">🎵</span><span><b>Learn a new song</b></span></button>
+        <button class="tileS"><span class="ic">✍</span><span><b>Ask the coach</b> for a different lesson</span></button>
+      </div>
+
+      <details class="planFold"><summary>Full path, coach lessons, weekly plan, settings</summary></details>
+    </div>
+    <div class="talk" style="right:18px;bottom:18px"><button class="talkBtn" aria-label="Talk to the coach">🎙</button></div>
+  </div>
+
+  <div class="note"><b>One next move.</b> Today the greeting sits in a bubble with six buttons under it (Yes, Something else, Just jam, Stick technique,
+    Skill map, Flow). Here the next lesson gets its own big card (title, what you'll do, minutes, steps, tempo), and the moves under it are the
+    same big tiles as in a lesson, each with its kit gesture. <b>New:</b> the gestures work on Journey too, so from the throne
+    hi-hat pedal × 3 starts the lesson without touching the laptop. "Hear it" plays the groove once before you start.</div>
+  <div class="note"><b>You, in numbers.</b> Streak, notes landed and minutes today become three big numbers you can read from the kit
+    (minutes against your 25 a day). The weekly focus is one line; the reason folds away under "why?". The long song sentence moves to the song card.</div>
+  <div class="note"><b>Today's set is a strip.</b> It used to be a second hero (two 150 px tiles) that repeated the bubble. Now it's a slim
+    row with a minute bar, and the bonus tiles (2-minute challenge, Beat your best, Play the song through) join it only once the set is done (see B).</div>
+  <div class="note"><b>The stage and its song, side by side.</b> The trail reads left to right: <i>now</i> first, then what's left, the ★ challenges,
+    the song. Today your coach's lesson sits 9th, behind 8 lessons you haven't played, so it looks like you skipped them. A coach lesson
+    gets a small ✍ mark; a lesson you tried but didn't finish gets a dashed ring. The stage song gets its own card with a ring of bars ready, and your
+    Queen song's status lives there instead of in a paragraph in the stats.</div>
+  <div class="note"><b>Header.</b> One kit chip ("Kit: 2 things to fix", or "e-Drum connected" in green) replaces the two long red chips; click it
+    for the details (see D). Trophies becomes <b>Progress</b> (its own mockup next). The 🎙 button keeps its place; the page gets room at the bottom so it never covers the last card.</div>
+</section>
+
+<!-- ============ B ============ -->
+<section class="state" id="b">
+  <h2>B · Later: today's set done</h2>
+  <div class="screen">
+    <div class="home2">
+      <div class="hero2">
+        <div class="nextCard">
+          <div class="coachSays"><div class="avatar">🥁</div><p>Both done: 24 minutes and a 3-day streak! Keep going, or have some fun.</p></div>
+          <div class="lessonBig" style="background:var(--panel2)">
+            <span class="ic">🥢</span>
+            <div class="kicker"><span>Next on your trail</span></div>
+            <h2>Sit, hold, strike</h2>
+            <div><p>Set the throne height, hold the sticks loosely, and let them bounce.</p>
+              <div class="meta"><span class="pill">Practice</span><span class="pill">8 min</span><span class="pill">3 steps</span></div></div>
+          </div>
+          <div class="moves">
+            <button class="move go"><b>▶ Next lesson</b><span class="g"><i>hi-hat pedal × 3</i> or say "yes"</span></button>
+            <button class="move alt" style="background:var(--night);color:#fff"><b>⏱ 2-minute challenge</b><span class="g small" style="color:#ddd">Your first jam · how many clean bars?</span></button>
+            <button class="move alt" style="background:var(--night);color:#fff"><b>🏆 Beat your best</b><span class="g small" style="color:#ddd">From quarters to 8ths · 75 BPM</span></button>
+            <button class="move alt"><b>↻ Something else</b><span class="g"><i>ride × 2</i></span></button>
+          </div>
+        </div>
+        <div class="card you2">
+          <div class="you2Top"><div class="ring sm" style="--p:17%"><div>Stage 1<br>2/12</div></div>
+            <div><div class="rankSticker small">New drummer</div><p class="small">Next rank: <b>Stick Rookie</b>.</p></div></div>
+          <div class="statTiles">
+            <div><b>3</b><span>🔥 day streak</span></div>
+            <div><b>41%</b><span>🎯 landed, up from 34%</span></div>
+            <div><b>24<small>/25</small></b><span>⏱ min today</span><div class="minBar"><i style="width:96%"></i></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card todayStrip">
+        <div class="head"><h3>Today's set · done ✓</h3><div class="segBar"><i class="done" style="--m:12"></i><i class="done" style="--m:12"></i></div><span class="small">24 of 24 min</span></div>
+        <div class="strip">
+          <button class="stripItem done"><span class="ic">✓</span><span><b>From quarters to 8ths</b><span class="small">★★☆ · 70 BPM</span></span></button>
+          <span class="arrowSep">→</span>
+          <button class="stripItem done"><span class="ic">✓</span><span><b>Your first jam</b><span class="small">★★★</span></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>After the set,</b> the next lesson on the trail leads (as today), and the 2-minute challenge and Beat your best become moves right
+    under it instead of dark tiles at the end of the set. The minutes bar fills to your daily goal.</div>
+</section>
+
+<!-- ============ C ============ -->
+<section class="state" id="c">
+  <h2>C · iPad, or the laptop with the window half wide (768 px)</h2>
+  <iframe class="dev" data-src="revamp-journey.html?only=a" width="768" height="2750" title="Journey at 768 px"></iframe>
+  <div class="note">Everything stacks in the same order: next move, you, today, stage, song, more. The four moves go two by two.</div>
+</section>
+
+<!-- ============ D ============ -->
+<section class="state" id="d">
+  <h2>D · The kit chip, clicked</h2>
+  <div class="screen" style="min-height:300px">
+    <header>
+      <div class="brand"><span class="logo"></span>Drum Coach</div>
+      <nav class="tabs"><button class="on">Journey</button><button>Songs</button><button>Practice</button><button>Progress</button></nav>
+      <span class="spacer"></span>
+      <button class="chip kitChip bad"><span class="dot"></span>Kit: 2 things to fix ▴</button>
+      <button class="gearBtn" aria-label="Setup">⚙</button>
+    </header>
+    <div class="popover">
+      <ul>
+        <li><span>🔴</span><span><b>MIDI is blocked</b>Click the icon left of the address bar, allow MIDI, then <button class="link">try again</button>.</span></li>
+        <li><span>🔈</span><span><b>Sound is off</b>Chrome needs one click or key press first (a pad hit can't). <button class="link">Turn it on</button></span></li>
+        <li><span>⚙</span><span><b>Pads and latency</b> not checked yet · <button class="link">check my kit</button></span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">When everything is fine the chip is green: "● e-Drum MIDI 1 · sound on". Nothing else lives in the header.</div>
+</section>
+
+<!-- ============ map ============ -->
+<section class="state" id="map">
+  <h2>Where everything went</h2>
+  <table class="map">
+    <tr><th>Today</th><th>In the revamp</th></tr>
+    <tr><td>Greeting bubble with the lesson title in the sentence</td><td>A short coach line; the title moves to the big lesson card</td></tr>
+    <tr><td>Yes, let's go ▶</td><td>▶ Start tile with its gestures (hi-hat pedal × 3, crash × 2, "yes")</td></tr>
+    <tr><td>Something else · Just jam</td><td>Tiles next to Start (Something else = ride × 2)</td></tr>
+    <tr><td>Stick technique · Flow</td><td>"More ways to play" row</td></tr>
+    <tr><td>Skill map</td><td>Progress tab (Skills); a link stays on the You card</td></tr>
+    <tr><td>Setup / sore / health / recap notice inside the bubble</td><td>One slim strip above the hero (same one-at-a-time order)</td></tr>
+    <tr><td>Stats list (streak, landed, minutes, focus, song paragraph)</td><td>Three numbers + one focus line; the song status goes to the song card</td></tr>
+    <tr><td>Today's set (big tiles) with bonus tiles</td><td>A slim strip; bonus tiles become moves once the set is done</td></tr>
+    <tr><td>Show-off card (no song picked)</td><td>The song card's "Your song" part: "Pick a real song ▶"</td></tr>
+    <tr><td>Trail, song stop at the end</td><td>Same trail, read left to right from <i>now</i>, plus the song card beside it</td></tr>
+    <tr><td>MIDI chip + sound chip</td><td>One kit chip with a details popover</td></tr>
+    <tr><td>Trophies tab</td><td>Progress tab (next mockup)</td></tr>
+    <tr><td>Full path, coach lessons, weekly plan, settings fold</td><td>Unchanged</td></tr>
+  </table>
+</section>
+
+<script>
+  // Mockup only: lay out the trail the way Trail() in TodayView does, with this stage's real stops.
+  const STOPS = [
+    { icon: '🎯', name: 'From quarters to 8ths: hear the "&"', cls: 'now coach' },
+    { icon: '🎯', name: 'Slow quarters: hit the click', cls: 'started coach' },
+    { icon: '🥢', name: 'Sit, hold, strike', cls: '' },
+    { icon: '🎸', name: 'Your first jam', cls: '' },
+    { icon: '🔁', name: 'Echo game', cls: '' },
+    { icon: '+5', name: 'more', cls: 'more' },
+    { icon: '★', name: 'Counting 8th notes', cls: 'boss' },
+    { icon: '★', name: 'Rests are notes too', cls: 'boss' },
+    { icon: '🎵', name: 'First Steps', cls: 'song' },
+  ];
+  for (const el of document.querySelectorAll('[data-trail]')) {
+    const pts = STOPS.map((_, i) => ({ x: 5 + (i * 90) / (STOPS.length - 1), y: 50 + 22 * Math.sin(i * 1.3) }));
+    el.style.setProperty('--gap', 90 / (STOPS.length - 1));
+    el.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts.map(p => `${p.x},${p.y}`).join(' ')}"/></svg>` +
+      STOPS.map((s, i) => `<button class="stop ${s.cls} ${pts[i].y < 50 ? 'up' : ''}" style="left:${pts[i].x}%;top:${pts[i].y}%"><span class="dot">${s.icon}</span><span class="name">${s.name}</span></button>`).join('');
+  }
+  if (new URLSearchParams(location.search).get('only')) document.body.classList.add('only');
+  else for (const f of document.querySelectorAll('iframe[data-src]')) f.src = f.dataset.src; // no frames inside the framed copy
+</script>
+</body>
+</html>

@@ -96,20 +96,57 @@ export const BADGES = [
   { id: 'stage-3star', name: 'Perfect stage', how: 'Every challenge of a stage at three stars' },
 ] as const;
 
-/** `stages`: each stage's checkpoint lesson ids. */
-/** `readySongs`: the ids of songs that pass songReady (the caller knows each song's bar count). */
-export function earnedBadges(runs: RunRow[], lessons: Record<string, { stars?: number; completedAt?: string }>, stages: string[][], now = new Date(), readySongs: string[] = []): string[] {
+type BadgeId = (typeof BADGES)[number]['id'];
+/**
+ * How far along each badge is (Progress shows the closest ones): `value` of `max`, in words, and whether it's earned.
+ * `stages`: each stage's checkpoint lesson ids. `readySongs`: the ids of songs that pass songReady (the caller knows
+ * each song's bar count); `bestSongBars`: the most bars ready of any song, for the show-off badge's progress.
+ */
+export function badgeProgress(runs: RunRow[], lessons: Record<string, { stars?: number; completedAt?: string }>, stages: string[][], now = new Date(), readySongs: string[] = [], bestSongBars = 0) {
   const streak = dashboard(runs, now).streak;
   const landed = runs.reduce((a, r) => a + Math.round(((r.notes ?? 0) * r.accuracy) / 100), 0);
-  const got: Record<(typeof BADGES)[number]['id'], boolean> = {
-    'first-3star': Object.values(lessons).some(p => p.stars === 3),
-    'fast-100': runs.some(r => r.bpm >= 100 && r.accuracy >= 90),
-    'streak-7': streak >= 7, 'streak-30': streak >= 30,
-    'notes-1k': landed >= 1000, 'notes-10k': landed >= 10000,
-    'showoff': readySongs.length > 0,
-    'stage-3star': stages.some(ids => ids.length > 0 && ids.every(id => lessons[id]?.stars === 3)),
+  const best = Math.max(0, ...Object.values(lessons).map(x => (x.completedAt ? x.stars ?? 1 : 0))); // stars come with a finished lesson
+  const fast = Math.max(0, ...runs.filter(r => r.accuracy >= 90).map(r => Math.round(r.bpm)));
+  const stage3 = Math.max(0, ...stages.filter(ids => ids.length).map(ids => ids.filter(id => lessons[id]?.stars === 3).length / ids.length));
+  const n = (v: number) => v.toLocaleString('en');
+  const p: Record<BadgeId, { value: number; max: number; words: string; done: boolean }> = {
+    'first-3star': { value: best, max: 3, words: best ? `best ${'★'.repeat(best)}${'☆'.repeat(3 - best)}` : 'finish a lesson first', done: Object.values(lessons).some(x => x.stars === 3) },
+    'fast-100': { value: fast, max: 100, words: fast ? `best: ${fast} BPM` : 'not yet at 90%', done: runs.some(r => r.bpm >= 100 && r.accuracy >= 90) },
+    'streak-7': { value: Math.min(streak, 7), max: 7, words: `${streak} / 7 days`, done: streak >= 7 },
+    'streak-30': { value: Math.min(streak, 30), max: 30, words: `${streak} / 30 days`, done: streak >= 30 },
+    'notes-1k': { value: Math.min(landed, 1000), max: 1000, words: `${n(landed)} / 1,000`, done: landed >= 1000 },
+    'notes-10k': { value: Math.min(landed, 10000), max: 10000, words: `${n(landed)} / 10,000`, done: landed >= 10000 },
+    'showoff': { value: Math.min(bestSongBars, SHOWOFF_MIN_BARS), max: SHOWOFF_MIN_BARS, words: `${bestSongBars} / ${SHOWOFF_MIN_BARS} bars`, done: readySongs.length > 0 },
+    'stage-3star': { value: stage3, max: 1, words: `${Math.round(stage3 * 100)}% of a stage at ★★★`, done: stages.some(ids => ids.length > 0 && ids.every(id => lessons[id]?.stars === 3)) },
   };
-  return BADGES.filter(b => got[b.id]).map(b => b.id);
+  return BADGES.map(b => ({ ...b, ...p[b.id] }));
+}
+
+export const earnedBadges = (...a: Parameters<typeof badgeProgress>): string[] => badgeProgress(...a).filter(b => b.done).map(b => b.id);
+
+/** Notes landed per day you played (weighted by the notes in each take), oldest first. */
+export function landedByDay(runs: RunRow[]): { date: string; pct: number; takes: number }[] {
+  const by = new Map<string, { hit: number; all: number; takes: number }>();
+  for (const r of runs) {
+    const k = dayKey(new Date(r.startedAt)), w = r.notes ?? 1, d = by.get(k) ?? { hit: 0, all: 0, takes: 0 };
+    by.set(k, { hit: d.hit + (w * r.accuracy) / 100, all: d.all + w, takes: d.takes + 1 });
+  }
+  return [...by.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, d]) => ({ date, pct: Math.round((100 * d.hit) / Math.max(1, d.all)), takes: d.takes }));
+}
+
+/** "4 in 10" for a share of notes, the way you'd say it at the kit. */
+export const inTen = (pct: number) => (pct >= 10 ? `${Math.round(pct / 10)} in 10` : pct > 0 ? `1 in ${Math.round(100 / pct)}` : 'no');
+/** The coach's line over Getting better: your first day in the window against the latest, in plain words. */
+export function progressLine(days: { date: string; pct: number }[]): string {
+  if (!days.length) return 'Play your first take and this fills in.';
+  const name = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en', { weekday: 'long' });
+  const last = days[days.length - 1];
+  if (days.length === 1) return `${name(last.date)}: ${inTen(last.pct)} notes landed. Your next day of playing goes next to it.`;
+  const first = days[0], gap = Math.round((Date.parse(last.date) - Date.parse(first.date)) / 86_400_000);
+  const span = gap <= 1 ? 'in one day' : gap <= 7 ? 'in a week' : `in ${Math.round(gap / 7)} weeks`;
+  if (last.pct >= first.pct + 5) return `${name(first.date)} ${inTen(first.pct)} notes landed. ${name(last.date)} ${inTen(last.pct)}. That is a real jump ${span}.`;
+  if (last.pct <= first.pct - 5) return `${name(last.date)} was harder than ${name(first.date)}: that happens. A slower tempo brings it back.`;
+  return `Steady at about ${inTen(last.pct)} notes landing. Slow and even is how it sticks.`;
 }
 
 /** A show-off song is a real chunk of the song: at least this many bars, every one ready. */
@@ -197,4 +234,15 @@ export function weekRecap(d: Pick<Dashboard, 'minutesWeek' | 'landedWeek' | 'lan
     : `Your notes landed ${d.landedWeek}% of the time.`;
   const third = newBadge ? `New on your shelf: ${newBadge}.` : 'This week, one small thing at a time.';
   return `${first} ${second} ${third}`;
+}
+
+/**
+ * Your recent takes all leaning late by about the same amount: usually the speakers or headphones, not you (Setup's
+ * latency check says so). At least 4 of the last 6 takes 60 ms or more behind; returns how many, and the typical lag.
+ */
+export function lateTakes(runs: RunRow[]): { takes: number; of: number; ms: number } | null {
+  const last = runs.slice(-6), late = last.filter(r => r.meanOffset >= 60);
+  if (last.length < 4 || late.length < 4) return null;
+  const ms = [...late.map(r => r.meanOffset)].sort((a, b) => a - b)[Math.floor(late.length / 2)];
+  return { takes: late.length, of: last.length, ms: Math.round(ms) };
 }

@@ -47,7 +47,7 @@ const EASE: Record<Ease, (x: number) => number> = { in: x => x * x, out: x => 1 
  * The pose at `beat` of a looping timeline `beats` long: eased between the keys (the ease belongs to the key you move
  * towards: 'in' accelerates into a stroke, 'out' slows a rebound). `word` = the last cue word reached.
  */
-export function sample<P extends Pose>(keys: Key<P>[], beats: number, beat: number): { pose: P; word?: string } {
+export function sample<P extends { [K in keyof P]: number }>(keys: Key<P>[], beats: number, beat: number): { pose: P; word?: string } { // any pose of numbers (arm, leg, D10 v2's hand)
   const b = ((beat % beats) + beats) % beats, ks = [...keys, { ...keys[0], t: keys[0].t + beats }];
   let i = ks.length - 2;
   while (i > 0 && ks[i].t > b) i--;

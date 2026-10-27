@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress hub revamp</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .prog{max-width:1560px;margin:0 auto;padding:22px 32px 96px;display:flex;flex-direction:column;gap:22px}
+  .progHead{display:flex;align-items:flex-end;gap:12px 18px;flex-wrap:wrap}
+  .progHead h2{margin:0;font:800 34px/1 var(--display);background:var(--panel);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);padding:8px 14px}
+  .progHead p{margin:0;font-weight:700;background:var(--panel2);border:2px solid var(--line);padding:4px 10px}
+  .progHead .sp{flex:1}
+  .row2{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:22px;align-items:stretch}
+  .card p{margin:0 0 8px}
+  .coachSays{display:flex;align-items:center;gap:14px;font-size:20px;font-weight:700;line-height:1.35;margin-bottom:12px}
+  .coachSays .avatar{width:52px;height:52px;flex:none;border-radius:50%;background:var(--cyan);border:3px solid var(--line);display:grid;place-items:center;font-size:26px;box-shadow:3px 3px 0 var(--line)}
+  .better{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:18px;align-items:end}
+  .chart svg{display:block;width:100%;height:auto;overflow:visible}
+  .chart .ax{font-size:12px;fill:var(--muted);font-weight:700}
+  .chart .val{font:800 15px var(--display);fill:var(--text)}
+  .chart .bar:hover{opacity:.8}
+  .tiles3{display:grid;gap:8px}
+  .tiles3>div{border:3px solid var(--line);background:var(--panel2);padding:8px 12px}
+  .tiles3 b{display:block;font:800 30px/1.1 var(--display)}
+  .tiles3 span{font-size:13px;font-weight:700;color:var(--muted)}
+
+  .week{display:flex;flex-direction:column;gap:12px}
+  .dots{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:12px;font-weight:800}
+  .dots>span{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .dots i{width:36px;height:36px;border:3px solid var(--line);border-radius:50%;background:var(--panel);font-style:normal;display:grid;place-items:center;font-size:16px}
+  .dots i.on{background:var(--pop)} .dots i.today{outline:3px dashed var(--accent);outline-offset:2px}
+  .minBar{height:16px;border:2px solid var(--line);background:var(--panel)} .minBar i{display:block;height:100%;background:var(--good)}
+  .big1{font:800 44px/1 var(--display)} .big1 small{font-size:18px;color:var(--muted)}
+
+  /* Skill map: what you're working on, what's next, the rest as chips. */
+  .skHead{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;margin-bottom:6px}
+  .skHead h3{margin:0}
+  .grpLbl{font:800 12px var(--display);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px;color:var(--muted)}
+  .skill{display:grid;grid-template-columns:minmax(180px,260px) minmax(0,1fr) 170px;gap:14px;align-items:center;padding:10px 0;border-top:2px solid #0001}
+  .skill b{font:800 17px var(--display)} .skill .what{display:block;font-size:13px;color:var(--muted)}
+  .track{position:relative;height:22px;border:3px solid var(--line);background:#fff;display:flex}
+  .track .done{background:var(--good)} .track .started{background:repeating-linear-gradient(135deg,var(--pop) 0 6px,#fff 6px 10px);border-left:2px solid var(--line)}
+  .skill .n{font-size:13px;font-weight:700}
+  .skill .n em{display:block;font-style:normal;color:var(--muted);font-weight:600}
+  .skill.next b{color:var(--muted)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chips span{border:2px solid var(--line);background:var(--panel);padding:4px 10px;font-size:13px;font-weight:700;border-radius:999px}
+  .chips span small{color:var(--muted);font-weight:600}
+
+  /* Trophies: earned first, then the closest three with how far you are, the rest folded. */
+  .trophies{display:flex;flex-direction:column;gap:10px}
+  .earned{display:flex;gap:12px;flex-wrap:wrap}
+  .medal{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--pop);border:3px solid var(--line);box-shadow:3px 3px 0 var(--line);font:800 15px var(--display)}
+  .medal i{font-style:normal;font-size:24px}
+  .tro{display:grid;grid-template-columns:44px minmax(0,1fr) 120px;gap:12px;align-items:center;padding:8px 0;border-top:2px solid #0001}
+  .tro .ic{width:44px;height:44px;border:3px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:20px;background:#EDEDED}
+  .tro b{font:800 16px var(--display)} .tro span.how{display:block;font-size:13px;color:var(--muted)}
+  .tro .pb{display:block;margin-top:6px;height:12px;border:2px solid var(--line);background:#fff} .tro .pb i{display:block;height:100%;background:var(--accent)}
+  .tro .num{font-size:13px;font-weight:800;text-align:right}
+  .row3{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px;align-items:start}
+  .empty{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:2px solid #0001}
+  .empty .ic{font-size:30px} .empty b{font:800 16px var(--display);display:block}
+  .empty p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+  table.lessons{border-collapse:collapse;width:100%;font-size:14px}
+  table.lessons th{text-align:left;font-size:12px;color:var(--muted);padding:6px 8px;border-bottom:2px solid var(--line)}
+  table.lessons td{padding:8px;border-bottom:1px solid #0002;vertical-align:middle}
+  table.lessons td b{font-family:var(--display)}
+  .human{display:flex;gap:12px;align-items:center;background:var(--panel2);border:2px dashed var(--line);padding:10px 14px;font-size:14px}
+  .human .ic{font-size:26px}
+  .stamp{display:inline-block;background:var(--bad);color:#fff;font:800 12px var(--display);padding:3px 8px;transform:rotate(-2deg);border:2px solid var(--line)}
+
+  @media (max-width:1100px){
+    .row2,.row3{grid-template-columns:1fr}
+    .prog{padding:18px 18px 96px}
+    .skill{grid-template-columns:1fr;gap:6px}
+  }
+  @media (max-width:700px){ .better{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · Progress (was Trophies)</b> Am I getting better? → What can I do? → What did I earn? → Where did my time go? The skill map moves here. Real data: your 2 days. Not built.</div>
+
+<section class="state keep" id="a">
+  <h2>A · Today, with your real data</h2>
+  <div class="note">Your numbers as of your last session (Sun 25 Oct): 38 takes, 18 minutes, 960 notes played, 334 of them landed.
+    The page answers four questions in order. Nothing here is empty boxes with "?" any more: every trophy says how far away it is.</div>
+  <div class="screen" data-screen="real"></div>
+</section>
+
+<section class="state" id="b">
+  <h2>B · Four weeks in (made-up example, so you can see it filled)</h2>
+  <div class="note">Not your data. Shows how the same page reads once there is more: the chart becomes a trend, trophies move up
+    into the earned row, skills fill in.</div>
+  <div class="screen" data-screen="example"></div>
+</section>
+
+<section class="state" id="c">
+  <h2>C · iPad (768 px)</h2>
+  <iframe class="dev" data-src="revamp-progress.html?only=a" width="768" height="1024" title="Progress at iPad width"></iframe>
+</section>
+
+<section class="state" id="map">
+  <h2>Where everything went</h2>
+  <table class="map">
+    <tr><th>On Trophies today</th><th>In Progress</th></tr>
+    <tr><td>Tab name "Trophies"</td><td>"Progress"</td></tr>
+    <tr><td>13 "?" boxes on the trophy shelf, 8 grey badge names</td><td>Earned trophies first; then the 3 closest, each with how far you are ("334 of 1,000 notes"); the rest folded</td></tr>
+    <tr><td>"0 stars from your lessons"</td><td>A tile in "Getting better" once there are stars</td></tr>
+    <tr><td>4 stat tiles: day streak, minutes today, minutes this week, runs saved</td><td>"This week": the 7 days as dots, minutes against your goal, the streak</td></tr>
+    <tr><td>Practice minutes, last 14 days (no goal)</td><td>"Your time": the same chart with your daily goal as a line</td></tr>
+    <tr><td>—</td><td>New: "Getting better", notes landed per day and one coach line about it</td></tr>
+    <tr><td>Skill map, a separate page from Journey, with black bars that look full</td><td>Here, in three groups (working on, next, later), light bars, and "started" shown hatched</td></tr>
+    <tr><td>By exercise table (accuracy %, trend lines, "Best BPM at 90%+")</td><td>"Your lessons": plain words (best, last, tempo now), newest first, one "practise" button</td></tr>
+    <tr><td>Your fills, Show-off set, You vs you, monthly report</td><td>One "Coming up" card with each one's empty state; the report and the teacher pack as buttons at the top</td></tr>
+    <tr><td>"For your teacher" button above the shelf; the film-yourself note between badges</td><td>Top-right button; the note is one line at the bottom</td></tr>
+  </table>
+</section>
+
+<script>
+const only = new URLSearchParams(location.search).get('only');
+if (only) { document.body.classList.add('only'); document.querySelectorAll('.state').forEach(el => el.classList.toggle('keep', el.id === only)); }
+else document.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
+
+const DAYS14 = ['12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25'];
+const WD = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const SKILLS = [
+  ['Steady time', 'Counting, staying with the click, keeping time alone', 20], ['Hands', 'Even singles and doubles, both hands alike', 10],
+  ['Hands and feet', 'Limbs doing different things at once', 88], ['16th notes', '"1 e & a": busier grooves and fills', 29],
+  ['Triplets and shuffle', 'Three to a beat: shuffle, swing, 6/8', 28], ['Loud and soft', 'Accents, ghost notes, soft and loud parts', 20],
+  ['Rudiments', 'Paradiddles, flams, drags, rolls', 7], ['Fills and solos', 'Fills, your own bars, landing on 1', 15],
+  ['Feel', 'Swing, laying back, grooving at tempo', 7], ['Reading and ears', 'Reading rhythms, hearing what you play', 15],
+  ['Songs', 'Playing whole songs with the band', 25],
+];
+
+// ---------- your data (from a copy of data/, read only) ----------
+const REAL = {
+  sub: 'Since Sat 24 Oct · 2 days · 38 takes · 18 min',
+  coach: 'Saturday 1 in 12 notes landed. Sunday 4 in 10. That is a real jump in one day.',
+  landed: [['Sat 24', 8, 5], ['Sun 25', 40, 33]],
+  tiles: [['334', 'notes landed of 960'], ['81%', 'best take (Say the &)'], ['91%', 'best warm-up (singles)']],
+  week: [0, 0, 0, 0, 0, 1, 1], today: 6, weekMin: 18, goal: 25, streak: 2, focus: 'play right on the click, slowly',
+  min14: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.2, 16.1],
+  rank: 'New drummer', stage: 'Stage 1 · Ready to play',
+  // [skill index, lessons done, started, takes, group]
+  skills: [[0, 0, 2, 30, 'now'], [1, 0, 1, 8, 'now'], [2, 0, 1, 1, 'next']],
+  earned: [],
+  closest: [['🎵', '1,000 notes', 'Land 1,000 notes', 334, 1000, '334 / 1,000'], ['🔥', '7-day streak', 'Play 7 days in a row', 2, 7, '2 / 7 days'],
+    ['★', 'First ★★★', 'Three stars on any lesson (98% landed, no extras)', 81, 98, 'best 81%']],
+  laterBadges: ['Clean at 100', '30-day streak', '10,000 notes', 'Show-off song', 'Perfect stage', '+ 9 rank trophies'],
+  lessons: [['From quarters to 8ths · Say the &, don\'t play it', 28, '81%', '69%', '40 BPM <small>(started at 60)</small>', 'Sun'],
+    ['Single strokes warm-up', 8, '91%', '13%', '50 BPM', 'Sun'], ['Slow quarters · Quarters at 40 BPM', 1, '13%', '13%', '40 BPM', 'Sat'],
+    ['Basic rock beat', 1, '0%', '0%', '64 BPM', 'Sat']],
+};
+
+// ---------- a made-up month, to show the page filled ----------
+const EXAMPLE = {
+  sub: 'Since Sat 24 Oct · 19 days · 412 takes · 6 h 10 min',
+  coach: 'Three weeks ago 4 in 10 notes landed. This week it is 9 in 10, at twice the tempo.',
+  landed: [['Mon 9', 62, 18], ['Tue 10', 70, 22], ['Wed 11', 68, 25], ['Fri 13', 77, 19], ['Sat 14', 81, 30], ['Sun 15', 84, 24], ['Mon 16', 83, 21], ['Tue 17', 88, 26], ['Wed 18', 90, 23]],
+  tiles: [['4,870', 'notes landed of 6,020'], ['14', 'lessons passed'], ['★ 31', 'stars from lessons']],
+  week: [1, 1, 1, 0, 0, 0, 0], today: 2, weekMin: 71, goal: 25, streak: 9, focus: 'kick and hi-hat together on 1',
+  min14: [22, 25, 0, 31, 18, 26, 24, 27, 25, 20, 0, 28, 24, 19],
+  rank: 'Groove Keeper', stage: 'Stage 3 · First grooves',
+  skills: [[2, 9, 2, 160, 'now'], [0, 14, 1, 210, 'now'], [1, 7, 1, 120, 'now'], [5, 2, 1, 24, 'next'], [3, 0, 0, 0, 'next']],
+  earned: [['🎵', '1,000 notes'], ['🔥', '7-day streak'], ['★', 'First ★★★']],
+  closest: [['⚡', 'Clean at 100', '90% landed at 100 BPM or faster', 92, 100, 'best: 92 BPM'], ['🔥', '30-day streak', 'Play 30 days in a row', 9, 30, '9 / 30 days'],
+    ['🎤', 'Show-off song', '16 bars of a real song, every bar at 85%+', 11, 16, '11 / 16 bars']],
+  laterBadges: ['10,000 notes', 'Perfect stage', '+ 7 rank trophies'],
+  lessons: [['The money beat', 14, '97%', '95%', '92 BPM', 'today'], ['Kick on 1 and 3', 9, '94%', '90%', '85 BPM', 'today'], ['Accents on the beat', 22, '91%', '88%', '80 BPM', 'Tue']],
+};
+
+const header = `<header>
+  <div class="brand"><span class="logo"></span>Drum Coach</div>
+  <nav class="tabs"><button>Journey</button><button>Songs</button><button>Practice</button><button class="on">Progress</button></nav>
+  <span class="spacer"></span>
+  <button class="chip kitChip bad"><span class="dot"></span><span class="long">Kit: </span>2 things to fix ▾</button>
+  <button class="gearBtn" aria-label="Setup">⚙</button></header>`;
+
+// Charts: one series each, one axis, recessive grid, value labels on the bars, a <title> tooltip per mark.
+function landedChart(days) {
+  const W = 640, H = 230, L = 34, B = 28, n = days.length, slot = (W - L) / Math.max(n, 7), bw = Math.min(56, slot - 10);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Notes landed per day, in percent">`;
+  for (const v of [0, 50, 100]) { const y = H - B - (H - B - 14) * v / 100; s += `<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="#0002"/><text class="ax" x="${L - 6}" y="${y + 4}" text-anchor="end">${v}%</text>`; }
+  days.forEach(([d, p, t], i) => {
+    const h = (H - B - 14) * p / 100, x = L + slot * i + (slot - bw) / 2, y = H - B - h;
+    s += `<g class="bar"><title>${d}: ${p}% of notes landed, ${t} takes</title><path d="M${x},${H - B}V${y + 4}q0,-4 4,-4h${bw - 8}q4,0 4,4V${H - B}Z" fill="#2F6FE4"/>
+      <text class="val" x="${x + bw / 2}" y="${y - 6}" text-anchor="middle">${p}%</text><text class="ax" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${d}</text></g>`;
+  });
+  return s + '</svg>';
+}
+function minutesChart(min, goal) {
+  const W = 1300, H = 190, L = 34, B = 26, max = 35, slot = (W - L) / min.length, bw = slot - 8, yOf = v => H - B - (H - B - 10) * v / max;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Minutes played per day, last 14 days, against your daily goal">`;
+  for (const v of [0, 10, 20, 30]) s += `<line x1="${L}" x2="${W}" y1="${yOf(v)}" y2="${yOf(v)}" stroke="#0001"/><text class="ax" x="${L - 6}" y="${yOf(v) + 4}" text-anchor="end">${v}</text>`;
+  min.forEach((m, i) => {
+    const x = L + slot * i + 4, y = yOf(m);
+    s += `<g class="bar"><title>Oct ${DAYS14[i]}: ${m} min</title>${m ? `<path d="M${x},${H - B}V${y + 4}q0,-4 4,-4h${bw - 8}q4,0 4,4V${H - B}Z" fill="${m >= goal ? '#1E9E5A' : '#2F6FE4'}"/>` : `<rect x="${x}" y="${H - B - 3}" width="${bw}" height="3" fill="#0002"/>`}
+      <text class="ax" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${DAYS14[i]}</text></g>`;
+  });
+  return s + `<line x1="${L}" x2="${W}" y1="${yOf(goal)}" y2="${yOf(goal)}" stroke="#141414" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="${W - 4}" y="${yOf(goal) - 6}" text-anchor="end" font-size="13" font-weight="800">your goal: ${goal} min a day</text></svg>`;
+}
+
+function page(D, real) {
+  const skillRow = ([k, done, started, takes, grp]) => {
+    const [name, what, total] = SKILLS[k];
+    return `<div class="skill ${grp}"><span><b>${name}</b><span class="what">${what}</span></span>
+      <span class="track" title="${done} of ${total} lessons done, ${started} started"><span class="done" style="width:${100 * done / total}%"></span><span class="started" style="width:${Math.max(2, 100 * started / total)}%"></span></span>
+      <span class="n">${done} of ${total} lessons${started ? ` · ${started} started` : ''}<em>${takes ? `${takes} takes so far` : 'not started'}</em></span></div>`;
+  };
+  const used = new Set(D.skills.map(s => s[0]));
+  const now = D.skills.filter(s => s[4] === 'now'), next = D.skills.filter(s => s[4] === 'next');
+  const weekPct = Math.min(100, 100 * D.weekMin / (D.goal * 7));
+  return `${header}<div class="prog">
+    <div class="progHead"><h2>Your progress</h2><p>${D.sub}</p><span class="sp"></span>
+      <button>📝 This month's report</button><button>🧑‍🏫 For your teacher</button></div>
+
+    <div class="row2">
+      <div class="card ${real ? 'rel new' : ''}"><h3>Getting better</h3>
+        <div class="coachSays"><div class="avatar">🥁</div><p>${D.coach}</p></div>
+        <div class="better"><div class="chart">${landedChart(D.landed)}<p class="small">Notes landed, per day you played. Hover a bar for the takes.</p></div>
+          <div class="tiles3">${D.tiles.map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join('')}</div></div>
+      </div>
+      <div class="card week"><h3>This week</h3>
+        <div class="dots">${D.week.map((on, i) => `<span><i class="${on ? 'on' : ''} ${i === D.today ? 'today' : ''}">${on ? '🔥' : ''}</i>${WD[i]}</span>`).join('')}</div>
+        <p><span class="big1">${D.streak}</span> <b>days in a row</b></p>
+        <div><p><b>${D.weekMin} of ${D.goal * 7} minutes</b> <span class="small">(your ${D.goal} a day)</span></p><div class="minBar"><i style="width:${weekPct}%"></i></div></div>
+        <p style="border-top:2px dashed var(--line);padding-top:10px">🎯 Focus: <b>${D.focus}</b></p>
+        <p class="small">${D.rank} · ${D.stage}</p>
+      </div>
+    </div>
+
+    <div class="card ${real ? 'rel new' : ''}">
+      <div class="skHead"><h3>Skill map</h3><span class="small">Every lesson trains one or more of these. Your coach plans your weeks from it.</span></div>
+      <div class="grpLbl">Working on now</div>${now.map(skillRow).join('')}
+      <div class="grpLbl">Next on your path</div>${next.map(skillRow).join('')}
+      <div class="grpLbl">Later</div><div class="chips">${SKILLS.map((s, i) => used.has(i) ? '' : `<span>${s[0]} <small>0 of ${s[2]}</small></span>`).join('')}</div>
+    </div>
+
+    <div class="row3">
+      <div class="card trophies ${real ? 'rel new' : ''}"><h3>Trophies</h3>
+        ${D.earned.length ? `<div class="earned">${D.earned.map(([i, n]) => `<span class="medal"><i>${i}</i>${n}</span>`).join('')}</div>` : '<p><b>None yet. Your first one is the closest below.</b></p>'}
+        <div class="grpLbl">Closest</div>
+        ${D.closest.map(([i, n, how, v, max, num]) => `<div class="tro"><span class="ic">${i}</span><span><b>${n}</b><span class="how">${how}</span><span class="pb"><i style="width:${100 * v / max}%"></i></span></span><span class="num">${num}</span></div>`).join('')}
+        <details><summary class="small">Later: ${D.laterBadges.join(' · ')}</summary></details>
+      </div>
+      <div class="card"><h3>Coming up</h3>
+        <div class="empty"><span class="ic">🎤</span><span><b>Show-off set</b><p>${real ? 'Pass Stage 1, then play 16 bars of First Steps with every bar at 85% or better. It lands here, ready to play for a friend.' : 'First Steps and Hats On are ready: 16 bars each, every bar 85%+.'}</p>${real ? '' : '<button class="primary">▶ Play the set</button>'}</span></div>
+        <div class="empty"><span class="ic">🥁</span><span><b>Your fills</b><p>Fills you make up in free bars can be kept after the take. They land here.</p></span></div>
+        <div class="empty"><span class="ic">⏪</span><span><b>You vs you</b><p>${real ? 'From 24 Nov' : 'Ready now'}: hear "you a month ago" against "you now" on the same groove.</p>${real ? '' : '<button class="primary">▶ Play both</button>'}</span></div>
+      </div>
+    </div>
+
+    <div class="card"><h3>Your time</h3><div class="chart">${minutesChart(D.min14, D.goal)}</div></div>
+
+    <div class="card ${real ? 'rel new' : ''}"><h3>Your lessons</h3>
+      <table class="lessons"><tr><th>Lesson</th><th>Takes</th><th>Best</th><th>Last</th><th>Tempo now</th><th>Played</th><th></th></tr>
+        ${D.lessons.map(([t, n, b, l, bpm, d]) => `<tr><td><b>${t}</b></td><td>${n}</td><td>${b}</td><td>${l}</td><td>${bpm}</td><td>${d}</td><td><button>Practise ▶</button></td></tr>`).join('')}</table>
+    </div>
+
+    <div class="human"><span class="ic">🎥</span><span>An app hears your timing and volume but can't see your hands. Once a month, film yourself with
+      📷 Check yourself and compare with How it moves. If you can, one lesson with a human teacher per stage spots what no app can.</span></div>
+  </div>
+  <div class="talk"><button class="talkBtn" aria-label="Talk to the coach">🎙</button></div>`;
+}
+document.querySelector('[data-screen="real"]').innerHTML = page(REAL, true);
+document.querySelector('[data-screen="example"]').innerHTML = page(EXAMPLE, false);
+</script>
+</body>
+</html>

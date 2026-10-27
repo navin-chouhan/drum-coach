@@ -59,24 +59,26 @@ No kit? Use these keys, and hold Shift for an accent. You can also click a pad u
 
 ## Using the app
 
-The tabs are **Journey** (home), **Songs**, **Practice** and **Trophies**. Pads, the kit test and the coach's
-settings are under **Setup** (the ⚙ gear). While a take runs, the app goes into focus mode: only the music and
-**Stop** stay on screen. **Esc** stops a take anywhere. The mic button (or hold **V**) talks to the coach from any screen.
+The tabs are **Journey** (home), **Songs**, **Practice** and **Progress**. Your kit, the kit test and the coach's
+settings are under **Setup** (the ⚙ gear). One **kit chip** in the header is green when the kit and the sound work,
+or says how many things need fixing; click it for the details. While a take runs, the app goes into focus mode: only
+the music and **Stop** stay on screen. **Esc** stops a take anywhere. The mic button (or hold **V**) talks to the coach
+from any screen. Every screen you play from shows each move's **kit gesture** (hi-hat pedal × 3 = yes / the big move,
+ride × 2 = next or something else, tom 2 × 2 = listen, floor × 2 slower, tom 1 × 2 faster, crash × 4 stops a take).
 
 ### Journey (home)
-- **Header.** Your rank sticker, streak, current stage and the rank it leads to, and one **Next up** button:
-  the lesson your coach wrote for you if one is waiting, otherwise the next item of today's session.
-- **Your show-off song.** Once you have a rank: **Pick my show-off songs** asks the coach for 3 real songs you
-  can now play; **Learn this one** adds it and opens it in Songs.
-- **Today's session.** A warm-up (a rudiment you've finished), a due review, then up to two lessons
-  for your current milestone. Coach lessons come first and carry a "by your coach" badge.
-  **Start / Continue** opens the next unfinished item. **Open** jumps to any item.
-- **Your coach.** **Ask the coach for a new lesson** makes it read your recent takes and progress
-  and write the next lesson. If the automatic AI debrief is on (Setup → Coach and voice), it
-  also asks for a lesson once a day when none is waiting.
-- **Weekly plan from your coach** (folded). For questions, use the coach panel (bottom right) or hold **V**.
-- **Your path.** All stages, with their checkpoints and lessons. Finished lessons show their stars. Click any
-  lesson to open it.
+- **One next move.** A short line from the coach, then the next lesson as a big card (what you'll do, the coach's
+  reason, minutes, steps, tempo) and the moves under it: **Start** (hi-hat pedal × 3), **Something else** (ride × 2),
+  **Hear it** (tom 2 × 2), **Just jam**. Once today's set is done, the next lesson on your trail leads and the
+  2-minute challenge and Beat your best join the moves.
+- **You.** Rank, the stage ring, and three big numbers: day streak, notes landed this week, minutes today against
+  your daily goal. The week's focus is one line (its reason folds away); the skill map is a link away.
+- **Today's set.** A slim strip with a minute bar; tap any item.
+- **The stage and its song.** The trail reads from what's done to the lesson you're on to what's left (lessons you
+  started come first, coach lessons have a ✍, the ★ challenges and the song at the end). Beside it, the stage song
+  with a ring of bars ready, **Hear it** / **Play it**, and your own song (or "Pick a real song").
+- **More ways to play:** Flow, Stick technique, Learn a new song, Ask the coach for a different lesson.
+- **Full path, coach lessons, weekly plan, settings** (folded): every stage and lesson, the weekly plan, resets.
 
 ### Finishing a lesson
 The last clean take of a lesson brings up **LESSON COMPLETE!** with your stars (★ passed, ★★ 95%+ on time and few
@@ -84,27 +86,32 @@ extra hits, ★★★ 98%+ with mostly perfect hits), a drum fill, and how close
 plays it again; your best is kept. Passing a stage's last checkpoint shows **RANK UP!** with your new title. After
 every finished lesson the coach writes your next one in the background.
 
-### Trophies
-Rank stickers, total stars, and your **show-off set**: YouTube songs you've played scored at 85% or better.
-In a song's **Play (scored)** mode, tick **Stage mode** for a big video and an **ENCORE!** instead of the score sheet.
+### Progress
+**Getting better** (notes landed per day you played, with the coach's line), **this week** (days played, streak,
+minutes against your goal, the focus), the **skill map** (working on now, next on your path, later), **trophies**
+(ranks and badges earned, then the three closest with how far you are), **coming up** (show-off set, your fills,
+you vs you), **your time** (14 days against your daily goal) and **your lessons** in plain words. Buttons at the top
+open this month's report and the page for a human teacher. In a song's **Play (scored)** mode, tick **Stage mode** for
+a big video and an **ENCORE!** instead of the score sheet.
 
 ### A lesson
-1. **About this lesson** explains what, why and how. Coach lessons also say why the coach picked
-   this for you.
-2. Each **step** says what to play, the tempo, the target tempo and how many clean takes you have.
-3. **Hear it** plays the whole pattern at your tempo.
-4. **Play** starts a one-bar count-in, then a take of about four bars. Play the **bright lanes**.
-   Dimmed notes are played by the app. Counting lessons show "1 & 2 &" on the highway.
-5. After the take you get a **verdict**: pass, or the one thing to fix, such as
-   "84% on time, the kick was late by 30 ms."
+1. **The top bar** shows the steps (the one you're on by name), the tempo with a ladder of 5-BPM rungs from the step's
+   start to its goal, **Hints** (H) and **Band** (B).
+2. **The coach line and four moves**, each with its kit gesture: Play (or the move the moment needs), Hear it,
+   Slower / Learn it slowly, Skip to next.
+3. **The sheet** fills its panel. With hints on, the count is big under the notes (on quarter and 8th charts every
+   "&" is shown; the ones you say but don't play are blue) with R / L / K / H under each note. Under the sheet the
+   **goal**: boxes for the clean takes and what "clean" means ("12 of 16 notes land…"), and a mini kit with your pads.
+4. **During a take** a beat ball bounces along the count and lands on each number with the click; the bar counter
+   and **Stop** sit under the music.
+5. **After the take** each note says on it, late, early or missed in its colour, extra hits get an ×, and a timing
+   line shows every hit against the click. The side card keeps the count, the stars and one tip.
    - Two clean takes raise the tempo by 5 BPM. At the target tempo, you move to the next step.
-   - Three misses in a row lower it by 5 BPM, never below the start tempo.
-   - A take passes at 90% on time with at most 15% extra hits. Some steps also check
-     rushing or dragging, even volume, or accent versus ghost volume.
-6. **Details and coach** opens the full results and written feedback from the AI coach.
-   After a failed take, **Ask the coach for a lesson that fixes this** writes a lesson for exactly
-   that problem.
-7. **Next in today's session** appears when the step is done or the item's time is up.
+   - A rough take slows it down (never below 40); after a few stuck takes the big move changes (check the latency,
+     count with me, learn it slowly, something different).
+6. **How it moves** shows the movement at your tempo (the grip from the side and from above, the kick heel down or
+   heel up, strokes, accents, doubles, flams, drags), with the usual mistake one tap away and 📷 Check yourself.
+   Details, Save as MIDI, Ask the coach for something different, Reset and Delete are under **⋯ More**.
 
 Finished lessons come back for **review** after 2, 5, 12 and 30 days. A failed review brings the
 lesson back the next day.
@@ -118,22 +125,21 @@ lesson back the next day.
 | Remove a coach lesson | In that lesson → "Delete this lesson" |
 | Start the whole path over and redo setup | Bottom of Journey → "Reset all lesson progress" |
 
-Resets never delete your run history (Trophies tab).
+Resets never delete your run history (Progress tab).
 
 ### Other tabs
-- **Practice.** Pick any exercise, coach-made chart or imported song. Set speed (50–125%),
-  bars A–B, repeats, metronome and subdivision, count-in, wait mode (the song waits for the right
-  hit) and browser drum sounds. `Esc` stops. The results screen shows accuracy, rushing or
-  dragging, each drum, a where-in-the-bar heat map, a replay and coach feedback.
+- **Practice.** On top, what you played last ("pick up where you left off", with today's start tempo and your best
+  clean tempo); the For you cards below have a yellow ring: ride × 2 moves it, hi-hat pedal × 3 plays it. A short
+  **warm-up** (tom 1 × 2) chains a few exercises, a minute each. Tabs and search list everything. Playing looks like a
+  lesson: big − / + for the tempo, loop bars and times round, results on the notes, **Climb** (off by default: 2 clean
+  takes move the tempo up 5, up to 5 above your best), the playing options as toggles, and your takes on this one.
 - **Songs.** Learn real songs from YouTube (below). "Import files" still takes a drum MIDI file plus
   an MP3/OGG/WAV backing track.
-- **Coach.** What to practise next, a weekly plan checklist, and a chat that can also create
-  exercises.
-- **Progress.** Streak, minutes today and this week, a 14-day chart, and accuracy and BPM trends per
-  exercise.
-- **Kit.** Live animated kit, last hit with velocity, and a scrolling hit timeline.
-- **Calibrate.** Hit-each-pad wizard, editable note map (with conflict warnings) and latency
-  calibration.
+- **Setup → Your kit.** The kit's status, then a checklist: latency (first when your takes all lean late), hit each pad
+  once (the pad to hit in huge type on a drawing of your kit), soft then loud, sound levels, which hand leads, kit
+  connected. The note map and the emulated kit are under Advanced.
+- **Setup → Kit test.** Live animated kit, last hit with velocity, and a scrolling hit timeline.
+- **Setup → Coach and voice.** Voice, while you play, sticks in hand (the gestures), Claude and your plan.
 
 ### Sheet music while you play
 Practice, lessons and YouTube *Play (scored)* show the music as **drum notation** by default (switch *Sheet / Highway*

@@ -21,3 +21,21 @@
 .tile b{font:800 18px var(--display)}
 .tile.hero{background:var(--pop)}
 @media (max-width:700px){.state{padding:0 16px}}
+
+/* Revamp mockups: the app screen inside each state, its header, the "where everything went" table, ?only=a for iframes. */
+.screen{position:relative;border:3px solid var(--line);box-shadow:8px 8px 0 var(--line);background:var(--bg) radial-gradient(#ffffff66 1.6px, transparent 1.8px) 0 0/12px 12px;overflow:hidden}
+.screen header{gap:18px}
+.screen .tabs button{font-size:14.5px}
+.screen .talk{position:absolute}
+.kitChip{cursor:pointer;font-weight:700}
+.kitChip.bad{background:#FFE3E2;color:var(--line);border:2px solid var(--bad)}
+.gearBtn{background:transparent;border-color:transparent;color:var(--nightText);font-size:17px}
+table.map{border-collapse:collapse;background:var(--panel);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);font-size:14px;max-width:1100px;width:100%}
+table.map th,table.map td{border-bottom:1px solid #0002;padding:7px 10px;text-align:left;vertical-align:top}
+table.map th{background:var(--line);color:var(--pop);font:800 12px var(--display);letter-spacing:.05em;text-transform:uppercase}
+iframe.dev{border:3px solid var(--line);box-shadow:8px 8px 0 var(--line);background:var(--bg);display:block}
+@media (max-width:1100px){ .kitChip .long{display:none} .screen header{flex-wrap:nowrap} .screen .brand{font-size:16px} }
+@media (max-width:700px){ .screen header .tabs{order:3;width:100%} }
+body.only .mockBar,body.only .state>h2,body.only .note,body.only .state:not(.keep){display:none}
+body.only .state{margin:0;padding:0;max-width:none}
+body.only .screen{border:0;box-shadow:none}

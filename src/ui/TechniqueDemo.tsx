@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getSettings, subscribeSettings } from '../input/settings';
 import { mirrorHands } from '../engine/padCal';
-import { ARM, armPoints, legPoints, PAD_Y, PX_PER_CM, type Pt } from '../engine/demoPose';
+import { ARM, armPoints, PAD_Y, PX_PER_CM, type Pt } from '../engine/demoPose';
+import { drawGripAbove, drawGripSide, drawKick, ensureArtDefs, GRIP_VIEWBOX, KICK_TEXT, KICK_VIEWBOX, type HitState, type KickMode } from './demoArt';
 import { DEMOS, poseAt, type DemoId } from '../content/demos';
 import { say } from '../voice/voice';
 import { player } from '../play/player';
@@ -25,22 +26,6 @@ function draw(root: SVGGElement, id: DemoId, beat: number, wrong: boolean, trail
   };
   root.replaceChildren();
   const f = poseAt(id, beat, wrong);
-  if (f.leg) {
-    const L = legPoints(f.leg), hit = L.beater[0] >= L.headX - 14;
-    el('rect', { x: L.H0[0] - 20, y: L.H0[1], width: 260, height: 14, fill: '#333', stroke: '#000', 'stroke-width': 2 });
-    el('line', { x1: L.H0[0] + 214, y1: L.H0[1], x2: L.H0[0] + 214, y2: L.H0[1] - 150, stroke: '#555', 'stroke-width': 8 });
-    el('rect', { x: L.headX, y: 150, width: 26, height: 300, fill: hit ? '#2DE1C2' : '#3a3a3a', stroke: '#000', 'stroke-width': 2 });
-    el('line', { x1: L.pivot[0], y1: L.pivot[1], x2: L.beater[0], y2: L.beater[1], stroke: '#ccc', 'stroke-width': 5 });
-    el('circle', { cx: L.beater[0], cy: L.beater[1], r: 14, fill: '#eee', stroke: '#000', 'stroke-width': 2 });
-    el('line', { x1: L.toeEnd[0], y1: L.toeEnd[1], x2: L.pivot[0], y2: L.pivot[1] + 20, stroke: '#888', 'stroke-width': 3, 'stroke-dasharray': '6 5' });
-    el('line', { x1: L.H0[0], y1: L.H0[1], x2: L.toeEnd[0], y2: L.toeEnd[1], stroke: '#999', 'stroke-width': 12, 'stroke-linecap': 'round' });
-    el('rect', { x: 210, y: 262, width: 150, height: 26, rx: 8, fill: '#2a2a2a', stroke: '#000', 'stroke-width': 2 }); // the throne
-    limb(root, L.hip, L.knee, 56, '#2F6FE4'); limb(root, L.knee, L.ankle, 42, '#2F6FE4');
-    const at = (p: Pt, len: number, deg: number): Pt => [p[0] + len * Math.cos(deg * Math.PI / 180), p[1] + len * Math.sin(deg * Math.PI / 180)];
-    el('polygon', { points: pts([L.heel, at(L.heel, 14, L.n), at(L.ankle, 18, L.n), at(at(L.toe, -40, L.fdir), 22, L.n), L.toe, at(L.heel, -4, L.fdir)]), fill: '#1b1b1b', stroke: '#888', 'stroke-width': 2 });
-    if (joints) ([[L.hip, 'hip'], [L.knee, 'knee'], [L.ankle, 'ankle'], [L.heel, 'heel'], [L.ball, 'ball']] as [Pt, string][]).forEach(([p, n]) => label(p, n));
-    return;
-  }
   const arms = f.arms.map(a => ({ ...a, k: armPoints(a.shoulder, a.pose) }));
   const hit = arms.some(a => a.k.tip[1] >= PAD_Y - 3);
   el('rect', { x: 470, y: PAD_Y, width: 230, height: 22, rx: 4, fill: hit ? '#2DE1C2' : '#3a3a3a', stroke: '#000', 'stroke-width': 2 });
@@ -79,79 +64,104 @@ function draw(root: SVGGElement, id: DemoId, beat: number, wrong: boolean, trail
   if (mirror) root.querySelectorAll('text').forEach(t => { const x = Number(t.getAttribute('x')); t.setAttribute('transform', `translate(${2 * x} 0) scale(-1 1)`); t.setAttribute('text-anchor', 'end'); });
 }
 
-/** The animated technique: right vs wrong, slow motion, the count. `bpm`: the lesson's tempo (the diagram moves at it). */
-export function TechniqueDemo({ id, bpm = 70, compact }: { id: DemoId; bpm?: number; compact?: boolean }) {
+const ART = { grip: true, kick: true } as Partial<Record<DemoId, true>>; // D10 v2 close-ups (demoArt.ts); the rest are the arm drawing above
+const flipTexts = (root: Element) => root.querySelectorAll('text').forEach(t => { // a mirrored drawing's words, read the normal way
+  const x = Number(t.getAttribute('x')), a = t.getAttribute('text-anchor');
+  t.setAttribute('transform', `translate(${2 * x} 0) scale(-1 1)`); t.setAttribute('text-anchor', a === 'end' ? 'start' : a === 'middle' ? 'middle' : 'end');
+});
+
+/**
+ * The animated technique: right vs wrong, slow motion, the count. `bpm`: the lesson's tempo (the diagram moves at it).
+ * The grip is shown from the thumb side and from above (both in the full view, a switch in the small one); the kick
+ * heel down or heel up (`heelUp`: the lesson's stage plays heel up).
+ */
+export function TechniqueDemo({ id, bpm = 70, compact, heelUp }: { id: DemoId; bpm?: number; compact?: boolean; heelUp?: boolean }) {
   const d = DEMOS[id];
-  const g = useRef<SVGGElement>(null), wordRef = useRef<HTMLDivElement>(null), countRef = useRef<HTMLDivElement>(null);
-  const [wrong, setWrong] = useState(false), [speed, setSpeed] = useState(compact ? 0.5 : 1), [joints, setJoints] = useState(false);
+  const g = useRef<SVGGElement>(null), g2 = useRef<SVGGElement>(null);
+  const wordRef = useRef<HTMLDivElement>(null), countRef = useRef<HTMLDivElement>(null), word2 = useRef<HTMLDivElement>(null), count2 = useRef<HTMLDivElement>(null);
+  const [wrong, setWrong] = useState(false), [speed, setSpeed] = useState(compact ? 0.5 : 1), [joints, setJoints] = useState(!compact && !!ART[id]); // labels on the close-ups; joint names on the arm when asked
+  const [view, setView] = useState<'side' | 'above'>('side'), [mode, setMode] = useState<KickMode>(heelUp ? 'up' : 'down');
   const mirror = !!useSyncExternalStore(subscribeSettings, getSettings).leftHanded; // N9: drawn for a left-handed player
+  const art = !!ART[id], both = art && id === 'grip' && !compact; // the full view shows the grip from both sides at once
+  const kickText = id === 'kick' ? KICK_TEXT[mode] : undefined;
   // D15: the coach talks you through it: the description (or the mistake), then the cue words in time for two loops.
   // On by default in the full view, one tap in the lesson's small panel; never during a take or with the voice off.
   const [talk, setTalk] = useState(!compact);
   const canTalk = () => talk && getSettings().voice !== false && player.phase !== 'playing';
-  useEffect(() => { if (canTalk()) void say(wrong ? `The mistake: ${d.mistake}` : d.what, true); }, [id, wrong, talk]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
+  useEffect(() => { if (canTalk()) void say(wrong ? `The mistake: ${d.mistake}` : kickText?.what ?? d.what, true); }, [id, wrong, talk, mode]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
   useEffect(() => {
-    if (!('right' in d) && !('leg' in d)) return;
+    if (!art && !('right' in d) && !('leg' in d)) return;
+    if (art) ensureArtDefs();
     let beat = 0, last = performance.now(), raf = 0, said: string | undefined;
-    const trail: Pt[] = [];
+    const trail: Pt[] = [], st: HitState = {}, st2: HitState = {};
+    const counts = (el: HTMLDivElement | null, cs: string[]) => {
+      if (!el || !cs.length) return;
+      const k = Math.floor(((beat % d.beats) / d.beats) * cs.length);
+      el.innerHTML = cs.map((c, i) => `<span class="${i === k ? 'on' : ''}">${mirror ? mirrorHands(c) : c}</span>`).join('');
+    };
     const frame = (now: number) => {
       beat += ((now - last) / 60000) * bpm * speed; last = now;
-      if (g.current) draw(g.current, id, beat, wrong, trail, joints, mirror);
-      const word = poseAt(id, beat, wrong).word;
+      let word: string | undefined;
+      if (art && g.current) {
+        g.current.replaceChildren();
+        if (id === 'kick') word = drawKick(g.current, beat, mode, wrong, joints, now, st);
+        else word = (view === 'above' && !both ? drawGripAbove : drawGripSide)(g.current, beat, wrong, joints, now, st);
+        if (mirror) flipTexts(g.current);
+        if (both && g2.current) {
+          g2.current.replaceChildren();
+          const w2 = drawGripAbove(g2.current, beat, wrong, joints, now, st2);
+          if (mirror) flipTexts(g2.current);
+          if (word2.current) { word2.current.textContent = w2 ?? word ?? ''; }
+          counts(count2.current, ['R', 'L', 'R', 'L']);
+        }
+      } else {
+        if (g.current) draw(g.current, id, beat, wrong, trail, joints, mirror);
+        word = poseAt(id, beat, wrong).word;
+      }
       if (wordRef.current) wordRef.current.textContent = word ?? '';
       if (word && word !== said && beat < 2 * d.beats && canTalk()) void say(word.toLowerCase()); // skipped while the intro still talks
       said = word;
-      if (countRef.current && d.counts.length) {
-        const k = Math.floor(((beat % d.beats) / d.beats) * d.counts.length);
-        countRef.current.innerHTML = d.counts.map((c, i) => `<span class="${i === k ? 'on' : ''}">${mirror ? mirrorHands(c) : c}</span>`).join('');
-      }
+      counts(countRef.current, id === 'grip' && view === 'above' && !both ? ['R', 'L', 'R', 'L'] : d.counts);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [id, bpm, speed, wrong, joints, d, mirror, talk]); // eslint-disable-line react-hooks/exhaustive-deps -- canTalk reads live settings
+  }, [id, bpm, speed, wrong, joints, d, mirror, talk, view, mode, art, both]); // eslint-disable-line react-hooks/exhaustive-deps -- canTalk reads live settings
 
+  const box = id === 'kick' ? KICK_VIEWBOX : art ? GRIP_VIEWBOX : '0 0 900 520';
+  const stage = { box, mirror, wrong, label: d.title };
   return (
     <div className={`technique ${compact ? 'compact' : ''}`}>
-      <div className="techStage">
-        {id === 'grip' ? <GripPicture /> : <svg viewBox="0 0 900 520" role="img" aria-label={`${d.title}, animated`}><g transform={mirror ? 'translate(900 0) scale(-1 1)' : undefined}><g ref={g} /></g></svg>}
-        <div className={`techWord ${wrong ? 'wrong' : ''}`} ref={wordRef} aria-live="off" />
-        <div className="techCount" ref={countRef} aria-hidden />
-      </div>
+      {both ? <div className="techPair"><Stage {...stage} g={g} word={wordRef} count={countRef} name="From the side" /><Stage {...stage} g={g2} word={word2} count={count2} name="From above" /></div>
+        : <Stage {...stage} g={g} word={wordRef} count={countRef} name={id === 'grip' ? (view === 'side' ? 'From the side' : 'From above') : id === 'kick' ? (mode === 'down' ? 'Heel down' : 'Heel up') : undefined} />}
       <div className="actions techBar">
-        {id !== 'grip' && <>
-          <span className="seg"><button className={wrong ? '' : 'on'} onClick={() => setWrong(false)}>✓ Right</button><button className={wrong ? 'on bad' : ''} onClick={() => setWrong(true)}>✗ Wrong</button></span>
-          <span className="seg">{([[1, '1×'], [0.5, '½×'], [0.25, '¼×']] as const).map(([v, l]) => <button key={v} className={speed === v ? 'on' : ''} onClick={() => setSpeed(v)}>{l}</button>)}</span>
-          {!compact && <label className="check"><input type="checkbox" checked={joints} onChange={e => setJoints(e.target.checked)} /> Joints</label>}
-        </>}
+        <span className="seg"><button className={wrong ? '' : 'on'} onClick={() => setWrong(false)}>✓ Right</button><button className={wrong ? 'on bad' : ''} onClick={() => setWrong(true)}>✗ Wrong</button></span>
+        {id === 'grip' && !both && <span className="seg"><button className={view === 'side' ? 'on' : ''} onClick={() => setView('side')}>Side</button><button className={view === 'above' ? 'on' : ''} onClick={() => setView('above')}>Above</button></span>}
+        {id === 'kick' && <span className="seg"><button className={mode === 'down' ? 'on' : ''} onClick={() => setMode('down')}>Heel down</button><button className={mode === 'up' ? 'on' : ''} onClick={() => setMode('up')}>Heel up</button></span>}
+        <span className="seg">{([[1, '1×'], [0.5, '½×'], [0.25, '¼×']] as const).map(([v, l]) => <button key={v} className={speed === v ? 'on' : ''} onClick={() => setSpeed(v)}>{l}</button>)}</span>
+        {!compact && <label className="check"><input type="checkbox" checked={joints} onChange={e => setJoints(e.target.checked)} /> {art ? 'Labels' : 'Joints'}</label>}
         <button className={talk ? 'on' : ''} aria-pressed={talk} onClick={() => setTalk(!talk)}>{talk ? '🔊 Talking you through it' : '🔈 Talk me through it'}</button>
       </div>
       {!compact && <>
-        <p className="techWhat">{d.what}</p>
-        <ul className="techWatch">{d.watch.map(w => <li key={w}>{w}</li>)}</ul>
+        {kickText && <h4 className="techTitle">{kickText.title}</h4>}
+        <p className="techWhat">{kickText?.what ?? d.what}</p>
+        <ul className="techWatch">{(kickText?.watch ?? d.watch).map(w => <li key={w}>{w}</li>)}</ul>
         <p className="small"><b>✗ Wrong:</b> {d.mistake}</p>
       </>}
     </div>
   );
 }
 
-/** Where the stick sits in the hand, from above (a still picture). */
-function GripPicture() {
+
+/** One drawing: the SVG the frame loop draws into (mirrored for a left-handed player), the cue word, the count, which view. */
+function Stage({ box, mirror, wrong, label, g, word, count, name }: { box: string; mirror: boolean; wrong: boolean; label: string; name?: string;
+  g: React.RefObject<SVGGElement | null>; word: React.RefObject<HTMLDivElement | null>; count: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <svg viewBox="0 0 640 300" role="img" aria-label="Matched grip seen from above">
-      <rect width="640" height="300" fill="#141414" />
-      <rect x="40" y="143" width="570" height="14" rx="7" fill="#D8AD68" stroke="#000" strokeWidth="2" />
-      <g fill="#E9B493" stroke="#5a3b2a" strokeWidth="2">
-        <rect x="96" y="128" width="22" height="58" rx="11" /><rect x="122" y="124" width="24" height="66" rx="12" /><rect x="150" y="122" width="25" height="70" rx="12" />
-      </g>
-      <path d="M70 110 Q120 80 200 92 L232 118 Q240 150 232 180 L200 206 Q120 222 72 196 Q50 150 70 110 Z" fill="#F2C4A4" stroke="#5a3b2a" strokeWidth="2.5" />
-      <path d="M224 120 Q262 112 268 140 Q270 168 246 176 L230 168 Q248 160 246 142 Q240 128 222 132 Z" fill="#E9B493" stroke="#5a3b2a" strokeWidth="2" />
-      <path d="M200 92 Q236 78 270 104 Q290 120 282 136 L266 140 Q252 120 228 114 Z" fill="#F2C4A4" stroke="#5a3b2a" strokeWidth="2.5" />
-      <g fontFamily="system-ui" fontWeight="700" fontSize="16">
-        <line x1="262" y1="150" x2="330" y2="60" stroke="#FFE14D" strokeWidth="2" /><text x="300" y="50" fill="#FFE14D">FULCRUM: thumb + index, a third up</text>
-        <line x1="140" y1="190" x2="110" y2="262" stroke="#2DE1C2" strokeWidth="2" /><text x="40" y="284" fill="#2DE1C2">back fingers: wrapped, loose</text>
-        <line x1="236" y1="200" x2="330" y2="236" stroke="#fff" strokeWidth="2" /><text x="336" y="242" fill="#fff">small gap: palm and stick</text>
-      </g>
-    </svg>
+    <div className="techStage">
+      <svg viewBox={box} role="img" aria-label={`${label}${name ? `, ${name.toLowerCase()}` : ''}, animated`}><g transform={mirror ? `translate(${box.split(' ')[2]} 0) scale(-1 1)` : undefined}><g ref={g} /></g></svg>
+      <div className={`techWord ${wrong ? 'wrong' : ''}`} ref={word} aria-live="off" />
+      <div className="techCount" ref={count} aria-hidden />
+      {name && <div className="techView">{name}</div>}
+    </div>
   );
 }

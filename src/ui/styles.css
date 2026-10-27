@@ -218,18 +218,98 @@
   @media (max-width:1000px){ .songGrid{grid-template-columns:1fr} }
   /* Today and lessons */
   .today{max-width:1000px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:14px;width:100%}
-  /* Journey home: coach hero, today's set, the stage trail */
-  .today.home{max-width:1560px;gap:26px;padding:28px 32px}
-  .homeHero{display:grid;grid-template-columns:auto minmax(0,1fr) 380px;gap:26px;align-items:stretch}
-  .homeHero>*{align-self:center}
-  .homeHero .avatar{width:72px;height:72px;border-radius:50%;background:var(--cyan);border:3px solid var(--line);display:grid;place-items:center;font-size:34px;box-shadow:4px 4px 0 var(--line)}
+  /* Journey home: one next move, you in numbers, today's set as a strip, the stage and its song, more ways to play */
+  .today.home2{max-width:1560px;gap:22px;padding:22px 32px 96px}
+  .notice{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--panel2);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);padding:10px 16px;font-size:16px}
+  .notice p{margin:0;flex:1;min-width:240px}
+  .notice .ic{font-size:24px}
+  .hero2{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:stretch}
+  .nextCard{background:var(--panel);border:3px solid var(--line);box-shadow:6px 6px 0 var(--line);padding:20px 22px;display:flex;flex-direction:column;gap:16px}
+  .coachSays{display:flex;align-items:center;gap:14px;font-size:20px;line-height:1.4}
+  .coachSays .avatar{width:56px;height:56px;flex:none;border-radius:50%;background:var(--cyan);border:3px solid var(--line);display:grid;place-items:center;font-size:28px;box-shadow:3px 3px 0 var(--line)}
+  .coachSays p{margin:0}
+  .lessonBig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 18px;align-items:center;padding:16px 18px;background:var(--pop);border:3px solid var(--line)}
+  .lessonBig.after{background:var(--panel2)}
+  .lessonBig .ic{grid-row:span 3;font-size:64px;line-height:1}
+  .lessonBig h2{margin:2px 0;font-size:34px;line-height:1.1}
+  .lessonBig p{margin:0;font-size:16px}
+  .lessonBig .why summary{display:inline;margin:0;color:var(--accent);text-decoration:underline;font-size:13px}
+  .lessonBig .why p{font-size:13px;color:var(--muted);margin-top:4px}
+  .kicker{font:800 11.5px var(--display);letter-spacing:.06em;text-transform:uppercase}
+  .kicker span{background:var(--line);color:var(--pop);padding:2px 8px;margin-right:6px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .pill{display:inline-block;padding:3px 10px;border:2px solid var(--line);border-radius:999px;background:var(--panel);font-weight:700;font-size:13px}
+  .pill.on{background:var(--good);color:#fff}
+  .nextCard .moves{grid-template-columns:2fr repeat(var(--n,3),1fr)}
+  .move.dark{background:var(--night);color:var(--nightText)} .move.dark .g{color:#ddd}
+  .you2{display:flex;flex-direction:column;gap:14px;padding:18px 20px}
+  .you2Top{display:flex;gap:16px;align-items:center}
+  .you2Top p{margin:0}
+  .ring.sm{width:104px;height:104px}
+  .ring.sm div{width:74px;height:74px;font-size:12px}
+  .statTiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .statTiles>div{border:3px solid var(--line);background:var(--panel2);padding:8px 10px;display:flex;flex-direction:column}
+  .statTiles b{font:800 28px/1.1 var(--display)}
+  .statTiles b small{font-size:15px;color:var(--muted)}
+  .statTiles span{font-size:12px;color:var(--muted);font-weight:700}
+  .minBar{height:8px;background:#0001;border:1px solid var(--line);margin-top:4px}
+  .minBar i{display:block;height:100%;background:var(--good)}
+  .weekFocus{font-size:15px;border-top:2px dashed var(--line);padding-top:12px}
+  .weekFocus details{display:inline}
+  .weekFocus summary{display:inline;margin:0 0 0 6px;color:var(--accent);text-decoration:underline;font-size:13px}
+  .weekFocus details[open] p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+  .you2>.link{align-self:flex-start}
+  .todayStrip{display:flex;flex-direction:column;gap:10px}
+  .todayStrip .head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .todayStrip .head h3{margin:0}
+  .segBar{flex:1;min-width:160px;display:flex;gap:4px}
+  .segBar i{flex:var(--m);height:10px;border:2px solid var(--line);background:var(--panel)}
+  .segBar i.done{background:var(--good)} .segBar i.cur{background:var(--pop)}
+  .strip{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap}
+  .stripItem{flex:1 1 220px;display:flex;align-items:center;gap:12px;padding:10px 14px;border:3px solid var(--line);background:var(--panel2);box-shadow:3px 3px 0 var(--line);text-align:left;border-radius:0;font-size:14px}
+  .stripItem .ic{font-size:28px}
+  .stripItem b{display:block;font:800 16px var(--display)}
+  .stripItem.cur{background:var(--pop)}
+  .stripItem.done{background:#E3F5EA}
+  .stripItem.bonus{background:var(--night);color:var(--nightText)} .stripItem.bonus .small{color:#ddd}
+  .arrowSep{align-self:center;font:800 22px var(--display)}
+  .stageRow{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:stretch}
+  .stageHead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .stageHead h3{margin:0}
+  .canDo2{margin:6px 0 0;font-size:14px}
+  .songCard{display:flex;flex-direction:column;gap:8px;padding:18px 20px}
+  .songCard h3{margin:0}
+  .songCard p{margin:0}
+  .songCard .actions{margin-top:4px}
+  .songTop{display:flex;gap:14px;align-items:center}
+  .songTop .ring{width:96px;height:96px;background:conic-gradient(var(--cyan) 0 var(--p),var(--panel) var(--p) 100%)}
+  .songTop .ring div{width:66px;height:66px;font-size:13px}
+  .songTop b{font:800 22px/1.15 var(--display)}
+  .yourSong{border-top:2px dashed var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .showoffInline{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .moreRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .moreRow .lbl{font:800 11.5px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--line);color:var(--pop);padding:2px 8px}
+  .tileS{display:flex;align-items:center;gap:8px;padding:8px 14px;border:3px solid var(--line);border-radius:0;background:var(--panel);box-shadow:3px 3px 0 var(--line);font-size:13px;text-align:left}
+  .tileS b{font:800 14px var(--display)}
+  .tileS .ic{font-size:20px}
+  .stop .dot{position:relative}
+  .stop.started .dot{border-style:dashed;background:var(--panel2)}
+  .stop.coach .dot::after{content:"✍";position:absolute;right:-10px;top:-10px;font-size:12px;background:var(--panel);border:2px solid var(--line);border-radius:50%;width:22px;height:22px;display:grid;place-items:center}
+  @media (max-width:1100px){
+    .hero2,.stageRow{grid-template-columns:1fr}
+    .nextCard .moves{grid-template-columns:1fr 1fr}
+    .today.home2{padding:18px 18px 96px}
+  }
+  @media (max-width:700px){
+    .nextCard .moves{grid-template-columns:1fr}
+    .lessonBig{grid-template-columns:1fr} .lessonBig .ic{grid-row:auto;font-size:44px}
+    .lessonBig h2{font-size:26px}
+    .arrowSep{display:none}
+    .statTiles b{font-size:22px}
+  }
   .bubble{position:relative;background:var(--panel);border:3px solid var(--line);border-radius:18px;padding:16px 20px;box-shadow:6px 6px 0 var(--line);font-size:19px;line-height:1.5}
-  .bubble::after{content:"";position:absolute;left:-18px;top:26px;border:9px solid transparent;border-right-color:var(--line)}
   .bubble p{margin:0 0 12px}
   .bubble .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .youCard{display:flex;gap:20px;align-items:center;padding:20px}
-  .youStats{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
-  .youStats b{font-family:var(--display)}
   .ring{width:130px;height:130px;flex:none;border-radius:50%;background:conic-gradient(var(--good) 0 var(--p),var(--panel) var(--p) 100%);border:3px solid var(--line);display:grid;place-items:center;box-shadow:4px 4px 0 var(--line)}
   .ring div{width:92px;height:92px;border-radius:50%;background:var(--panel);border:3px solid var(--line);display:grid;place-items:center;font:800 13px/1.1 var(--display);text-align:center}
   .setTiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
@@ -254,8 +334,7 @@
   .stop.boss .dot{border-radius:12px;background:var(--night);color:var(--pop)}
   .stop.song .dot{border-radius:12px;background:var(--cyan)}
   .stop:hover .dot{transform:scale(1.08)}
-  @media (max-width:1000px){ .homeHero{grid-template-columns:auto minmax(0,1fr)} .youCard{grid-column:1/-1} }
-  @media (max-width:700px){ .homeHero{grid-template-columns:1fr} .homeHero .avatar{display:none} .bubble::after{display:none} .trail{height:230px;margin:10px 20px} .stop .name{display:none} .stop.now .name{display:block} }
+  @media (max-width:700px){ .trail{height:230px;margin:10px 20px} .stop .name{display:none} .stop.now .name{display:block} }
   .lessonTitle{margin:0 0 4px;font-size:22px}
   .milestone{display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
   .milestone.later{opacity:.6}
@@ -354,8 +433,20 @@
   .talkAction{display:block;width:100%;margin-top:8px;font-size:16px;padding:10px}
   .talkBubble .listening{color:var(--bad);font-weight:700}
 
-  /* --- navigation: gear + setup sub-tabs --- */
-  .tabs .gear{font-size:17px;line-height:1;padding:5px 10px}
+  /* --- navigation: one kit chip with its details, the gear, setup sub-tabs --- */
+  .kitChipWrap{position:relative}
+  .kitChip{cursor:pointer;font-weight:700}
+  .chip.kitChip.bad{background:#FFE3E2;color:var(--line);border:2px solid var(--bad)}
+  .gearBtn{background:transparent;border-color:transparent;color:var(--nightText);font-size:17px;line-height:1;padding:5px 10px}
+  .gearBtn.on{background:var(--pop);border-color:var(--pop);color:var(--line)}
+  .popover{position:absolute;right:0;top:calc(100% + 10px);z-index:70;width:min(380px,calc(100vw - 32px));background:var(--panel);color:var(--text);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);padding:12px 14px;font-size:14px}
+  .popover ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+  .popover li{display:flex;gap:10px;align-items:flex-start}
+  .popover li b{display:block}
+  .popover select{margin-top:4px}
+  header .tabs button{font-size:14.5px}
+  @media (max-width:1100px){ .kitChip .long{display:none} }
+  @media (max-width:700px){ header>.tabs:not(.subTabs){order:3;width:100%} }
   .subTabs{flex-basis:100%;justify-content:flex-end}
   .subTabs button{font-size:12px}
   /* --- focus mode: only the music and Stop while a take runs --- */
@@ -423,7 +514,7 @@
   .move.go{background:var(--accent);color:#fff}.move.go b{font-size:34px}.move.go .g i{background:var(--pop);color:var(--line)}
   .move.alt{background:var(--panel2)}
   .move:hover{transform:translate(-1px,-1px)}
-  .lessonMain{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:16px;min-height:0}
+  .lessonMain{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;min-height:0;align-items:start}
   .lessonScreen.playing .lessonMain{grid-template-columns:1fr}
   .lessonMusic{position:relative;background:var(--night);border:3px solid var(--line);box-shadow:6px 6px 0 var(--pop);min-height:420px;display:flex;flex-direction:column}
   .lessonScreen.playing .lessonMusic{min-height:calc(100vh - 200px)}
@@ -444,8 +535,52 @@
   .liveHint{min-height:62px;background:var(--pop);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);font:800 28px system-ui;padding:12px 18px;opacity:.25}
   .liveHint.on{opacity:1}
   .lessonScreen .sheetTip{display:none} /* the live tip shows big above the music instead */
-  @media (max-width:1100px){ .lessonMain{grid-template-columns:1fr} .moves{grid-template-columns:1fr 1fr} .say .bubble{font-size:22px} }
-  @media (max-width:700px){ .moves{grid-template-columns:1fr} .bigTempo{margin-left:0} .say .avatar{display:none} }
+  /* lesson revamp: named step pills, the tempo ladder, the goal bar with a mini kit, results on the notes, one side card */
+  .lbar h2{font:800 21px/1.15 var(--display);max-width:360px}
+  .lbar h2 small{display:block;font:700 12px system-ui;color:var(--muted)}
+  .stepPills{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .stepPill{display:flex;align-items:center;gap:7px;padding:3px;border:2px solid var(--line);border-radius:999px;background:var(--panel);font-weight:700;font-size:15px;white-space:nowrap}
+  .stepPill i{font-style:normal;width:24px;height:24px;flex:none;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font:800 12px var(--display);background:var(--panel)}
+  .stepPill.now{background:var(--pop);padding-right:12px}
+  .stepPill.done{background:#E3F5EA} .stepPill.done i{background:var(--good);color:#fff}
+  .bigTempo{font-size:42px;line-height:1}
+  .ladder{display:flex;flex-direction:column;gap:3px;font:700 11.5px system-ui;color:var(--muted)}
+  .rungs{display:flex;align-items:flex-end;gap:3px}
+  .rungs i{width:16px;height:calc(8px + var(--k) * 3px);border:2px solid var(--line);background:var(--panel)}
+  .rungs i.at{background:var(--pop)} .rungs i.start{border-style:dashed} .rungs i.goal{background:var(--night)}
+  .hintToggle{white-space:nowrap} .hintToggle kbd{margin-left:4px}
+  .hintToggle.off{color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
+  .notesLabel{position:absolute;top:14px;left:14px;z-index:3;color:var(--pop);font:800 13px var(--display);letter-spacing:.05em;text-transform:uppercase;max-width:calc(100% - 200px)}
+  .hintLegend{display:flex;gap:6px 18px;flex-wrap:wrap}
+  .hintLegend .sayIt{color:#8FB4FF} .hintLegend .on{color:#4BE08A} .hintLegend .late{color:var(--pop)} .hintLegend .missed{color:#FF7A73}
+  .timingLine{margin:0 12px 6px;background:#FFFDF6;border:3px solid var(--line);padding:8px 12px 4px}
+  .timingLine figcaption{font-size:14px}
+  .timingLine svg{display:block;width:100%;height:auto;max-height:110px}
+  .goalBar{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:12px 14px;color:#fff;border-top:2px solid #ffffff33}
+  .goalBar .txt{flex:1;min-width:240px;font-size:18px;line-height:1.35}
+  .goalBar .txt small{display:block;color:#ccc;font-size:14px}
+  .goalBar .boxes{display:flex;gap:8px}
+  .goalBar .boxes i{width:34px;height:34px;border:3px solid #fff;display:grid;place-items:center;font:800 18px var(--display);font-style:normal}
+  .goalBar .boxes i.ok{background:var(--good)}
+  .goalBar .stopBtn{position:static;font-size:20px;padding:10px 18px}
+  .lessonScreen.playing .goalBar{padding-right:96px} /* clear of the coach's mic button */
+  .kitLbl{display:flex;align-items:center;gap:8px;color:#ccc;font-size:12.5px;font-weight:700}
+  svg.miniKit{width:150px;height:auto;flex:none}
+  .miniKit circle,.miniKit rect{fill:#333;stroke:#fff;stroke-width:2;transition:fill .12s}
+  .miniKit .mine{fill:var(--pop);stroke:var(--line);stroke-width:3}
+  .miniKit .hit{fill:var(--bg);transition:none}
+  .sheetBall{position:absolute;left:0;top:0;z-index:3;border-radius:50%;background:var(--pop);border:3px solid var(--line);box-shadow:2px 2px 0 var(--line);opacity:0;pointer-events:none;will-change:transform}
+  .lessonSide .result .top{display:flex;align-items:center;gap:14px}
+  .bigN{font:800 64px/1 var(--display)} .bigN small{font-size:28px;color:var(--muted)}
+  .takeStars i{font-style:normal;font-size:28px;color:#D6D6D6;-webkit-text-stroke:1.5px var(--line)} .takeStars i.on{color:var(--pop)}
+  .lessonSide .result .chips{margin-top:10px}
+  .lessonSide .result .tip{margin:10px 0}
+  .lessonSide details.card>summary{margin:0;color:var(--accent);font-weight:700;font-size:14px}
+  .lessonSide details.card[open]>summary{margin-bottom:8px}
+  .lessonCard p{font-size:16px;line-height:1.4}
+  .more ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:14px}
+  @media (max-width:1100px){ .lessonMain{grid-template-columns:1fr} .lessonSide{display:grid;grid-template-columns:1fr 1fr;align-items:start} .moves{grid-template-columns:1fr 1fr} .say .bubble{font-size:22px} }
+  @media (max-width:700px){ .moves{grid-template-columns:1fr} .bigTempo{margin-left:0} .say .avatar{display:none} .lessonSide{grid-template-columns:1fr} .ladder{display:none} }
 
   /* --- Practice at the kit: chooser, tempo steppers, bar picker, on/off switches --- */
   .moves.five{grid-template-columns:2fr repeat(4,1fr)}
@@ -553,3 +688,193 @@
 .demoOverlay .techStage svg { max-height: calc(100vh - 230px); width: auto; max-width: 100%; margin: 0 auto; }
 .realSong { aspect-ratio: 16 / 9; width: min(100%, 520px); margin: 8px 0; border: 3px solid var(--line); background: #000; }
 .realSong iframe { width: 100%; height: 100%; display: block; }
+
+/* --- Setup: Your kit as a checklist (latency first), the pad wizard from the throne, Coach and voice in groups --- */
+.setup{grid-row:2/4;max-width:1400px;margin:0 auto;padding:22px 32px 96px;display:flex;flex-direction:column;gap:20px;width:100%}
+.seg{display:inline-flex;border:2px solid var(--line)}
+.seg button{border:0;border-radius:0;border-right:2px solid var(--line);font-weight:700;font-size:12.5px;background:var(--panel)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--pop)}
+.setupStatus{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:center;padding:16px 20px}
+.setupStatus .ring{width:110px;height:110px} .setupStatus .ring div{width:78px;height:78px;font-size:15px}
+.setupStatus h2{margin:0 0 6px;font:800 28px var(--display)}
+.lights{display:flex;gap:10px;flex-wrap:wrap}
+.light{display:flex;align-items:center;gap:8px;padding:6px 12px;border:2px solid var(--line);font-weight:700;background:var(--panel)}
+.light i{width:12px;height:12px;border-radius:50%;background:var(--good);border:2px solid var(--line)}
+.light.warn i{background:var(--ok)} .light.bad i{background:var(--bad)}
+.setupStatus .lastHit{font:800 20px var(--display);text-align:right}
+.setupStatus .lastHit small{display:block;font:700 13px system-ui;color:var(--muted)}
+.checks{display:flex;flex-direction:column}
+.chk{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 4px;border-top:2px solid #0001}
+.chk .st{width:46px;height:46px;border-radius:50%;border:3px solid var(--line);display:grid;place-items:center;font:800 22px var(--display);background:var(--pop)}
+.chk.ok .st{background:var(--good);color:#fff}
+.chk.first{background:#FFF6CC;outline:3px solid var(--line);outline-offset:-3px;padding:14px 12px}
+.chk b{font:800 19px var(--display)}
+.chk .t{font-size:13px;font-weight:700;color:var(--muted);margin-left:8px}
+.chk p{margin:4px 0 0;font-size:15px}
+.chk .why{color:var(--bad);font-weight:700}
+.chk>button{font-size:16px;padding:10px 16px}
+.chkTool{grid-column:1/-1}
+.chkTool .card{box-shadow:none;border-width:2px;animation:none}
+.tag1{display:inline-block;background:var(--bad);color:#fff;font:800 11px var(--display);padding:2px 8px;margin-left:8px;vertical-align:middle}
+details.adv summary{font:800 15px var(--display);color:var(--text);margin:0}
+details.adv[open] summary{margin-bottom:10px}
+.noteGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
+.noteGrid label{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:700}
+.noteGrid label.conflict{color:var(--bad)}
+.noteGrid input{font:inherit;padding:6px 8px;border:2px solid var(--line);border-radius:0;background:var(--panel2);width:100%}
+.padWizard{display:flex;flex-direction:column;gap:16px}
+.wiz{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.wizBig{background:var(--night);color:#fff;border:3px solid var(--line);box-shadow:6px 6px 0 var(--pop);padding:18px 22px;text-align:center}
+.wizBig .k{font:800 14px var(--display);letter-spacing:.06em;color:var(--pop);text-transform:uppercase}
+.wizBig h2{margin:6px 0 4px;font:800 clamp(36px,5vw,64px)/1 var(--display);color:#fff}
+.wizBig p{margin:0;font-size:20px;color:#ddd}
+svg.kitMap{width:100%;max-width:620px;height:auto;margin:10px auto 0;display:block}
+.kitMap circle,.kitMap rect{fill:#333;stroke:#888;stroke-width:2}
+.kitMap circle.ok,.kitMap rect.ok{fill:var(--good)}
+.kitMap circle.now,.kitMap rect.now{fill:var(--pop);stroke:#fff;stroke-width:5}
+.kitMap text{font:800 13px system-ui;fill:#fff;stroke:none}
+.kitMap text.now{font-size:17px;fill:var(--line)}
+.pulse{transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion: no-preference){ .pulse{animation:pulse 1s ease-in-out infinite} }
+@keyframes pulse{50%{transform:scale(1.12)}}
+.heard{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.heard li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border:2px solid var(--line);background:var(--panel);font-weight:700}
+.heard li.ok{background:#E3F5EA} .heard li.current{background:var(--pop)} .heard li span:last-child{color:var(--muted)}
+.wizMoves{grid-template-columns:1fr 1fr 1fr}
+.groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.tg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:10px 0;border-top:2px solid #0001}
+.tg>b{font:800 16px var(--display)}
+.tg>.d{grid-column:1;font-size:13.5px;color:var(--muted)}
+.tg>:nth-child(2){grid-row:span 2}
+.sw{width:56px;height:30px;padding:0;border:3px solid var(--line);border-radius:999px;background:#ddd;position:relative}
+.sw::after{content:"";position:absolute;top:2px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--line);transition:left .15s}
+.sw.on{background:var(--good)} .sw.on::after{left:27px}
+.slider{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px}
+.slider input{width:140px;accent-color:var(--accent)}
+.gest{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;margin-top:10px;font-size:14px;align-items:center}
+.gest i{font-style:normal;background:var(--night);color:var(--pop);border-radius:999px;padding:2px 10px;font-weight:700;white-space:nowrap;justify-self:start}
+.claudeOk{padding:8px 12px;background:#E3F5EA;border:2px solid var(--line);font-weight:700;margin:0 0 6px}
+@media (max-width:1100px){ .wiz,.groups{grid-template-columns:1fr} .setup{padding:18px 18px 96px} .noteGrid{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:700px){ .setupStatus{grid-template-columns:1fr} .setupStatus .lastHit{text-align:left} .chk{grid-template-columns:44px 1fr} .chk>button,.chk>.seg{grid-column:2;justify-self:start} .wizMoves{grid-template-columns:1fr} }
+/* D10 v2: the grip from two sides, the kick on a real pedal */
+.techPair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.technique .techView{position:absolute;top:50px;right:14px;font:800 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:#9a9a9a}
+.technique .techTitle{margin:12px 0 0;font-size:18px}
+@media (max-width:1000px){ .techPair{grid-template-columns:1fr} }
+
+/* --- Progress: getting better, this week, the skill map, trophies with how far, coming up, your time, your lessons --- */
+.prog{grid-row:2/4;max-width:1560px;margin:0 auto;padding:22px 32px 96px;display:flex;flex-direction:column;gap:22px;width:100%}
+.progHead{display:flex;align-items:flex-end;gap:12px 18px;flex-wrap:wrap}
+.progHead h2{margin:0;font:800 34px/1 var(--display);background:var(--panel);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);padding:8px 14px}
+.progHead p{margin:0;font-weight:700;background:var(--panel2);border:2px solid var(--line);padding:4px 10px}
+.progHead .sp{flex:1}
+.progRow2{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:22px;align-items:stretch}
+.progRow3{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px;align-items:start}
+.prog .card p{margin:0 0 8px}
+.prog .coachSays{font-weight:700;margin-bottom:12px}
+.better{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:18px;align-items:end}
+.prog .chart svg{display:block;width:100%;height:auto;overflow:visible}
+.prog .chart .ax{font-size:12px;fill:var(--muted);font-weight:700}
+.prog .chart .val{font:800 15px var(--display);fill:var(--text)}
+.prog .chart .bar:hover{opacity:.8}
+.tiles3{display:grid;gap:8px}
+.tiles3>div{border:3px solid var(--line);background:var(--panel2);padding:8px 12px}
+.tiles3 b{display:block;font:800 30px/1.1 var(--display)}
+.tiles3 span{font-size:13px;font-weight:700;color:var(--muted)}
+.weekCard{display:flex;flex-direction:column;gap:12px}
+.weekDots{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:12px;font-weight:800}
+.weekDots>span{display:flex;flex-direction:column;align-items:center;gap:3px}
+.weekDots i{width:36px;height:36px;border:3px solid var(--line);border-radius:50%;background:var(--panel);font-style:normal;display:grid;place-items:center;font-size:16px}
+.weekDots i.on{background:var(--pop)} .weekDots i.today{outline:3px dashed var(--accent);outline-offset:2px}
+.weekCard .minBar{height:16px;border-width:2px;background:var(--panel)}
+.big1{font:800 44px/1 var(--display)}
+.skHead{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;margin-bottom:6px}
+.skHead h3{margin:0}
+.grpLbl{font:800 12px var(--display);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px;color:var(--muted)}
+.skill{display:grid;grid-template-columns:minmax(180px,260px) minmax(0,1fr) 190px;gap:14px;align-items:center;padding:10px 0;border-top:2px solid #0001}
+.skill b{font:800 17px var(--display)} .skill .what{display:block;font-size:13px;color:var(--muted)}
+.track{position:relative;height:22px;border:3px solid var(--line);background:#fff;display:flex}
+.track .done{background:var(--good)} .track .started{background:repeating-linear-gradient(135deg,var(--pop) 0 6px,#fff 6px 10px);border-left:2px solid var(--line)}
+.skill .n{font-size:13px;font-weight:700}
+.skill .n em{display:block;font-style:normal;color:var(--muted);font-weight:600}
+.laterChips{display:flex;gap:8px;flex-wrap:wrap}
+.laterChips span{border:2px solid var(--line);background:var(--panel);padding:4px 10px;font-size:13px;font-weight:700;border-radius:999px}
+.laterChips span small{color:var(--muted);font-weight:600}
+.trophies{display:flex;flex-direction:column;gap:10px}
+.earned{display:flex;gap:12px;flex-wrap:wrap}
+.medal{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--pop);border:3px solid var(--line);box-shadow:3px 3px 0 var(--line);font:800 15px var(--display)}
+.medal i{font-style:normal;font-size:24px}
+.tro{display:grid;grid-template-columns:44px minmax(0,1fr) 130px;gap:12px;align-items:center;padding:8px 0;border-top:2px solid #0001}
+.tro .ic{width:44px;height:44px;border:3px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:20px;background:#EDEDED;filter:grayscale(1)}
+.tro b{font:800 16px var(--display)} .tro span.how{display:block;font-size:13px;color:var(--muted)}
+.tro .pb{display:block;margin-top:6px;height:12px;border:2px solid var(--line);background:#fff} .tro .pb i{display:block;height:100%;background:var(--accent)}
+.tro .num{font-size:13px;font-weight:800;text-align:right}
+.upItem{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:2px solid #0001}
+.upItem>span:last-child{flex:1;min-width:0}
+.upItem .ic{font-size:30px} .upItem b{font:800 16px var(--display);display:block}
+.upItem p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.upItem .songList{margin-top:6px}
+table.lessonsTable{border-collapse:collapse;width:100%;font-size:14px}
+table.lessonsTable th{text-align:left;font-size:12px;color:var(--muted);padding:6px 8px;border-bottom:2px solid var(--line)}
+table.lessonsTable td{padding:8px;border-bottom:1px solid #0002;vertical-align:middle}
+table.lessonsTable td b{font-family:var(--display)}
+.human{display:flex;gap:12px;align-items:center;background:var(--panel2);border:2px dashed var(--line);padding:10px 14px;font-size:14px}
+.human .ic{font-size:26px}
+@media (max-width:1100px){ .progRow2,.progRow3,.better{grid-template-columns:1fr} .tiles3{grid-template-columns:repeat(3,1fr)} .prog{padding:18px 18px 96px} .skill{grid-template-columns:1fr;gap:6px} }
+@media (max-width:700px){ .better{grid-template-columns:1fr} table.lessonsTable th:nth-child(4),table.lessonsTable td:nth-child(4),table.lessonsTable th:nth-child(6),table.lessonsTable td:nth-child(6){display:none} }
+
+/* --- Practice: pick from the throne (a ring the ride moves), a warm-up, the lesson layout with tempo, Climb and history --- */
+.pickTop{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
+.resume{display:flex;flex-direction:column;gap:14px;padding:18px 20px}
+.resume.focus{outline:5px solid var(--pop);outline-offset:3px}
+.resumeBig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 18px;align-items:center;padding:14px 16px;background:var(--pop);border:3px solid var(--line)}
+.resumeBig .ic{grid-row:span 3;font-size:58px;line-height:1}
+.resumeBig h2{margin:2px 0;font-size:32px;line-height:1.1}
+.resumeBig p{margin:0;font-size:16px}
+.resumeNew{font-size:18px;margin:0}
+.resume .moves{grid-template-columns:2fr 1fr 1fr}
+.warm{display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:var(--night);color:#fff}
+.warm h3{background:var(--pop);color:var(--line)}
+.warm p{margin:0}
+.warm ol{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.warm li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border:2px solid #555;font-weight:700}
+.warm li span{color:var(--pop);white-space:nowrap}
+.warm .move{color:var(--text)}
+.browse{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.browse .lbl{font:800 12px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--line);color:var(--pop);padding:3px 8px}
+.browse .sp{flex:1}
+.browse input{font:inherit;padding:8px 12px;border:3px solid var(--line);border-radius:999px;min-width:220px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.exCard2{position:relative;display:flex;flex-direction:column;gap:6px;text-align:left;padding:16px;border:3px solid var(--line);border-radius:0;background:var(--panel2);box-shadow:4px 4px 0 var(--line);min-height:150px}
+.exCard2.ai{border-style:dashed}
+.exCard2.all{background:var(--panel)}
+.exCard2 .ic{font-size:30px} .exCard2 b{font:800 19px/1.15 var(--display)}
+.exCard2 .tag{align-self:flex-start;background:var(--night);color:var(--nightText);font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.exCard2 .small{font-size:13px}
+.exCard2.focus{background:var(--panel);outline:5px solid var(--pop);outline-offset:3px;box-shadow:0 0 0 11px var(--line)}
+.exCard2.focus::after{content:"hi-hat pedal × 3 to play";position:absolute;right:8px;top:-15px;background:var(--pop);border:2px solid var(--line);font:800 12px var(--display);padding:2px 8px;z-index:2}
+.tabRow{display:flex;gap:8px;flex-wrap:wrap}
+.tabRow button{font-weight:700;border:2px solid var(--line)} .tabRow button.on{background:var(--pop)}
+.tabRow small{color:var(--muted)}
+.tempoBox{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tempoBox .st{width:48px;height:48px;padding:0;font:800 26px var(--display);border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line);background:var(--panel)}
+.tempoBox .n{font:800 44px/1 var(--display);min-width:84px;text-align:center} .tempoBox .n small{display:block;font:700 12px system-ui;color:var(--muted)}
+.bestHere{font-size:13px;font-weight:700;color:var(--muted);max-width:120px;line-height:1.25}
+.climb{display:flex;align-items:center;gap:12px}
+.climb small{display:block;color:#ccc;font-size:13px}
+.goalBar .sw{border-color:#fff;background:#555;flex:none}
+.goalBar .sw.on{background:var(--good)}
+.goalBar .ladder{color:#ccc}
+.goalBar .rungs i{border-color:#fff;background:transparent} .goalBar .rungs i.at{background:var(--pop)} .goalBar .rungs i.goal{background:var(--good)}
+.chipGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chipGrid button{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border:2px solid var(--line);border-radius:0;font-weight:700;font-size:13.5px;background:var(--panel)}
+.chipGrid button.on{background:var(--pop)}
+.chipGrid button small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}
+.hist{display:flex;gap:10px;align-items:center;font-size:14px}
+.hist svg{flex:none}
+.practice .barPick{padding:10px 12px}
+@media (max-width:1100px){ .pickTop{grid-template-columns:1fr} .grid4{grid-template-columns:1fr 1fr} .resume .moves{grid-template-columns:1fr 1fr} }
+@media (max-width:700px){ .grid4{grid-template-columns:1fr} .tempoBox{margin-left:0} .chipGrid{grid-template-columns:1fr} }
+.practice:not(.playing) .lessonMusic .sheetIdle{padding-top:14px}
+.practice:not(.playing) .lessonMusic .viewSwitch{top:-46px}

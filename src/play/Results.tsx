@@ -38,7 +38,7 @@ export function saveRun(f: Finished, extra?: Record<string, unknown>): Promise<v
 export function LatencyHint({ f }: { f: Finished }) {
   const ms = f.options.wait ? null : latencySuspect(f.results);
   return ms === null ? null : <p className="warn">Almost every stroke landed about {Math.abs(ms)} ms {ms > 0 ? 'late' : 'early'}.
-    If it felt on time to you, it's probably the setup, not your hands: run the latency test under ⚙ Setup → Pads.</p>;
+    If it felt on time to you, it's probably the setup, not your hands: run the latency test under ⚙ Setup → Your kit.</p>;
 }
 
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
