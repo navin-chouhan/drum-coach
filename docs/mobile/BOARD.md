@@ -46,14 +46,16 @@ results.
 |---|---|---|
 | B0 | **This run has no Mac, Xcode, iPad or kit** (Linux cloud container). The Swift module can't be compiled and M1–M9 can't run here. | **Open, needs the owner.** S1 delivers the code and the checklist. The owner runs them on the MacBook. |
 | B1 | No Web MIDI on iOS; Expo has no built-in MIDI | Mitigated by design: our own CoreMIDI module (S1) |
-| B2 | Kit doesn't enumerate on iPad/iPhone | Unknown until M2/M7. Needs the owner's hardware. |
+| B2 | Kit doesn't enumerate on iPad/iPhone | **Cleared on iPad (M2 pass)**: `e-Drum` (Medeli) enumerates over USB-C on iPadOS 26.5 |
 | B3 | Bridge delay / jitter too high | Unknown until M5/M6. Clicks are scheduled natively on host time already (S1), so the Swift click scheduler is the default, not the fallback |
 | B4 | MIDI clock vs audio clock | Unknown until M5. `react-native-audio-api` 0.13.6 has no host-time mapping (S1), so A4 plans native host-time scheduling |
 | B5 | Expo Go can't load the module | Mitigated: dev client only |
 | B6 | One USB-C port on the iPad | Wi-Fi debugging + Metro; maybe a hub |
 | B7 | Free Apple ID builds expire in 7 days | **Decided: free Apple ID for now**, reinstall weekly. Revisit (paid, TestFlight) once in daily use |
 | B8 | The simulator can't see the USB kit | Network MIDI (M8), touch pads, fixtures |
-| B23 | The probe's Swift has never been compiled; a possible start-up hang (`DispatchQueue.main.sync`) | Open. GATE0.md §5.1 has the fallbacks. The owner pastes back any Xcode errors |
+| B23 | The probe's Swift has never been compiled; a possible start-up hang | **Cleared**: compiled first time with Xcode 27.1, no hang. A launch crash came from Expo's own package versions (fixed: expo 58.0.20) |
+| B24 | Bridge delay p95 40–59 ms in the debug build (M6 target < 20) | Open. Re-measure in a Release build; batch events per frame in A3. Scoring unaffected (host time) |
+| B25 | MIDI queued while backgrounded arrives on resume with old timestamps | Open, for A3: drop stale messages after a resume |
 | B9–B19 | see the orchestrator prompt §10 | not yet reached |
 | B20 | The server binds 127.0.0.1 and returns 403 for any Host that isn't localhost (`server/index.ts:33-38,425`) | Known (A0). A5 adds a LAN/token mode if D2 = a/c |
 | B21 | The take engine (`src/play/player.ts`) isn't in the core, so iOS scoring could drift from web scoring | Known (A0). Phase 1/2 needs a clock-agnostic `createTake` in core with an injected audio interface. Added to A1/A4 scope |
@@ -76,3 +78,6 @@ results.
   API-key fallback (D2), start fresh (D3), fresh iPad-native mockups (D4), lean v1 + Share take with Songs next
   (D5). D1 waits for the device run. M7 is marked skipped in the checklist.
 - 2026-10-27: Owner dev loop: Mac to build/install, Linux for Metro and the kit tests (checklist section A2).
+- 2026-10-28: Device run day 1 (owner, MacBook Air on macOS 27.2 with Xcode 27.1; iPad M1 on iPadOS 26.5). Step 0 passes
+  after the expo 58.0.20 fix. M2 passes (every note, choke, note-off, bounce filter, clock filtering). M3 passes
+  (all changes in under 2 s). M4 is in progress; M5, M6 and M8 are still to do. Resume next session.
