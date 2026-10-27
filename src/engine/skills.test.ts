@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CURRICULUM, LESSON_BY_ID } from '../content/curriculum';
 import { startProgress } from './lesson';
-import { placementLadder, SKILLS, skillMap, skillsOf } from './skills';
+import { placementLadder, SKILLS, skillGroups, skillMap, skillsOf } from './skills';
 
 describe('skills (N5)', () => {
   it('each lesson trains named skills, from its id or what it plays', () => {
@@ -42,5 +42,16 @@ describe('skillGrowth', () => {
     const g = skillGrowth(CURRICULUM, { 'count-8ths': { step: 0, bpm: 60, completedAt: '2026-10-03', stars: 3 } as never }, ['2026-09', '2026-10']);
     expect(g.time[0]).toBe(0);
     expect(g.time[1]).toBeGreaterThan(0);
+  });
+});
+
+describe('skillGroups', () => {
+  it('working on now (played or started), next (this stage, untouched), later (the rest)', () => {
+    const g = skillGroups(CURRICULUM, { 'count-8ths': { ...startProgress(LESSON_BY_ID['count-8ths']), bpm: 50 } }, '2026-10-26', { 'count-8ths': 12 }, 0);
+    const time = g.now.find(k => k.id === 'time')!;
+    expect(time).toMatchObject({ started: 1, takes: 12 });
+    expect(g.next.every(k => k.here && !k.takes)).toBe(true);
+    expect(g.later.some(k => k.id === 'triplets')).toBe(true);
+    expect(g.now.length + g.next.length + g.later.length).toBe(SKILLS.length);
   });
 });

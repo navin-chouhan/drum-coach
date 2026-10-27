@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barsReady, dashboard, earnedBadges, songReady, forYou, practiceStart, isoWeek, lateTakes, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
+import { badgeProgress, barsReady, dashboard, earnedBadges, songReady, forYou, practiceStart, isoWeek, lateTakes, landedByDay, progressLine, suggestNext, weekRecap, weekTheme, type RunRow } from './progress';
 
 const catalog = [
   { id: 'a', title: 'A', bpm: 80, level: 1 },
@@ -148,5 +148,31 @@ describe('lateTakes', () => {
     expect(lateTakes(late)).toEqual({ takes: 6, of: 6, ms: 105 });
     expect(lateTakes([...late.slice(0, 3), ...[5, -10, 20].map(meanOffset => run({ meanOffset }))])).toBeNull();
     expect(lateTakes(late.slice(0, 3))).toBeNull();
+  });
+});
+
+describe('badgeProgress', () => {
+  it('says how far each badge is, and agrees with earnedBadges', () => {
+    const now = new Date('2026-10-25T18:00:00');
+    const runs = [run({ startedAt: '2026-10-24T09:00:00', accuracy: 40, notes: 480 }), run({ startedAt: '2026-10-25T09:00:00', bpm: 70, accuracy: 81, notes: 480 })];
+    const p = Object.fromEntries(badgeProgress(runs, {}, [], now, [], 6).map(b => [b.id, b]));
+    expect(p['notes-1k']).toMatchObject({ value: 581, max: 1000, words: '581 / 1,000', done: false });
+    expect(p['streak-7'].words).toBe('2 / 7 days');
+    expect(p['first-3star'].words).toBe('finish a lesson first');
+    expect(badgeProgress(runs, { a: { stars: 2, completedAt: '2026-10-24' } }, [], now).find(b => b.id === 'first-3star')?.words).toBe('best ★★☆');
+    expect(p['fast-100'].words).toBe('not yet at 90%');
+    expect(p['showoff'].words).toBe('6 / 16 bars');
+    expect(badgeProgress(runs, {}, [], now).filter(b => b.done)).toEqual([]);
+  });
+});
+
+describe('landedByDay and progressLine', () => {
+  it('weights each day by its notes and says the jump in plain words', () => {
+    const days = landedByDay([run({ startedAt: '2026-10-24T10:00:00', accuracy: 0, notes: 100 }), run({ startedAt: '2026-10-24T11:00:00', accuracy: 16, notes: 100 }),
+      run({ startedAt: '2026-10-25T10:00:00', accuracy: 40, notes: 300 })]);
+    expect(days).toEqual([{ date: '2026-10-24', pct: 8, takes: 2 }, { date: '2026-10-25', pct: 40, takes: 1 }]);
+    expect(progressLine(days)).toBe('Saturday 1 in 13 notes landed. Sunday 4 in 10. That is a real jump in one day.');
+    expect(progressLine([])).toMatch(/first take/);
+    expect(progressLine([{ date: '2026-10-24', pct: 60 }, { date: '2026-10-30', pct: 61 }])).toMatch(/^Steady at about 6 in 10/);
   });
 });
