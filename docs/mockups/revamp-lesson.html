@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson screen revamp</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .ls{max-width:1640px;margin:0 auto;padding:16px 24px 90px;display:flex;flex-direction:column;gap:14px}
+
+  /* Top bar: where you are in the lesson, the tempo ladder, two toggles. */
+  .lbar2{display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap;padding:10px 16px}
+  .lbar2 .back{font-weight:700;font-size:15px}
+  .lbar2 h2{margin:0;font:800 21px/1.15 var(--display);max-width:330px}
+  .lbar2 h2 small{display:block;font:700 12px system-ui;color:var(--muted)}
+  .steps{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .stepPill{display:flex;align-items:center;gap:7px;padding:3px 12px 3px 3px;border:2px solid var(--line);border-radius:999px;background:var(--panel);font-weight:700;font-size:13px;white-space:nowrap}
+  .stepPill i{font-style:normal;width:24px;height:24px;flex:none;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font:800 12px var(--display);background:var(--panel)}
+  .stepPill.now{background:var(--pop);font-size:15px}
+  .stepPill:not(.now){padding-right:3px}
+  .new::before{top:0;left:0}
+  .stepPill.done{background:#E3F5EA} .stepPill.done i{background:var(--good);color:#fff}
+  .tempo2{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .tempo2 .n{font:800 42px/1 var(--display)} .tempo2 .n small{font:700 15px system-ui;color:var(--muted)}
+  .ladder{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--muted)}
+  .rungs{display:flex;align-items:flex-end;gap:3px}
+  .rungs i{width:16px;height:calc(8px + var(--k) * 3px);border:2px solid var(--line);background:var(--panel)}
+  .rungs i.at{background:var(--pop)} .rungs i.start{border-style:dashed} .rungs i.goal{background:var(--night)}
+  .tog{font-weight:700;white-space:nowrap} .tog.on{background:var(--pop)}
+  .tog.off{color:var(--muted);border-style:dashed}
+  .tog kbd{margin-left:4px}
+
+  /* The music panel: the sheet fills it, the count is big, the goal sits under it. */
+  .lm{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+  .ls.playing .lm{grid-template-columns:1fr}
+  .ls.playing .side{display:none}
+  .music{position:relative;background:var(--night);border:3px solid var(--line);box-shadow:6px 6px 0 var(--pop);display:flex;flex-direction:column}
+  .musicTop{display:flex;align-items:center;gap:12px;padding:8px 12px;color:#fff;font:800 13px var(--display);letter-spacing:.05em;text-transform:uppercase}
+  .musicTop .lbl{color:var(--pop)}
+  .musicTop .seg{margin-left:auto;display:inline-flex;border:2px solid #fff}
+  .musicTop .seg button{border:0;border-radius:0;font:700 12px system-ui;padding:4px 10px;background:transparent;color:#fff;text-transform:none;letter-spacing:0}
+  .musicTop .seg button.on{background:var(--pop);color:var(--line)}
+  .paper{background:#FFFDF5;margin:0 12px;border:3px solid var(--line)}
+  .paper svg{display:block;width:100%;height:auto}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;padding:0 14px 10px;font-size:14px;font-weight:700}
+  .legend .say{color:var(--accent)}
+  .goal{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:12px 14px;color:#fff}
+  .goal .txt{flex:1;min-width:260px;font-size:17px;line-height:1.35}
+  .goal .txt small{display:block;color:#ccc;font-size:13.5px}
+  .boxes{display:flex;gap:8px}
+  .boxes i{width:34px;height:34px;border:3px solid #fff;display:grid;place-items:center;font-style:normal;font:800 18px var(--display)}
+  .boxes i.ok{background:var(--good)}
+  .miniKit{display:flex;align-items:center;gap:8px;color:#ccc;font-size:12.5px;font-weight:700}
+  .miniKit svg{width:170px;height:auto}
+  .music .stopBtn{font-size:20px;padding:10px 18px}
+
+  /* Side: one lesson card, how it moves (bigger now the kit is gone), the rest folded. */
+  .side{display:flex;flex-direction:column;gap:14px}
+  .side p{margin:0 0 8px;font-size:16px;line-height:1.4}
+  .side details summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}
+  .side .hintcard{background:var(--panel2);border:2px dashed var(--line);padding:8px 10px;font-size:15.5px}
+  .demoBox{position:relative;background:var(--night);border:3px solid var(--line)}
+  .demoBox svg{display:block;width:100%;height:auto}
+  .demoBox .w{position:absolute;left:12px;top:8px;font:800 30px var(--display);color:var(--pop);text-shadow:2px 2px 0 #000}
+  .demoBar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+  .seg2{display:inline-flex;border:2px solid var(--line)} .seg2 button{border:0;border-radius:0;border-right:2px solid var(--line);font-weight:700}
+  .seg2 button:last-child{border-right:0} .seg2 .r{background:var(--good);color:#fff}
+  .more{font-size:14px} .more ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px}
+
+  /* After a take: the count, the stars, one tip. */
+  .result2 .top{display:flex;align-items:center;gap:14px}
+  .result2 .big{font:800 64px/1 var(--display)} .result2 .big small{font-size:28px;color:var(--muted)}
+  .result2 .stars{font-size:30px;letter-spacing:2px;color:#bbb}
+  .result2 .tip{font-size:18px;font-weight:700;margin:10px 0}
+
+  .stick{transform-origin:70px 120px;animation:drop 1.5s cubic-bezier(.5,0,.5,1) infinite}
+  @keyframes drop{0%,100%{transform:rotate(0deg)}30%{transform:rotate(-30deg)}60%{transform:rotate(-30deg)}}
+  @media (prefers-reduced-motion: reduce){.stick{animation:none}}
+
+  @media (max-width:1100px){
+    .lm{grid-template-columns:1fr}
+    .side{display:grid;grid-template-columns:1fr 1fr;align-items:start}
+    .ls{padding:14px 16px 90px}
+    .say .bubble{font-size:22px}
+  }
+  @media (max-width:700px){
+    .side{grid-template-columns:1fr}
+    .ladder{display:none}
+    .tempo2{margin-left:0}
+  }
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · Lesson screen revamp</b> The sheet fills its panel, the count is big, the goal is on screen, results land on the notes, the side column is one card. Real data: your step 1 at 40 BPM. Not built.</div>
+
+<!-- ============ A ============ -->
+<section class="state keep" id="a">
+  <h2>A · Before a take: where you are today</h2>
+  <div class="note">Your real spot: <b>From quarters to 8ths: hear the "&amp;"</b>, step 1 of 3, slowed from 60 to 40 BPM after rough takes.
+    Things you already know stay: the big coach line and the four moves with their kit gestures. New is outlined in blue.</div>
+  <div class="screen" data-screen="a"></div>
+</section>
+
+<!-- ============ B ============ -->
+<section class="state" id="b">
+  <h2>B · During the take</h2>
+  <div class="note">The side column goes away, as it does today. <b>New: the beat ball.</b> It bounces along the count and lands on each
+    number exactly with the click, and it's at the top on every "&amp;". Your takes land about 0.1 s after the click: a beginner
+    often waits to <i>hear</i> the click and then hits. The ball lets you see the beat coming and hit <i>with</i> it.
+    It runs here at 40 BPM.</div>
+  <div class="screen" data-screen="b"></div>
+</section>
+
+<!-- ============ C ============ -->
+<section class="state" id="c">
+  <h2>C · After the take: your real last take</h2>
+  <div class="note">Your last take on this step (25 Oct, 40 BPM): 11 of 16 notes landed, about 0.1 s after the click on average, 5 extra hits.
+    <b>The results are on the notes</b>: each one says late, on it or missed, and the timing line shows that <i>every</i> hit is late
+    by about the same amount. That pattern is usually the speakers or headphones, not you, so the app's main move after a few
+    takes like this is the latency check (it already does this; now you can see why). The side card keeps only the count, the stars and one tip.</div>
+  <div class="screen" data-screen="c"></div>
+</section>
+
+<!-- ============ D ============ -->
+<section class="state" id="d">
+  <h2>D · iPad (768 px)</h2>
+  <div class="note">One column: the sheet first, the lesson card and How it moves side by side under it. The step pills show only
+    their numbers, except the one you're on.</div>
+  <iframe class="dev" data-src="revamp-lesson.html?only=a" width="768" height="1024" title="Lesson screen at iPad width"></iframe>
+</section>
+
+<!-- ============ map ============ -->
+<section class="state" id="map">
+  <h2>Where everything went</h2>
+  <table class="map">
+    <tr><th>On the lesson screen today</th><th>In the revamp</th></tr>
+    <tr><td>Step dots with no names</td><td>Numbered step pills; the one you're on shows its name ("Say the &amp;, don't play it")</td></tr>
+    <tr><td>"40 BPM → 70" and an empty meter</td><td>Big tempo and a ladder: one rung per +5 BPM, the step's start dashed, the goal black</td></tr>
+    <tr><td>The sheet in a small white box, black space under it</td><td>The sheet fills the panel: bigger notes, the count in big type, sticking under the notes, the syllables you only say in blue</td></tr>
+    <tr><td>"0 of 2 clean takes at 40 BPM" (after a take, small)</td><td>Goal bar under the sheet, before the first take: two boxes to tick and what "clean" means in plain words</td></tr>
+    <tr><td>"You play: snare. The app plays the rest (grey)" card</td><td>The app's notes stay grey on the sheet; "your pad: snare" sits next to the mini kit</td></tr>
+    <tr><td>Kit view at the bottom of the side column</td><td>A mini kit in the goal bar; it lights on each hit, also during the take</td></tr>
+    <tr><td>Side: what, hint, why and how (open), an info card, How it moves, kit, six links</td><td>One "The lesson" card (why and how folded after the first visit), How it moves (bigger), "⋯ More" for the links</td></tr>
+    <tr><td>Results: a numbers card in the side column</td><td>Late / on it / missed / extra on the notes, a timing line under them; the side card keeps the count, stars and one tip</td></tr>
+    <tr><td>Hints toggle, Band toggle or "just you and the click"</td><td>Same two, smaller, with their keys (H, B)</td></tr>
+    <tr><td>Details and history, Save take as MIDI, Ask for something different, Reset, Delete</td><td>"⋯ More" in the side column ("Something different" is still the main move after 5 stuck takes)</td></tr>
+    <tr><td>Moves, coach line, gestures, keyboard, autopilot, intro slides, break, latency in the lesson</td><td>Unchanged</td></tr>
+  </table>
+</section>
+
+<script>
+const only = new URLSearchParams(location.search).get('only');
+if (only) { document.body.classList.add('only'); document.querySelectorAll('.state').forEach(el => el.classList.toggle('keep', el.id === only)); }
+else document.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
+
+// ---------- the real lesson (from your data) ----------
+const L = {
+  title: 'From quarters to 8ths: hear the "&"',
+  what: 'Counting "1 & 2 & 3 & 4 &" out loud while you play, first on quarter notes only, then switching between quarters and 8ths.',
+  hint: 'Hold each stick about a third of the way up, loosely, and let it bounce off the pad.',
+  why: 'Most rushing on 8ths comes from guessing where the "&" is. If you already say it in time, your hands just follow your voice.',
+  steps: ["Say the &, don't play it", 'Switch: quarters, then 8ths', 'Steady 8ths, even hands'],
+  text: 'Snare on 1 2 3 4 only (R L R L), but say the full "1 & 2 & 3 & 4 &" out loud.',
+};
+const NOTES = [0, 1, 2, 3, 4, 5, 6, 7];            // snare quarters, 2 bars
+const STICK = ['R', 'L', 'R', 'L', 'R', 'L', 'R', 'L'];
+// Round 2 of your last take: ms after the click (null = missed); extra hits at these beats.
+const TAKE = [95, 110, 70, null, 120, 60, null, 105], EXTRAS = [1.5, 5.6];
+const ALL_HITS = [95, 110, 70, 120, 60, 105, 140, 85, 130, 90, 75]; // the 11 landed hits of both rounds
+
+// ---------- the screen, built once per state ----------
+const header = `<header>
+  <div class="brand"><span class="logo"></span>Drum Coach</div>
+  <nav class="tabs"><button class="on">Journey</button><button>Songs</button><button>Practice</button><button>Progress</button></nav>
+  <span class="spacer"></span>
+  <button class="chip kitChip bad"><span class="dot"></span><span class="long">Kit: </span>2 things to fix ▾</button>
+  <button class="gearBtn" aria-label="Setup">⚙</button></header>`;
+
+const rungs = [40, 45, 50, 55, 60, 65, 70].map((b, k) => `<i style="--k:${k}" class="${b === 40 ? 'at' : ''} ${b === 60 ? 'start' : ''} ${b === 70 ? 'goal' : ''}" title="${b} BPM"></i>`).join('');
+const lbar = s => `<div class="lbar2 card ${s === 'a' ? 'rel new' : ''}">
+  <button class="link back">← Journey</button>
+  <h2>${L.title.replace('&', '&amp;')}<small>✍ your coach wrote this one · Practice</small></h2>
+  <div class="steps">${L.steps.map((t, i) => `<span class="stepPill ${i === 0 ? 'now' : ''}" title="Step ${i + 1}: ${t.replace('&', '&amp;')}"><i>${i + 1}</i>${i === 0 ? `<span>${t.replace('&', '&amp;')}</span>` : ''}</span>`).join('')}</div>
+  <div class="tempo2"><span class="n">40 <small>BPM</small></span>
+    <span class="ladder"><span class="rungs">${rungs}</span><span>start 60 · goal 70</span></span></div>
+  <button class="tog on">💡 Hints <kbd>H</kbd></button>
+  <button class="tog off" title="Counting steps are just you and the click">🎸 off · just the click</button>
+</div>`;
+
+const say = (line, under) => `<div class="say"><div class="avatar">🥁</div><div class="bubble">${line}${under ? `<p class="under">${under}</p>` : ''}</div></div>`;
+const move = (cls, label, g) => `<button class="move ${cls}"><b>${label}</b>${g ? `<span class="g">${g}</span>` : ''}</button>`;
+
+const kit = `<svg viewBox="0 0 200 112" aria-label="Your pads: snare">
+  <g stroke="#fff" stroke-width="2" fill="#333">
+    <circle cx="28" cy="46" r="17"/><circle cx="58" cy="20" r="16"/><circle cx="92" cy="30" r="12"/><circle cx="124" cy="30" r="12"/>
+    <circle cx="164" cy="22" r="18"/><circle cx="150" cy="70" r="17"/>
+    <rect x="92" y="84" width="34" height="20" rx="4"/>
+    <circle class="kitSnare" cx="62" cy="72" r="17" fill="#FFE14D" stroke="#141414" stroke-width="3"/></g>
+  <text x="62" y="77" text-anchor="middle" font-size="12" font-weight="800" fill="#141414">you</text></svg>`;
+
+function screen(s) {
+  const playing = s === 'b', after = s === 'c';
+  const top = playing
+    ? `<div class="liveHint on rel new">💡 Play with the click, not after it: hit as the ball lands.</div>`
+    : after
+      ? say('11 of 16 landed, and every one a little after the click.', 'When every note is late by the same amount, check the latency first: it may be your speakers, not you.')
+        + `<div class="moves">${move('go', '⏱ Check my latency', '<i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"')}${move('', '🎧 Hear your take', '<i>tom 2 × 2</i>')}${move('alt', '🐢 Learn it slowly', '<i>floor × 2</i>')}${move('alt', '⏭ Skip to next', '<i>ride × 2</i>')}</div>`
+      : say(L.text.replace('&', '&amp;'))
+        + `<div class="moves">${move('go', '▶ Play', '<i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"')}${move('', '👂 Hear it', '<i>tom 2 × 2</i>')}${move('alt', '🐢 Learn it slowly', '<i>floor × 2</i>')}${move('alt', '⏭ Skip to next', '<i>ride × 2</i>')}</div>`;
+
+  const goal = `<div class="goal">
+    <span class="boxes" title="clean takes"><i></i><i></i></span>
+    <span class="txt"><b>2 clean takes</b> and the tempo goes up to 45.
+      <small>Clean = 13 of 16 notes land, and on average no more than a hair (40 ms) off the click.</small></span>
+    <span class="miniKit">${kit}<span>your pad:<br>snare</span></span></div>`;
+
+  const side = after
+    ? `<div class="card result2 rel new"><h3>Your take</h3>
+        <div class="top"><span class="big">11<small>/16</small></span><span><b>notes landed</b><br><span class="stars">★★★</span><br><span class="small">13 needed</span></span></div>
+        <p class="tip">💡 Every hit came about 0.1 s after the click.</p>
+        <p class="small">↑ better than last take (9 of 16) · 0 of 2 clean takes at 40 BPM</p>
+        <button class="link">👂 Hear it right</button></div>
+       <details class="card"><summary>The lesson</summary><p>${L.what.replace(/&/g, '&amp;')}</p></details>`
+    : `<div class="card rel new"><h3>The lesson</h3><p>${L.what.replace(/&/g, '&amp;')}</p>
+        <p class="hintcard">💡 <b>Hint:</b> ${L.hint}</p>
+        <details><summary>Why and how</summary><p class="small">${L.why.replace(/&/g, '&amp;')}</p></details></div>`;
+
+  return `${header}<div class="ls ${playing ? 'playing' : ''}">
+    ${lbar(s)}
+    ${top}
+    <div class="lm">
+      <section class="music ${s === 'a' ? 'rel new' : ''}">
+        <div class="musicTop"><span class="lbl">Step 1 · ${L.steps[0].replace('&', '&amp;')}</span>${playing ? '' : '<span>· round 2 of 2</span>'.repeat(after ? 1 : 0)}
+          <span class="seg"><button class="on">Sheet</button><button>Highway</button></span></div>
+        <div class="paper"><svg data-sheet="${s}"></svg>
+          <div class="legend"><span>● black: hit it and say it</span><span class="say">◌ blue: say it, don't hit</span>${after ? '<span style="color:var(--good)">on it</span><span style="color:var(--ok)">late / early</span><span style="color:var(--bad)">missed</span><span style="color:#888">× extra hit</span>' : ''}</div></div>
+        ${playing ? `<div class="goal"><span class="boxes"><i></i><i></i></span><span class="txt">Bar <b data-barno>1</b> of 4</span><span class="miniKit">${kit}</span><button class="primary big stopBtn">Stop <small>(crash × 4, Esc)</small></button></div>` : goal}
+      </section>
+      <aside class="side">
+        ${side}
+        <div class="card"><h3>How it moves <button class="link">⤢ Bigger</button></h3>
+          <div class="demoBox"><span class="w">BOUNCE</span>
+            <svg viewBox="0 0 320 170" aria-label="The stick drops and bounces back"><rect x="150" y="138" width="130" height="10" fill="#555"/>
+              <g class="stick"><line x1="70" y1="120" x2="270" y2="128" stroke="#E8C27A" stroke-width="6" stroke-linecap="round"/><circle cx="70" cy="120" r="16" fill="#E9B48C" stroke="#141414" stroke-width="2"/></g>
+              <circle cx="88" cy="121" r="5" fill="#FFE14D"/></svg></div>
+          <div class="demoBar"><span class="seg2"><button class="r">✓ Right</button><button>✗ Wrong</button></span><span class="seg2"><button>1×</button><button>½×</button></span>
+            <button class="primary">📷 Check yourself <small>(C)</small></button></div>
+          <p class="small" style="margin-top:8px">The D10 v2 drawing plays here, at your tempo.</p></div>
+        <details class="card more rel new"><summary>⋯ More</summary><ul>
+          <li><button class="link">Details and history</button></li><li><button class="link">💾 Save take as MIDI</button></li>
+          <li><button class="link">Ask the coach for something different</button></li><li><button class="link">Reset this lesson</button></li>
+          <li><button class="link danger">Delete this lesson</button></li></ul></details>
+      </aside>
+    </div></div>
+    <div class="talk"><button class="talkBtn" aria-label="Talk to the coach">🎙</button></div>`;
+}
+document.querySelectorAll('[data-screen]').forEach(el => { el.innerHTML = screen(el.dataset.screen); });
+
+// ---------- the sheet (drawn the way NotesView does with VexFlow in the app) ----------
+const NS = 'http://www.w3.org/2000/svg';
+const mk = (p, tag, a = {}, text) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (text != null) e.textContent = text; p.appendChild(e); return e; };
+const X0 = 92, X1 = 985, BARS = 2, BW = (X1 - X0) / BARS;
+const bx = t => X0 + BW * Math.floor(t / 4) + 40 + (t % 4) * (BW - 64) / 4;
+const TOP = 78, GAP = 18, SN = TOP + 1.5 * GAP;     // snare sits in the 3rd space (C5)
+const COUNT_Y = 248, BALL_LAND = 208, BALL_TOP = 168;
+const COL = { good: '#1E9E5A', ok: '#C77700', bad: '#E8423F', say: '#2F6FE4' };
+const word = ms => ms == null ? 'missed' : Math.abs(ms) <= 20 ? 'on it' : `${Math.abs(ms) <= 45 ? 'a hair ' : ''}${ms > 0 ? 'late' : 'early'}`;
+
+function drawSheet(svg, s) {
+  const after = s === 'c', y0 = after ? 0 : 26, h = after ? 430 : 296;
+  svg.setAttribute('viewBox', `0 ${y0} 1000 ${h - y0}`);
+  svg.setAttribute('aria-label', 'Two bars of snare quarter notes with the count 1 & 2 & 3 & 4 & under them');
+  for (let i = 0; i < 5; i++) mk(svg, 'line', { x1: 14, x2: X1, y1: TOP + i * GAP, y2: TOP + i * GAP, stroke: '#141414', 'stroke-width': 1.6 });
+  mk(svg, 'rect', { x: 22, y: TOP + GAP, width: 7, height: 2 * GAP, fill: '#141414' }); mk(svg, 'rect', { x: 34, y: TOP + GAP, width: 7, height: 2 * GAP, fill: '#141414' });
+  mk(svg, 'text', { x: 64, y: TOP + 2 * GAP - 2, 'font-size': 32, 'font-weight': 900, 'font-family': 'Georgia,serif', 'text-anchor': 'middle' }, '4');
+  mk(svg, 'text', { x: 64, y: TOP + 4 * GAP - 2, 'font-size': 32, 'font-weight': 900, 'font-family': 'Georgia,serif', 'text-anchor': 'middle' }, '4');
+  for (let b = 1; b <= BARS; b++) mk(svg, 'line', { x1: X0 + BW * b - (b === BARS ? 6 : 0), x2: X0 + BW * b - (b === BARS ? 6 : 0), y1: TOP, y2: TOP + 4 * GAP, stroke: '#141414', 'stroke-width': b === BARS ? 7 : 1.6 });
+  if (BARS) mk(svg, 'line', { x1: X1 - 14, x2: X1 - 14, y1: TOP, y2: TOP + 4 * GAP, stroke: '#141414', 'stroke-width': 1.6 });
+
+  // the cursor (state B) goes under the notes
+  const cursor = s === 'b' ? mk(svg, 'rect', { x: bx(0) - 23, y: TOP - 22, width: 46, height: 4 * GAP + 44, fill: '#2DE1C255', rx: 8 }) : null;
+
+  // notes: quarter notes on the snare, stems up
+  const heads = NOTES.map((t, i) => {
+    const x = bx(t), r = after ? TAKE[i] : undefined, missed = after && r == null;
+    const c = !after ? '#141414' : missed ? COL.bad : Math.abs(r) <= 20 ? COL.good : COL.ok;
+    const g = mk(svg, 'g');
+    mk(g, 'line', { x1: x + 13, x2: x + 13, y1: SN - 3, y2: SN - 72, stroke: c, 'stroke-width': 3 });
+    const head = mk(g, 'ellipse', { cx: x, cy: SN, rx: 14, ry: 10, transform: `rotate(-20 ${x} ${SN})`, fill: missed ? '#FFFDF5' : c, stroke: c, 'stroke-width': missed ? 3 : 1, 'stroke-dasharray': missed ? '4 3' : '' });
+    if (after) {
+      mk(g, 'text', { x: x + 4, y: SN - 82, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 800, fill: c }, word(r));
+      if (r != null) { // a timing whisker: where the hit landed against the note
+        const dx = r * 0.32;
+        mk(g, 'line', { x1: x, x2: x + dx, y1: SN + 34, y2: SN + 34, stroke: c, 'stroke-width': 4, 'stroke-linecap': 'round' });
+        mk(g, 'line', { x1: x, x2: x, y1: SN + 26, y2: SN + 42, stroke: '#141414', 'stroke-width': 2 });
+        mk(g, 'circle', { cx: x + dx, cy: SN + 34, r: 6, fill: c });
+      }
+    }
+    return { x, head, t };
+  });
+  if (after) EXTRAS.forEach(t => { const x = bx(t); mk(svg, 'text', { x, y: TOP - 10, 'text-anchor': 'middle', 'font-size': 24, 'font-weight': 800, fill: '#888' }, '×'); mk(svg, 'text', { x, y: TOP - 30, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: '#888' }, 'extra'); });
+
+  // the count: numbers you hit and say (black), "&"s you only say (blue, dashed)
+  const syl = [];
+  for (let k = 0; k < BARS * 8; k++) {
+    const t = k / 2, num = k % 2 === 0, xx = bx(Math.floor(t)) + (num ? 0 : (BW - 64) / 8);
+    const g = mk(svg, 'g');
+    const bg = mk(g, 'rect', { x: xx - 24, y: COUNT_Y - 34, width: 48, height: 46, rx: 12, fill: num ? 'none' : '#2F6FE41A', stroke: num ? 'none' : COL.say, 'stroke-width': 2, 'stroke-dasharray': '5 4' });
+    mk(g, 'text', { x: xx, y: COUNT_Y, 'text-anchor': 'middle', 'font-size': num ? 36 : 30, 'font-weight': 900, style: 'font-family:var(--display)', fill: num ? '#141414' : COL.say }, num ? String(1 + (k / 2) % 4) : '&');
+    if (num) mk(g, 'text', { x: xx, y: COUNT_Y + 36, 'text-anchor': 'middle', 'font-size': 20, 'font-weight': 800, fill: '#555' }, STICK[k / 2]);
+    syl.push({ t, x: xx, bg, num });
+  }
+
+  // the beat ball rests on "1" before the take, bounces during it
+  const ball = s !== 'c' ? mk(svg, 'circle', { cx: syl[0].x, cy: BALL_LAND, r: 13, fill: '#FFE14D', stroke: '#141414', 'stroke-width': 3 }) : null;
+
+  if (after) { // the timing line: all your hits against the click
+    const y = 352, cx = 330, k = 1.6;            // 1 ms = 1.6 px
+    mk(svg, 'line', { x1: 30, x2: 970, y1: 304, y2: 304, stroke: '#141414', 'stroke-width': 1, 'stroke-dasharray': '4 4' });
+    mk(svg, 'text', { x: 30, y: 330, 'font-size': 15, 'font-weight': 800 }, 'WHERE YOUR HITS LANDED');
+    mk(svg, 'rect', { x: cx - 40 * k, y: y - 16, width: 80 * k, height: 32, fill: '#1E9E5A22', stroke: COL.good, 'stroke-width': 2 });
+    mk(svg, 'line', { x1: cx - 160, x2: cx + 290 * k, y1: y, y2: y, stroke: '#141414', 'stroke-width': 3 });
+    mk(svg, 'line', { x1: cx, x2: cx, y1: y - 24, y2: y + 24, stroke: '#141414', 'stroke-width': 3 });
+    mk(svg, 'text', { x: cx, y: y + 44, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 800 }, 'the click');
+    mk(svg, 'text', { x: cx - 150, y: y + 44, 'font-size': 15, 'font-weight': 700, fill: '#555' }, '← early');
+    mk(svg, 'text', { x: cx + 230, y: y + 44, 'font-size': 15, 'font-weight': 700, fill: '#555' }, 'late →');
+    mk(svg, 'text', { x: cx, y: y - 22, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 700, fill: COL.good }, 'what this step asks');
+    ALL_HITS.forEach((ms, i) => mk(svg, 'circle', { cx: cx + ms * k, cy: y + ((i % 3) - 1) * 9, r: 7, fill: COL.ok, stroke: '#141414', 'stroke-width': 1.5 }));
+    mk(svg, 'text', { x: cx + 290 * k + 16, y: y + 6, 'font-size': 17, 'font-weight': 800 }, '+ 5 missed, 5 extra');
+  }
+  return { heads, syl, ball, cursor };
+}
+
+const sheets = {};
+document.querySelectorAll('svg[data-sheet]').forEach(svg => { sheets[svg.dataset.sheet] = drawSheet(svg, svg.dataset.sheet); });
+
+// ---------- state B: the take at 40 BPM, the ball lands on each click ----------
+const B = sheets.b;
+if (B) {
+  const beatMs = 60000 / 40, t0 = performance.now(), barNo = document.querySelector('[data-screen="b"] [data-barno]');
+  const kitSnare = document.querySelector('[data-screen="b"] .kitSnare');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const frame = now => {
+    const beats = (now - t0) / beatMs, t = beats % (BARS * 4), i = Math.floor(t), u = t - i;
+    const x0 = B.syl[i * 2].x, x1 = i + 1 < BARS * 4 ? B.syl[(i + 1) * 2].x : B.syl[i * 2].x + (B.syl[2].x - B.syl[0].x);
+    B.ball.setAttribute('cx', x0 + (x1 - x0) * u);
+    B.ball.setAttribute('cy', reduce ? BALL_LAND : BALL_LAND - (BALL_LAND - BALL_TOP) * 4 * u * (1 - u));
+    B.cursor.setAttribute('x', bx(Math.min(t, BARS * 4 - 0.01)) - 23);
+    B.syl.forEach(s => s.bg.setAttribute('fill', Math.abs(s.t - t) < 0.22 ? '#FFE14D' : s.num ? 'none' : '#2F6FE41A'));
+    // your notes colour in as you play them (late, like your take)
+    B.heads.forEach(h => h.head.setAttribute('fill', h.t <= t - 0.08 ? '#C77700' : '#141414'));
+    kitSnare.setAttribute('fill', u > 0.06 && u < 0.2 ? '#FF5FA2' : '#FFE14D');
+    barNo.textContent = 1 + Math.floor(beats / 4) % 4;
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

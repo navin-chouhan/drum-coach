@@ -196,6 +196,7 @@ Still open:
   YouTube clock): owner checks with the kit.
 - **N1 camera pose tracking and G4 sampled sounds** were skipped (they need downloads the owner declined).
 - **The grip and kick-foot drawings** in How it moves read poorly for a beginner (D10: animated v2 mockup waiting for "build it").
+- **UI/UX revamp** of Journey, the lesson screen, Progress, Setup and Practice: mockups waiting for "build it" (see below).
 - **Repeated rank-up** at stage 8 with several style tracks (D16).
 
 ### Round 8 (N11: the first automated play test, `npm run playtest`), 2026-10-26
@@ -233,6 +234,25 @@ Time Lord; stage 8's "song-pocket" passes now that the emulated kit follows volu
 | D16 | Stage 8 with all style tracks: "Rank up: you're now a Pocket Pro!" four times (rock-drive, open-hat-funk, jazz-tempo, bossa). The rank-up test in `LessonPlayer` asks "are all the stage's checkpoints done?" after saving, and the other tracks' checkpoints are new lessons, so each one passes it again. | Bug | Open: only rank up when the stage wasn't passed before this take. |
 
 D10 (grip and kick foot) has a v2 mockup with animation: `docs/mockups/d10-grip-foot.html`.
+
+### UI/UX revamp mockups, 2026-10-27 (waiting for "build it")
+Built on a read-only copy of the owner's data, so each screen shows the real state: stage 1, "From quarters to 8ths"
+step 1 at 40 BPM, 38 takes over 2 days.
+- `revamp-journey.html`: one next move with kit gestures, today's set as a strip, the stage trail and its song side by
+  side, one kit chip instead of the MIDI and sound chips, Trophies renamed Progress.
+- `revamp-lesson.html`: step pills with names, a tempo ladder, the sheet filling its panel with the count big and the
+  syllables you only say in blue, the pass goal on screen before the first take, a beat ball over the count during the
+  take, results on the notes and a timing line after it, one side card.
+- `revamp-progress.html`: getting better (notes landed per day), this week, the skill map (moved from Journey, light
+  bars), trophies with how far each one is, your time against the daily goal, your lessons in plain words.
+- `revamp-setup.html`: Your kit as a checklist that says what each check fixes; the pad wizard readable from the throne;
+  Coach and voice in four groups with short switches and a gesture table.
+- `revamp-practice.html`: "pick up where you left off" plus For you cards the ride steps through, an optional 5-minute
+  warm-up, and the play screen in the lesson layout with big tempo − / + and an optional tempo climb.
+
+Seen in the owner's data while building them: the last 6 takes on that step all landed about 0.1 s after the click and
+the latency was never measured. The D2 fix already makes the latency test the big move after 3 such takes; it is the
+first thing to run at the kit (M2 below).
 
 Testing lesson: when the shared `/tmp` quota fills, SQLite writes fail ("disk I/O error") and the play test reports
 "the take was not saved". Run it with a short temp path on the real disk: `TMPDIR=~/.cache/dpt npm run playtest`

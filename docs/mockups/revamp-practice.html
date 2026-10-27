@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice revamp</title>
+<link rel="stylesheet" href="../../src/ui/styles.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .pr{max-width:1560px;margin:0 auto;padding:20px 28px 96px;display:flex;flex-direction:column;gap:18px}
+
+  /* Picking, at the kit: one big "pick up where you left off", cards you can step through with the ride. */
+  .pickTop{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
+  .resume{display:flex;flex-direction:column;gap:14px;padding:18px 20px}
+  .resumeBig{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 18px;align-items:center;padding:14px 16px;background:var(--pop);border:3px solid var(--line)}
+  .resumeBig .ic{grid-row:span 3;font-size:58px;line-height:1}
+  .kicker{font:800 11.5px var(--display);letter-spacing:.06em;text-transform:uppercase}
+  .kicker span{background:var(--line);color:var(--pop);padding:2px 8px;margin-right:6px}
+  .resumeBig h2{margin:2px 0;font-size:32px;line-height:1.1}
+  .resumeBig p{margin:0;font-size:16px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px} .meta .pill{background:var(--panel);font-size:13px}
+  .resume .moves{grid-template-columns:2fr 1fr 1fr}
+  .warm{display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:var(--night);color:#fff}
+  .warm h3{background:var(--pop);color:var(--line)}
+  .warm ol{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+  .warm li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border:2px solid #555;font-weight:700}
+  .warm li span{color:var(--pop)}
+  .warm .move{color:var(--text)}
+  .browse{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .browse .lbl{font:800 12px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--line);color:var(--pop);padding:3px 8px}
+  .browse .sp{flex:1}
+  .browse input{font:inherit;padding:8px 12px;border:3px solid var(--line);border-radius:999px;min-width:220px}
+  .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+  .exCard2{position:relative;display:flex;flex-direction:column;gap:6px;text-align:left;padding:16px;border:3px solid var(--line);border-radius:0;background:var(--panel2);box-shadow:4px 4px 0 var(--line);min-height:150px}
+  .exCard2 .ic{font-size:30px} .exCard2 b{font:800 19px/1.15 var(--display)}
+  .exCard2 .tag{align-self:flex-start;background:var(--night);color:var(--nightText);font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .exCard2 .small{font-size:13px}
+  .exCard2.focus{background:var(--panel);outline:5px solid var(--pop);outline-offset:3px;box-shadow:0 0 0 11px var(--line)}
+  .exCard2.focus::after{content:"hi-hat pedal × 3 to play";position:absolute;right:8px;top:-15px;background:var(--pop);border:2px solid var(--line);font:800 12px var(--display);padding:2px 8px;z-index:2}
+  .tabRow{display:flex;gap:8px;flex-wrap:wrap}
+  .tabRow button{font-weight:700;border:2px solid var(--line)} .tabRow button.on{background:var(--pop)}
+  .tabRow small{color:var(--muted)}
+
+  /* Playing: the lesson screen's layout, plus tempo and loop controls. */
+  .lbar2{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:10px 16px}
+  .lbar2 h2{margin:0;font:800 24px var(--display)}
+  .lbar2 .back{font-weight:700}
+  .tempoBox{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .tempoBox .st{width:48px;height:48px;font:800 26px var(--display);border:3px solid var(--line);border-radius:0;box-shadow:3px 3px 0 var(--line);background:var(--panel)}
+  .tempoBox .n{font:800 44px/1 var(--display);min-width:84px;text-align:center} .tempoBox .n small{display:block;font:700 12px system-ui;color:var(--muted)}
+  .best{font-size:13px;font-weight:700;color:var(--muted);max-width:120px;line-height:1.25}
+  .tog{font-weight:700} .tog.on{background:var(--pop)}
+  .lm{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+  .music{background:var(--night);border:3px solid var(--line);box-shadow:6px 6px 0 var(--pop);display:flex;flex-direction:column}
+  .musicTop{display:flex;align-items:center;gap:10px;padding:8px 12px;color:#fff;font-weight:700;font-size:14px;flex-wrap:wrap}
+  .musicTop .seg,.rounds{display:inline-flex;border:2px solid #fff}
+  .musicTop .seg button,.rounds button{border:0;border-radius:0;font:700 12.5px system-ui;padding:4px 10px;background:transparent;color:#fff}
+  .musicTop .seg button.on{background:var(--pop);color:var(--line)}
+  .musicTop .seg{margin-left:auto}
+  .paper{background:#FFFDF5;margin:0 12px;border:3px solid var(--line)}
+  .paper svg{display:block;width:100%;height:auto}
+  .goal{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:12px 14px;color:#fff}
+  .goal .txt{flex:1;min-width:260px;font-size:16px} .goal .txt small{display:block;color:#ccc;font-size:13px}
+  .sw{width:56px;height:30px;border:3px solid #fff;border-radius:999px;background:#555;position:relative;flex:none}
+  .sw::after{content:"";position:absolute;top:2px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+  .sw.on{background:var(--good)} .sw.on::after{left:27px}
+  .ladder{display:flex;gap:4px;align-items:flex-end}
+  .ladder i{width:20px;border:2px solid #fff;height:calc(10px + var(--k) * 4px)} .ladder i.at{background:var(--pop)} .ladder i.best{background:var(--good)}
+  .side{display:flex;flex-direction:column;gap:14px}
+  .chipGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .chipGrid button{display:flex;align-items:center;gap:8px;text-align:left;padding:8px 10px;border:2px solid var(--line);border-radius:0;font-weight:700;font-size:13.5px;background:var(--panel)}
+  .chipGrid button.on{background:var(--pop)}
+  .chipGrid button small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}
+  .hist{display:flex;gap:10px;align-items:center;font-size:14px}
+  .hist svg{width:140px;height:44px;flex:none}
+
+  @media (max-width:1100px){
+    .pickTop,.lm{grid-template-columns:1fr} .grid4{grid-template-columns:1fr 1fr} .pr{padding:16px 16px 96px}
+    .resume .moves{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:700px){ .grid4{grid-template-columns:1fr} .tempoBox{margin-left:0} .chipGrid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="mockBar"><b>MOCKUP · Practice revamp</b> Pick from the kit (ride × 2 steps through the cards), a 5-minute warm-up, and a play screen with the lesson screen's layout plus tempo, loop and an optional tempo climb. Real data. Not built.</div>
+
+<section class="state keep" id="a">
+  <h2>A · Picking what to play, from the throne</h2>
+  <div class="note">Today: tabs, a search box and small cards (four for you right now: no step-ups while it's hard); you need the mouse. Now the top card is what you played last
+    (Single strokes warm-up, 8 takes, best clean tempo 70), with the same moves and gestures as a lesson. <b>Ride × 2 steps the yellow
+    ring through the "For you" cards</b>, hi-hat pedal × 3 plays the ringed one. Tabs and search stay below for the mouse.
+    New and optional: a 5-minute warm-up that chains four short exercises at tempos from your own takes.</div>
+  <div class="screen" data-screen="pick"></div>
+</section>
+
+<section class="state" id="b">
+  <h2>B · Playing it</h2>
+  <div class="note">Same layout as the revamped lesson screen: coach line, moves, the sheet filling its panel, results on the notes after a
+    take. Practice keeps its own tools: big − / + for tempo (or floor × 2 / tom 1 × 2), times round, loop bars on longer charts.
+    <b>New, off by default: Climb.</b> After 2 clean takes the tempo goes up 5, like a lesson's ladder, and it stops 5 above your best.
+    The seven "How it plays" checkboxes become a grid of toggles.</div>
+  <div class="screen" data-screen="play"></div>
+</section>
+
+<section class="state" id="c">
+  <h2>C · iPad (768 px)</h2>
+  <iframe class="dev" data-src="revamp-practice.html?only=a" width="768" height="1024" title="Practice at iPad width"></iframe>
+</section>
+
+<section class="state" id="map">
+  <h2>Where everything went</h2>
+  <table class="map">
+    <tr><th>In Practice today</th><th>In the revamp</th></tr>
+    <tr><td>"Practise anything" with tabs, search and the For you cards</td><td>"Pick up where you left off" on top, For you as bigger cards with a ring the ride moves, tabs and search under them</td></tr>
+    <tr><td>—</td><td>New: 5-minute warm-up (optional)</td></tr>
+    <tr><td>Card text: "40 BPM · best 70 · 1 bar"</td><td>"starts at 40 today · best clean 70" (same numbers, said plainly)</td></tr>
+    <tr><td>Tempo with small − / + in the bar</td><td>Big − / + with the tempo between them, your best next to it</td></tr>
+    <tr><td>Moves: Play/Again · Hear · +5 · −5 · Next one</td><td>Unchanged, same gestures</td></tr>
+    <tr><td>Loop bars and times round above the sheet</td><td>Same place, on one line with Sheet / Highway</td></tr>
+    <tr><td>"How it plays": seven checkbox sentences</td><td>Seven toggles in a grid, each with a one-line note</td></tr>
+    <tr><td>Results card with numbers</td><td>Results on the notes, as on the lesson screen; the card keeps landed, in a row, comebacks</td></tr>
+    <tr><td>Kit view in the side column</td><td>Mini kit in the bar under the sheet</td></tr>
+    <tr><td>—</td><td>New: Climb (tempo ladder, off by default) and "your takes here" history line</td></tr>
+  </table>
+</section>
+
+<script>
+const only = new URLSearchParams(location.search).get('only');
+if (only) { document.body.classList.add('only'); document.querySelectorAll('.state').forEach(el => el.classList.toggle('keep', el.id === only)); }
+else document.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
+
+const header = `<header>
+  <div class="brand"><span class="logo"></span>Drum Coach</div>
+  <nav class="tabs"><button>Journey</button><button>Songs</button><button class="on">Practice</button><button>Progress</button></nav>
+  <span class="spacer"></span>
+  <button class="chip kitChip bad"><span class="dot"></span><span class="long">Kit: </span>2 things to fix ▾</button>
+  <button class="gearBtn" aria-label="Setup">⚙</button></header>`;
+const move = (cls, label, g) => `<button class="move ${cls}"><b>${label}</b>${g ? `<span class="g">${g}</span>` : ''}</button>`;
+
+// Your "For you" list, in the app's order (from a copy of data/).
+const FOR_YOU = [['🥢', 'good warm-up', 'Single strokes (16ths)', 'starts at 50 · 2 bars'], ['🥢', 'at your level', 'Accents on the beat', 'starts at 60 · 2 bars'],
+  ['🥢', 'at your level', 'Hi-hat 8th notes', 'starts at 80 · 2 bars']];
+
+const pickPage = () => `${header}<div class="pr">
+  <div class="pickTop">
+    <div class="card resume rel new">
+      <div class="resumeBig"><span class="ic">🎯</span>
+        <div class="kicker"><span>Pick up where you left off</span>played Sun · 8 takes</div>
+        <h2>Single strokes warm-up</h2>
+        <div><p>Even 16ths on the snare, R L R L. One bar, round and round.</p>
+          <div class="meta"><span class="pill">starts at 40 today</span><span class="pill">best clean: 70 BPM</span><span class="pill">✍ by your coach</span></div></div></div>
+      <div class="moves">${move('go', '▶ Play it', '<i>hi-hat pedal × 3</i> or <i>crash × 2</i>')}${move('', '👂 Hear it', '<i>tom 2 × 2</i>')}${move('alt', '⏭ Next card', '<i>ride × 2</i>')}</div>
+    </div>
+    <div class="card warm rel new"><h3>5-minute warm-up</h3>
+      <p style="margin:0">Four short exercises, one after the other, at the tempos For you picks. No score, just loosen up.</p>
+      <ol><li>Single strokes warm-up <span>1 min · 40</span></li><li>Single strokes (16ths) <span>1 min · 50</span></li><li>Accents on the beat <span>1½ min · 60</span></li><li>Hi-hat 8th notes <span>1½ min · 80</span></li></ol>
+      ${move('alt', '🔥 Start the warm-up', '<i>tom 1 × 2</i>')}
+    </div>
+  </div>
+  <div class="browse"><span class="lbl">For you</span><span class="small">ride × 2 moves the ring · hi-hat pedal × 3 plays it</span></div>
+  <div class="grid4 rel new">${FOR_YOU.map(([ic, tag, t, m], i) => `<button class="exCard2 ${i === 0 ? 'focus' : ''}"><span class="ic">${ic}</span><span class="tag">${tag}</span><b>${t}</b><span class="small">${m}</span></button>`).join('')}
+    <button class="exCard2" style="background:var(--panel)"><span class="ic">＋</span><b>All exercises</b><span class="small">Grooves 18 · Rudiments and drills 9 · Fills 6 · Songs 1 · From your coach 1</span></button></div>
+  <div class="browse"><div class="tabRow"><button class="on">For you</button><button>Grooves <small>18</small></button><button>Rudiments and drills <small>9</small></button><button>Fills <small>6</small></button><button>Songs <small>1</small></button><button>From your coach <small>1</small></button></div>
+    <span class="sp"></span><input placeholder="🔎 Search" aria-label="Search exercises"></div>
+</div>
+<div class="talk"><button class="talkBtn" aria-label="Talk to the coach">🎙</button></div>`;
+
+const kit = `<svg viewBox="0 0 200 112" width="150" aria-label="Your pads: snare"><g stroke="#fff" stroke-width="2" fill="#333">
+  <circle cx="28" cy="46" r="17"/><circle cx="58" cy="20" r="16"/><circle cx="92" cy="30" r="12"/><circle cx="124" cy="30" r="12"/><circle cx="164" cy="22" r="18"/><circle cx="150" cy="70" r="17"/>
+  <rect x="92" y="84" width="34" height="20" rx="4"/><circle cx="62" cy="72" r="17" fill="#FFE14D" stroke="#141414" stroke-width="3"/></g></svg>`;
+const rungs = [40, 45, 50, 55, 60, 65, 70, 75].map((b, k) => `<i style="--k:${k}" class="${b === 40 ? 'at' : ''} ${b === 70 ? 'best' : ''}" title="${b} BPM"></i>`).join('');
+const chip = (on, t, d) => `<button class="${on ? 'on' : ''}"><span>${t}<small>${d}</small></span></button>`;
+
+const playPage = () => `${header}<div class="pr">
+  <div class="lbar2 card rel new"><button class="link back">← All exercises</button><h2>Single strokes warm-up</h2><span class="toolBadge">🥢 EXERCISE · BY YOUR COACH</span>
+    <div class="tempoBox"><button class="st" aria-label="5 BPM slower">−</button><span class="n">40<small>BPM</small></span><button class="st" aria-label="5 BPM faster">+</button>
+      <span class="best">best clean here: 70 BPM</span></div>
+    <button class="tog on">💡 Hints <kbd>H</kbd></button></div>
+  <div class="say"><div class="avatar">🥁</div><div class="bubble">Even 16ths, R L R L. Easy start at 40; your best clean take is 70.</div></div>
+  <div class="moves five">${move('go', '▶ Play', '<i>hi-hat pedal × 3</i> or <i>crash × 2</i>')}${move('', '👂 Hear it', '<i>tom 2 × 2</i>')}${move('alt', '🐇 +5 BPM', '<i>tom 1 × 2</i>')}${move('alt', '🐢 −5 BPM', '<i>floor × 2</i>')}${move('alt', '⏭ Next one', '<i>ride × 2</i>')}</div>
+  <div class="lm">
+    <section class="music rel new">
+      <div class="musicTop"><span>1 bar ·</span><span class="rounds"><button>−</button><button>4× round</button><button>+</button></span>
+        <span class="seg"><button class="on">Sheet</button><button>Highway</button></span></div>
+      <div class="paper"><svg data-sheet></svg></div>
+      <div class="goal"><span class="sw"></span><span class="txt"><b>Climb</b>: after 2 clean takes the tempo goes up 5, until 75.<small>Off: the tempo stays where you put it.</small></span>
+        <span class="ladder">${rungs}</span>${kit}</div>
+    </section>
+    <aside class="side">
+      <div class="card rel new"><h3>How it plays</h3><div class="chipGrid">
+        ${chip(true, '🔔 Click', 'on every beat')}${chip(false, '⁘ 8th click', 'click on the &amp;s too')}
+        ${chip(true, '1 bar count-in', 'before each take')}${chip(false, '🎶 Play along', 'I play softly under you')}
+        ${chip(false, '🐢 Wait mode', 'waits for each note')}${chip(true, '💡 Hints', 'count and sticking')}
+        ${chip(true, '📋 Intro slides', 'before the first take')}</div></div>
+      <div class="card"><h3>Your takes here</h3><div class="hist">
+        <svg viewBox="0 0 140 44" aria-label="Notes landed in your 8 takes: 34, 91, 34, 34, 25, 47, 9, 13 percent"><polyline points="4,28 22,6 40,28 58,28 76,32 94,23 112,40 130,38" fill="none" stroke="#2F6FE4" stroke-width="2"/><circle cx="130" cy="38" r="4" fill="#2F6FE4"/></svg>
+        <span>8 takes on Saturday. <b>91% landed at 70</b>; the 6 after it, at 50 and 60, stayed under 50%. Slower didn't help, so check the latency first.</span></div></div>
+      <details class="card"><summary>⚙ More</summary><p class="small">Browser drum sounds · latency correction · song sync</p></details>
+    </aside>
+  </div>
+</div>
+<div class="talk"><button class="talkBtn" aria-label="Talk to the coach">🎙</button></div>`;
+
+document.querySelector('[data-screen="pick"]').innerHTML = pickPage();
+document.querySelector('[data-screen="play"]').innerHTML = playPage();
+
+// One bar of 16ths on the snare: beamed in fours, "1 e & a" under them, R L R L.
+const NS = 'http://www.w3.org/2000/svg', svg = document.querySelector('svg[data-sheet]');
+const mk = (tag, a, text) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
+const TOP = 60, GAP = 18, SN = TOP + 1.5 * GAP, X0 = 100, X1 = 980, bx = t => X0 + 40 + t * (X1 - X0 - 70) / 4;
+svg.setAttribute('viewBox', '0 20 1000 270');
+for (let i = 0; i < 5; i++) mk('line', { x1: 14, x2: X1, y1: TOP + i * GAP, y2: TOP + i * GAP, stroke: '#141414', 'stroke-width': 1.6 });
+mk('rect', { x: 22, y: TOP + GAP, width: 7, height: 2 * GAP, fill: '#141414' }); mk('rect', { x: 34, y: TOP + GAP, width: 7, height: 2 * GAP, fill: '#141414' });
+mk('text', { x: 64, y: TOP + 2 * GAP - 2, 'font-size': 34, 'font-weight': 900, 'font-family': 'Georgia,serif', 'text-anchor': 'middle' }, '4');
+mk('text', { x: 64, y: TOP + 4 * GAP - 2, 'font-size': 34, 'font-weight': 900, 'font-family': 'Georgia,serif', 'text-anchor': 'middle' }, '4');
+mk('line', { x1: X1 - 14, x2: X1 - 14, y1: TOP, y2: TOP + 4 * GAP, stroke: '#141414', 'stroke-width': 1.6 });
+mk('line', { x1: X1 - 4, x2: X1 - 4, y1: TOP, y2: TOP + 4 * GAP, stroke: '#141414', 'stroke-width': 7 });
+const SYL = ['1', 'e', '&', 'a'];
+for (let beat = 0; beat < 4; beat++) {
+  const xs = [0, 1, 2, 3].map(k => bx(beat + k / 4));
+  xs.forEach((x, k) => {
+    mk('ellipse', { cx: x, cy: SN, rx: 13, ry: 9.5, transform: `rotate(-20 ${x} ${SN})`, fill: '#141414' });
+    mk('line', { x1: x + 12, x2: x + 12, y1: SN - 3, y2: SN - 66, stroke: '#141414', 'stroke-width': 3 });
+    mk('text', { x, y: 228, 'text-anchor': 'middle', 'font-size': k ? 28 : 36, 'font-weight': 900, fill: '#141414' }, k ? SYL[k] : String(beat + 1));
+    mk('text', { x, y: 262, 'text-anchor': 'middle', 'font-size': 20, 'font-weight': 800, fill: '#555' }, k % 2 ? 'L' : 'R');
+  });
+  for (const y of [SN - 66, SN - 54]) mk('rect', { x: xs[0] + 10, y, width: xs[3] - xs[0] + 4, height: 7, fill: '#141414' });
+}
+</script>
+</body>
+</html>
