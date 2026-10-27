@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Thinking, useCoachEntry } from '../coach/api';
 import { summarizeRun } from '../coach/summary';
-import { cleanBars, worstBars } from '../engine/scoring';
+import { cleanBars, WINDOWS, worstBars } from '../engine/scoring';
+import { lastRound } from '../engine/takeMarks';
 import { beatsPerBar } from '../engine/chart';
 import { freeBarStats, inFreeBar, takeDrift } from '../engine/jam';
 import { afterReview, autoProbe, floorLine, freeStars, stuckMove, stuckLine, type StuckMove, lateNote, proveOnAnotherDay, type LessonProgress, nextStepInfo, checkPass, CLEAN_TAKES, countPlan, passFor, pickVariant, probeTempo, playChart, recordTarget, toolOf, goodMsFor, ladderStep, lanesNow, MIN_BPM, starsFor, startProgress, type LadderEvent } from '../engine/lesson';
@@ -14,7 +15,6 @@ import { Celebration, flourish } from './Celebration';
 import type { SessionRole } from '../engine/planner';
 import { getSettings, setSettings, subscribeSettings } from '../input/settings';
 import { NotesView } from '../play/NotesView';
-import { KitView } from '../ui/KitView';
 import { player, playerVersion, start, stop, subscribePlayer, type Finished, type PlayOptions } from '../play/player';
 import { LatencyHint, Results, saveRun } from '../play/Results';
 import { LatencyCard } from '../ui/LatencyCard';
@@ -26,7 +26,7 @@ import { hush, say, voiceEngine } from '../voice/voice';
 import { onHit } from '../input/hits';
 import { canRunAction, coachLine, coachTake, screenAction, dropCoachAction, onCoachAction, replyFor, runAction, thinkingAbout, useCoach } from '../coach/session';
 import { stepIcon, TOOL_LABEL } from './tools';
-import { CoachLine, FlowMeter, LiveHint, Move } from '../play/AtKit';
+import { BarCounter, CoachLine, FlowMeter, GoalBar, LiveHint, Move, TempoLadder, TimingLine } from '../play/AtKit';
 import { IntroSlides } from '../play/IntroSlides';
 import { SelfCheck } from '../ui/SelfCheck';
 import { EarQuiz } from './EarQuiz';
@@ -401,6 +401,15 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     return false;
   }));
 
+  // After a take: how each note of its last round went, on the sheet, and every hit on the timing line.
+  const take = useMemo(() => {
+    if (!f || playing || f.options.demo || f.options.wait || !f.results.length) return undefined;
+    const same = f.chart.notes.length === chart.notes.length && f.chart.notes.every((n, i) => n.t === chart.notes[i].t && n.drum === chart.notes[i].drum);
+    if (!same) return undefined;
+    const r = lastRound(chart, f.run, f.results, f.options, f.extras.map(h => (h.time - f.zero) / (60000 / (f.chart.bpm * f.options.speed))));
+    return { ...r, mark: (i: number) => r.marks.get(i) };
+  }, [f, playing, chart]);
+
   if (f && details) return <Results f={f} onAgain={() => play(false)} onBack={() => setDetails(false)} />;
 
   const stage = MILESTONES.find(m => m.checkpoints.includes(lesson.checkpoint ?? lesson.id)) ?? MILESTONES.find(m => m.level === lesson.level);
@@ -423,15 +432,57 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
     .map(b => ({ bar: b, notes: fillFromTake(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beatsPerBar: f.run.beatsPerBar }, b) }))
     .filter(x => x.notes.length >= 2).slice(0, 4) : [];
   const layer = step.layers && !oneTake ? Math.min(p.layer ?? 0, step.layers.length - 1) : undefined;
-  const dots = step.layers && !oneTake ? step.layers.map((_, i) => (i < layer! ? 'done' : i === layer ? 'on' : ''))
-    : lesson.steps.map((_, i) => (i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'on' : ''));
-  const toTarget = Math.max(0, Math.min(1, (bpm - step.bpm.start) / Math.max(1, step.bpm.target - step.bpm.start)));
+  // The steps (or a step's layers) as pills: numbers, and the name of the one you're on.
+  const pills = step.layers && !oneTake ? step.layers.map((l, i) => ({ name: i ? `+ ${l.filter(d => !step.layers![i - 1].includes(d)).map(laneName).join(' + ')}` : l.map(laneName).join(' + '), state: i < layer! ? 'done' : i === layer ? 'now' : '' }))
+    : lesson.steps.map((st, i) => ({ name: st.title, state: i < stepIdx || p.completedAt ? 'done' : i === stepIdx ? 'now' : '' }));
   // The verdict never turns into "…" while the coach thinks: the thinking shows as a small line under it.
   const said = breakNow ? { line: `${outcome?.say ?? ''} You've played over 20 minutes: time for a 2-minute break.`, under: undefined } : coachLine(outcome?.say, fresh2, big);
   const line = said.line ?? (arcade ? `Two minutes at ${arcadeBpm} BPM: how many clean bars can you play? ${arcadeBest ? `Your best: ${arcadeBest}.` : ''}`
     : canProbe ? (probeExplained ? `Find your tempo from ${step.bpm.start} BPM.` : "Let's find your tempo: one bar at a time, 5 BPM faster after each clean bar, until it gets hard.")
     : flow ? 'Flow: just play. The click fades away and nothing is scored as pass or fail. Stop when you like (crash × 4 or Esc).' : step.text);
   const howHint = lesson.how.split(/(?<=\.)\s/)[0];
+
+  // The goal, in words, before the take: how many clean takes, what "clean" means, what happens then.
+  const myPads = lanes ?? [...new Set(chart.notes.filter(n => !n.auto).map(n => n.drum))];
+  const perTake = chart.notes.filter(n => !n.auto && (!lanes || lanes.includes(n.drum))).length * options(false).repeats;
+  const accuracy = Math.min(passFor(lesson.level).accuracy, step.pass?.accuracy ?? 100);
+  const need = cleanNeeded(step), lastStep = stepIdx === lesson.steps.length - 1;
+  const goal = arcade ? <><b>Two minutes</b> at {arcadeBpm} BPM: every clean bar counts.</>
+    : flow ? <><b>Just play.</b> Nothing to pass.</>
+    : step.jam ? <><b>Any full take</b> counts. Just play along and enjoy it.</>
+    : role === 'review' ? <><b>One take</b> at {bpm} BPM: does it still sit?</>
+    : role === 'warmup' || role === 'stretch' ? <><b>One take</b> to warm up.</>
+    : role === 'record' ? <><b>{recordStreak ? `${recordStreak} in a row` : `${bpm} BPM`}</b> beats your record.</>
+    : step.pass?.streak ? <><b>{step.pass.streak} notes in a row</b> and {lastStep ? 'the lesson is done' : 'on to the next step'}.<small>Miss one and the count starts again.</small></>
+    : step.trade || (free.length > 0 && !perTake) ? <><b>Your bars:</b> anything you like, on the beat.</>
+    : layer !== undefined && layer < step.layers!.length - 1 ? <><b>A clean take</b> adds the {laneName(step.layers![layer + 1].find(d => !step.layers![layer].includes(d)) ?? '')}.
+      <small>Clean = {Math.ceil((perTake * accuracy) / 100)} of {perTake} notes land.</small></>
+    : <><b>{need} clean take{need === 1 ? '' : 's in a row'}</b> and {bpm < step.bpm.target ? `the tempo goes up to ${Math.min(step.bpm.target, bpm + 5)}` : lastStep ? 'the lesson is done' : 'on to the next step'}.
+      <small>Clean = {Math.ceil((perTake * accuracy) / 100)} of {perTake} notes land{step.pass?.maxAbsOffsetMs ? `, and on average no more than a hair (${step.pass.maxAbsOffsetMs} ms) off the click` : ''}.</small></>;
+  const boxes = !oneTake && !step.jam && !arcade && !flow && !step.pass?.streak && (layer === undefined || layer === step.layers!.length - 1) ? { n: need, ok: p.clean } : undefined;
+  // A quarter / 8th chart is counted in 8ths on the sheet: the ones you only say are blue.
+  const sayOnly = hints && chart.timeSignature[1] === 4 && chart.notes.every(n => Math.abs(n.t * 2 - Math.round(n.t * 2)) < 1e-3)
+    && new Set(chart.notes.filter(n => !n.auto && (!lanes || lanes.includes(n.drum))).map(n => n.t)).size < chart.bars * beatsPerBar(chart) * 2;
+  const shown = outcome?.nums && !playing ? outcome.nums : undefined;
+  const lit = shown && outcome!.passed && shown.total && f ? starsFor(f.stats) : 0;
+  const landedNeed = shown && shown.total && !step.jam && !step.pass?.streak && !outcome!.zoomed && !oneTake ? Math.ceil((shown.total * accuracy) / 100) : undefined;
+  const lessonCard = <>
+    <p>{lesson.what}</p>
+    {layer !== undefined && <p>Layer {layer + 1} of {step.layers!.length}: a clean take adds {laneName(step.layers![layer + 1]?.find(d => !step.layers![layer].includes(d)) ?? 'speed')}.</p>}
+    {hints && <p className="hintcard">💡 <b>Hint:</b> {howHint}</p>}
+    {step.probe && <p className="small">Find your tempo: one bar at a time from {step.bpm.start} BPM, faster after each clean bar. Then we practise just below where it got hard.</p>}
+    {step.fadeClick && <p className="small">The click fades away over {step.fadeClick} bars. Keep the tempo on your own.</p>}
+    {step.clickOn === '2and4' && <p className="small">The click is only on 2 and 4, like a snare backbeat. Feel 1 and 3 yourself.</p>}
+    {step.clickOn === '8ths' && <p className="small">The click is on every 8th note.</p>}
+    {!!step.variants?.length && <p className="small">A different phrase each take: read it, don't memorise it.</p>}
+    {step.read && <p className="small">📖 Reading: no hints under the notes. Count it in your head first, then play what you see.</p>}
+    {step.countAloud && <p className="small">{engine === 'browser' ? "I'd count along here with the Piper voice (Setup → Coach and voice)." : 'I count along with you for the first bars, then you take over.'}</p>}
+    {step.trade && <p className="small">Trade bars: I play a bar, you answer with anything. No wrong notes, just stay on the beat.</p>}
+    {!step.trade && free.length > 0 && <p className="small">Bar {free.join(' and ')} is yours: play any fill you like.</p>}
+    {free.length > 0 && !!getSettings().fills?.length && <button className="link" onClick={() => { const all = getSettings().fills!; hearFill(all[Math.floor(Math.random() * all.length)]); }}>🎧 Hear one of your fills</button>}
+    {step.gapBars && <p className="small">The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
+    <details open={fresh}><summary>Why and how</summary><p>{lesson.why}</p><p>{lesson.how}</p></details>
+  </>;
 
   return (
     <div className={`lessonScreen ${playing ? 'playing' : ''}`}>
@@ -440,13 +491,13 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
         beatsPerBar={beatsPerBar(chart)} focus={outcome?.reason ?? (hints ? howHint : undefined)} demo={demo} onDone={() => { const r = intro.run; setIntro(undefined); r(); }} onClose={() => setIntro(undefined)} />}
       <div className="lbar card">
         <button className="link back" onClick={() => { stop(); onBack(); }}>← Journey</button>
-        <h2>{lesson.title}</h2>
-        <span className="toolBadge">{stepIcon(step, lesson.kind)} {(role ? ROLE[role] : TOOL_LABEL[toolOf(step)]).toUpperCase()}</span>
-        {dots.length > 1 && <span className="stepDots" aria-label={layer !== undefined ? `Layer ${layer + 1} of ${dots.length}` : `Step ${stepIdx + 1} of ${dots.length}`}>{dots.map((d, i) => <i key={i} className={d} />)}</span>}
-        <span className="bigTempo">{arcade ? arcadeBpm : bpm} <small>BPM{!oneTake && ` → ${step.bpm.target}`}</small>{!oneTake && <span className="meter"><b style={{ width: `${toTarget * 100}%` }} /></span>}</span>
-        <button className={`hintToggle ${hints ? 'on' : ''}`} aria-pressed={hints} onClick={() => setSettings({ hints: !hints })} title="Show the count and which hand or foot plays each note (key H)">💡 Hints {hints ? 'on' : 'off'}</button>
-        {bandSpec ? <button className={`hintToggle ${getSettings().band !== false ? 'on' : ''}`} aria-pressed={getSettings().band !== false} onClick={() => setSettings({ band: getSettings().band === false })} title="Bass and keys play along (key B). Volume: Setup → Sound check">🎸 Band {getSettings().band !== false ? 'on' : 'off'}</button>
-          : <span className="small" title="Counting, rudiments and find-your-tempo are just you and the click">🎸 just you and the click</span>}
+        <h2>{lesson.title}<small>{stepIcon(step, lesson.kind)} {lesson.source === 'ai' ? '✍ your coach wrote this one · ' : ''}{role ? ROLE[role] : TOOL_LABEL[toolOf(step)]}</small></h2>
+        {pills.length > 1 && <span className="stepPills" aria-label={layer !== undefined ? `Layer ${layer + 1} of ${pills.length}` : `Step ${stepIdx + 1} of ${pills.length}`}>
+          {pills.map((x, i) => <span key={i} className={`stepPill ${x.state}`} title={`${layer !== undefined ? 'Layer' : 'Step'} ${i + 1}: ${x.name}`}><i>{x.state === 'done' ? '✓' : i + 1}</i>{x.state === 'now' && <span>{x.name}</span>}</span>)}</span>}
+        <span className="bigTempo">{arcade ? arcadeBpm : bpm} <small>BPM</small>{!oneTake && !arcade && !flow && <TempoLadder bpm={bpm} start={step.bpm.start} target={step.bpm.target} />}</span>
+        <button className={`hintToggle ${hints ? 'on' : ''}`} aria-pressed={hints} onClick={() => setSettings({ hints: !hints })} title="Show the count, which hand or foot plays each note, and the beat ball">💡 Hints <kbd>H</kbd></button>
+        {bandSpec ? <button className={`hintToggle ${getSettings().band !== false ? 'on' : ''}`} aria-pressed={getSettings().band !== false} onClick={() => setSettings({ band: getSettings().band === false })} title="Bass and keys play along. Volume: Setup → Sound check">🎸 Band {getSettings().band !== false ? 'on' : 'off'} <kbd>B</kbd></button>
+          : <span className="hintToggle off" title="Counting, rudiments and find-your-tempo are just you and the click">🎸 off · just the click</span>}
       </div>
 
       {checking && demo && <SelfCheck demo={demo} bpm={bpm} onClose={() => setChecking(false)} />}
@@ -484,59 +535,53 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
 
       {!resting && <div className="lessonMain">
         <section className="lessonMusic">
-          {playing && <button className="primary big stopBtn" onClick={stop}>Stop <small>(crash × 4, Esc)</small></button>}
-          <NotesView idle={{ chart: idleSheet.chart, bpm, goal: step.text, hints, dim: idleSheet.dim, zoom: 1.6 }} />
-          {hints && <p className="hintLegend">R right hand · L left hand · K kick · H hi-hat foot</p>}
+          <NotesView label={`${layer !== undefined ? `Layer ${layer + 1}` : `Step ${stepIdx + 1}`} · ${step.title}`}
+            idle={{ chart: idleSheet.chart, bpm, goal: step.text, hints, dim: idleSheet.dim, zoom: 1.3, marks: take?.mark, extras: take?.extras }} />
+          {!playing && (hints || take) && <p className="hintLegend">
+            {take ? <><span className="on">on it</span><span className="late">late / early</span><span className="missed">missed</span><span>× extra hit</span></>
+              : <>{sayOnly && <span className="sayIt">blue: say it, don't play it</span>}<span>R right hand · L left hand · K kick · H hi-hat foot</span></>}</p>}
+          {take && <TimingLine offsets={take.offsets} zone={WINDOWS.perfect} missed={take.missed} extra={f?.stats.extra ?? 0} />}
+          <GoalBar boxes={boxes} kit={myPads} right={playing && <button className="primary big stopBtn" onClick={stop}>Stop <small>(crash × 4, Esc)</small></button>}>
+            {playing ? <BarCounter /> : goal}
+          </GoalBar>
           {step.bite?.songId.startsWith('yt-') && <RealSongBox key={step.bite.songId} songId={step.bite.songId} onPlayer={setReal} />}
         </section>
         {!playing && <aside className="lessonSide">
-          {outcome?.nums ? <div className={`card result ${outcome.passed ? 'pass' : ''}`}>
-            <div className="nums">
-              {outcome.nums.total > 0 && <div><b>{outcome.nums.landed}/{outcome.nums.total}</b><span>landed</span></div>}
-              {outcome.nums.total > 0 && <div><b>{outcome.nums.streak}</b><span>in a row</span></div>}
-              {outcome.nums.onBeat !== undefined && <div><b>{outcome.nums.onBeat}%</b><span>on the beat</span></div>}
-              {outcome.nums.total > 0 && <div><b>{outcome.nums.recoveries}</b><span>comebacks</span></div>}
-              {/* the feel, when this step asks for it (R4) */}
-              {step.pass?.swingPct && feel?.swing != null && <div><b>{Math.round(feel.swing)}%</b><span>swing (aim {step.pass.swingPct.join('–')})</span></div>}
-              {step.pass?.minDynamicsR !== undefined && feel?.dynamics != null && <div><b>{feel.dynamics >= step.pass.minDynamicsR ? '✓' : '✗'}</b><span>soft / loud</span></div>}
-              {step.pass?.offsetTarget && behind !== undefined && <div><b>{Math.round(behind)} ms</b><span>behind (aim {step.pass.offsetTarget.ms - step.pass.offsetTarget.tol}–{step.pass.offsetTarget.ms + step.pass.offsetTarget.tol})</span></div>}
+          {shown ? <>
+            <div className={`card result ${outcome!.passed ? 'pass' : ''}`}>
+              <h3>Your take</h3>
+              <div className="top">
+                {shown.total > 0 ? <span className="bigN">{shown.landed}<small>/{shown.total}</small></span> : shown.onBeat !== undefined && <span className="bigN">{shown.onBeat}<small>%</small></span>}
+                <span><b>{shown.total > 0 ? 'notes landed' : 'on the beat'}</b><br /><span className="takeStars" aria-label={`${lit} of 3 stars`}>{[1, 2, 3].map(k => <i key={k} className={k <= lit ? 'on' : ''}>★</i>)}</span>
+                  {landedNeed !== undefined && <><br /><span className="small">{landedNeed} needed</span></>}</span>
+              </div>
+              <div className="chips">
+                {shown.total > 0 && <span className="pill">{shown.streak} in a row</span>}
+                {shown.recoveries > 0 && <span className="pill">{shown.recoveries} comebacks</span>}
+                {shown.onBeat !== undefined && shown.total > 0 && <span className="pill">your bars {shown.onBeat}% on the beat</span>}
+                {/* the feel, when this step asks for it (R4) */}
+                {step.pass?.swingPct && feel?.swing != null && <span className="pill">{Math.round(feel.swing)}% swing (aim {step.pass.swingPct.join('–')})</span>}
+                {step.pass?.minDynamicsR !== undefined && feel?.dynamics != null && <span className="pill">soft / loud {feel.dynamics >= step.pass.minDynamicsR ? '✓' : '✗'}</span>}
+                {step.pass?.offsetTarget && behind !== undefined && <span className="pill">{Math.round(behind)} ms behind (aim {step.pass.offsetTarget.ms - step.pass.offsetTarget.tol}–{step.pass.offsetTarget.ms + step.pass.offsetTarget.tol})</span>}
+              </div>
+              {outcome!.reason && <p className="tip">💡 {outcome!.reason}</p>}
+              <p className="small">{shown.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && !outcome!.itemDone && (layer === undefined || layer === step.layers!.length - 1) ? cleanCount(p.clean, cleanNeeded(step), p.bpm) : ''}</p>
+              {f && <LatencyHint f={f} />}
+              {yourFills.length > 0 && <div className="actions">{yourFills.map((fl, k) => kept.has(`${f!.startedAt}/${fl.bar}`)
+                ? <span key={fl.bar} className="small">✓ fill {k + 1} kept</span>
+                : <button key={fl.bar} onClick={() => { keepFill(fl.notes, f!.chart.bpm * f!.options.speed, f!.chart.timeSignature); setKept(new Set(kept).add(`${f!.startedAt}/${fl.bar}`)); }}>💾 Keep fill {k + 1}</button>)}</div>}
+              {f && f.hits.length > 0 && <button className="link" onClick={() => play(true)}>👂 Hear it right</button>}
             </div>
-            {outcome.reason && <p className="tip">💡 {outcome.reason}</p>}
-            <p className="small">{outcome.nums.better ? '↑ better than last take · ' : ''}{!oneTake && !step.jam && !outcome.itemDone && (layer === undefined || layer === step.layers!.length - 1) ? cleanCount(p.clean, cleanNeeded(step), p.bpm) : ''}</p>
-            {f && <LatencyHint f={f} />}
-            {yourFills.length > 0 && <div className="actions">{yourFills.map((fl, k) => kept.has(`${f!.startedAt}/${fl.bar}`)
-              ? <span key={fl.bar} className="small">✓ fill {k + 1} kept</span>
-              : <button key={fl.bar} onClick={() => { keepFill(fl.notes, f!.chart.bpm * f!.options.speed, f!.chart.timeSignature); setKept(new Set(kept).add(`${f!.startedAt}/${fl.bar}`)); }}>💾 Keep fill {k + 1}</button>)}</div>}
-            {f && f.hits.length > 0 && <button className="link" onClick={() => play(true)}>👂 Hear it right</button>}
-          </div> : <div className="card">
-            <p><b>{lesson.what}</b></p>
-            {layer !== undefined && <p>Layer {layer + 1} of {step.layers!.length}: a clean take adds {laneName(step.layers![layer + 1]?.find(d => !step.layers![layer].includes(d)) ?? 'speed')}.</p>}
-            {hints && <p className="hintcard">💡 <b>Hint:</b> {howHint}</p>}
-            <details open={fresh}><summary>Why and how</summary><p>{lesson.why}</p><p>{lesson.how}</p></details>
-          </div>}
+            <details className="card lessonCard"><summary>The lesson</summary>{lessonCard}</details>
+          </> : <div className="card lessonCard"><h3>The lesson</h3>{lessonCard}</div>}
           {step.bite && <div className="card"><p>🎵 Bars {step.bite.fromBar}–{step.bite.toBar} of <b>{step.bite.title ?? 'your song'}</b></p>
             {step.bite.songId.startsWith('yt-') && <>
               {real && <label className="check"><input type="checkbox" checked={getSettings().realSong !== false} onChange={e => setSettings({ realSong: e.target.checked })} /> Play over the real song (drumless), not the practice band</label>}
               {real && getSettings().realSong !== false && <p className="small">The song plays at the nearest speed YouTube offers (75%, 100%…), so its tempo can differ a little from the ladder's.</p>}
               <button className="link" onClick={() => requestSong(step.bite!.songId, { from: step.bite!.fromBar, to: step.bite!.toBar })}>Open it in Songs →</button>
             </>}</div>}
-          {(step.trade || step.read || free.length > 0 || step.pass?.streak || step.gapBars || step.countAloud || step.probe || step.fadeClick || step.clickOn || step.variants?.length || (lanes && step.chart.notes.some(n => !lanes.includes(n.drum)))) && <div className="card small">
-            {step.probe && <p>Find your tempo: one bar at a time from {step.bpm.start} BPM, faster after each clean bar. Then we practise just below where it got hard.</p>}
-            {step.fadeClick && <p>The click fades away over {step.fadeClick} bars. Keep the tempo on your own.</p>}
-            {step.clickOn === '2and4' && <p>The click is only on 2 and 4, like a snare backbeat. Feel 1 and 3 yourself.</p>}
-            {step.clickOn === '8ths' && <p>The click is on every 8th note.</p>}
-            {!!step.variants?.length && <p>A different phrase each take: read it, don't memorise it.</p>}
-            {step.read && <p>📖 Reading: no hints under the notes. Count it in your head first, then play what you see.</p>}
-            {step.countAloud && <p>{engine === 'browser' ? "I'd count along here with the Piper voice (Setup → Coach and voice)." : 'I count along with you for the first bars, then you take over.'}</p>}
-            {step.trade && <p>Trade bars: I play a bar, you answer with anything. No wrong notes, just stay on the beat.</p>}
-            {!step.trade && free.length > 0 && <p>Bar {free.join(' and ')} is yours: play any fill you like.</p>}
-            {free.length > 0 && !!getSettings().fills?.length && <button className="link" onClick={() => { const all = getSettings().fills!; hearFill(all[Math.floor(Math.random() * all.length)]); }}>🎧 Hear one of your fills</button>}
-            {step.pass?.streak && <p>Challenge: {recordStreak ?? step.pass.streak} notes in a row. Missed one? The count just starts again.</p>}
-            {lanes && step.chart.notes.some(n => !lanes.includes(n.drum)) && <p>You play: {lanes.map(laneName).join(', ')}. The app plays the rest (grey).</p>}
-            {step.gapBars && <p>The click goes silent every {step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.</p>}
-          </div>}
           {lesson.needsLatency && !getSettings().latencyChecked && <div className="card"><p className="warn">This lesson is judged in milliseconds. Run the latency test first
-            (⚙ Setup → Pads → Latency), or "behind the beat" may just be your speakers.</p></div>}
+            (⚙ Setup → Your kit → Latency), or "behind the beat" may just be your speakers.</p></div>}
           {demo && <div className="card howItMoves">
             <h3>How it moves <button className="link" onClick={() => setBigDemo(true)}>⤢ Bigger</button></h3>
             <TechniqueDemo id={demo} bpm={bpm} compact />
@@ -548,17 +593,19 @@ function Lesson({ lessonId, role, minutes, onNext, onBack, onItemDone, onOpen, f
               <TechniqueDemo id={demo} bpm={bpm} />
             </div>
           </div>}
-          <div className="lessonKit"><KitView /></div>
-          <div className="actions small">
-            {timeUp && !outcome?.itemDone && <span>That's your {minutes} minutes for this one.</span>}
-            {f && <button className="link" onClick={() => setDetails(true)}>Details and history</button>}
-            {f && f.hits.length > 0 && <button className="link" onClick={() => saveFile(`${lesson.title} ${stamp()}.mid`, new Blob([takeToMidi({ hits: f.hits, zero: f.zero, bpm: Math.round(f.chart.bpm * f.options.speed), title: lesson.title })], { type: 'audio/midi' }))}>💾 Save take as MIDI</button>}
-            {helpKey && (help?.status === 'thinking' ? <Thinking what="Your coach is writing something different" />
-              : help?.status === 'done' ? <>Your coach wrote "{help.data?.title}". {onOpen && help.data?.id && <button className="link" onClick={() => onOpen(help.data!.id)}>Open it</button>}</>
-              : <>{help?.status === 'error' && <span className="warn">{help.error}</span>}<button className="link" onClick={askHelp}>Ask the coach for something different</button></>)}
-            {lesson.source === 'ai' && <button className="link danger" onClick={() => { if (confirm(`Delete the coach's lesson "${lesson.title}"?`)) { stop(); void deleteCoachLesson(lesson.id).then(onBack); } }}>Delete this lesson</button>}
-            {!fresh && !oneTake && <button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Trophies.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button>}
-          </div>
+          {timeUp && !outcome?.itemDone && <p className="small">That's your {minutes} minutes for this one.</p>}
+          {helpKey && help?.status === 'thinking' && <Thinking what="Your coach is writing something different" />}
+          {helpKey && help?.status === 'done' && <p className="small">Your coach wrote "{help.data?.title}". {onOpen && help.data?.id && <button className="link" onClick={() => onOpen(help.data!.id)}>Open it</button>}</p>}
+          <details className="card more"><summary>⋯ More</summary>
+            <ul>
+              {f && <li><button className="link" onClick={() => setDetails(true)}>Details and history</button></li>}
+              {f && f.hits.length > 0 && <li><button className="link" onClick={() => saveFile(`${lesson.title} ${stamp()}.mid`, new Blob([takeToMidi({ hits: f.hits, zero: f.zero, bpm: Math.round(f.chart.bpm * f.options.speed), title: lesson.title })], { type: 'audio/midi' }))}>💾 Save take as MIDI</button></li>}
+              {helpKey && help?.status !== 'thinking' && help?.status !== 'done' && <li>{help?.status === 'error' && <span className="warn">{help.error}</span>}<button className="link" onClick={askHelp}>Ask the coach for something different</button></li>}
+              {!fresh && !oneTake && <li><button className="link" onClick={() => { if (confirm(`Reset "${lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Progress.`)) { stop(); resetLesson(lesson.id); } }}>Reset this lesson</button></li>}
+              {lesson.source === 'ai' && <li><button className="link danger" onClick={() => { if (confirm(`Delete the coach's lesson "${lesson.title}"?`)) { stop(); void deleteCoachLesson(lesson.id).then(onBack); } }}>Delete this lesson</button></li>}
+              <li className="small">Keys: H hints · B band · C check yourself · Esc stop</li>
+            </ul>
+          </details>
         </aside>}
       </div>}
     </div>

@@ -2,7 +2,7 @@ import type { ChartNote } from '../engine/chart';
 import { getSettings, setSettings } from '../input/settings';
 import { start } from './player';
 
-// Your fills: one-bar fills you made up in free bars, kept to hear again (Trophies, fill lessons).
+// Your fills: one-bar fills you made up in free bars, kept to hear again (Progress, fill lessons).
 export type Fill = NonNullable<ReturnType<typeof getSettings>['fills']>[number];
 
 export function keepFill(notes: ChartNote[], bpm: number, timeSignature: [number, 2 | 4 | 8 | 16]) {

@@ -57,7 +57,7 @@ export function Calibrate({ device }: { device: string }) {
   );
 }
 
-/** "Hit each pad once": records the note each pad sends (Setup → Pads, and step 2 of onboarding). */
+/** "Hit each pad once": records the note each pad sends (Setup → Your kit, and step 2 of onboarding). */
 export function PadWizard({ device, autoStart, onSaved }: { device: string; autoStart?: boolean; onSaved?: () => void }) {
   const map = useSyncExternalStore(subscribeNoteMap, getNoteMap);
   const [cal, setCal] = useState<CalState | null>(autoStart ? initialCal() : null);

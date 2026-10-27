@@ -514,7 +514,7 @@
   .move.go{background:var(--accent);color:#fff}.move.go b{font-size:34px}.move.go .g i{background:var(--pop);color:var(--line)}
   .move.alt{background:var(--panel2)}
   .move:hover{transform:translate(-1px,-1px)}
-  .lessonMain{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:16px;min-height:0}
+  .lessonMain{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;min-height:0;align-items:start}
   .lessonScreen.playing .lessonMain{grid-template-columns:1fr}
   .lessonMusic{position:relative;background:var(--night);border:3px solid var(--line);box-shadow:6px 6px 0 var(--pop);min-height:420px;display:flex;flex-direction:column}
   .lessonScreen.playing .lessonMusic{min-height:calc(100vh - 200px)}
@@ -535,8 +535,52 @@
   .liveHint{min-height:62px;background:var(--pop);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);font:800 28px system-ui;padding:12px 18px;opacity:.25}
   .liveHint.on{opacity:1}
   .lessonScreen .sheetTip{display:none} /* the live tip shows big above the music instead */
-  @media (max-width:1100px){ .lessonMain{grid-template-columns:1fr} .moves{grid-template-columns:1fr 1fr} .say .bubble{font-size:22px} }
-  @media (max-width:700px){ .moves{grid-template-columns:1fr} .bigTempo{margin-left:0} .say .avatar{display:none} }
+  /* lesson revamp: named step pills, the tempo ladder, the goal bar with a mini kit, results on the notes, one side card */
+  .lbar h2{font:800 21px/1.15 var(--display);max-width:360px}
+  .lbar h2 small{display:block;font:700 12px system-ui;color:var(--muted)}
+  .stepPills{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .stepPill{display:flex;align-items:center;gap:7px;padding:3px;border:2px solid var(--line);border-radius:999px;background:var(--panel);font-weight:700;font-size:15px;white-space:nowrap}
+  .stepPill i{font-style:normal;width:24px;height:24px;flex:none;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font:800 12px var(--display);background:var(--panel)}
+  .stepPill.now{background:var(--pop);padding-right:12px}
+  .stepPill.done{background:#E3F5EA} .stepPill.done i{background:var(--good);color:#fff}
+  .bigTempo{font-size:42px;line-height:1}
+  .ladder{display:flex;flex-direction:column;gap:3px;font:700 11.5px system-ui;color:var(--muted)}
+  .rungs{display:flex;align-items:flex-end;gap:3px}
+  .rungs i{width:16px;height:calc(8px + var(--k) * 3px);border:2px solid var(--line);background:var(--panel)}
+  .rungs i.at{background:var(--pop)} .rungs i.start{border-style:dashed} .rungs i.goal{background:var(--night)}
+  .hintToggle{white-space:nowrap} .hintToggle kbd{margin-left:4px}
+  .hintToggle.off{color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
+  .notesLabel{position:absolute;top:14px;left:14px;z-index:3;color:var(--pop);font:800 13px var(--display);letter-spacing:.05em;text-transform:uppercase;max-width:calc(100% - 200px)}
+  .hintLegend{display:flex;gap:6px 18px;flex-wrap:wrap}
+  .hintLegend .sayIt{color:#8FB4FF} .hintLegend .on{color:#4BE08A} .hintLegend .late{color:var(--pop)} .hintLegend .missed{color:#FF7A73}
+  .timingLine{margin:0 12px 6px;background:#FFFDF6;border:3px solid var(--line);padding:8px 12px 4px}
+  .timingLine figcaption{font-size:14px}
+  .timingLine svg{display:block;width:100%;height:auto;max-height:110px}
+  .goalBar{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:12px 14px;color:#fff;border-top:2px solid #ffffff33}
+  .goalBar .txt{flex:1;min-width:240px;font-size:18px;line-height:1.35}
+  .goalBar .txt small{display:block;color:#ccc;font-size:14px}
+  .goalBar .boxes{display:flex;gap:8px}
+  .goalBar .boxes i{width:34px;height:34px;border:3px solid #fff;display:grid;place-items:center;font:800 18px var(--display);font-style:normal}
+  .goalBar .boxes i.ok{background:var(--good)}
+  .goalBar .stopBtn{position:static;font-size:20px;padding:10px 18px}
+  .lessonScreen.playing .goalBar{padding-right:96px} /* clear of the coach's mic button */
+  .kitLbl{display:flex;align-items:center;gap:8px;color:#ccc;font-size:12.5px;font-weight:700}
+  svg.miniKit{width:150px;height:auto;flex:none}
+  .miniKit circle,.miniKit rect{fill:#333;stroke:#fff;stroke-width:2;transition:fill .12s}
+  .miniKit .mine{fill:var(--pop);stroke:var(--line);stroke-width:3}
+  .miniKit .hit{fill:var(--bg);transition:none}
+  .sheetBall{position:absolute;left:0;top:0;z-index:3;border-radius:50%;background:var(--pop);border:3px solid var(--line);box-shadow:2px 2px 0 var(--line);opacity:0;pointer-events:none;will-change:transform}
+  .lessonSide .result .top{display:flex;align-items:center;gap:14px}
+  .bigN{font:800 64px/1 var(--display)} .bigN small{font-size:28px;color:var(--muted)}
+  .takeStars i{font-style:normal;font-size:28px;color:#D6D6D6;-webkit-text-stroke:1.5px var(--line)} .takeStars i.on{color:var(--pop)}
+  .lessonSide .result .chips{margin-top:10px}
+  .lessonSide .result .tip{margin:10px 0}
+  .lessonSide details.card>summary{margin:0;color:var(--accent);font-weight:700;font-size:14px}
+  .lessonSide details.card[open]>summary{margin-bottom:8px}
+  .lessonCard p{font-size:16px;line-height:1.4}
+  .more ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:14px}
+  @media (max-width:1100px){ .lessonMain{grid-template-columns:1fr} .lessonSide{display:grid;grid-template-columns:1fr 1fr;align-items:start} .moves{grid-template-columns:1fr 1fr} .say .bubble{font-size:22px} }
+  @media (max-width:700px){ .moves{grid-template-columns:1fr} .bigTempo{margin-left:0} .say .avatar{display:none} .lessonSide{grid-template-columns:1fr} .ladder{display:none} }
 
   /* --- Practice at the kit: chooser, tempo steppers, bar picker, on/off switches --- */
   .moves.five{grid-template-columns:2fr repeat(4,1fr)}

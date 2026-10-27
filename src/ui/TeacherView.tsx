@@ -33,7 +33,7 @@ export function TeacherView({ onBack }: { onBack: () => void }) {
   return (
     <div className="today teacherView">
       <div className="card noPrint">
-        <button className="link back" onClick={onBack}>← Trophies</button>
+        <button className="link back" onClick={onBack}>← Progress</button>
         <h2>👩‍🏫 For your teacher</h2>
         <p>A one-page summary to print or show a drum teacher, now and then (monthly is great). With it, bring a 30-second clip
           from "📷 Check yourself" (Save clip) and a take's MIDI file (Save take as MIDI, under a lesson's result). Type what the
