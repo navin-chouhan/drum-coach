@@ -27,6 +27,21 @@ describe('probe: counters are computed in JS from raw bytes', () => {
     expect(p.log.some(e => e.kind === 'clock')).toBe(false); // realtime is counted, not logged by default
   });
 
+  it('keeps every pad message for Copy results, however much clock arrives', () => {
+    const p = createProbe({ captureSize: 10, noteLogSize: 3 });
+    const ev = (t: number, ...bytes: number[]) => p.ingest({ bytes, hostTimeMs: t, nativeReceivedMs: t }, t);
+    ev(0, 0x99, 36, 100);
+    for (let t = 1; t < 50; t++) ev(t * 24, 0xf8); // ~1 s of clock: the raw capture keeps only the last 10
+    ev(1300, 0x99, 36, 0); ev(1400, 0xa9, 44, 127);
+    expect(p.capture.some(m => m[1] === 0x99)).toBe(true);
+    expect(p.noteLog.map(e => e.kind)).toEqual(['noteOn', 'noteOff', 'polyAftertouch']);
+    ev(1500, 0x99, 38, 90);
+    expect(p.noteLog.map(e => e.note)).toEqual([36, 44, 38]); // oldest dropped at noteLogSize
+    expect(p.log[0]).toBe(p.noteLog[2]); // one entry, shared by the screen log
+    p.resetCounters();
+    expect(p.noteLog).toHaveLength(0);
+  });
+
   it('keeps the log to its size, newest first, and resets', () => {
     const p = createProbe({ logSize: 5 });
     for (let i = 0; i < 20; i++) p.ingest({ bytes: [0x99, 36, 100], hostTimeMs: i * 200, nativeReceivedMs: i * 200 }, i * 200);

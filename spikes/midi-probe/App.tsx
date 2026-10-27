@@ -35,7 +35,7 @@ export default function App() {
       counters: { ...c }, framer: { droppedBytes: c.droppedBytes, sysex: c.sysex },
       bridgeDelayMs: probe.bridge.summary(), nativeDelayMs: probe.native.summary(), audio: DrumMidi.getAudioInfo() ?? undefined,
       tapTests: runs, debug: { ...(debug ?? {}), lifecycle: { ...lifecycle } },
-      lastMessages: relativeMessages(probe.capture), lastLog: [...probe.log],
+      lastMessages: relativeMessages(probe.capture), lastLog: [...probe.log], noteLog: [...probe.noteLog],
     };
   }
 

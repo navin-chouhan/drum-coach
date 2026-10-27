@@ -46,6 +46,8 @@ export type ProbeResults = {
   /** The last raw messages: [ms after the first of them, ...bytes]. */
   lastMessages: number[][];
   lastLog: LogEntry[];
+  /** Every non-realtime message since the last reset (up to 300), oldest first: the pad check reads this. */
+  noteLog?: LogEntry[];
 };
 
 const r1 = (x: number) => Math.round(x * 10) / 10;

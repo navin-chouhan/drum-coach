@@ -67,6 +67,8 @@ export type ProbeOptions = {
   logSize?: number;
   /** Raw messages kept for "Copy results" / "Save as fixture". */
   captureSize?: number;
+  /** Non-realtime messages kept for "Copy results" (clock would push the pad notes out of the capture in seconds). */
+  noteLogSize?: number;
   /** Clock and active sensing in the log too (they arrive ~40×/s, so off by default; always counted). */
   logRealtime?: () => boolean;
 };
@@ -75,11 +77,12 @@ export type Probe = ReturnType<typeof createProbe>;
 
 export function createProbe(opts: ProbeOptions = {}) {
   const noteMap = opts.noteMap ?? (() => DEFAULT_NOTE_MAP);
-  const logSize = opts.logSize ?? 50, captureSize = opts.captureSize ?? 5000;
+  const logSize = opts.logSize ?? 50, captureSize = opts.captureSize ?? 5000, noteLogSize = opts.noteLogSize ?? 300;
   const framer = createFramer(), filter = createHitFilter(noteMap, opts.padCal);
   let counters = emptyCounters();
   let log: LogEntry[] = []; // newest first
   let capture: number[][] = []; // [hostTimeMs, ...bytes], oldest first
+  let noteLog: LogEntry[] = []; // every message but clock and active sensing, oldest first
   let seq = 0, lastHost = -Infinity, droppedBase = 0;
   const bridge = new Samples(), native = new Samples();
   const hitListeners = new Set<(h: Hit) => void>();
@@ -121,9 +124,14 @@ export function createProbe(opts: ProbeOptions = {}) {
           if (hit) { counters.hits++; hits.push(hit); verdict = 'hit'; } else { counters.filtered++; verdict = 'filtered'; }
         } else if (c.choke) verdict = 'choke';
         const realtime = c.kind === 'clock' || c.kind === 'activeSensing';
+        const entry = (): LogEntry => ({ seq: ++seq, hostTimeMs: ev.hostTimeMs, hex: toHex(msg), kind: c.kind, channel: c.channel,
+          note: c.note, velocity: c.velocity, value: c.value, padName: c.padName, verdict });
+        if (!realtime) {
+          noteLog.push(entry());
+          if (noteLog.length > noteLogSize) noteLog.splice(0, noteLog.length - noteLogSize);
+        }
         if (!realtime || opts.logRealtime?.()) {
-          log.unshift({ seq: ++seq, hostTimeMs: ev.hostTimeMs, hex: toHex(msg), kind: c.kind, channel: c.channel, note: c.note,
-            velocity: c.velocity, value: c.value, padName: c.padName, verdict });
+          log.unshift(realtime ? entry() : noteLog[noteLog.length - 1]);
           if (log.length > logSize) log.length = logSize;
         }
       }
@@ -135,11 +143,13 @@ export function createProbe(opts: ProbeOptions = {}) {
     get counters(): Readonly<Counters> { return counters; },
     get log(): readonly LogEntry[] { return log; },
     get capture(): readonly number[][] { return capture; },
+    /** Pad notes, note-offs, aftertouch etc. (no clock/active sensing), oldest first. */
+    get noteLog(): readonly LogEntry[] { return noteLog; },
     /** jsReceivedMs − hostTimeMs per event. */
     bridge,
     /** nativeReceivedMs − hostTimeMs per event (CoreMIDI → our receive block). */
     native,
-    resetCounters() { counters = emptyCounters(); droppedBase = framer.stats.droppedBytes; log = []; capture = []; filter.reset(); },
+    resetCounters() { counters = emptyCounters(); droppedBase = framer.stats.droppedBytes; log = []; capture = []; noteLog = []; filter.reset(); },
     resetDelay() { bridge.reset(); native.reset(); },
   };
 }
