@@ -16,12 +16,12 @@ export function CoachLine({ line, under, thinking }: { line: string; under?: str
   );
 }
 
-/** A move tile. `go` is the main move: hi-hat pedal × 3, crash × 2 or a spoken "yes". */
-export function Move({ label, gesture, go, alt, onClick }: { label: string; gesture?: string; go?: boolean; alt?: boolean; onClick: () => void }) {
+/** A move tile. `go` is the main move: hi-hat pedal × 3, crash × 2 or a spoken "yes". `sub`: a small line instead of a gesture. */
+export function Move({ label, gesture, sub, go, alt, dark, onClick }: { label: string; gesture?: string; sub?: string; go?: boolean; alt?: boolean; dark?: boolean; onClick: () => void }) {
   return (
-    <button className={`move ${go ? 'go' : alt ? 'alt' : ''}`} autoFocus={go} onClick={onClick}>
+    <button className={`move ${go ? 'go' : dark ? 'dark' : alt ? 'alt' : ''}`} autoFocus={go} onClick={onClick}>
       <b>{label}</b>
-      <span className="g">{go ? <><i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"</> : gesture && <i>{gesture}</i>}</span>
+      <span className={`g ${sub ? 'small' : ''}`}>{go ? <><i>hi-hat pedal × 3</i> or <i>crash × 2</i> or say "yes"</> : gesture ? <i>{gesture}</i> : sub}</span>
     </button>
   );
 }

@@ -9,7 +9,7 @@ import { getSettings, setSettings } from '../input/settings';
  * The stage's song project: the coach suggests real songs this stage gets you ready for; the one you pick becomes the
  * stage's goal (Profile.song), the coach writes song bites from it, and once every bar is ready it's a show-off song.
  */
-export function ShowoffCard({ stage, profile, builtin }: { stage: Milestone; profile: Profile; builtin?: { title: string; open: () => void } }) {
+export function ShowoffCard({ stage, profile, builtin, inline }: { stage: Milestone; profile: Profile; builtin?: { title: string; open: () => void }; inline?: boolean }) {
   const key = `project-${stage.level}`;
   const e = useCoachEntry<ShowoffSongs>(key);
   const learn = async (video: { id: string; title: string }) => {
@@ -17,11 +17,12 @@ export function ShowoffCard({ stage, profile, builtin }: { stage: Milestone; pro
     setSettings({ profile: { ...getSettings().profile, song: { id: s.id, title: video.title, stage: stage.level } } });
     requestSong(s.id);
   };
+  // inline: the "Your song" part of Journey's stage song card (no card, no built-in line: the card shows that song)
   return (
-    <div className="card showoff">
-      <h3>Pick your song for this stage</h3>
+    <div className={inline ? 'showoffInline' : 'card showoff'}>
+      {inline ? <span className="small">Your song</span> : <h3>Pick your song for this stage</h3>}
       {builtin && <p>🎵 Your stage song: <button className="link" onClick={builtin.open}><b>{builtin.title}</b></button>, built in, with the band. Or pick a real one:</p>}
-      <p>A real song you'll play for your friends. The lessons in <b>{stage.title}</b> get you ready for it, a few bars at a time.</p>
+      <p className={inline ? 'small' : undefined}>A real song you'll play for your friends. The lessons in <b>{stage.title}</b> get you ready for it, a few bars at a time.</p>
       {e?.status === 'thinking' ? <Thinking what="Your coach is picking songs for this stage" />
         : e?.status === 'done' && e.data ? (
           <ul className="ytResults">
@@ -36,9 +37,9 @@ export function ShowoffCard({ stage, profile, builtin }: { stage: Milestone; pro
           </ul>
         ) : <>
           {e?.status === 'error' && <p className="warn">{e.error}</p>}
-          <button className="primary" onClick={() => askCoach(key, 'showoff', { stage: stage.title, canDo: stage.canDo, goals: profile.goals })}>Show me songs</button>
+          <button className={inline ? undefined : 'primary'} onClick={() => askCoach(key, 'showoff', { stage: stage.title, canDo: stage.canDo, goals: profile.goals })}>{inline ? 'Pick a real song ▶' : 'Show me songs'}</button>
         </>}
-      <p className="small">When 16 bars or more are in and every bar is played at 85% or better, it joins your show-off set on Trophies, ready for Stage mode.</p>
+      {!inline && <p className="small">When 16 bars or more are in and every bar is played at 85% or better, it joins your show-off set on Progress, ready for Stage mode.</p>}
     </div>
   );
 }
