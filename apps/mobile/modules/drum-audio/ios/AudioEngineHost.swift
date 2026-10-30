@@ -604,7 +604,7 @@ final class AudioEngineHost {
   func backingLoad(_ uri: String) throws -> [String: Any] {
     let opened: BackingPlayer.Opened
     do {
-      opened = try BackingPlayer.open(uri)
+      opened = try BackingPlayer.openFile(uri)
     } catch {
       setError("\(error)")
       throw error
@@ -835,6 +835,7 @@ final class AudioEngineHost {
         }
         emitRoute?(Self.body(info))
       } catch {
+        backing.stop()
         setError("restart after config change: \(error)")
       }
     } else {

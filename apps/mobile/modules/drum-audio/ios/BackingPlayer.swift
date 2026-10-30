@@ -120,7 +120,7 @@ final class BackingPlayer {
   // MARK: - Load
 
   /// Opens a local file (any thread). Throws for anything that isn't a readable mono or stereo local audio file.
-  static func open(_ uri: String) throws -> Opened {
+  static func openFile(_ uri: String) throws -> Opened {
     guard let path = BackingMath.filePath(uri) else {
       throw DrumAudioError("backing: only local files (file:// or a path) play here")
     }
