@@ -49,6 +49,8 @@ results.
 |---|---|---|---|
 | D0 | Devices | — | **iPad only, landscape locked** (`ios.isTabletOnly`). Layouts are width-based so iPhone can be added later. iPhone joins Android under "later". M7 skipped. |
 | Dev loop | Where builds and tests run | — | **Build + install on the Mac; Metro and tests on Linux** (owner). Rebuild on the Mac only for native changes or every 7 days. M1 and M8 are done on the Mac during the install session. |
+| D6 | Audio (AUDIO-DESIGN §8) | — | **(2026-10-30)** Listening: **USB-C hub, iPad 3.5 mm out → module AUX IN** (click and kit in the module's headphones; latency is measured for that route). **Mix with other apps.** Interrupted take: **keep if ≥ 2 whole bars**, flagged, not counted for the ladder or stars. Calls on the iPad are **Banner** style (`prefersNoInterruptionsFromSystemAlerts` covers declined calls). Offline count-in and tips: **the iPad's built-in voice**. |
+| D7 | Home server (A5s) | — | **(2026-10-30)** Plain HTTP on the home Wi-Fi is fine (Tailscale optional, away from home). Coach context cap stays **50 KB**. Web and iPad **share** one live-coach session and one set of rate limits. |
 | D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | **Go (owner, 2026-10-30)**, with M4–M6 and M8 still open. They run in parallel with Phase 1; **M5 (jitter) must pass before A4 starts in Phase 2.** |
 | Layout | apps/mobile in npm workspaces? | — | **No** (orchestrator): React Native needs the exact React version Expo bundles (19.3.0), and the web uses ^19.3.1. Root workspaces = `packages/*` only. `apps/mobile` is its own npm project and uses `file:../../packages/core` + Metro watchFolders. Shims and server imports use relative `.ts` paths (Node type stripping refuses `.ts` in node_modules). |
 | D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
@@ -185,3 +187,5 @@ results.
   the web kit's style. The kick is white and the floor tom brown, so no drum colour reads as a result colour (green,
   orange, red). A `lesson-take-falling` frame is there to compare highway directions. `mock.js` lint fix (an unused
   constant; it exports its drawing functions on window). The gallery artifact is republished.
+- 2026-10-30: Owner answered the 5 audio and 3 home-server questions (D6, D7): all defaults; the listening setup is
+  the hub + AUX IN route. Nothing built needs to change; A4 part 2 uses them (route-keyed latency, keep-if-2-bars).
