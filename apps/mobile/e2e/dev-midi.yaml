@@ -1,0 +1,18 @@
+# T3 smoke: the home's link opens /dev/midi and its Devices section is there (empty on the simulator: no MIDI
+# sources). Needs testID "dev-midi-devices" on that section (apps/mobile/app/dev/midi.tsx, A3), rendered even with no
+# devices. The link is found by its text (anything with "MIDI" in it).
+appId: com.drumcoach.app
+name: Dev MIDI screen shows Devices
+tags:
+  - smoke
+---
+- runFlow: subflows/open-app.yaml
+- tapOn:
+    text: .*MIDI.*
+- extendedWaitUntil:
+    visible:
+      id: dev-midi-devices
+    timeout: 10000
+- assertVisible:
+    id: dev-midi-devices
+- takeScreenshot: dev-midi-devices

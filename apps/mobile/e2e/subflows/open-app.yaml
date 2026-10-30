@@ -1,0 +1,16 @@
+# Starts the app from a clean state. A Release build has the JS bundle inside and opens straight on the home.
+# A dev-client build opens on the Expo dev launcher instead: pass -e DEV_CLIENT_URL=... (see README.md) and the
+# flow opens that URL, which loads the bundle from Metro.
+appId: com.drumcoach.app
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${typeof DEV_CLIENT_URL !== 'undefined' && DEV_CLIENT_URL !== ''}
+    commands:
+      - openLink: ${DEV_CLIENT_URL}
+- extendedWaitUntil:
+    visible:
+      id: home-title
+    timeout: 60000 # a dev client's first bundle from Metro takes a while

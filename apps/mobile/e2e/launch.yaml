@@ -1,0 +1,12 @@
+# T3 smoke: the app launches and the home shows "Drum Coach".
+# Needs testID "home-title" on the home's title (apps/mobile/app/index.tsx, A2).
+appId: com.drumcoach.app
+name: Launch shows the home
+tags:
+  - smoke
+---
+- runFlow: subflows/open-app.yaml
+- assertVisible:
+    id: home-title
+    text: Drum Coach
+- takeScreenshot: launch-home
