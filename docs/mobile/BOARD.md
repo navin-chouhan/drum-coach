@@ -51,7 +51,7 @@ session. The decisions it needs are D1–D5, below.
 | A7b Lesson player | running | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
 | A7c Setup + first run | running | `app/(main)/setup*`, `app/welcome/**`, `src/features/{setup,firstRun,latency,pads}/**` | [briefs/A7c.md](briefs/A7c.md) | Setup, first run |
 | A7d Practice + Progress | running | `app/(main)/{practice,progress}*`, `app/practice/**`, `src/features/{practice,progress}/**` | [briefs/A7d.md](briefs/A7d.md) | Practice, Progress |
-| A7e Coach panel | running | `app/(main)/coach.tsx`, `src/features/coach/**` | [briefs/A7e.md](briefs/A7e.md) | coach panel |
+| A7e Coach panel | **done, merged** (490b4ec) | `app/(main)/coach.tsx`, `src/features/coach/**` | [briefs/A7e.md](briefs/A7e.md) | coach panel |
 | A8 Songs | running | `app/(main)/songs.tsx`, `app/song/**`, `src/features/songs/**`, `src/youtube/**` | [briefs/A8.md](briefs/A8.md) | Songs + imports |
 
 | A4p3 Backing audio | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio*` | [briefs/A4p3.md](briefs/A4p3.md) | BackingPort |
@@ -232,3 +232,4 @@ results.
 - 2026-10-30: ACI2 merged: `.github/workflows/ios.yml` on the `xcode-27` runner (Xcode 27.1, the owner's build), prebuild + xcodebuild for the iPad simulator + Swift unit tests; triggers: dispatch and PRs to main touching apps/mobile. `.github/actionlint.yaml` declares the new hosted label actionlint doesn't know yet.
 - 2026-10-30: A7a merged (Journey on core + Storage; nav = js-tabs drawn as the sidebar; old home → /about; Dev row in debug). Integration notes sent: lesson route `/lesson/[id]?item=N&mode=play|hear|jam` + `markDonePatch` (A7b); skill map / full path in Progress (A7d); one source for drum colours (follow-up).
 - 2026-10-30: A8 granted src/data schema/store edits (songs migration 2) and expo-document-picker + expo-file-system. Started A4p3 (backing audio) so imported tracks can play.
+- 2026-10-30: A7e merged (coach panel + Coach tab; expo-speech 58.0.3; voice input left for later, as the web needs STT). Requests forwarded: A7b mounts CoachInspector on results + handles /lesson/chart?chartId=&bpm=; A8 opens /song/<id> from plan items.
