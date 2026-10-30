@@ -15,7 +15,7 @@ session. The decisions it needs are D1–D5, below.
 |---|---|---|---|
 | 0 | A0 Recon, S1 MIDI spike | **built; waiting for the owner's device run** | GATE0.md GO + owner decisions D1–D5 |
 | 1 | A1 core, A2 Expo shell, A3 MIDI module, A9 harness skeleton | **code complete, merged; waiting for the owner's iPad check** ([PHASE1-CHECKLIST.md](PHASE1-CHECKLIST.md)) | T0 green; core tests green; app on simulator + iPad; kit logs hits |
-| 2 | A4 audio/clock, A5 data/backend, A6 play surfaces (+A7 mockups) | not started | Lesson plays + scores + saves on iPad, offline, T6 timing |
+| 2 | A4 audio/clock, A5 data/backend, A6 play surfaces (+A7 mockups) | **in progress**: A4/A5/A6 part 1 merged; A4p2 take engine and A7a screens running | Lesson plays + scores + saves on iPad, offline, T6 timing |
 | 3 | A7 screens, A6 rest | not started | All v1 screens on iPad landscape, with touch pads and kit |
 | 3b | A8 Songs (inline YouTube) | not started (the phase right after v1, D5) | Songs on iPad landscape |
 | 4 | A10 QA, then fixes | not started | §8 checklist green or every red item is a blocker |
@@ -42,6 +42,9 @@ session. The decisions it needs are D1–D5, below.
 
 | A6n Sheet music | running | `apps/mobile/src/notation/**`, `app/dev/sheet.tsx`, apps/mobile package.json (this round) | [briefs/A6n.md](briefs/A6n.md) | NotationView (VexFlow on iPad) |
 
+| A4p2 Take engine (core) | running | `packages/core/src/play/**` (not audioPort.ts) | [briefs/A4p2.md](briefs/A4p2.md) | createTake, planEvents, createMetronome, parity tests |
+| A7a UI kit + nav + Journey | running | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
@@ -59,6 +62,7 @@ results.
 | D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
 | D3 | Data | one-time import of `data/`, then the device is the source of truth | **Start fresh on the iPad.** No import tool. `data/` untouched. No sync. |
 | D4 | Mockups | list + designs before A6/A7 build screens | **Revised 2026-10-30: "Web look, iPad layout"**: the web app's identity (pink dotted ground, black outlines, hard shadows, yellow, chunky type, mascot, emoji, web kit drawing) on the iPad layouts (one landscape screen, full-screen player, big type, gesture chips). The first version (iPad-native: sidebar, sheets, native controls) at 1194×834 for: Journey, lesson player (take + results), Practice, Progress, Setup (kit, pads, latency, coach), coach panel, touch pad kit, first run. The owner approves them before screens are built. |
+| D4✓ | Mockups approved | — | **Approved by the owner 2026-10-30** (v3: web look on iPad layouts, sheet music default). Screens start. |
 | D5 | v1 scope | Journey, lesson player, Practice, Progress, Setup, Songs with inline YouTube | **Lean v1**: Journey, lesson player, Practice, Progress, Setup, coach, "Share take" (MIDI export via the share sheet). Songs is the next phase. Later: camera self-check, ear quiz, transcribe, teacher view. |
 
 ## Blocker register
@@ -199,3 +203,7 @@ results.
   until 2026-11-03), and **zod 3.x under @expo/cli (GHSA-mrhx-c7xc-m3w5) and deepmerge (GHSA-gcqx-w48m-w2h4)** listed
   in Dependency review's `allow-ghsas` with reasons, because no fixed release exists. Remove each when Expo ships a
   fix (B26).
+- 2026-10-30: **PR #2 merged into main** (aa2b828) after CI was green (Check Node 22/24, Mobile, CodeQL, secret
+  scan, dependency review, npm audit + signatures, workflow lint). The branch is fast-forwarded to main and carries
+  on. Owner **approved the mockups**. Started A4p2 (take engine in core) and A7a (UI kit + nav + Journey). Next
+  screen agents start on top of A7a's kit.
