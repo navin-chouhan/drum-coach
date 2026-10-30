@@ -6,12 +6,14 @@ on. Leave it off and nothing changes: the server listens on `127.0.0.1` only, an
 
 ## What changes when it's on
 
-- The server listens on `HOST` as well as for this machine's web app.
-- This machine's web app (`localhost`) still needs no token. Everything else must send
-  `Authorization: Bearer <APP_TOKEN>` and use a Host name in `ALLOWED_HOSTS` (or the address in `HOST`). Without the
+- The server listens on `APP_HOST` as well as for this machine's web app.
+- The variable is `APP_HOST`, not `HOST`: some shells export `HOST`, and the server ignores it.
+- This machine's web app (`localhost`) still needs no token. A request that came through a reverse proxy is never
+  counted as this machine's web app (step 5). Everything else must send
+  `Authorization: Bearer <APP_TOKEN>` and use a Host name in `ALLOWED_HOSTS` (or the address in `APP_HOST`). Without the
   token it gets 401. A wrong Host, or any browser page (it sends `Origin` or `Sec-Fetch-Site`), gets 403.
-- The server won't start if `HOST` isn't loopback and `APP_TOKEN` is missing or shorter than 24 characters. It also
-  won't start if `HOST=0.0.0.0` and `ALLOWED_HOSTS` is empty.
+- The server won't start if `APP_HOST` isn't loopback and `APP_TOKEN` is missing or shorter than 24 characters. It also
+  won't start if `APP_HOST=0.0.0.0` and `ALLOWED_HOSTS` is empty.
 - The token is never written to the log. Keep it out of git: it goes in `.env`, which git ignores.
 - The rate limits are totals for every caller, so the iPad and the web app share them (60 coach, speech and YouTube
   calls a minute).
@@ -34,13 +36,13 @@ openssl rand -base64 32        # make a token; copy the output
 Then edit `.env` in the project folder:
 
 ```sh
-HOST=0.0.0.0                   # every interface: this machine's web app keeps working
+APP_HOST=0.0.0.0               # every interface: this machine's web app keeps working
 ALLOWED_HOSTS=192.168.1.20     # the address from step 1; add more with commas (e.g. 192.168.1.20,100.101.102.103)
 APP_TOKEN=paste-the-token-here
 ```
 
-With `HOST=0.0.0.0` the port is open on every network the machine is on, so do step 3. Another option is to bind
-to one address only (`HOST=192.168.1.20`). Then nothing else can reach the port, but the server stops listening on
+With `APP_HOST=0.0.0.0` the port is open on every network the machine is on, so do step 3. Another option is to bind
+to one address only (`APP_HOST=192.168.1.20`). Then nothing else can reach the port, but the server stops listening on
 `localhost`, so the web app on this machine can't reach it.
 
 Start the server as usual (`npm run server`, or `npm run dev` for the web app too). The log says
@@ -60,7 +62,7 @@ Without ufw (firewalld): `sudo firewall-cmd --zone=home --change-interface=wlan0
 `sudo firewall-cmd --zone=home --add-port=8787/tcp --permanent && sudo firewall-cmd --reload`.
 
 **Mac:** the built-in firewall (System Settings → Network → Firewall) works per app, not per port. Turn it on and allow
-incoming connections for `node` when macOS asks. To limit the port to one network, bind `HOST` to that address. Or
+incoming connections for `node` when macOS asks. To limit the port to one network, bind `APP_HOST` to that address. Or
 add a `pf` rule that only passes port 8787 on `en0` and `utun*` (Tailscale) and blocks it elsewhere.
 
 ## 4. Keep the machine awake
@@ -82,9 +84,15 @@ add a `pf` rule that only passes port 8787 on `en0` and `utun*` (Tailscale) and 
 Tailscale encrypts the traffic. On plain home Wi-Fi the token travels unencrypted over HTTP, which is fine on a network
 you trust and not on public Wi-Fi.
 
-To use HTTPS and the MagicDNS name instead, keep `HOST=127.0.0.1`, set `APP_TOKEN` and
-`ALLOWED_HOSTS=my-mac.tailnet-name.ts.net`, and run `tailscale serve --bg 8787`. The iPad then uses
-`https://my-mac.tailnet-name.ts.net`, and nothing is open on the LAN. (Not yet tried with this app.)
+To use HTTPS and the MagicDNS name instead, keep `APP_HOST=127.0.0.1`, set `APP_TOKEN` and
+`ALLOWED_HOSTS=my-mac.tailnet-name.ts.net` (the ts.net name, which is the Host the iPad's requests carry), and run
+`tailscale serve --bg 8787`. The iPad then uses `https://my-mac.tailnet-name.ts.net`, and nothing is open on the LAN.
+
+This is safe because the token is always required through the proxy. `tailscale serve` connects from 127.0.0.1, but
+it adds forwarding headers (`X-Forwarded-For`, `Tailscale-…`). Any request with a reverse proxy's headers
+(`X-Forwarded-For`, `Forwarded`, `X-Forwarded-Host`, `X-Real-IP`, `Via`, `Tailscale-*`) is never treated as this
+machine's web app, even if the proxy rewrote its Host to `localhost`. The same holds for Caddy or nginx. (Not yet tried
+with this app.)
 
 ## 6. Test it with curl
 

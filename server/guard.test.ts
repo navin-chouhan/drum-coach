@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import { Writable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
-import { accessConfig, AccessConfigError, accessSummary, allowedRequest, childEnv, guardHook, health, hostName, isLoopback, looksLikeAudio, tokenMatches, verdict } from './guard';
+import { accessConfig, AccessConfigError, accessSummary, allowedRequest, childEnv, guardHook, health, hostName, isLoopback, looksLikeAudio, proxied, tokenMatches, verdict } from './guard';
 
 describe('local API guard', () => {
   it("lets the app's own pages and local tools in", () => {
@@ -60,7 +60,7 @@ describe('child process environment', () => {
 
 // ---------- home-server mode (D2) ----------
 const TOKEN = 'k3Jq9vR2xL7mN4pT8wY1zB6cD0fG5hS=';
-const home = accessConfig({ HOST: '192.168.1.20', APP_TOKEN: TOKEN, ALLOWED_HOSTS: 'My-Mac.tailnet.ts.net, 100.64.0.7' });
+const home = accessConfig({ APP_HOST: '192.168.1.20', APP_TOKEN: TOKEN, ALLOWED_HOSTS: 'My-Mac.tailnet.ts.net, 100.64.0.7' });
 const local = accessConfig({});
 const ask = (remoteAddress: string, headers: Record<string, string>, a = home) => verdict({ remoteAddress, headers }, a);
 const auth = { authorization: `Bearer ${TOKEN}` };
@@ -71,16 +71,19 @@ describe('home-server config', () => {
     expect(accessSummary(local)).toMatch(/^Local only/);
   });
   it('refuses to start beyond loopback without a strong token', () => {
-    expect(() => accessConfig({ HOST: '192.168.1.20' })).toThrow(AccessConfigError);
-    expect(() => accessConfig({ HOST: '0.0.0.0', APP_TOKEN: '  ' })).toThrow(/APP_TOKEN must be set/);
-    expect(() => accessConfig({ HOST: '192.168.1.20', APP_TOKEN: 'short-token-123' })).toThrow(/at least 24/);
+    expect(() => accessConfig({ APP_HOST: '192.168.1.20' })).toThrow(AccessConfigError);
+    expect(() => accessConfig({ APP_HOST: '0.0.0.0', APP_TOKEN: '  ' })).toThrow(/APP_TOKEN must be set/);
+    expect(() => accessConfig({ APP_HOST: '192.168.1.20', APP_TOKEN: 'short-token-123' })).toThrow(/at least 24/);
     expect(() => accessConfig({ APP_TOKEN: 'short' })).toThrow(/at least 24/); // a weak token is never used, even on loopback
   });
+  it('ignores a plain HOST, which some shells export: only APP_HOST moves the server', () => {
+    expect(accessConfig({ HOST: 'my-laptop' }).host).toBe('127.0.0.1');
+  });
   it('every interface needs ALLOWED_HOSTS; a bound address is allowed by itself', () => {
-    expect(() => accessConfig({ HOST: '0.0.0.0', APP_TOKEN: TOKEN })).toThrow(/ALLOWED_HOSTS/);
-    expect([...accessConfig({ HOST: '0.0.0.0', APP_TOKEN: TOKEN, ALLOWED_HOSTS: '192.168.1.20:8787' }).allowedHosts]).toEqual(['192.168.1.20']);
+    expect(() => accessConfig({ APP_HOST: '0.0.0.0', APP_TOKEN: TOKEN })).toThrow(/ALLOWED_HOSTS/);
+    expect([...accessConfig({ APP_HOST: '0.0.0.0', APP_TOKEN: TOKEN, ALLOWED_HOSTS: '192.168.1.20:8787' }).allowedHosts]).toEqual(['192.168.1.20']);
     expect([...home.allowedHosts]).toEqual(['my-mac.tailnet.ts.net', '100.64.0.7', '192.168.1.20']);
-    expect([...accessConfig({ HOST: 'fd7a:115c:a1e0::7', APP_TOKEN: TOKEN }).allowedHosts]).toEqual(['fd7a:115c:a1e0::7']);
+    expect([...accessConfig({ APP_HOST: 'fd7a:115c:a1e0::7', APP_TOKEN: TOKEN }).allowedHosts]).toEqual(['fd7a:115c:a1e0::7']);
     expect(accessSummary(home)).toContain('192.168.1.20');
     expect(accessSummary(home)).not.toContain(TOKEN);
   });
@@ -124,6 +127,18 @@ describe('who may call', () => {
     expect(ask('192.168.1.50', { host: '192.168.1.20:8787', 'sec-fetch-site': 'cross-site', ...auth })).toBe(403); // an <img> on a web page
     expect(ask('192.168.1.50', { host: 'evil.example:8787', ...auth })).toBe(403);
     expect(ask('192.168.1.50', { ...auth })).toBe(403);
+  });
+  it('a request through a reverse proxy on this machine is never local: it needs the token', () => {
+    const viaProxy = { host: 'localhost:8787', 'x-forwarded-for': '100.101.102.103' }; // a proxy that rewrote Host to localhost
+    expect(ask('127.0.0.1', viaProxy)).toBe(401);
+    expect(ask('127.0.0.1', viaProxy, local)).toBe(403); // no home-server mode
+    expect(ask('127.0.0.1', { ...viaProxy, ...auth })).toBe(403); // localhost isn't an allowed name
+    expect(ask('127.0.0.1', { ...viaProxy, ...auth, host: 'my-mac.tailnet.ts.net' })).toBe(200);
+    for (const h of ['forwarded', 'x-forwarded-host', 'x-real-ip', 'via', 'tailscale-user-login', 'Tailscale-Headers-Info']) {
+      expect(proxied({ [h]: 'x' })).toBe(true);
+      expect(ask('127.0.0.1', { host: 'localhost:8787', [h]: 'x' })).toBe(401);
+    }
+    expect(proxied({ host: 'localhost:5173', origin: 'http://localhost:5173', 'sec-fetch-site': 'same-origin' })).toBe(false); // Vite's proxy
   });
   it('a proxy on this machine (tailscale serve) takes the token path', () => {
     const served = accessConfig({ APP_TOKEN: TOKEN, ALLOWED_HOSTS: 'my-mac.tailnet.ts.net' });

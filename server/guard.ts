@@ -1,5 +1,6 @@
 // Who may call the API.
-// - This app's own pages (through Vite's proxy) and local tools such as the play test, from a loopback address:
+// - This app's own pages (through Vite's proxy) and local tools such as the play test, from a loopback address and
+//   not through a reverse proxy (no X-Forwarded-For, Forwarded, Via, Tailscale-… headers):
 //   - Host blocks DNS rebinding (a website whose name points at 127.0.0.1).
 //   - Origin blocks pages from other origins on writes.
 //   - Sec-Fetch-Site blocks other websites, and pages on other localhost ports, on every request: browsers send it even
@@ -30,7 +31,7 @@ export function allowedRequest(headers: { host?: string; origin?: string; 'sec-f
 // ---------- home-server mode: where the server listens, and who else may call it ----------
 export const MIN_TOKEN_LENGTH = 24;
 export type Access = {
-  host: string; // where the server listens (HOST)
+  host: string; // where the server listens (APP_HOST)
   token?: string; // APP_TOKEN: set = home-server mode
   allowedHosts: ReadonlySet<string>; // Host names (no port, lower case) a token request may use
 };
@@ -51,18 +52,18 @@ export function hostName(header?: string) {
 }
 
 /**
- * Reads HOST, APP_TOKEN and ALLOWED_HOSTS. Throws (the server then refuses to start) when the API would be reachable
+ * Reads APP_HOST, APP_TOKEN and ALLOWED_HOSTS. Throws (the server then refuses to start) when the API would be reachable
  * from other machines without a strong token, when a token is too short to be one, or when nothing names this server.
  */
 export function accessConfig(env: Record<string, string | undefined>): Access {
-  const host = (env.HOST ?? '').trim() || '127.0.0.1';
+  const host = (env.APP_HOST ?? '').trim() || '127.0.0.1';
   const token = (env.APP_TOKEN ?? '').trim() || undefined;
   const allowedHosts = new Set((env.ALLOWED_HOSTS ?? '').split(',').map(hostName).filter(Boolean));
   const loopback = isLoopback(host);
   const make = 'make one with: openssl rand -base64 32';
-  if (!loopback && !token) throw new AccessConfigError(`HOST=${host} would open the API to other machines, so APP_TOKEN must be set (at least ${MIN_TOKEN_LENGTH} characters; ${make}). Not starting.`);
+  if (!loopback && !token) throw new AccessConfigError(`APP_HOST=${host} would open the API to other machines, so APP_TOKEN must be set (at least ${MIN_TOKEN_LENGTH} characters; ${make}). Not starting.`);
   if (token && token.length < MIN_TOKEN_LENGTH) throw new AccessConfigError(`APP_TOKEN is ${token.length} characters; it must be at least ${MIN_TOKEN_LENGTH} (${make}). Not starting.`);
-  if (isWildcard(host) && !allowedHosts.size) throw new AccessConfigError(`HOST=${host} listens on every interface: set ALLOWED_HOSTS to the address or name the iPad uses (e.g. ALLOWED_HOSTS=192.168.1.20,my-mac.tailnet.ts.net). Not starting.`);
+  if (isWildcard(host) && !allowedHosts.size) throw new AccessConfigError(`APP_HOST=${host} listens on every interface: set ALLOWED_HOSTS to the address or name the iPad uses (e.g. ALLOWED_HOSTS=192.168.1.20,my-mac.tailnet.ts.net). Not starting.`);
   if (!loopback && !isWildcard(host)) allowedHosts.add(hostName(host.includes(':') ? `[${host}]` : host)); // the bound address
   return { host, token, allowedHosts };
 }
@@ -75,10 +76,19 @@ export function tokenMatches(header: string | undefined, token: string) {
   return timingSafeEqual(digest(m[1]), digest(token));
 }
 
+/**
+ * Headers a reverse proxy adds (tailscale serve, Caddy, nginx). A proxy on this machine connects from 127.0.0.1 and may
+ * rewrite Host to localhost, so a proxied request is never "this machine": it takes the token path. Vite's dev proxy
+ * adds none of them (its `xfwd` is off).
+ */
+const PROXY_HEADERS = ['x-forwarded-for', 'forwarded', 'x-forwarded-host', 'x-real-ip', 'via'];
+export const proxied = (headers: IncomingHttpHeaders) =>
+  PROXY_HEADERS.some(h => headers[h] !== undefined) || Object.keys(headers).some(h => h.toLowerCase().startsWith('tailscale-'));
+
 /** 200 = let it through; 401 = no or wrong token; 403 = not this app (Host, Origin, Sec-Fetch-Site), or no home-server mode. */
 export function verdict(req: { remoteAddress?: string; headers: IncomingHttpHeaders }, a: Access): 200 | 401 | 403 {
   const { headers } = req;
-  if (isLoopback(req.remoteAddress) && allowedRequest(headers)) return 200; // this machine's app and tools, as before
+  if (isLoopback(req.remoteAddress) && !proxied(headers) && allowedRequest(headers)) return 200; // this machine's app and tools, as before
   if (!a.token) return 403; // no home-server mode: the answer it always was
   if (!tokenMatches(headers.authorization, a.token)) return 401;
   if (headers.origin !== undefined || headers['sec-fetch-site'] !== undefined) return 403; // a browser page

@@ -33,7 +33,7 @@ const PORT = Number(process.env.PORT || 8787);
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 1_000_000 });
 
 // Only the local app may call this API (guard.ts): not other websites, not pages on other local ports, no DNS rebinding.
-// With HOST/APP_TOKEN/ALLOWED_HOSTS set (home-server mode, docs/mobile/HOME-SERVER.md) the iPad may too, with the token.
+// With APP_HOST/APP_TOKEN/ALLOWED_HOSTS set (home-server mode, docs/mobile/HOME-SERVER.md) the iPad may too, with the token.
 // A setting that would expose the API without a strong token stops the server here, before it listens.
 const access = (() => {
   try { return accessConfig(process.env); } catch (e) { console.error(`\n${(e as Error).message}\n`); process.exit(1); }

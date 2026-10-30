@@ -179,7 +179,7 @@ describe('health and access through the real app', () => {
     expect(r.statusCode).toBe(403);
   });
   it('the server refuses to start on the LAN without a strong token', () => {
-    for (const env of [{ HOST: '192.168.1.20', APP_TOKEN: '' }, { HOST: '0.0.0.0', APP_TOKEN: 'too-short' }]) {
+    for (const env of [{ APP_HOST: '192.168.1.20', APP_TOKEN: '' }, { APP_HOST: '0.0.0.0', APP_TOKEN: 'too-short' }]) {
       const r = spawnSync(process.execPath, [join(import.meta.dirname, 'index.ts')], { env: { ...process.env, ...env, PORT: '0', ALLOWED_HOSTS: '' }, encoding: 'utf8', timeout: 30_000 });
       expect(r.status).toBe(1);
       expect(r.stderr).toMatch(/APP_TOKEN .*Not starting\./);
