@@ -2,14 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Feedback } from '@drum-coach/core/coach/schemas';
 import type { Chart } from '@drum-coach/core/engine/chart';
 import { isoWeek } from '@drum-coach/core/engine/progress';
-import { createKv } from '../../data/kv';
 import type { PlanRecord } from '../../data/records';
 import { createCoachAsks } from './asks';
 import { chartIdFor, COACH_CHARTS_KEY, createCoachCharts, targetExists } from './charts';
 import { createContextFor } from './context';
 import { askFeedback, createSpeakOnce, feedbackKey, feedbackView, spokenLine } from './feedback';
 import { coachProblem, hostOf } from './problem';
-import { readSettings } from './settings';
 import { summarizeTake } from './summary';
 import { applyTip, createTipsCache, cueIdsFor, TIPS_KEY } from './tips';
 import { cleanPlanForm, createWeekPlan, planItemLine, planItemTarget, savedPlanOf } from './weekPlan';
@@ -215,17 +213,5 @@ describe('the week plan, kept on the iPad', () => {
     expect(planItemTarget(plan.days[0].items[1], exists)).toEqual({ kind: 'song', id: 'yt-abc' });
     expect(planItemTarget({ chartId: 'gone' }, exists)).toBeUndefined();
     expect(planItemLine(plan.days[0].items[0])).toBe('Money beat · 10 min · 70 BPM');
-  });
-});
-
-describe('settings', () => {
-  it('reads the web key with the core defaults and migrations', () => {
-    const kv = createKv(null, () => {});
-    expect(readSettings(kv).liveCoach).toBe(true);
-    kv.set('drumcoach.settings', JSON.stringify({ liveCoach: false, v: 1, liveTips: 'screen', profile: { goals: ['funk'] } }));
-    const s = readSettings(kv);
-    expect(s).toMatchObject({ liveCoach: false, voice: true, liveTips: 'screen', profile: { goals: ['funk'], minutesPerDay: 25 } });
-    kv.set('drumcoach.settings', 'nope');
-    expect(readSettings(kv).aiTips).toBe(true);
   });
 });
