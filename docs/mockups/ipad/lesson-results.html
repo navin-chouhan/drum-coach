@@ -5,78 +5,53 @@
 <meta name="viewport" content="width=1194">
 <title>Lesson results · iPad mockup</title>
 <link rel="stylesheet" href="ipad.css">
+<script src="mock.js"></script>
 <style>
-  .top { position: absolute; left: 24px; right: 24px; top: 30px; height: 62px; display: flex; align-items: center; gap: 14px; }
-  .title { white-space: nowrap; }
-  .title b { display: block; font-size: 21px; letter-spacing: -.015em; }
-  .title span { font-size: 14px; color: var(--label2); }
-  .steps { display: flex; gap: 6px; align-items: center; margin-left: 6px; white-space: nowrap; }
-  .steps i { width: 30px; height: 30px; border-radius: 15px; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 14px; background: var(--fill); color: var(--label2); }
-  .steps i.done { background: var(--greenSoft); color: var(--greenInk); }
-  .steps i.done .ic { width: 14px; height: 14px; }
-  .steps i.cur { width: auto; padding: 0 12px 0 4px; gap: 7px; display: flex; background: var(--yellow); color: #3A2A00; }
-  .steps i.cur em { font-style: normal; width: 22px; height: 22px; border-radius: 11px; background: rgba(0,0,0,.12); display: grid; place-items: center; font-size: 13px; }
-  .sp { flex: 1; }
-  .tempo { display: flex; align-items: center; gap: 12px; }
-  .tempo .big { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
-  .tempo .big small { font-size: 15px; font-weight: 600; color: var(--label2); margin-left: 3px; letter-spacing: 0; }
-  .tempo .up { font-size: 15px; font-weight: 700; color: var(--greenInk); background: var(--greenSoft); border-radius: 12px; padding: 3px 9px; }
-  .ladder { display: flex; flex-direction: column; gap: 3px; }
-  .rungs { display: flex; align-items: flex-end; gap: 4px; height: 26px; }
-  .rungs i { width: 12px; border-radius: 3px; background: var(--fill); }
-  .rungs i.start { box-shadow: inset 0 0 0 1.5px var(--label2); }
-  .rungs i.done { background: var(--green); }
-  .rungs i.at { background: var(--yellow); box-shadow: 0 0 0 2px rgba(255, 204, 0, .3); }
-  .rungs i.goalR { background: var(--label); }
-  .ladder span { font-size: 12px; color: var(--label2); font-weight: 600; }
+  .tempo .up { font: 900 14px var(--display); color: var(--line); background: #4BE08A; border: 2px solid #fff; border-radius: 999px; padding: 3px 10px; }
+  .verdict { position: absolute; left: 24px; right: 30px; top: 116px; }
+  .verdict .bubble { flex: 1; display: flex; align-items: center; gap: 14px; }
+  .verdict p { font-size: 22px; }
+  .verdict .think { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 800; white-space: nowrap; background: var(--panel2); border: 2px solid var(--line); border-radius: 999px; padding: 4px 10px; }
+  .resMoves { position: absolute; left: 24px; right: 30px; top: 198px; grid-template-columns: 2fr 1fr 1fr 1fr; }
 
-  .verdict { position: absolute; left: 24px; right: 24px; top: 102px; }
-  .verdict .bubble { flex: 1; background: #fff; border-radius: 20px; padding: 10px 18px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 14px; }
-  .verdict p { font-size: 23px; }
-  .verdict .think { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--label2); white-space: nowrap; }
-  .resMoves { position: absolute; left: 24px; right: 24px; top: 176px; grid-template-columns: 2fr 1fr 1fr 1fr; }
-  .resMoves .move { min-height: 92px; }
+  .notesPanel { position: absolute; left: 24px; top: 310px; width: 790px; height: 456px; padding: 10px 14px; background: var(--night); color: #fff; box-shadow: 6px 6px 0 var(--pop); }
+  .ph { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+  .ph h3 { font-size: 15px; color: var(--pop); letter-spacing: .05em; text-transform: uppercase; }
+  .legend { margin-left: auto; display: flex; gap: 12px; font-size: 13px; font-weight: 800; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; border: 2px solid #fff; }
+  .side { position: absolute; left: 832px; right: 30px; top: 310px; height: 456px; display: flex; flex-direction: column; gap: 12px; }
+  .take .landed { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+  .take .landed b { font: 900 52px/1 var(--display); }
+  .take .landed span { font-size: 15px; font-weight: 800; }
+  .stars { font-size: 30px; color: var(--pop); -webkit-text-stroke: 1.5px var(--line); letter-spacing: 1px; line-height: 1.1; }
+  .stars .off { color: #D6D6D6; }
+  .facts { margin-top: 4px; display: grid; gap: 1px; font-size: 14.5px; }
+  .facts b { font-family: var(--display); font-weight: 900; }
+  .fix { background: var(--orangeSoft); }
+  .fix p { font-size: 15.5px; font-weight: 700; margin: 6px 0 8px; line-height: 1.28; }
+  .ask { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--panel2); }
+  .ask p { font-size: 13.5px; line-height: 1.25; font-weight: 600; }
+  .ask p b { display: block; font: 900 15px var(--display); }
 
-  .notesPanel { position: absolute; left: 24px; top: 282px; width: 790px; height: 488px; padding: 14px 18px; }
-  .ph { display: flex; align-items: center; gap: 10px; }
-  .ph h3 { font-size: 19px; letter-spacing: -.01em; }
-  .legend { margin-left: auto; display: flex; gap: 12px; font-size: 13px; color: var(--label2); font-weight: 600; }
-  .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
-  .side { position: absolute; left: 826px; right: 24px; top: 282px; height: 488px; display: flex; flex-direction: column; gap: 12px; }
-  .take { padding: 14px 16px; }
-  .take .landed { display: flex; align-items: baseline; gap: 8px; }
-  .take .landed b { font-size: 46px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
-  .take .landed span { font-size: 16px; color: var(--label2); font-weight: 600; }
-  .stars { font-size: 26px; color: var(--yellow); letter-spacing: 1px; }
-  .stars .off { color: rgba(120,120,128,.25); }
-  .facts { margin-top: 8px; display: grid; gap: 4px; font-size: 15px; }
-  .facts span { color: var(--label2); }
-  .fix { padding: 14px 16px; background: var(--orangeSoft); box-shadow: none; }
-  .fix .kicker { color: var(--orangeInk); }
-  .fix p { font-size: 17px; font-weight: 500; margin: 4px 0 10px; line-height: 1.3; }
-  .ask { padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
-  .ask p { font-size: 14px; color: var(--label2); line-height: 1.25; }
-  .ask p b { color: var(--label); display: block; font-size: 15px; }
-
-  /* Share sheet popover (D5: Share take = MIDI export via the share sheet) */
-  .pop { display: none; position: absolute; z-index: 20; right: 92px; top: 92px; width: 380px; background: rgba(250, 250, 252, .97); border-radius: 26px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, .25), 0 0 0 .5px rgba(0,0,0,.08); padding: 14px; }
-  #share:target ~ .pop { display: block; }
-  #share:target ~ .scrim { display: block; }
-  .scrim { display: none; position: absolute; inset: 0; z-index: 15; background: rgba(0, 0, 0, .12); }
-  .pop::before { content: ""; position: absolute; top: -9px; right: 46px; width: 20px; height: 20px; background: rgba(250, 250, 252, .97); transform: rotate(45deg); border-radius: 3px; }
-  .file { display: flex; gap: 12px; align-items: center; padding: 4px 4px 12px; border-bottom: .5px solid var(--sep); }
-  .file .fi { width: 46px; height: 54px; border-radius: 8px; background: #fff; box-shadow: 0 0 0 .5px var(--sep), 0 2px 6px rgba(0,0,0,.08); display: grid; place-items: center; color: var(--snare); font-weight: 800; font-size: 11px; }
+  /* The share sheet is iOS's own (D5: Share take = MIDI export via the share sheet), so it keeps the system look. */
+  .pop { display: none; position: absolute; z-index: 20; right: 84px; top: 96px; width: 380px; background: rgba(250, 250, 252, .98); border-radius: 26px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .3), 0 0 0 .5px rgba(0,0,0,.1); padding: 14px; font-family: var(--sf); }
+  #share:target ~ .pop, #share:target ~ .scrim { display: block; }
+  .scrim { display: none; position: absolute; inset: 0; z-index: 15; background: rgba(0, 0, 0, .18); }
+  .pop::before { content: ""; position: absolute; top: -9px; right: 80px; width: 20px; height: 20px; background: rgba(250, 250, 252, .98); transform: rotate(45deg); border-radius: 3px; }
+  .file { display: flex; gap: 12px; align-items: center; padding: 4px 4px 12px; border-bottom: .5px solid rgba(60,60,67,.2); }
+  .file .fi { width: 46px; height: 54px; border-radius: 8px; background: var(--pop); border: 2px solid var(--line); display: grid; place-items: center; font: 900 11px var(--display); }
   .file b { display: block; font-size: 16px; }
-  .file span { font-size: 13px; color: var(--label2); }
-  .targets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 14px 0 12px; border-bottom: .5px solid var(--sep); }
+  .file span { font-size: 13px; color: rgba(60,60,67,.65); }
+  .targets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 14px 0 12px; border-bottom: .5px solid rgba(60,60,67,.2); }
   .targets div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; }
-  .targets i { width: 58px; height: 58px; border-radius: 15px; display: grid; place-items: center; color: #fff; }
+  .targets i { width: 58px; height: 58px; border-radius: 15px; display: grid; place-items: center; color: #fff; font-size: 26px; font-style: normal; }
   .targets i .ic { width: 28px; height: 28px; }
   .acts { margin-top: 10px; }
-  .acts .li { background: #fff; min-height: 46px; }
+  .acts .li { background: #fff; min-height: 46px; border: 0; }
+  .acts .li + .li { border-top: .5px solid rgba(60,60,67,.2); }
   .acts .li:first-child { border-radius: 12px 12px 0 0; } .acts .li:last-child { border-radius: 0 0 12px 12px; }
-  .acts .li .ic { margin-left: auto; color: var(--label); width: 20px; height: 20px; }
+  .acts .li .em { margin-left: auto; }
 </style>
 </head>
 <body>
@@ -85,16 +60,16 @@
   <div class="status"><span>19:45</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>87%</span><span class="batt"><i style="width:84%"></i></span></div>
 
   <header class="top">
-    <span class="btn glass round"><span class="ic i-chevl"></span></span>
+    <span class="btn round sm" style="width:40px"><span class="ic i-chevl"></span></span>
     <div class="title"><b>The money beat</b><span>Step 3 of 4 · ★ checkpoint</span></div>
-    <div class="steps"><i class="done"><span class="em ck">✓</span></i><i class="done"><span class="em ck">✓</span></i><i class="cur"><em>3</em>+ snare</i><i>4</i></div>
+    <div class="steps"><i class="done">✓</i><i class="done">✓</i><i class="cur"><em>3</em>+ snare</i><i>4</i></div>
     <span class="sp"></span>
     <div class="tempo">
       <div class="big num">70<small>BPM</small></div><span class="up">→ 75 next</span>
-      <div class="ladder"><div class="rungs"><i class="start done" style="height:10px"></i><i class="done" style="height:13px"></i><i class="done" style="height:16px"></i><i class="at" style="height:19px"></i><i style="height:21px"></i><i style="height:23px"></i><i class="goalR" style="height:26px"></i></div><span>start 60 · goal 90</span></div>
+      <div class="ladder"><div class="rungs"><i class="start done" style="height:10px"></i><i class="done" style="height:13px"></i><i class="done" style="height:16px"></i><i class="at" style="height:19px"></i><i style="height:22px"></i><i style="height:25px"></i><i class="goal" style="height:28px"></i></div><span>start 60 · goal 90</span></div>
     </div>
-    <span class="btn glass" style="margin-left:8px"><span class="em">📤</span>Share take</span>
-    <span class="btn glass round"><span class="em">⋯</span></span>
+    <span class="btn" style="margin-left:6px;background:var(--pop)"><span class="em">📤</span>Share take</span>
+    <span class="btn round sm" style="width:40px">⋯</span>
   </header>
 
   <div class="coach verdict">
@@ -106,13 +81,13 @@
   <div class="moves resMoves">
     <div class="move go"><b><span class="em">▶</span>Play at 75</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span><span class="or">or say “yes”</span></div></div>
     <div class="move"><b><span class="em">🎧</span>Hear your take</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
-    <div class="move"><b><span class="em">🐢</span>Stay at 70</b><div class="gs"><span class="gest g-floor">floor × 2</span></div></div>
-    <div class="move"><b><span class="em">⏭</span>Skip to next</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+    <div class="move alt"><b><span class="em">🐢</span>Stay at 70</b><div class="gs"><span class="gest g-floor">floor × 2</span></div></div>
+    <div class="move alt"><b><span class="em">⏭</span>Skip to next</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
   </div>
 
   <section class="card notesPanel">
     <div class="ph"><h3>Your take, on the notes</h3>
-      <div class="legend"><span><i style="background:#34C759"></i>on it</span><span><i style="background:#FF9500"></i>early / late</span><span><i style="box-shadow:inset 0 0 0 2px #FF3B30"></i>missed</span><span style="color:#FF3B30">✕ extra</span></div></div>
+      <div class="legend"><span><i style="background:#4BE08A"></i>on it</span><span><i style="background:#FF9F1C"></i>early / late</span><span><i style="background:none;border:2px dashed #FF5A4F"></i>missed</span><span style="color:#FF5A4F">✕ extra</span></div></div>
     <div id="notes"></div>
   </section>
 
@@ -121,12 +96,12 @@
       <div class="kicker">Take 2 · 70 BPM</div>
       <div class="landed"><b class="num">46</b><span>of 48 notes landed</span></div>
       <div class="stars">★★<span class="off">★</span></div>
-      <div class="facts"><div><b>21</b> <span>in a row, your best</span></div><div><b>18 ms</b> <span>after the click, on average</span></div><div><b>1</b> <span>extra hit</span></div></div>
+      <div class="facts"><div><b>21</b> in a row, your best</div><div><b>18 ms</b> after the click, on average</div><div><b>1</b> extra hit</div></div>
     </section>
     <section class="card fix">
       <div class="kicker">One thing to fix</div>
       <p>The kick rushed in bar 3, twice about 60 ms early. Let your foot fall <b>with</b> the hi-hat, heel down.</p>
-      <span class="btn sm" style="background:#fff;color:var(--orangeInk)"><span class="em">🔁</span>Fix bar 3 · 4× at 60</span>
+      <span class="btn sm"><span class="em">🔁</span>Fix bar 3 · 4× at 60</span>
     </section>
     <section class="card ask">
       <div class="avatar sm">🥁</div>
@@ -140,9 +115,9 @@
     <div class="file"><div class="fi">MIDI</div><div><b>The money beat · take 2.mid</b><span>Your 47 hits at their real times · 4 bars · 70 BPM · 2 KB</span></div></div>
     <div class="targets">
       <div><i style="background:linear-gradient(#5AC8FA,#007AFF)"><span class="ic i-wifi"></span></i>AirDrop</div>
-      <div><i style="background:linear-gradient(#5BE37D,#28C840)"><span class="em">💬</span></i>Messages</div>
+      <div><i style="background:linear-gradient(#5BE37D,#28C840)">💬</i>Messages</div>
       <div><i style="background:linear-gradient(#62B7FF,#1A82FB)"><span class="ic i-send"></span></i>Mail</div>
-      <div><i style="background:linear-gradient(#FFE27A,#FFC600)"><span class="em">📝</span></i>Notes</div>
+      <div><i style="background:linear-gradient(#FFE27A,#FFC600)">📝</i>Notes</div>
     </div>
     <div class="acts">
       <div class="li">Save to Files<span class="em">📁</span></div>
@@ -153,60 +128,47 @@
   <div class="home"></div>
 </div>
 <script>
-// The take's 4 bars, two bars per row; every note shows how it landed (src/engine/takeMarks.ts).
-const C = { hihat: '#0FA3B1', snare: '#5856D6', kick: '#48484A' };
-const marks = { kick16: ['early', '−62'], kick20: ['early', '−55'], hihat9: ['late', '+52'], hihat31: ['miss'], snare14: ['miss'] };
-const extras = [{ lane: 'snare', t: 18.5 }];
-const lanes = ['hihat', 'snare', 'kick'], NAMES = { hihat: 'Hi-hat', snare: 'Snare', kick: 'Kick' };
-function row(bars, y0, W) {
-  const left = 74, colW = (W - left - 6) / 16, laneH = 36;
-  const x = t => left + colW * (t - bars * 8) + colW / 2, y = i => y0 + 22 + laneH * i + laneH / 2;
+// The take's 4 bars, two bars per row, on the black panel; every note says how it landed (src/engine/takeMarks.ts).
+const marks = { kick16: ['off', '−62'], kick20: ['off', '−55'], hihat9: ['off', '+52'], hihat31: ['miss'], snare14: ['miss'] };
+const lanes = ['hihat', 'snare', 'kick'];
+function row(first, y0, W) {
+  const left = 80, colW = (W - left - 4) / 16, laneH = 34;
+  const x = t => left + colW * (t - first * 8) + colW / 2, y = i => y0 + 20 + laneH * i + laneH / 2;
   let s = '';
   for (let b = 0; b < 2; b++) {
     const bx = left + b * 8 * colW;
-    s += `<rect x="${bx + 2}" y="${y0 + 22}" width="${8 * colW - 4}" height="${laneH * 3}" rx="12" fill="#F6F6F9"/>`;
-    s += `<text x="${bx + 8}" y="${y0 + 14}" font-size="12" font-weight="700" fill="rgba(60,60,67,.6)">BAR ${bars + b + 1}</text>`;
+    s += `<rect x="${bx + 2}" y="${y0 + 20}" width="${8 * colW - 4}" height="${laneH * 3}" fill="#ffffff12"/>`;
+    s += `<text x="${bx + 6}" y="${y0 + 13}" font-size="12" font-weight="900" fill="${POP}">BAR ${first + b + 1}</text>`;
   }
-  lanes.forEach((l, i) => { s += `<circle cx="10" cy="${y(i)}" r="5" fill="${C[l]}"/><text x="20" y="${y(i) + 5}" font-size="14" font-weight="600" fill="#1C1C1E">${NAMES[l]}</text>`; });
-  for (let t = bars * 8; t < bars * 8 + 16; t++) {
-    const e = t % 8;
-    lanes.forEach((l, i) => {
-      const has = l === 'hihat' || (l === 'kick' && (e === 0 || e === 4)) || (l === 'snare' && (e === 2 || e === 6));
-      if (!has) return;
-      const m = marks[l + t], kind = m ? m[0] : 'ok', cx = x(t), cy = y(i);
-      const fill = kind === 'ok' ? '#34C759' : kind === 'miss' ? '#fff' : '#FF9500';
-      const stroke = kind === 'miss' ? 'stroke="#FF3B30" stroke-width="2.5" stroke-dasharray="4 3"' : '';
-      if (l === 'kick') s += `<rect x="${cx - 15}" y="${cy - 12}" width="30" height="24" rx="7" fill="${fill}" ${stroke}/>`;
-      else s += `<circle cx="${cx}" cy="${cy}" r="13" fill="${fill}" ${stroke}/>`;
-      if (kind === 'miss') s += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="14" font-weight="800" fill="#FF3B30">✕</text>`;
-      if (kind === 'early' || kind === 'late') s += `<text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">${m[1]}</text>`;
-    });
+  lanes.forEach((l, i) => { s += `<circle cx="10" cy="${y(i)}" r="6" fill="${DC[l]}" stroke="#fff" stroke-width="1.5"/><text x="22" y="${y(i) + 5}" font-size="14" font-weight="900" fill="#fff">${NAME[l]}</text>`; });
+  for (const n of moneyBeat(4)) {
+    if (n.t < first * 8 || n.t >= first * 8 + 16) continue;
+    const m = marks[n.lane + n.t], cx = x(n.t), cy = y(lanes.indexOf(n.lane));
+    s += gem(n.lane, cx, cy, 12, m ? m[0] : 'ok');
+    if (m && m[1]) s += `<text x="${cx}" y="${cy - 15}" text-anchor="middle" font-size="11" font-weight="900" fill="#FF9F1C">${m[1]}</text>`;
   }
-  for (const ex of extras) if (ex.t >= bars * 8 && ex.t < bars * 8 + 16) {
-    const cx = x(ex.t), cy = y(lanes.indexOf(ex.lane));
-    s += `<text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="24" font-weight="800" fill="#FF3B30">✕</text>`;
-  }
-  for (let t = bars * 8; t < bars * 8 + 16; t++) {
+  if (first === 2) s += `<text x="${x(18.5)}" y="${y(1) + 8}" text-anchor="middle" font-size="24" font-weight="900" fill="#FF5A4F">✕</text>`;
+  for (let t = first * 8; t < first * 8 + 16; t++) {
     const e = t % 8, isNum = e % 2 === 0;
-    s += `<text x="${x(t)}" y="${y0 + 22 + laneH * 3 + 19}" text-anchor="middle" font-size="15" font-weight="${isNum ? 800 : 700}" fill="${isNum ? '#1C1C1E' : '#007AFF'}">${isNum ? e / 2 + 1 : '&'}</text>`;
+    s += `<text x="${x(t)}" y="${y0 + 20 + laneH * 3 + 18}" text-anchor="middle" font-size="15" font-weight="900" fill="${isNum ? '#fff' : '#8FB4FF'}">${isNum ? e / 2 + 1 : '&amp;'}</text>`;
   }
   return s;
 }
 function timing(y0, W) {
-  // Where every hit landed against the click; the green band is "right on it" (±40 ms here).
+  // Where every hit landed against the click; the green band is "right on it".
   const offs = [12, 18, 22, 9, 31, 25, 14, 52, 19, 27, 8, 16, 21, 33, 11, 24, 15, 20, 28, 6, 17, 23, 13, 30, -62, 19, 26, -55, 14, 22, 18, 25, 10, 29, 16, 21, 12, 27, 35, 19, 24, 15, 20, 11, 26, 18, -4];
-  const mid = W / 2, sc = (W / 2 - 60) / 100, x = ms => mid + ms * sc;
-  let s = `<text x="0" y="${y0}" font-size="14" font-weight="700" fill="#1C1C1E">Where your hits landed</text><text x="${W}" y="${y0}" text-anchor="end" font-size="13" font-weight="600" fill="rgba(60,60,67,.6)">on average 18 ms after the click · 2 missed · 1 extra</text>`;
-  const cy = y0 + 46;
-  s += `<rect x="${x(-40)}" y="${cy - 26}" width="${x(40) - x(-40)}" height="52" rx="10" fill="rgba(52,199,89,.12)" stroke="#34C759" stroke-width="1.5"/>`;
-  s += `<line x1="${x(-100)}" x2="${x(100)}" y1="${cy}" y2="${cy}" stroke="rgba(60,60,67,.3)" stroke-width="2"/>`;
-  s += `<line x1="${mid}" x2="${mid}" y1="${cy - 30}" y2="${cy + 30}" stroke="#1C1C1E" stroke-width="2.5"/>`;
-  offs.forEach((ms, k) => { s += `<circle cx="${x(ms)}" cy="${cy + ((k % 3) - 1) * 10}" r="6" fill="${Math.abs(ms) <= 40 ? '#34C759' : '#FF9500'}" stroke="#fff" stroke-width="1.5"/>`; });
-  s += `<text x="${x(-100)}" y="${cy + 46}" font-size="13" font-weight="600" fill="rgba(60,60,67,.6)">← early</text><text x="${mid}" y="${cy + 46}" text-anchor="middle" font-size="13" font-weight="700">the click</text><text x="${x(100)}" y="${cy + 46}" text-anchor="end" font-size="13" font-weight="600" fill="rgba(60,60,67,.6)">late →</text>`;
+  const mid = W / 2, sc = (W / 2 - 50) / 100, x = ms => mid + ms * sc, h = 104;
+  let s = `<rect x="0" y="${y0}" width="${W}" height="${h}" fill="#FFFDF6" stroke="${INK}" stroke-width="3"/>`;
+  s += `<text x="12" y="${y0 + 20}" font-size="14" font-weight="900" fill="${INK}">Where your hits landed</text><text x="${W - 12}" y="${y0 + 20}" text-anchor="end" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#4A4A4A">on average 18 ms after the click · 2 missed · 1 extra</text>`;
+  const cy = y0 + 56;
+  s += `<rect x="${x(-40)}" y="${cy - 20}" width="${x(40) - x(-40)}" height="40" fill="#E3F5EA" stroke="#1E9E5A" stroke-width="2"/>`;
+  s += `<line x1="${x(-100)}" x2="${x(100)}" y1="${cy}" y2="${cy}" stroke="${INK}" stroke-width="3"/><line x1="${mid}" x2="${mid}" y1="${cy - 24}" y2="${cy + 24}" stroke="${INK}" stroke-width="3"/>`;
+  offs.forEach((ms, k) => { s += `<circle cx="${x(ms)}" cy="${cy + ((k % 3) - 1) * 9}" r="6" fill="${Math.abs(ms) <= 40 ? '#1E9E5A' : '#FF9F1C'}" stroke="${INK}" stroke-width="1.5"/>`; });
+  s += `<text x="${x(-100)}" y="${cy + 40}" font-size="12" font-weight="900" fill="#4A4A4A">← EARLY</text><text x="${mid}" y="${cy + 40}" text-anchor="middle" font-size="12" font-weight="900">THE CLICK</text><text x="${x(100)}" y="${cy + 40}" text-anchor="end" font-size="12" font-weight="900" fill="#4A4A4A">LATE →</text>`;
   return s;
 }
-const W = 754;
-document.getElementById('notes').innerHTML = `<svg width="${W}" height="440" viewBox="0 0 ${W} 440" font-family="Inter, -apple-system, sans-serif">${row(0, 2, W)}${row(2, 160, W)}${timing(336, W)}</svg>`;
+const W = 756;
+document.getElementById('notes').innerHTML = `<svg width="${W}" height="418" viewBox="0 0 ${W} 418" font-family='${FONT}' style="display:block">${row(0, 0, W)}${row(2, 150, W)}${timing(306, W)}</svg>`;
 </script>
 </body>
 </html>

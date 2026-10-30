@@ -15,30 +15,6 @@
   #countin:target ~ * .v-countin, #countin:target ~ .v-countin { display: flex; }
   #countin:target ~ .hint.v-take, #countin:target ~ * .barNow.v-take, #countin:target ~ * .lh b { display: none; }
 
-  /* the web's black header bar, as the player's top bar */
-  .top { position: absolute; left: 0; right: 0; top: 0; height: 100px; background: var(--night); color: #fff; border-bottom: 3px solid var(--line); box-shadow: 0 5px 0 var(--pop);
-    display: flex; align-items: center; gap: 14px; padding: 26px 24px 0; }
-  .title { white-space: nowrap; }
-  .title b { display: block; font: 900 22px var(--display); }
-  .title span { font-size: 13.5px; color: #ccc; font-weight: 700; }
-  .steps { display: flex; gap: 6px; align-items: center; margin-left: 4px; white-space: nowrap; }
-  .steps i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 900 13px var(--display); font-style: normal; background: var(--panel); color: var(--line); border: 2.5px solid var(--line); box-shadow: 0 0 0 2px #fff; }
-  .steps i.done { background: var(--good); color: #fff; }
-  .steps i.cur { width: auto; padding: 0 12px 0 3px; gap: 7px; display: flex; background: var(--pop); border-radius: 999px; font-size: 14px; }
-  .steps i.cur em { font-style: normal; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); background: #fff; display: grid; place-items: center; font-size: 11px; }
-  .sp { flex: 1; }
-  .tempo { display: flex; align-items: center; gap: 12px; }
-  .tempo .big { font: 900 46px/1 var(--display); }
-  .tempo .big small { font: 800 14px var(--sf); color: #ccc; margin-left: 4px; }
-  .ladder { display: flex; flex-direction: column; gap: 4px; }
-  .rungs { display: flex; align-items: flex-end; gap: 3px; }
-  .rungs i { width: 14px; border: 2px solid #fff; background: transparent; }
-  .rungs i.start { border-style: dashed; } .rungs i.done { background: var(--good); } .rungs i.at { background: var(--pop); } .rungs i.goal { background: #fff; }
-  .ladder span { font-size: 11.5px; color: #ccc; font-weight: 800; }
-  .stopGroup { display: flex; gap: 10px; align-items: center; }
-  .top .btn.red { height: 52px; font-size: 20px; padding: 0 22px; font-family: var(--display); font-weight: 900; box-shadow: 3px 3px 0 #fff; }
-  .top .btn { box-shadow: 3px 3px 0 #ffffff88; }
-  .top .seg { box-shadow: 3px 3px 0 #ffffff88; }
 
   .hint { position: absolute; left: 24px; right: 24px; top: 118px; height: 58px; background: var(--pop); border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line);
     display: flex; align-items: center; gap: 14px; padding: 0 18px; font: 900 26px var(--display); }
