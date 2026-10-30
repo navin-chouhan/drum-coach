@@ -1,7 +1,7 @@
 // Where the drums sit in the kit view and on the touch pads, as seen from the throne (the MPS-150: crash, toms and ride
 // on top, hi-hat left, snare, kick and floor below). Pure TypeScript (Vitest-tested). Layouts are in design units and
 // scaled to fit, keeping their aspect.
-import type { DrumId } from './chartLike';
+import { PAD_DRUM, type DrumId, type PadId } from './chartLike';
 
 /** A drum, or the hi-hat pedal (which has its own strip on the touch pads). */
 export type KitPartId = DrumId | 'hhPedal';
@@ -85,4 +85,10 @@ export function hitTest(layout: KitLayout, x: number, y: number, slop = 8): KitP
 /** The smallest target side in points at this scale (Apple: at least 44). */
 export function minTargetPt(layout: KitLayout, scale: number): number {
   return Math.min(...layout.parts.map(p => (p.kind === 'circle' ? p.r * 2 : Math.min(p.w, p.h)) * scale));
+}
+
+/** The drawn part a stroke lights: the pedal strip when the layout has one, else the hi-hat. */
+export function partForPad(layout: KitLayout, pad: PadId): KitPartId {
+  if (pad === 'hhPedal' && layout.parts.some(p => p.id === 'hhPedal')) return 'hhPedal';
+  return PAD_DRUM[pad];
 }

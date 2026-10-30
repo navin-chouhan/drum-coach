@@ -28,6 +28,8 @@ export type PlayTheme = {
   nowBall: string;
   nowBallStroke: string;
   noteText: string;
+  /** Pad names on lit pads (kit view, touch pads). */
+  padText: string;
   accentRing: string;
 };
 
@@ -62,6 +64,7 @@ export const IPAD_THEME: PlayTheme = {
   nowBall: '#FFCC00',
   nowBallStroke: '#C99A00',
   noteText: '#FFFFFF',
+  padText: '#FFFFFF',
   accentRing: '#1C1C1E',
 };
 
@@ -89,6 +92,7 @@ export const WEB_THEME: PlayTheme = {
   nowBall: '#FFE14D',
   nowBallStroke: '#141414',
   noteText: '#141414',
+  padText: '#141414',
   accentRing: '#FFFFFF',
 };
 

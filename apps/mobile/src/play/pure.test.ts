@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { estimateOffset, nextOffset, sampleOffset } from './clockSync';
 import { createStream, offsetLabel, resultKind, type PlayResult } from './events';
-import { edgeDistance, fitLayout, hitTest, MINI_KIT, minTargetPt, partBox, toLayout, TOUCH_KIT } from './kitLayout';
+import { edgeDistance, fitLayout, hitTest, MINI_KIT, minTargetPt, partBox, partForPad, toLayout, TOUCH_KIT } from './kitLayout';
 import { hihatPad, padForPart, padSound, strokeTime, touchVelocity, velocityGain } from './touch';
 
 describe('results', () => {
@@ -81,6 +81,12 @@ describe('kit layout', () => {
   it('keeps every touch target at least 44 pt on an iPad (pad area down to 1000 × 380)', () => {
     expect(minTargetPt(TOUCH_KIT, fitLayout(TOUCH_KIT, 1000, 380).scale)).toBeGreaterThanOrEqual(44);
     expect(minTargetPt(TOUCH_KIT, 1)).toBe(56);
+  });
+  it('lights the pedal strip for the foot when there is one, else the hi-hat', () => {
+    expect(partForPad(TOUCH_KIT, 'hhPedal')).toBe('hhPedal');
+    expect(partForPad(MINI_KIT, 'hhPedal')).toBe('hihat');
+    expect(partForPad(MINI_KIT, 'hhOpen')).toBe('hihat');
+    expect(partForPad(MINI_KIT, 'floor')).toBe('floor');
   });
   it('keeps pads from overlapping', () => {
     const circles = TOUCH_KIT.parts.filter(p => p.kind === 'circle') as Extract<(typeof TOUCH_KIT.parts)[number], { kind: 'circle' }>[];
