@@ -13,7 +13,7 @@ function write(name: string, note: string, chart: Chart, repeats: number, seed: 
     name, source: 'emulated', recordedAt: '2026-10-26', note, noteMap: DEFAULT_NOTE_MAP, chart, speed: 1, fromBar: 1, toBar: 1, repeats, latencyMs: 0,
     midi: raw.map(m => [Math.round(m.timeStamp * 10) / 10, ...m.data]), expect: { minLanded: run.notes.length - 2, maxExtras: 1 },
   };
-  writeFileSync(new URL(`../../src/input/fixtures/${name}.json`, import.meta.url), JSON.stringify(fixture));
+  writeFileSync(new URL(`../../packages/core/src/input/fixtures/${name}.json`, import.meta.url), JSON.stringify(fixture));
   console.log(`${name}: ${run.notes.length} notes, ${raw.length} MIDI messages`);
 }
 

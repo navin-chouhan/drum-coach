@@ -13,7 +13,7 @@ export function windowsFor(beatMs: number, gapMs = Infinity, goodMs = WINDOWS.go
   return { good, perfect: Math.min(WINDOWS.perfect, Math.round(good / 2)), near: Math.max(WINDOWS.near, beatMs * 0.3) };
 }
 export type Judgement = 'perfect' | 'good' | 'miss';
-/** time = ms on the performance.now() clock (latency already removed for hits). */
+/** time = host ms on the app's one Clock (web: performance.now()); latency already removed for hits. */
 export type Expected = { time: number; drum: ChartDrum; good?: number; grace?: number; buzz?: boolean }; // buzz: a buzz (press) stroke, its bounces belong to it // good: this note's own Good window (noteWindows); grace: chart grace strokes
 /**
  * Per-note Good windows: 40% of the gap to the nearest note on the same drum, capped at `goodMs`. Fast 16ths on the

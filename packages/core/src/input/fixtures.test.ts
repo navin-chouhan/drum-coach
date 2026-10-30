@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { replayFixture, type MidiFixture } from './fixtures';
 
-// Every recorded session in src/input/fixtures/ must still give its result (N11).
+// Every recorded session in packages/core/src/input/fixtures/ must still give its result (N11).
 const fixtures = Object.values(import.meta.glob<MidiFixture>('./fixtures/*.json', { eager: true, import: 'default' }));
 
 describe('recorded kit sessions (fixtures)', () => {
