@@ -5,130 +5,104 @@
 <meta name="viewport" content="width=1194">
 <title>Lesson player · iPad mockup</title>
 <link rel="stylesheet" href="ipad.css">
+<script src="mock.js"></script>
 <style>
-  /* Three moments of one screen: #ready (before the take), #countin, and the take itself (default). */
+  /* Four moments of one screen: #ready (before the take), #countin, the take (default) and #falling (the take on the
+     web's falling highway, to compare). */
   .ipad .v-ready, .ipad .v-countin { display: none; }
   #ready:target ~ * .v-ready, #ready:target ~ .v-ready { display: flex; }
   #ready:target ~ * .v-take, #ready:target ~ .v-take { display: none; }
   #countin:target ~ * .v-countin, #countin:target ~ .v-countin { display: flex; }
+  #countin:target ~ .hint.v-take, #countin:target ~ * .barNow.v-take, #countin:target ~ * .lh b { display: none; }
 
-  .top { position: absolute; left: 24px; right: 24px; top: 30px; height: 62px; display: flex; align-items: center; gap: 14px; }
-  .title b { display: block; font-size: 21px; letter-spacing: -.015em; }
-  .title span { font-size: 14px; color: var(--label2); }
-  .title { white-space: nowrap; }
-  .steps { white-space: nowrap; display: flex; gap: 6px; align-items: center; margin-left: 6px; }
-  .steps i { width: 30px; height: 30px; border-radius: 15px; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 14px; background: var(--fill); color: var(--label2); }
-  .steps i.done { background: var(--greenSoft); color: var(--greenInk); }
-  .steps i.done .ic { width: 14px; height: 14px; }
-  .steps i.cur { width: auto; padding: 0 12px 0 4px; gap: 7px; display: flex; background: var(--yellow); color: #3A2A00; }
-  .steps i.cur em { font-style: normal; width: 22px; height: 22px; border-radius: 11px; background: rgba(0,0,0,.12); display: grid; place-items: center; font-size: 13px; }
-  .sp { flex: 1; }
-  .tempo { display: flex; align-items: center; gap: 12px; }
-  .tempo .big { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
-  .tempo .big small { font-size: 15px; font-weight: 600; color: var(--label2); margin-left: 3px; letter-spacing: 0; }
-  .ladder { display: flex; flex-direction: column; gap: 3px; }
-  .rungs { display: flex; align-items: flex-end; gap: 4px; height: 26px; }
-  .rungs i { width: 12px; border-radius: 3px; background: var(--fill); }
-  .rungs i.start { box-shadow: inset 0 0 0 1.5px var(--label2); background: none; }
-  .rungs i.done { background: var(--green); }
-  .rungs i.at { background: var(--yellow); box-shadow: 0 0 0 2px rgba(255, 204, 0, .3); }
-  .rungs i.goal { background: var(--label); }
-  .ladder span { font-size: 12px; color: var(--label2); font-weight: 600; }
-  .stop { display: flex; align-items: center; gap: 10px; }
-  .stop .btn.red { height: 52px; border-radius: 26px; font-size: 19px; padding: 0 24px; }
-  .stop .btn.red .ic { width: 18px; height: 18px; }
 
-  .hint { position: absolute; left: 24px; right: 24px; top: 104px; height: 62px; border-radius: 20px; background: var(--yellow); color: #2A1F00;
-    display: flex; align-items: center; gap: 14px; padding: 0 22px; font-size: 27px; font-weight: 700; letter-spacing: -.015em; }
-  .hint .ic { width: 28px; height: 28px; }
-  .hint small { margin-left: auto; font-size: 15px; font-weight: 600; opacity: .7; }
+  .hint { position: absolute; left: 24px; right: 24px; top: 118px; height: 58px; background: var(--pop); border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line);
+    display: flex; align-items: center; gap: 14px; padding: 0 18px; font: 900 26px var(--display); }
+  .hint .em { font-size: 28px; }
+  .hint small { margin-left: auto; font: 800 14px var(--sf); }
 
-  .coachRow { position: absolute; left: 24px; right: 24px; top: 102px; }
-  .coachRow .bubble { flex: 1; background: #fff; border-radius: 20px; padding: 12px 18px; box-shadow: var(--shadow); }
-  .coachRow p { font-size: 23px; }
-  .readyMoves { position: absolute; left: 24px; right: 24px; top: 176px; grid-template-columns: 2fr 1fr 1fr 1fr; }
+  .coachRow { position: absolute; left: 24px; right: 24px; top: 116px; }
+  .coachRow .bubble { flex: 1; }
+  .coachRow p { font-size: 22px; }
+  .readyMoves { position: absolute; left: 24px; right: 30px; top: 196px; grid-template-columns: 2fr 1fr 1fr 1fr; }
   .readyMoves { display: none; }
   #ready:target ~ .readyMoves { display: grid; }
-  #countin:target ~ .hint.v-take, #countin:target ~ * .barNow.v-take, #countin:target ~ * .lh b { display: none; }
-  .readyMoves .move { min-height: 92px; }
 
-  .panel { position: absolute; left: 24px; right: 24px; top: 178px; height: 408px; background: #fff; border-radius: 24px; box-shadow: var(--shadow); overflow: hidden; }
-  #ready:target ~ .panel { top: 282px; height: 304px; }
+  .panel { position: absolute; left: 24px; right: 30px; top: 190px; height: 396px; background: var(--night); border: 3px solid var(--line); box-shadow: 6px 6px 0 var(--pop); overflow: hidden; }
+  #ready:target ~ .panel { top: 300px; height: 286px; }
   .panel svg { display: block; }
-  .panelTag { position: absolute; top: 12px; right: 14px; display: flex; gap: 8px; align-items: center; }
-  .barNow { position: absolute; left: 18px; top: 12px; font-size: 15px; font-weight: 600; color: var(--label2); }
-  .barNow b { color: var(--label); font-size: 22px; }
+  .barNow { position: absolute; left: 16px; top: 10px; font: 800 14px var(--sf); color: #ccc; }
+  .barNow b { color: #fff; font: 900 22px var(--display); }
 
-  .countBig { position: absolute; left: 618px; top: 252px; transform: translateX(-50%); z-index: 3; flex-direction: column; align-items: center; gap: 4px; }
-  .countBig .n { width: 150px; height: 150px; border-radius: 50%; background: rgba(255, 204, 0, .95); display: grid; place-items: center; font-size: 96px; font-weight: 800; color: #2A1F00; box-shadow: 0 10px 40px rgba(255, 170, 0, .35); }
-  .countBig p { font-size: 18px; font-weight: 600; color: var(--label2); background: rgba(255,255,255,.9); padding: 4px 12px; border-radius: 12px; }
+  .countBig { position: absolute; left: 618px; top: 262px; transform: translateX(-50%); z-index: 3; flex-direction: column; align-items: center; gap: 8px; }
+  .countBig .n { width: 150px; height: 150px; border-radius: 50%; background: var(--pop); border: 4px solid var(--line); box-shadow: 6px 6px 0 var(--line); display: grid; place-items: center; font: 900 96px var(--display); }
+  .countBig p { font: 900 16px var(--display); background: var(--panel); border: 3px solid var(--line); padding: 3px 12px; }
 
-  .bottom { position: absolute; left: 24px; right: 24px; top: 598px; height: 172px; display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 12px; }
-  .goalCard { display: flex; align-items: center; gap: 20px; padding: 18px 22px; }
+  .bottom { position: absolute; left: 24px; right: 30px; top: 604px; height: 160px; display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 18px; }
+  .goalCard { display: flex; align-items: center; gap: 18px; padding: 14px 20px; background: var(--panel2); }
   .boxes { display: flex; gap: 8px; }
-  .boxes i { width: 48px; height: 48px; border-radius: 12px; box-shadow: inset 0 0 0 2.5px var(--label3); display: grid; place-items: center; color: #fff; }
-  .boxes i.ok { background: var(--green); box-shadow: none; }
-  .boxes i .ic { width: 26px; height: 26px; }
-  .goalCard h3 { font-size: 22px; letter-spacing: -.015em; line-height: 1.2; }
-  .goalCard p { font-size: 16px; color: var(--label2); margin-top: 6px; }
+  .boxes i { width: 50px; height: 50px; border: 3px solid var(--line); background: var(--panel); display: grid; place-items: center; font: 900 24px var(--display); font-style: normal; color: #fff; }
+  .boxes i.ok { background: var(--good); }
+  .goalCard h3 { font-size: 21px; line-height: 1.15; }
+  .goalCard p { font-size: 15px; font-weight: 600; margin-top: 5px; }
   .goalCard .barCount { margin-left: auto; text-align: right; flex: none; }
-  .goalCard .barCount b { display: block; font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
-  .goalCard .barCount span { font-size: 14px; color: var(--label2); font-weight: 600; }
-  .kitCard { padding: 10px 14px; display: flex; flex-direction: column; }
-  .kitCard .lh { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--label2); font-weight: 600; }
-  .kitCard .lh b { color: var(--greenInk); font-size: 15px; }
+  .goalCard .barCount b { display: block; font: 900 38px/1 var(--display); }
+  .goalCard .barCount span { font-size: 13px; font-weight: 800; }
+  .kitCard { padding: 0; background: var(--night); overflow: hidden; position: relative; box-shadow: 5px 5px 0 var(--line); }
+  .kitCard .lh { position: absolute; left: 10px; right: 10px; top: 7px; display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; color: #fff; z-index: 2; }
+  .kitCard .lh b { color: #4BE08A; }
 </style>
 </head>
 <body>
 <div class="ipad">
-  <i id="ready"></i><i id="countin"></i>
+  <i id="ready"></i><i id="countin"></i><i id="falling"></i>
   <div class="status"><span>19:44</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>87%</span><span class="batt"><i style="width:84%"></i></span></div>
 
   <header class="top">
-    <span class="btn glass round v-ready"><span class="ic i-chevl"></span></span>
+    <span class="btn round sm v-ready" style="width:40px"><span class="ic i-chevl"></span></span>
     <div class="title"><b>The money beat</b><span>Step 3 of 4 · ★ checkpoint</span></div>
-    <div class="steps"><i class="done"><span class="ic i-check"></span></i><i class="done"><span class="ic i-check"></span></i><i class="cur"><em>3</em>+ snare</i><i>4</i></div>
+    <div class="steps"><i class="done">✓</i><i class="done">✓</i><i class="cur"><em>3</em>+ snare</i><i>4</i></div>
     <span class="sp"></span>
     <div class="tempo">
       <div class="big num">70<small>BPM</small></div>
-      <div class="ladder"><div class="rungs"><i class="start done" style="height:10px"></i><i class="done" style="height:13px"></i><i class="at" style="height:16px"></i><i style="height:19px"></i><i style="height:21px"></i><i style="height:23px"></i><i class="goal" style="height:26px"></i></div><span>start 60 · goal 90</span></div>
+      <div class="ladder"><div class="rungs"><i class="start done" style="height:10px"></i><i class="done" style="height:13px"></i><i class="at" style="height:16px"></i><i style="height:19px"></i><i style="height:22px"></i><i style="height:25px"></i><i class="goal" style="height:28px"></i></div><span>start 60 · goal 90</span></div>
     </div>
-    <div class="v-ready" style="gap:8px;align-items:center;margin-left:10px">
+    <div class="v-ready" style="gap:8px;align-items:center;margin-left:6px">
       <span class="seg"><span class="on">Highway</span><span>Sheet</span></span>
-      <span class="btn glass sm"><span class="ic i-bulb"></span>Hints</span>
-      <span class="btn glass sm"><span class="ic i-note"></span>Band</span>
-      <span class="btn glass round"><span class="ic i-more"></span></span>
+      <span class="btn sm pop"><span class="em">💡</span>Hints</span>
+      <span class="btn sm"><span class="em">🎸</span>Band</span>
+      <span class="btn round sm" style="width:38px">⋯</span>
     </div>
-    <div class="stop v-take"><span class="gest lg g-crash">crash × 4</span><span class="btn red"><span class="ic i-stop"></span>Stop</span></div>
+    <div class="v-take stopGroup"><span class="gest lg on-tint g-crash">crash × 4</span><span class="btn red">■ Stop</span></div>
   </header>
 
   <!-- During the take: one big live tip (rule-based, src/engine/liveCoach.ts) -->
-  <div class="hint v-take"><span class="ic i-bulb"></span>Hi-hat foot down (it sounds open)<small>live tip · your kit sent open hi-hat</small></div>
+  <div class="hint v-take"><span class="em">💡</span>Hi-hat foot down (it sounds open)<small>your kit sent open hi-hat</small></div>
+  <div class="hint v-countin" style="background:var(--panel2)"><span class="em">🥁</span>Count-in: one bar, then 4 bars at 70<small>“one, two, three, four”</small></div>
 
   <!-- Before the take: the coach line and four moves, each with its kit gesture -->
   <div class="coach coachRow v-ready">
-    <div class="avatar lg"><span class="ic i-drum"></span></div>
+    <div class="avatar lg">🥁</div>
     <div class="bubble"><p>Snare on <b>2 and 4</b> with your left hand; the right stays on the hi-hat. Count “1 & 2 &” out loud.</p></div>
   </div>
   <div class="moves readyMoves">
-    <div class="move go"><b><span class="ic i-play"></span>Play</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span><span class="or">or say “yes”</span></div></div>
-    <div class="move"><b><span class="ic i-ear"></span>Hear it</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
-    <div class="move"><b><span class="ic i-slow"></span>Slower</b><div class="gs"><span class="gest g-floor">floor × 2</span></div></div>
-    <div class="move"><b><span class="ic i-skip"></span>Skip to next</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+    <div class="move go"><b><span class="em">▶</span>Play</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span><span class="or">or say “yes”</span></div></div>
+    <div class="move"><b><span class="em">👂</span>Hear it</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
+    <div class="move alt"><b><span class="em">🐢</span>Slower</b><div class="gs"><span class="gest g-floor">floor × 2</span></div></div>
+    <div class="move alt"><b><span class="em">⏭</span>Skip to next</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
   </div>
 
   <section class="panel" id="hwPanel">
     <div id="hw"></div>
     <div class="barNow v-take"><b>Bar 3</b> of 4</div>
-    <div class="barNow v-ready" style="font-size:13px">R right · L left · K kick</div>
+    <div class="barNow v-ready">R right · L left · K kick</div>
   </section>
 
-  <div class="countBig v-countin"><div class="n">3</div><p>say it with the click</p></div>
-  <div class="hint v-countin" style="background:var(--tintSoft);color:var(--label)"><span class="ic i-metro" style="color:var(--tint)"></span>Count-in: one bar, then 4 bars at 70<small>“one, two, three, four”</small></div>
+  <div class="countBig v-countin"><div class="n">3</div><p>SAY IT WITH THE CLICK</p></div>
 
   <div class="bottom">
     <section class="card goalCard">
-      <div class="boxes"><i class="ok"><span class="ic i-check"></span></i><i></i></div>
+      <div class="boxes"><i class="ok">✓</i><i></i></div>
       <div>
         <h3>2 clean takes in a row and the tempo goes up to 75.</h3>
         <p>Clean = 39 of 48 notes land. One ★★★ take counts as both.</p>
@@ -136,125 +110,34 @@
       <div class="barCount v-take"><b class="num">Take 2</b><span>at 70 BPM</span></div>
     </section>
     <section class="card kitCard">
-      <div class="lh"><span>Your pads: hi-hat, snare, kick</span><b class="v-take">Kick + hi-hat · on it</b></div>
+      <div class="lh"><span>Your pads: hi-hat, snare, kick</span><b class="v-take">on it!</b></div>
       <div id="kit"></div>
     </section>
   </div>
 
   <div class="home"></div>
 </div>
-
 <script>
-// The note highway, drawn as inline SVG. Lanes top to bottom like notation: cymbals above, kick below.
-// Notes move right to left; the line marks "now". Numbers are eighths from the first note.
-const C = { hihat: '#0FA3B1', snare: '#5856D6', kick: '#48484A' };
-const STICK = { hihat: 'R', snare: 'L', kick: 'K' };
 const mode = location.hash.slice(1) || 'take';
-function money(bars) {
-  const n = [];
-  for (let b = 0; b < bars; b++) for (let e = 0; e < 8; e++) {
-    n.push({ lane: 'hihat', t: b * 8 + e });
-    if (e === 0 || e === 4) n.push({ lane: 'kick', t: b * 8 + e });
-    if (e === 2 || e === 6) n.push({ lane: 'snare', t: b * 8 + e });
-  }
-  return n;
-}
-function highway({ W, H, pos, px, nowX, judged, flash }) {
-  const lanes = ['hihat', 'snare', 'kick'], top = 46, laneH = (H - top - 78) / 3, left = 132;
-  const x = t => nowX + (t - pos) * px, y = i => top + laneH * i + laneH / 2;
-  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, -apple-system, sans-serif">`;
-  s += `<defs><clipPath id="lanes"><rect x="${left}" y="0" width="${W - left}" height="${H}"/></clipPath>
-        <linearGradient id="fade" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`;
-  lanes.forEach((l, i) => {
-    s += `<rect x="${left}" y="${y(i) - laneH / 2 + 3}" width="${W - left - 14}" height="${laneH - 6}" rx="14" fill="${i % 2 ? '#F6F6F9' : '#FAFAFC'}"/>`;
-    s += `<circle cx="24" cy="${y(i)}" r="7" fill="${C[l]}"/><text x="40" y="${y(i) + 7}" font-size="20" font-weight="700" fill="#1C1C1E">${{ hihat: 'Hi-hat', snare: 'Snare', kick: 'Kick' }[l]}</text>`;
-  });
-  s += `<g clip-path="url(#lanes)">`;
-  // bar and beat lines
-  for (let t = Math.floor(pos - 8); t < pos + 24; t++) {
-    if (t < -8) continue;
-    const bar = ((t % 8) + 8) % 8 === 0, beat = t % 2 === 0;
-    if (!beat) continue;
-    s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top - 4}" y2="${top + laneH * 3}" stroke="${bar ? 'rgba(60,60,67,.35)' : 'rgba(60,60,67,.10)'}" stroke-width="${bar ? 2 : 1}"/>`;
-    if (bar && t >= 0) s += `<text x="${x(t) + 8}" y="${top - 10}" font-size="13" font-weight="700" fill="rgba(60,60,67,.6)">BAR ${t / 8 + 1}</text>`;
-    if (bar && t < 0) s += `<text x="${x(t) + 8}" y="${top - 10}" font-size="13" font-weight="700" fill="rgba(60,60,67,.6)">COUNT-IN</text>`;
-  }
-  // notes
-  for (const n of money(4)) {
-    const cx = x(n.t), cy = y(lanes.indexOf(n.lane));
-    if (cx < left - 30 || cx > W + 30) continue;
-    const j = judged?.[n.lane + n.t] ?? (n.t < pos + 0.01 && judged ? 'ok' : null);
-    const past = n.t < pos + 0.01;
-    let fill = C[n.lane], op = 1, ring = '';
-    if (past && j === 'ok') { fill = '#34C759'; }
-    if (past && j === 'late') { fill = '#FF9500'; }
-    if (past && j === 'miss') { fill = 'none'; }
-    if (past) op = .9;
-    const r = n.lane === 'kick' ? 0 : 19;
-    if (n.lane === 'kick') {
-      s += `<rect x="${cx - 22}" y="${cy - 17}" width="44" height="34" rx="9" fill="${fill}" ${j === 'miss' ? 'stroke="#FF3B30" stroke-width="3" stroke-dasharray="5 4"' : ''} opacity="${op}"/>`;
-    } else {
-      s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" ${j === 'miss' ? 'stroke="#FF3B30" stroke-width="3" stroke-dasharray="5 4"' : ''} opacity="${op}"/>`;
-    }
-    const label = past ? (j === 'ok' ? '✓' : j === 'late' ? '›' : '✕') : STICK[n.lane];
-    s += `<text x="${cx}" y="${cy + 6.5}" text-anchor="middle" font-size="${past ? 19 : 17}" font-weight="800" fill="${j === 'miss' && past ? '#FF3B30' : '#fff'}">${label}</text>`;
-    if (past && j === 'late') s += `<text x="${cx}" y="${cy + 36}" text-anchor="middle" font-size="12" font-weight="700" fill="#C25E00">+48 ms</text>`;
-  }
-  // flashes at the now line: the hits that just landed
-  for (const l of flash || []) {
-    const cy = y(lanes.indexOf(l));
-    s += `<circle cx="${nowX}" cy="${cy}" r="30" fill="none" stroke="#34C759" stroke-width="4" opacity=".9"/><circle cx="${nowX}" cy="${cy}" r="40" fill="none" stroke="#34C759" stroke-width="2" opacity=".35"/>`;
-  }
-  s += `</g>`;
-  // the now line
-  s += `<rect x="${nowX - 2}" y="${top - 14}" width="4" height="${laneH * 3 + 18}" rx="2" fill="#FFCC00"/>`;
-  // count row with the beat ball
-  const cyC = H - 30;
-  s += `<rect x="${left}" y="${cyC - 28}" width="${W - left - 14}" height="50" rx="14" fill="#F2F2F7"/>`;
-  s += `<text x="24" y="${cyC + 6}" font-size="15" font-weight="700" fill="rgba(60,60,67,.6)">Count</text>`;
-  s += `<g clip-path="url(#lanes)">`;
-  for (let t = Math.floor(pos - 6); t < pos + 22; t++) {
-    const e = ((t % 8) + 8) % 8, isNum = e % 2 === 0, word = isNum ? String(e / 2 + 1) : '&';
-    if (t < 0 && !isNum) continue;
-    const cur = Math.abs(t - pos) < 0.01;
-    const fill = cur ? '#1C1C1E' : t < 0 ? 'rgba(60,60,67,.45)' : isNum ? '#1C1C1E' : '#007AFF';
-    s += `<text x="${x(t)}" y="${cyC + 9}" text-anchor="middle" font-size="${cur ? 30 : 24}" font-weight="${isNum ? 800 : 700}" fill="${fill}" opacity="${t < pos - .01 ? .35 : 1}">${word}</text>`;
-  }
-  s += `</g>`;
-  s += `<circle cx="${nowX}" cy="${cyC - 34}" r="11" fill="#FFCC00" stroke="#C99A00" stroke-width="2"/>`;
-  s += `<rect x="${left}" y="0" width="60" height="${H}" fill="url(#fade)"/>`;
-  return s + `</svg>`;
-}
-const panel = document.getElementById('hwPanel').getBoundingClientRect();
-const W = panel.width, H = mode === 'ready' ? 304 : 408; // :target may not apply yet when this runs
-const opts = {
-  take: { pos: 20, px: 62, nowX: 470, judged: { hihat17: 'late', kick16: 'late' }, flash: ['hihat', 'kick'] },
-  ready: { pos: -1.5, px: 62, nowX: 230, judged: null },
-  countin: { pos: -4, px: 62, nowX: 470, judged: null },
-}[mode] || {};
-document.getElementById('hw').innerHTML = highway({ W, H, ...opts });
+const panelW = 1134, panelH = mode === 'ready' ? 280 : 390; // :target may not apply yet when this runs
+const judged = { hihat17: 'off', kick16: 'off' };
+document.getElementById('hw').innerHTML = mode === 'falling'
+  ? fallingHighway({ W: panelW, H: panelH, pos: 20, px: 46, judged, flash: ['hihat', 'kick'] })
+  : highway({ W: panelW, H: panelH, ...{
+      take: { pos: 20, px: 62, nowX: 470, judged, flash: ['hihat', 'kick'] },
+      ready: { pos: -1.5, px: 62, nowX: 230, top: 40, countH: 48 },
+      countin: { pos: -4, px: 62, nowX: 470 },
+    }[mode === 'falling' ? 'take' : mode] });
 
-// The kit seen from the throne. Your pads are bright; the ones that just landed glow.
-function kit(lit) {
-  const P = [
-    ['crash', 70, 34, 30, '#D99A00'], ['hihat', 40, 98, 33, '#0FA3B1'], ['tom1', 140, 46, 24, '#AF52DE'], ['tom2', 196, 46, 24, '#C93A9E'],
-    ['ride', 296, 40, 34, '#00A383'], ['snare', 112, 112, 32, '#5856D6'], ['floor', 262, 112, 32, '#A2845E'],
-  ];
-  const mine = ['hihat', 'snare', 'kick'];
-  let s = `<svg width="344" height="132" viewBox="0 0 344 152" font-family="Inter, sans-serif">`;
-  for (const [id, cx, cy, r, c] of P) {
-    const on = mine.includes(id), hit = lit.includes(id);
-    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${on ? c : '#E5E5EA'}" opacity="${on ? 1 : .9}"/>`;
-    if (hit) s += `<circle cx="${cx}" cy="${cy}" r="${r + 7}" fill="none" stroke="#34C759" stroke-width="5"/>`;
-    s += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${on ? '#fff' : 'rgba(60,60,67,.5)'}">${{ crash: 'Crash', hihat: 'Hi-hat', tom1: 'Tom 1', tom2: 'Tom 2', ride: 'Ride', snare: 'Snare', floor: 'Floor' }[id]}</text>`;
-  }
-  const kh = lit.includes('kick');
-  s += `<rect x="160" y="108" width="62" height="38" rx="10" fill="#48484A"/>`;
-  if (kh) s += `<rect x="153" y="101" width="76" height="52" rx="15" fill="none" stroke="#34C759" stroke-width="5"/>`;
-  s += `<text x="191" y="132" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Kick</text>`;
-  return s + `</svg>`;
-}
-document.getElementById('kit').innerHTML = kit(mode === 'take' ? ['hihat', 'kick'] : []);
+// The kit from the throne, in the web app's drawing style; the pads that just landed glow and pop a comic word.
+const hit = mode === 'take' || mode === 'falling';
+const mine = ['hihat', 'snare', 'kick'];
+const P = [
+  [{ id: 'crash', x: 62, y: 54, r: 24 }], [{ id: 'hihat', x: 48, y: 112, r: 29 }], [{ id: 'tom1', x: 150, y: 52, r: 21 }], [{ id: 'tom2', x: 206, y: 52, r: 21 }],
+  [{ id: 'ride', x: 312, y: 58, r: 30 }], [{ id: 'snare', x: 128, y: 114, r: 29 }], [{ id: 'floor', x: 300, y: 120, r: 25 }], [{ id: 'kick', x: 214, y: 118, w: 64, h: 36 }],
+].map(([p]) => [p, { dim: !mine.includes(p.id), labelSize: 11, hit: hit && (p.id === 'hihat' || p.id === 'kick') ? '#4BE08A' : null, word: hit && p.id === 'kick' ? 'BOOM!' : hit && p.id === 'hihat' ? 'TSS!' : null, wordSize: 17 }]);
+document.getElementById('kit').innerHTML = kit(366, 154, P, 'k');
+document.querySelector('#kit svg').style.display = 'block';
 </script>
 </body>
 </html>

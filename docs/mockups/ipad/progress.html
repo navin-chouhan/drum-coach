@@ -6,59 +6,56 @@
 <title>Progress · iPad mockup</title>
 <link rel="stylesheet" href="ipad.css">
 <style>
-  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 292px; gap: 12px; }
-  .better { padding: 14px 18px; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 8px 16px; }
-  .better .coach { grid-column: 1 / -1; }
-  .better .coach p { font-size: 16px; white-space: nowrap; }
-  .tiles { display: flex; flex-direction: column; gap: 8px; }
-  .tiles div { background: var(--bg); border-radius: 12px; padding: 5px 10px; }
-  .tiles b { font-size: 21px; letter-spacing: -.02em; display: block; line-height: 1.1; }
-  .tiles span { white-space: nowrap; font-size: 12px; color: var(--label2); font-weight: 600; }
-  .week { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 292px; gap: 16px; }
+  .better { padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 8px 16px; }
+  .better .coach { grid-column: 1 / -1; gap: 10px; }
+  .better .coach p { font-size: 16px; white-space: nowrap; padding: 6px 14px; box-shadow: 3px 3px 0 var(--line); }
+  .tiles { display: flex; flex-direction: column; gap: 10px; }
+  .tiles div { background: var(--panel2); border: 3px solid var(--line); padding: 4px 10px; }
+  .tiles b { font: 900 23px/1.1 var(--display); display: block; }
+  .tiles span { white-space: nowrap; font-size: 12px; font-weight: 800; color: var(--muted); }
+  .week { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
   .days { display: flex; justify-content: space-between; }
-  .days div { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--label2); }
-  .days i { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--label3); display: grid; place-items: center; color: #fff; }
-  .days i.on { background: var(--orange); box-shadow: none; }
-  .days i.today { box-shadow: 0 0 0 3px rgba(255,149,0,.3); }
-  .days i .ic { width: 15px; height: 15px; }
+  .days div { display: flex; flex-direction: column; align-items: center; gap: 3px; font: 900 11px var(--display); }
+  .days i { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--line); display: grid; place-items: center; font-size: 14px; font-style: normal; background: var(--panel); }
+  .days i.on { background: var(--orange); }
+  .days i.today { background: var(--pop); box-shadow: 2px 2px 0 var(--line); }
   .streak { display: flex; align-items: baseline; gap: 8px; }
-  .streak b { font-size: 36px; letter-spacing: -.03em; line-height: 1; }
-  .streak span { font-size: 15px; color: var(--label2); font-weight: 600; }
-  .mbar { height: 8px; border-radius: 4px; background: var(--fill); overflow: hidden; }
-  .mbar i { display: block; height: 100%; width: 75%; background: var(--green); border-radius: 4px; }
-  .week .small { font-size: 14px; color: var(--label2); }
-  .week .focus { font-size: 15px; border-top: .5px solid var(--sep); padding-top: 9px; }
-  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; margin-top: 12px; }
-  .skills { padding: 12px 18px; }
-  .sk { display: grid; grid-template-columns: 210px minmax(0, 1fr) 110px; gap: 12px; align-items: center; padding: 4px 0; }
-  .sk small { white-space: nowrap; }
-  .sk + .sk { border-top: .5px solid var(--sep); }
-  .sk b { font-size: 15.5px; display: block; }
-  .sk small { font-size: 12.5px; color: var(--label2); }
-  .sk .track { height: 10px; border-radius: 5px; background: var(--fill); overflow: hidden; }
-  .sk .track i { display: block; height: 100%; border-radius: 5px; background: var(--tint); }
-  .sk .n { font-size: 13px; color: var(--label2); text-align: right; }
-  .gh { font-size: 12px; font-weight: 700; color: var(--label2); letter-spacing: .04em; text-transform: uppercase; margin: 4px 0 0; }
+  .streak b { font: 900 38px/1 var(--display); }
+  .streak span { font-size: 15px; font-weight: 800; }
+  .mbar { height: 14px; border: 2px solid var(--line); background: var(--panel); }
+  .mbar i { display: block; height: 100%; background: var(--good); border-right: 2px solid var(--line); }
+  .week .small { font-size: 14px; font-weight: 600; }
+  .week .focus { font-size: 15px; border-top: 2px dashed var(--line); padding-top: 8px; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; margin-top: 13px; }
+  .skills { padding: 10px 16px; }
+  .sk { display: grid; grid-template-columns: 200px minmax(0, 1fr) 110px; gap: 12px; align-items: center; padding: 3px 0; }
+  .sk + .sk { border-top: 2px solid rgba(20,20,20,.1); }
+  .sk b { font: 900 15px var(--display); display: block; }
+  .sk small { font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .sk .track { height: 14px; border: 2px solid var(--line); background: var(--panel); }
+  .sk .track i { display: block; height: 100%; background: var(--accent); border-right: 2px solid var(--line); }
+  .sk .n { font-size: 13px; font-weight: 700; text-align: right; }
+  .gh { display: inline-block; font: 900 11px var(--display); letter-spacing: .05em; text-transform: uppercase; margin: 3px 0 0; background: var(--panel2); border: 2px solid var(--line); padding: 1px 6px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-  .chips span { font-size: 13px; padding: 3px 9px; border-radius: 10px; background: var(--fill2); color: var(--label2); font-weight: 500; }
-  .tro { padding: 12px 16px; }
+  .chips span { font-size: 12.5px; padding: 2px 9px; border-radius: 999px; border: 2px solid var(--line); background: var(--panel); font-weight: 800; }
+  .chips span:first-child { border: 0; padding-left: 0; }
+  .tro { padding: 10px 14px; }
   .earned { display: flex; gap: 6px; margin: 8px 0 4px; }
-  .earned div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; font-size: 11.5px; font-weight: 600; line-height: 1.15; }
-  .medal { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(160deg, #FFD60A, #FF9F0A); box-shadow: 0 2px 6px rgba(255,149,0,.3); }
-  .medal .ic { width: 22px; height: 22px; }
-  .medal.b { background: linear-gradient(160deg, #64D2FF, #0A84FF); box-shadow: 0 2px 6px rgba(10,132,255,.3); }
-  .close .li { padding: 5px 0; min-height: 40px; --inset: 0px; font-size: 15px; }
-  .close .li .grow small { margin-top: 3px; }
-  .close .t { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; margin-top: 4px; }
-  .close .t i { display: block; height: 100%; background: var(--tint); }
-  .row3 { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; margin-top: 12px; }
-  .time, .lessons { padding: 10px 16px; }
-  .lessons .li { padding: 3px 0; min-height: 36px; --inset: 0px; font-size: 15px; }
-  .lessons .li b { font-weight: 600; }
-  .stars { color: var(--yellow); font-size: 14px; }
-  .stars .off { color: rgba(120,120,128,.28); }
-  h3.t { font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; }
-  h3.t span { font-size: 13px; color: var(--label2); font-weight: 500; }
+  .earned div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; font-size: 11.5px; font-weight: 800; line-height: 1.15; }
+  .medal { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; background: var(--pop); border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--line); }
+  .medal.b { background: var(--cyan); }
+  .close .li { padding: 4px 0; min-height: 40px; font-size: 15px; font-weight: 700; }
+  .close .t { height: 12px; border: 2px solid var(--line); background: var(--panel); margin-top: 4px; }
+  .close .t i { display: block; height: 100%; background: var(--accent); border-right: 2px solid var(--line); }
+  .row3 { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; margin-top: 13px; }
+  .time, .lessons { padding: 9px 14px; }
+  .lessons .li { padding: 2px 0; min-height: 33px; font-size: 15px; }
+  .lessons .li b { font-weight: 900; font-family: var(--display); font-size: 14.5px; }
+  .stars { color: #FFC400; -webkit-text-stroke: .8px var(--line); font-size: 15px; }
+  .stars .off { color: #D6D6D6; }
+  h3.t { font-size: 17px; display: flex; justify-content: space-between; align-items: center; }
+  h3.t span { font: 700 13px var(--sf); color: var(--muted); }
 </style>
 </head>
 <body>
@@ -66,16 +63,15 @@
   <div class="status"><span>19:51</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>86%</span><span class="batt"><i style="width:82%"></i></span></div>
 
   <nav class="sb">
-    <div class="sbTop"><span class="ic i-sidebar"></span></div>
-    <div class="sbTitle">Drum Coach</div>
-    <a class="sbItem"><span class="ic i-map"></span>Journey</a>
-    <a class="sbItem"><span class="ic i-metro"></span>Practice</a>
-    <a class="sbItem on"><span class="ic i-chart"></span>Progress</a>
-    <a class="sbItem"><span class="ic i-bubble"></span>Coach</a>
-    <a class="sbItem"><span class="ic i-gear"></span>Setup</a>
+    <div class="brand"><span class="logo"></span>Drum Coach</div>
+    <a class="sbItem"><span class="em">🗺️</span>Journey</a>
+    <a class="sbItem"><span class="em">🎯</span>Practice</a>
+    <a class="sbItem on"><span class="em">📈</span>Progress</a>
+    <a class="sbItem"><span class="em">💬</span>Coach</a>
+    <a class="sbItem"><span class="em">⚙️</span>Setup</a>
     <div class="sbStatus">
       <div class="row"><i class="dot"></i><b>e-Drum</b><span>connected</span></div>
-      <div class="row"><span class="ic i-clock" style="width:15px;height:15px;color:var(--label2)"></span><b>Latency</b><span>31 ms</span></div>
+      <div class="row"><span class="em">⏱</span><b>Latency</b><span>31 ms</span></div>
       <div class="row"><i class="dot"></i><b>Coach</b><span>home server</span></div>
     </div>
   </nav>
@@ -85,12 +81,12 @@
       <h1>Progress</h1>
       <span class="sub">Since 9 Oct · 17 days played · 412 takes · 6 h 40 min</span>
       <span class="sp"></span>
-      <span class="btn glass sm"><span class="ic i-doc"></span>This month’s report</span>
+      <span class="btn glass sm"><span class="em">📝</span>This month’s report</span>
     </div>
 
     <div class="grid">
       <section class="card better">
-        <div class="coach"><div class="avatar sm"><span class="ic i-drum"></span></div><p><b>Getting better.</b> 6 in 10 notes landed two weeks ago. Now 8 in 10.</p></div>
+        <div class="coach"><div class="avatar sm">🥁</div><p><b>Getting better.</b> 6 in 10 notes landed two weeks ago. Now 8 in 10.</p></div>
         <div id="landed"></div>
         <div class="tiles">
           <div><b class="num">4,812</b><span>notes landed</span></div>
@@ -101,10 +97,10 @@
       <section class="card week">
         <h3 class="t">This week <span>goal 25 min a day</span></h3>
         <div class="days">
-          <div><i class="on"><span class="ic i-flame"></span></i>M</div><div><i class="on"><span class="ic i-flame"></span></i>T</div><div><i class="on"><span class="ic i-flame"></span></i>W</div>
-          <div><i class="on"><span class="ic i-flame"></span></i>T</div><div><i class="on today"><span class="ic i-flame"></span></i>F</div><div><i></i>S</div><div><i></i>S</div>
+          <div><i class="on">🔥</i>M</div><div><i class="on">🔥</i>T</div><div><i class="on">🔥</i>W</div>
+          <div><i class="on">🔥</i>T</div><div><i class="on today">🔥</i>F</div><div><i></i>S</div><div><i></i>S</div>
         </div>
-        <div class="streak"><b class="num">6</b><span>days in a row</span></div>
+        <div class="streak"><b class="num">6</b><span>🔥 days in a row</span></div>
         <div><div class="small num" style="margin-bottom:5px"><b style="color:var(--label)">118</b> of 175 minutes</div><div class="mbar"><i style="width:67%"></i></div></div>
         <div class="focus"><span style="color:var(--label2)">Focus:</span> <b>kick with the hi-hat</b></div>
       </section>
@@ -124,10 +120,10 @@
       <section class="card tro">
         <h3 class="t">Trophies <span>4 earned</span></h3>
         <div class="earned">
-          <div><span class="medal"><span class="ic i-sticks"></span></span>Stick Rookie<span style="color:var(--greenInk)">✓ proven</span></div>
-          <div><span class="medal"><span class="ic i-drum"></span></span>Limb Wrangler</div>
-          <div><span class="medal b"><span class="ic i-note"></span></span>1,000 notes</div>
-          <div><span class="medal b"><span class="ic i-star"></span></span>First ★★★</div>
+          <div><span class="medal">🥢</span>Stick Rookie<span style="color:var(--greenInk)">✓ proven</span></div>
+          <div><span class="medal">🥁</span>Limb Wrangler</div>
+          <div><span class="medal b">🎵</span>1,000 notes</div>
+          <div><span class="medal b">★</span>First ★★★</div>
         </div>
         <div class="close">
           <div class="li"><span class="grow">7-day streak<div class="t"><i style="width:86%"></i></div></span><span class="val num">6 / 7</span></div>
@@ -156,28 +152,28 @@
 const days = [['M', 58], ['T', 61], ['Th', 55], ['F', 66], ['Sa', 70], ['M', 68], ['T', 74], ['W', 72], ['Th', 79], ['M', 81], ['W', 84], ['F', 83]];
 {
   const W = 340, H = 124, b = 20, top = 10, bw = 22, gap = (W - 30 - days.length * bw) / (days.length - 1);
-  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, sans-serif">`;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family='"Arial Black","Inter Display",sans-serif' font-weight="900">`;
   for (const p of [50, 100]) { const y = top + (H - top - b) * (1 - p / 100); s += `<line x1="30" x2="${W}" y1="${y}" y2="${y}" stroke="rgba(60,60,67,.12)"/><text x="0" y="${y + 4}" font-size="11" fill="rgba(60,60,67,.6)">${p}%</text>`; }
   days.forEach(([d, v], i) => {
     const x = 30 + i * (bw + gap), h = (H - top - b) * v / 100, y = H - b - h, last = i >= days.length - 5;
-    s += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="5" fill="${last ? '#007AFF' : 'rgba(0,122,255,.35)'}"/>`;
+    s += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${last ? '#2F6FE4' : '#A9C4F5'}" stroke="#141414" stroke-width="2.5"/>`;
     s += `<text x="${x + bw / 2}" y="${H - 7}" text-anchor="middle" font-size="11" font-weight="600" fill="rgba(60,60,67,.6)">${d}</text>`;
   });
   const l = days[days.length - 1], lx = 30 + (days.length - 1) * (bw + gap) + bw / 2, ly = H - b - (H - top - b) * l[1] / 100;
-  s += `<text x="${lx}" y="${ly - 6}" text-anchor="middle" font-size="12" font-weight="700" fill="#007AFF">${l[1]}%</text>`;
-  document.getElementById('landed').innerHTML = s + `<line x1="30" x2="${W}" y1="${H - b}" y2="${H - b}" stroke="rgba(60,60,67,.3)"/></svg>`;
+  s += `<text x="${lx}" y="${ly - 6}" text-anchor="middle" font-size="12" font-weight="700" fill="#141414">${l[1]}%</text>`;
+  document.getElementById('landed').innerHTML = s + `<line x1="30" x2="${W}" y1="${H - b}" y2="${H - b}" stroke="#141414" stroke-width="3"/></svg>`;
 }
 // Minutes per day for 14 days, against the daily goal (25).
 const mins = [22, 0, 28, 19, 31, 26, 0, 24, 27, 18, 30, 25, 22, 14];
 {
-  const W = 268, H = 92, b = 18, max = 35, bw = 13, gap = (W - mins.length * bw) / (mins.length - 1);
-  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, sans-serif">`;
+  const W = 268, H = 84, b = 18, max = 35, bw = 13, gap = (W - mins.length * bw) / (mins.length - 1);
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family='"Arial Black","Inter Display",sans-serif' font-weight="900">`;
   mins.forEach((m, i) => {
     const x = i * (bw + gap), h = Math.max(2, (H - b - 8) * m / max), y = H - b - h;
-    s += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="4" fill="${m >= 25 ? '#34C759' : m ? 'rgba(52,199,89,.45)' : 'rgba(120,120,128,.2)'}"/>`;
+    s += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${m >= 25 ? '#1E9E5A' : m ? '#A8DDBE' : '#DDD'}" stroke="#141414" stroke-width="2"/>`;
   });
   const gy = H - b - (H - b - 8) * 25 / max;
-  s += `<line x1="0" x2="${W}" y1="${gy}" y2="${gy}" stroke="#1C1C1E" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${W}" y="${gy - 5}" text-anchor="end" font-size="11" font-weight="700">25 min</text>`;
+  s += `<line x1="0" x2="${W}" y1="${gy}" y2="${gy}" stroke="#141414" stroke-width="2.5" stroke-dasharray="6 4"/><text x="${W}" y="${gy - 5}" text-anchor="end" font-size="11" font-weight="700">25 min</text>`;
   s += `<text x="0" y="${H - 3}" font-size="11" fill="rgba(60,60,67,.6)">17 Oct</text><text x="${W}" y="${H - 3}" text-anchor="end" font-size="11" fill="rgba(60,60,67,.6)">today</text>`;
   document.getElementById('time').innerHTML = s + `</svg>`;
 }

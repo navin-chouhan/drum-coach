@@ -8,7 +8,7 @@
 <style>
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
   .col { display: flex; flex-direction: column; gap: 14px; }
-  .li { min-height: 50px; }
+  .li { min-height: 45px; padding-top: 4px; padding-bottom: 4px; }
   .li .grow b { font-weight: 500; }
   .li .grow small { margin-top: 1px; }
   .sym.green { background: var(--green); } .sym.blue { background: var(--tint); } .sym.orange { background: var(--orange); }
@@ -27,7 +27,8 @@
   .groupHead { padding-top: 0; }
   .kitHero { display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
   .kitHero .big { width: 52px; height: 52px; border-radius: 14px; background: var(--green); color: #fff; display: grid; place-items: center; }
-  .kitHero .big .ic { width: 30px; height: 30px; }
+  .kitHero .big { border: 3px solid var(--line); }
+  .kitHero .big .em { font-size: 30px; }
   .kitHero b { font-size: 20px; display: block; letter-spacing: -.01em; }
   .kitHero span { font-size: 14px; color: var(--label2); }
   .kitHero .hit { margin-left: auto; text-align: right; }
@@ -39,54 +40,53 @@
   <div class="status"><span>20:05</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>85%</span><span class="batt"><i style="width:80%"></i></span></div>
 
   <nav class="sb">
-    <div class="sbTop"><span class="ic i-sidebar"></span></div>
-    <div class="sbTitle">Drum Coach</div>
-    <a class="sbItem"><span class="ic i-map"></span>Journey</a>
-    <a class="sbItem"><span class="ic i-metro"></span>Practice</a>
-    <a class="sbItem"><span class="ic i-chart"></span>Progress</a>
-    <a class="sbItem"><span class="ic i-bubble"></span>Coach</a>
-    <a class="sbItem on"><span class="ic i-gear"></span>Setup</a>
+    <div class="brand"><span class="logo"></span>Drum Coach</div>
+    <a class="sbItem"><span class="em">🗺️</span>Journey</a>
+    <a class="sbItem"><span class="em">🎯</span>Practice</a>
+    <a class="sbItem"><span class="em">📈</span>Progress</a>
+    <a class="sbItem"><span class="em">💬</span>Coach</a>
+    <a class="sbItem on"><span class="em">⚙️</span>Setup</a>
     <div class="sbStatus">
       <div class="row"><i class="dot"></i><b>e-Drum</b><span>connected</span></div>
-      <div class="row"><span class="ic i-clock" style="width:15px;height:15px;color:var(--label2)"></span><b>Latency</b><span>31 ms</span></div>
+      <div class="row"><span class="em">⏱</span><b>Latency</b><span>31 ms</span></div>
       <div class="row"><i class="dot"></i><b>Coach</b><span>home server</span></div>
     </div>
   </nav>
 
   <main class="main">
-    <div class="navbar"><h1>Setup</h1><span class="sp"></span><span class="btn glass sm"><span class="ic i-drum"></span>Kit test</span></div>
+    <div class="navbar"><h1>Setup</h1><span class="sp"></span><span class="btn glass sm"><span class="em">🥁</span>Kit test</span></div>
 
     <div class="cols">
       <div class="col">
         <div>
           <div class="groupHead">Kit</div>
           <div class="group">
-            <div class="kitHero"><span class="big"><span class="ic i-drum"></span></span><div><b>e-Drum</b><span>USB · Medeli · connected</span></div>
+            <div class="kitHero"><span class="big"><span class="em">🥁</span></span><div><b>e-Drum</b><span>USB · Medeli · connected</span></div>
               <div class="hit"><b>Snare</b><span>note 38 · velocity 92</span></div></div>
-            <div class="li withSym" style="--inset:16px"><span class="sym gray"><span class="ic i-cable"></span></span><span class="grow"><b>MIDI input</b></span><span class="val">e-Drum <span class="ic i-chevr chev"></span></span></div>
+            <div class="li withSym" style="--inset:16px"><span class="sym gray"><span class="em">🔌</span></span><span class="grow"><b>MIDI input</b></span><span class="val">e-Drum <span class="ic i-chevr chev"></span></span></div>
           </div>
           <div class="groupFoot">MIDI clock and active sensing are filtered. The hi-hat pad sends open unless the pedal is down.</div>
         </div>
         <div>
           <div class="groupHead">Pads</div>
           <div class="group">
-            <div class="li withSym"><span class="sym indigo"><span class="ic i-target"></span></span><span class="grow"><b>Hit each pad once</b><small>10 of 10 pads · checked 28 Oct</small></span><span class="val"><span class="btn sm" style="height:32px">Again</span></span></div>
-            <div class="li withSym"><span class="sym teal"><span class="ic i-wave"></span></span><span class="grow"><b>Soft, then loud</b><small>accents and ghost notes judged fairly</small></span><span class="val"><span class="ic i-check chk"></span><span class="ic i-chevr chev"></span></span></div>
-            <div class="li withSym"><span class="sym gray"><span class="ic i-note"></span></span><span class="grow"><b>Note map</b></span><span class="val">General MIDI, tom 1 = 48 <span class="ic i-chevr chev"></span></span></div>
+            <div class="li withSym"><span class="sym indigo"><span class="em">🎯</span></span><span class="grow"><b>Hit each pad once</b><small>10 of 10 pads · checked 28 Oct</small></span><span class="val"><span class="btn sm" style="height:32px">Again</span></span></div>
+            <div class="li withSym"><span class="sym teal"><span class="em">🎧</span></span><span class="grow"><b>Soft, then loud</b><small>accents and ghost notes judged fairly</small></span><span class="val"><span class="pill green" style="height:26px">✓ done</span><span class="ic i-chevr chev"></span></span></div>
+            <div class="li withSym"><span class="sym gray"><span class="em">🎸</span></span><span class="grow"><b>Note map</b></span><span class="val">General MIDI, tom 1 = 48 <span class="ic i-chevr chev"></span></span></div>
           </div>
         </div>
         <div>
           <div class="groupHead">Latency</div>
           <div class="group">
-            <div class="li withSym"><span class="sym orange"><span class="ic i-clock"></span></span><span class="grow"><b>31 ms</b><small>iPad speakers · measured 28 Oct</small></span><span class="val"><span class="btn sm fill" style="height:32px">Measure</span></span></div>
+            <div class="li withSym"><span class="sym orange"><span class="em">⏱</span></span><span class="grow"><b>31 ms</b><small>iPad speakers · measured 28 Oct</small></span><span class="val"><span class="btn sm fill" style="height:32px">Measure</span></span></div>
           </div>
           <div class="groupFoot">Bluetooth headphones add 150–250 ms. Measure again when you change what you listen through.</div>
         </div>
         <div>
           <div class="groupHead">Sound and you</div>
           <div class="group">
-            <div class="li withSym"><span class="sym blue"><span class="ic i-speaker"></span></span><span class="grow"><b>Sound levels</b><small>click 125% · band 60% · coach voice 45%</small></span><span class="ic i-chevr chev"></span></div>
-            <div class="li withSym"><span class="sym gray"><span class="ic i-hand"></span></span><span class="grow"><b>Which hand leads</b></span><span class="seg"><span class="on">Right</span><span>Left</span></span></div>
+            <div class="li withSym"><span class="sym blue"><span class="em">🔊</span></span><span class="grow"><b>Sound levels</b><small>click 125% · band 60% · coach voice 45%</small></span><span class="ic i-chevr chev"></span></div>
+            <div class="li withSym"><span class="sym gray"><span class="em">👆</span></span><span class="grow"><b>Which hand leads</b></span><span class="seg"><span class="on">Right</span><span>Left</span></span></div>
           </div>
         </div>
       </div>
@@ -96,15 +96,15 @@
           <div class="groupHead">Coach · home server</div>
           <div class="group">
             <div class="li"><span class="lbl">Server</span><span class="field mono">http://drum-laptop.local:8787</span></div>
-            <div class="li"><span class="lbl">Token</span><span class="field">•••••••••••••••• <span class="ic i-lock" style="width:14px;height:14px;color:var(--label3);margin-left:auto"></span></span></div>
-            <div class="li"><span class="btn sm" style="height:34px">Test connection</span><span class="result" style="margin-left:auto"><span class="ic i-check"></span>Connected · 140 ms</span></div>
+            <div class="li"><span class="lbl">Token</span><span class="field">•••••••••••••••• <span class="em">🔒</span></span></div>
+            <div class="li"><span class="btn sm" style="height:34px">Test connection</span><span class="result" style="margin-left:auto"><span class="em ck">✓</span>Connected · 140 ms</span></div>
           </div>
           <div class="groupFoot">Your laptop runs the coach with your Claude subscription. Same Wi-Fi or Tailscale.</div>
         </div>
         <div>
           <div class="groupHead">Coach · fallback</div>
           <div class="group">
-            <div class="li withSym"><span class="sym yellow"><span class="ic i-key"></span></span><span class="grow"><b>Anthropic API key</b><small>optional, kept in the Keychain</small></span><span class="val">Not set <span class="ic i-chevr chev"></span></span></div>
+            <div class="li withSym"><span class="sym yellow"><span class="em">🔑</span></span><span class="grow"><b>Anthropic API key</b><small>optional, kept in the Keychain</small></span><span class="val">Not set <span class="ic i-chevr chev"></span></span></div>
           </div>
           <div class="groupFoot">Used only when the server can’t be reached. Each question sends a short summary of your takes, never audio or raw MIDI.</div>
         </div>

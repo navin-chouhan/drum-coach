@@ -6,51 +6,47 @@
 <title>Coach panel · iPad mockup</title>
 <link rel="stylesheet" href="ipad.css">
 <style>
-  /* The coach is an inspector: it floats over the right side of the screen you're on (here, a take's results),
+  /* The coach is an inspector: it slides over the right side of the screen you're on (here, a take's results),
      so the moves and your notes stay in view. #offline shows the server-unreachable state. */
   .bg { position: absolute; inset: 0; width: 1194px; height: 834px; border: 0; pointer-events: none; }
-  .insp { position: absolute; z-index: 10; right: 8px; top: 8px; bottom: 8px; width: 430px; border-radius: 30px; background: rgba(248, 248, 250, .96);
-    backdrop-filter: blur(30px); box-shadow: -10px 0 50px rgba(0, 0, 0, .14), 0 0 0 .5px rgba(0, 0, 0, .08); display: flex; flex-direction: column; overflow: hidden; }
-  .ih { display: flex; align-items: center; gap: 10px; padding: 30px 16px 10px 18px; }
-  .ih h2 { font-size: 24px; letter-spacing: -.02em; }
-  .ih .pill { margin-left: 4px; height: 26px; font-size: 13px; }
-  .ih .btn { margin-left: auto; }
-  .thread { flex: 1; overflow: hidden; justify-content: flex-end; padding-bottom: 12px !important; padding: 4px 16px 0; display: flex; flex-direction: column; gap: 10px; }
-  .ctx { align-self: center; font-size: 12.5px; color: var(--label2); font-weight: 600; background: var(--fill2); padding: 3px 10px; border-radius: 10px; }
+  .insp { position: absolute; z-index: 10; right: 0; top: 0; bottom: 0; width: 440px; background: var(--bg) var(--dots); border-left: 4px solid var(--line);
+    box-shadow: -8px 0 0 var(--pop); display: flex; flex-direction: column; overflow: hidden; }
+  .ih { display: flex; align-items: center; gap: 10px; padding: 32px 16px 12px 18px; background: var(--night); color: #fff; border-bottom: 3px solid var(--line); box-shadow: 0 4px 0 var(--pop); }
+  .ih h2 { font-size: 24px; }
+  .ih .pill { margin-left: 4px; height: 28px; font-size: 13px; }
+  .ih .btn { margin-left: auto; box-shadow: 2px 2px 0 #ffffff88; }
+  .thread { flex: 1; overflow: hidden; justify-content: flex-end; padding: 8px 16px 14px !important; display: flex; flex-direction: column; gap: 11px; }
+  .ctx { align-self: center; font-size: 12.5px; font-weight: 800; background: var(--panel); border: 2px solid var(--line); padding: 2px 10px; border-radius: 999px; }
   .msg { display: flex; gap: 8px; align-items: flex-end; }
-  .msg .b { background: #fff; border-radius: 20px 20px 20px 6px; padding: 10px 13px; font-size: 15.5px; line-height: 1.38; box-shadow: 0 1px 2px rgba(0,0,0,.05); max-width: 340px; }
+  .msg .b { background: var(--panel); border: 3px solid var(--line); border-radius: 18px 18px 18px 4px; padding: 9px 13px; font-size: 15.5px; font-weight: 600; line-height: 1.36; box-shadow: 4px 4px 0 var(--line); max-width: 344px; }
   .msg.me { justify-content: flex-end; }
-  .msg.me .b { background: var(--tint); color: #fff; border-radius: 20px 20px 6px 20px; max-width: 300px; }
-  .msg.me .b small { display: block; font-size: 11.5px; opacity: .8; margin-top: 3px; }
-  .drill { margin-left: 40px; background: #fff; border-radius: 18px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,.05); display: flex; flex-direction: column; gap: 6px; border: 1.5px solid var(--yellowSoft); }
-  .drill .kicker { color: #8A6A00; }
-  .drill b { font-size: 17px; }
-  .drill p { font-size: 14px; color: var(--label2); }
+  .msg.me .b { background: var(--accent); color: #fff; border-radius: 18px 18px 4px 18px; max-width: 350px; font-weight: 700; }
+  .msg.me .b small { display: block; font-size: 11.5px; opacity: .85; margin-top: 3px; }
+  .drill { margin-left: 44px; background: var(--panel2); border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; }
+  .drill b { font: 900 17px var(--display); }
+  .drill p { font-size: 14px; font-weight: 600; }
   .drill .row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
-  .nextStep { margin-left: 40px; background: var(--tint); color: #fff; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-  .nextStep b { font-size: 21px; display: flex; align-items: center; gap: 8px; }
-  .nextStep b .ic { width: 20px; height: 20px; }
-  .nextStep .gs { display: flex; gap: 6px; align-items: center; font-size: 13px; }
-  .think { display: flex; gap: 10px; align-items: center; margin-left: 40px; background: #fff; border-radius: 18px; padding: 10px 13px; font-size: 14px; color: var(--label2); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-  .think b { color: var(--label); display: block; font-size: 15px; }
-  .comp { padding: 10px 14px 70px; display: flex; gap: 8px; align-items: center; border-top: .5px solid var(--sep); background: rgba(248,248,250,.98); }
-  .comp .field { flex: 1; height: 44px; border-radius: 22px; background: #fff; box-shadow: inset 0 0 0 .5px var(--sep); color: var(--label3); font-size: 16px; padding: 0 16px; }
-  .comp .btn.round { width: 44px; height: 44px; }
+  .nextStep { margin-left: 44px; background: var(--accent); color: #fff; border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .nextStep b { font: 900 24px var(--display); display: flex; align-items: center; gap: 8px; }
+  .nextStep .gs { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 700; }
+  .think { display: flex; gap: 10px; align-items: center; margin-left: 44px; background: var(--panel2); border: 3px dashed var(--line); padding: 9px 12px; font-size: 13.5px; font-weight: 600; }
+  .think b { display: block; font: 900 15px var(--display); }
+  .comp { padding: 12px 14px 70px; display: flex; gap: 10px; align-items: center; background: var(--night); border-top: 3px solid var(--line); }
+  .comp .field { flex: 1; height: 46px; border-radius: 999px; border-width: 3px; color: var(--muted); font-size: 16px; font-weight: 600; padding: 0 16px; }
+  .comp .btn.round { width: 46px; height: 46px; box-shadow: 2px 2px 0 #ffffff88; }
 
   .off, .offStatus { display: none; }
   #offline:target ~ .insp .on-line { display: none; }
   #offline:target ~ .insp .off { display: flex; }
   #offline:target ~ .insp .offStatus { display: inline-flex; }
-  .warnCard { flex-direction: column; gap: 8px; background: #fff; border-radius: 18px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.05); border: 1.5px solid rgba(255, 149, 0, .35); }
-  .warnCard h3 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
-  .warnCard h3 .ic { color: var(--orange); width: 22px; height: 22px; }
-  .warnCard p { font-size: 14.5px; color: var(--label2); line-height: 1.38; }
-  .warnCard .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; color: var(--label); }
-  .warnCard .row { display: flex; gap: 8px; margin-top: 4px; }
-  .okList { flex-direction: column; gap: 6px; background: var(--greenSoft); border-radius: 16px; padding: 12px 14px; font-size: 14px; }
-  .okList b { font-size: 15px; }
-  .okList span { display: flex; gap: 8px; align-items: center; color: var(--label); }
-  .okList .ic { width: 14px; height: 14px; color: var(--greenInk); }
+  .warnCard { flex-direction: column; gap: 7px; background: var(--panel); border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 12px 14px; }
+  .warnCard h3 { font-size: 19px; display: flex; align-items: center; gap: 8px; background: var(--pop); border: 2px solid var(--line); padding: 4px 8px; align-self: flex-start; }
+  .warnCard p { font-size: 14.5px; font-weight: 600; line-height: 1.36; }
+  .warnCard .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; font-weight: 700; background: var(--panel2); padding: 0 4px; border: 1.5px solid var(--line); }
+  .warnCard .row { display: flex; gap: 10px; margin-top: 4px; }
+  .okList { flex-direction: column; gap: 5px; background: #E3F5EA; border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--line); padding: 10px 14px; font-size: 14px; font-weight: 700; }
+  .okList b { font: 900 15px var(--display); }
+  .okList span { display: flex; gap: 8px; align-items: center; }
 </style>
 </head>
 <body>
@@ -61,24 +57,24 @@
 
   <aside class="insp">
     <div class="ih">
-      <div class="avatar sm"><span class="ic i-drum"></span></div>
-      <h2>Coach</h2>
+      <div class="avatar sm">🥁</div>
+      <h2>💬 Coach</h2>
       <span class="pill green on-line"><i class="dot"></i>home server</span>
       <span class="pill orange offStatus"><i class="dot warn"></i>can’t reach it</span>
-      <span class="btn round sm" style="width:36px"><span class="ic i-x" style="width:15px;height:15px;color:var(--label2)"></span></span>
+      <span class="btn round sm" style="width:38px">✕</span>
     </div>
 
     <div class="thread on-line">
       <span class="ctx">The money beat · take 2 · 70 BPM</span>
-      <div class="msg"><div class="avatar sm"><span class="ic i-drum"></span></div>
+      <div class="msg"><div class="avatar sm">🥁</div>
         <div class="b">Nice: 46 of 48 landed, and the snare sat right on 2 and 4. One thing: in bar 3 the kick jumped ahead of the hat twice, about 60 ms. Let your foot fall <b>with</b> the hi-hat, heel down, no extra push.</div></div>
       <div class="drill">
         <div class="kicker">Drill · 65 BPM</div>
         <b>Kick with the hat</b>
         <p>Hi-hat 8ths and the kick on 1 and 3 only. Say “kick” out loud as you play it.</p>
-        <div class="row"><span class="btn sm"><span class="ic i-play" style="width:13px;height:13px"></span>Play this drill</span></div>
+        <div class="row"><span class="btn sm"><span class="em">▶</span>Play this drill</span></div>
       </div>
-      <div class="nextStep"><b><span class="ic i-play"></span>Play at 75</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span>or say “yes”</div></div>
+      <div class="nextStep"><b><span class="em">▶</span>Play at 75</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span>or say “yes”</div></div>
       <div class="msg me"><div class="b">Make my next lesson about the kick<small>said at the kit</small></div></div>
       <div class="think"><span class="spinner"></span><div><b>Your coach is thinking…</b>This can take a minute. Keep playing; the answer waits here.</div></div>
     </div>
@@ -86,25 +82,25 @@
     <div class="thread off">
       <span class="ctx">The money beat · take 2 · 70 BPM</span>
       <div class="warnCard off">
-        <h3><span class="ic i-warn"></span>Can’t reach your coach</h3>
+        <h3><span class="em">⚠️</span>Can’t reach your coach</h3>
         <p><span class="mono">drum-laptop.local:8787</span> didn’t answer in 10 seconds. Is the laptop awake and on the same Wi-Fi (or Tailscale)?</p>
         <p>No API key is set, so there’s no fallback.</p>
-        <div class="row"><span class="btn sm fill"><span class="ic i-redo" style="width:15px;height:15px"></span>Try again</span><span class="btn sm">Coach settings</span></div>
+        <div class="row"><span class="btn sm fill"><span class="em">↻</span>Try again</span><span class="btn sm">Coach settings</span></div>
       </div>
-      <div class="msg"><div class="avatar sm" style="background:var(--fill);box-shadow:none;color:var(--label2)"><span class="ic i-drum"></span></div>
+      <div class="msg"><div class="avatar sm" style="background:#ddd">🥁</div>
         <div class="b"><b>From the app:</b> 46 of 48 landed, 21 in a row. One thing: the kick in bar 3 came about 60 ms early. Two clean takes, so 75 is next.</div></div>
       <div class="okList off">
         <b>Everything else keeps working</b>
-        <span><span class="ic i-check"></span>Lessons, scoring and the tempo ladder</span>
-        <span><span class="ic i-check"></span>Live tips while you play (they’re rule-based)</span>
-        <span><span class="ic i-check"></span>Your takes are saved on this iPad</span>
+        <span><span class="em ck">✓</span>Lessons, scoring and the tempo ladder</span>
+        <span><span class="em ck">✓</span>Live tips while you play (they’re rule-based)</span>
+        <span><span class="em ck">✓</span>Your takes are saved on this iPad</span>
       </div>
-      <div class="msg me"><div class="b" style="opacity:.6">Make my next lesson about the kick<small>waiting · sends when the coach is back</small></div></div>
+      <div class="msg me"><div class="b" style="background:var(--panel2);color:var(--line);border-style:dashed">Make my next lesson about the kick<small>waiting · sends when the coach is back</small></div></div>
     </div>
 
     <div class="comp">
       <span class="field">Ask your coach</span>
-      <span class="btn round" style="background:var(--fill)"><span class="ic i-mic"></span></span>
+      <span class="btn round">🎙️</span>
       <span class="btn round fill"><span class="ic i-send"></span></span>
     </div>
   </aside>
