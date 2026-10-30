@@ -1,0 +1,169 @@
+import { CURRICULUM, MILESTONES } from '@drum-coach/core/content/curriculum';
+import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
+import { DEFAULTS } from '@drum-coach/core/input/settings';
+import { describe, expect, it, vi } from 'vitest';
+import { createDataStore } from '../../data/store';
+import { openTestDb } from '../../data/nodeSqlite.testutil';
+import { ago, dayKey, minutesWords, shortDate, thousands } from './dates';
+import { allLessons, loadStoredData } from './data';
+import { askMonthReport, coachUnavailable, historyModel, keptReport } from './monthReport';
+import { lessonWords, practiseTarget, progressModel, starString } from './progress';
+import { skillMapModel } from './skillMap';
+
+const NOW = new Date(2026, 9, 30, 19, 0); // Friday 30 Oct 2026, local time
+const at = (day: number, hour = 18, month = 9) => new Date(2026, month, day, hour).toISOString();
+const run = (chartId: string, accuracy: number, day: number, over: Partial<RunRow> = {}): RunRow => ({
+  chartId, chartTitle: chartId, startedAt: at(day), durationS: 600, bpm: 80, speed: 1, accuracy, meanOffset: 5, spread: 15, notes: 40, ...over,
+});
+const base = { progress: {}, profile: DEFAULTS.profile, lessons: CURRICULUM, now: NOW };
+
+describe('dates', () => {
+  it('says days the web way without Intl', () => {
+    expect(shortDate('2026-10-09')).toBe('9 Oct');
+    expect(ago('2026-10-30', '2026-10-30')).toBe('today');
+    expect(ago('2026-10-29', '2026-10-30')).toBe('yesterday');
+    expect(ago('2026-10-27', '2026-10-30')).toBe('Tue');
+    expect(ago('2026-10-01', '2026-10-30')).toBe('1 Oct');
+    expect([minutesWords(400), minutesWords(25)]).toEqual(['6 h 40 min', '25 min']);
+    expect(thousands(4812)).toBe('4,812');
+    expect(thousands(1234567)).toBe('1,234,567');
+  });
+});
+
+describe('progress', () => {
+  it('day one: empty states, Stage 1, no trophies yet', () => {
+    const m = progressModel({ ...base, runs: [] });
+    expect(m.empty).toBe(true);
+    expect(m.since).toBeUndefined();
+    expect(m.better.line).toBe('Play your first take and this fills in.');
+    expect(m.better.days).toEqual([]);
+    expect(m.better.best).toBeUndefined();
+    expect(m.week.streak).toBe(0);
+    expect(m.week.minutes).toBe(0);
+    expect(m.week.goalMinutes).toBe(175);
+    expect(m.week.rank).toBe(`New drummer · Stage 1 · ${MILESTONES[0].title}`);
+    expect(m.week.dots.map(d => d.letter).join('')).toBe('MTWTFSS');
+    expect(m.week.dots[4].today).toBe(true); // Friday
+    expect(m.trophies.earned).toBe(0);
+    expect(m.trophies.closest).toHaveLength(3);
+    expect(m.trophies.later.at(-1)).toBe(`+ ${MILESTONES.length} rank trophies`);
+    expect(m.time.days).toHaveLength(14);
+    expect(m.time.top).toBe(35);
+    expect(m.lessons).toEqual([]);
+    expect(m.skills.now).toEqual([]);
+  });
+  it('with history: the head line, getting better, this week and your time', () => {
+    const runs = [
+      run('lesson/count-quarters/1', 60, 26, { chartTitle: 'Quarter notes · on the snare' }),
+      run('singles', 70, 27), run('singles', 85, 29, { bpm: 90 }), run('disco', 97, 30, { chartTitle: 'Disco (four on the floor)' }),
+    ];
+    const m = progressModel({ ...base, runs, badges: ['first-3star'] });
+    expect(m.since).toBe('Since Mon 26 Oct · 4 days · 4 takes · 40 min');
+    expect(m.better.days.map(d => d.pct)).toEqual([60, 70, 85, 97]);
+    expect(m.better.days[0].title).toBe('Mon 26 Oct: 60% of notes landed, 1 take');
+    expect(m.better.line).toContain('That is a real jump in a week');
+    expect(m.better.landed).toBe(thousands(24 + 28 + 34 + 39));
+    expect(m.better.best).toEqual({ pct: '97%', of: 'Disco (four on the floor)' });
+    expect(m.week.dots.map(d => d.on)).toEqual([true, true, false, true, true, false, false]);
+    expect(m.week.streak).toBe(2);
+    expect(m.week.minutes).toBe(40);
+    expect(m.time.days.at(-1)).toMatchObject({ minutes: 10, atGoal: false });
+    expect(m.trophies.badges.map(b => b.id)).toEqual(['first-3star']); // kept once earned
+    expect(m.lessons[0]).toMatchObject({ lessonId: 'count-quarters', takes: 1, best: 60, words: '1 take, best 60%', practise: { kind: 'lesson', lessonId: 'count-quarters' } });
+    expect(m.exercises.map(e => e.chartId).sort()).toEqual(['disco', 'singles']);
+    expect(m.exercises.find(e => e.chartId === 'disco')?.practise).toEqual({ kind: 'practice', chartId: 'disco', bpm: 85 });
+    expect(m.skills.now.length).toBeGreaterThan(0); // the lesson's skills, from its takes
+  });
+  it("this week's focus: the coach's plan for this week, else the tip given most", () => {
+    const tips = Array.from({ length: 5 }, (_, i) => run('singles', 80, 26 + i, { tips: ['rushing'] }));
+    expect(progressModel({ ...base, runs: tips }).week.focus).toBe('rushing ahead of the click');
+    expect(progressModel({ ...base, runs: tips, plan: { week: isoWeek(NOW), focus: 'kick with the hi-hat' } }).week.focus).toBe('kick with the hi-hat');
+    expect(progressModel({ ...base, runs: tips, plan: { week: '2020-W01', focus: 'old' } }).week.focus).toBe('rushing ahead of the click');
+  });
+  it('ranks earned and proven show as trophies', () => {
+    const today = dayKey(NOW);
+    const progress = Object.fromEntries(MILESTONES[0].checkpoints.map(id => [id, { step: 0, bpm: 60, clean: 0, fails: 0, bestBpm: 60, reviewStage: 1, completedAt: today, stars: 3 }]));
+    const m = progressModel({ ...base, runs: [], progress });
+    expect(m.trophies.ranks).toEqual([expect.objectContaining({ name: MILESTONES[0].rank, proven: true })]);
+    expect(m.week.rank.startsWith(MILESTONES[0].rank)).toBe(true);
+    expect(m.trophies.earned).toBeGreaterThanOrEqual(2); // the rank and First ★★★
+  });
+  it('lessons in plain words', () => {
+    const p = { step: 2, bpm: 75, clean: 0, fails: 0, bestBpm: 70, reviewStage: 0 };
+    expect(lessonWords(p, 5, { bpm: 75, started: 60, takes: 4, best: 80 }, '2026-10-30')).toBe('step 3, 75 next (started at 60)');
+    expect(lessonWords({ ...p, completedAt: '2026-10-29', stars: 2, reviewDue: '2026-11-04' }, 5, { takes: 4, best: 80 }, '2026-10-30')).toBe('back for review in 5 days');
+    expect(lessonWords({ ...p, completedAt: '2026-10-20', stars: 1 }, 5, { takes: 4, best: 80 }, '2026-10-30')).toBe('shaky: worth one more go');
+    expect(lessonWords({ ...p, completedAt: '2026-10-20', stars: 3, reviewDue: '2026-10-29' }, 5, { takes: 4, best: 80 }, '2026-10-30')).toBe('due for a review');
+    expect(starString(2)).toBe('★★☆');
+  });
+  it('each row goes back to where it was played', () => {
+    expect(practiseTarget('lesson/money-quarters/3')).toEqual({ kind: 'lesson', lessonId: 'money-quarters' });
+    expect(practiseTarget('jam-yt-abc')).toEqual({ kind: 'song', songId: 'yt-abc' });
+    expect(practiseTarget('singles', null)).toEqual({ kind: 'practice', chartId: 'singles' });
+    expect(practiseTarget('singles', 80)).toEqual({ kind: 'practice', chartId: 'singles', bpm: 85 });
+  });
+});
+
+describe('skill map', () => {
+  it('every skill with its mastery and 6 months of growth', () => {
+    const rows = skillMapModel(CURRICULUM, {}, '2026-10-30', NOW.getTime());
+    expect(rows.length).toBe(11);
+    expect(rows[0]).toMatchObject({ id: 'time', name: 'Steady time', pct: 0, fill: 0.02, growth: [0, 0, 0, 0, 0, 0] });
+    expect(rows.every(r => r.refresh === undefined)).toBe(true);
+  });
+});
+
+describe("this month's report", () => {
+  const report = { headline: 'A steadier month', better: ['Even 8ths'], next: ['The kick'], note: 'Keep it short and daily.' };
+  it('reads a kept report only for this month', () => {
+    expect(keptReport({ month: '2026-10', report }, NOW)).toEqual(report);
+    expect(keptReport({ month: '2026-09', report }, NOW)).toBeUndefined();
+    expect(keptReport('junk', NOW)).toBeUndefined();
+  });
+  it('asks the server with the iPad context and keeps the answer', async () => {
+    const call = vi.fn(async () => ({ ok: true as const, data: { data: report, cached: false, month: '2026-10' } }));
+    const keep = vi.fn();
+    const r = await askMonthReport({ call, context: async () => ({ runs: [] }), keep }, true, NOW);
+    expect(r).toEqual({ ok: true, report });
+    expect(call).toHaveBeenCalledWith('POST', '/api/coach/month', { again: true, context: { runs: [] } }, { timeoutMs: 120_000 });
+    expect(keep).toHaveBeenCalledWith({ month: '2026-10', report });
+  });
+  it('the unreachable state, and an answer it cannot read', async () => {
+    const keep = vi.fn();
+    const off = await askMonthReport({ call: async () => ({ ok: false, reason: 'unreachable' }), context: async () => ({}), keep }, false, NOW);
+    expect(off).toEqual({ ok: false, message: coachUnavailable({ reason: 'unreachable' }) });
+    expect(coachUnavailable({ reason: 'not-configured' })).toContain('Setup → Coach');
+    const bad = await askMonthReport({ call: async () => ({ ok: true, data: { nope: 1 } }), context: async () => { throw new Error('x'); }, keep }, false, NOW);
+    expect(bad.ok).toBe(false);
+    expect(keep).not.toHaveBeenCalled();
+  });
+  it('you vs you needs a kept take a month old; months fill in from the first take', () => {
+    const old = run('singles', 70, 20, { id: 1, hasTake: true, startedAt: at(20, 18, 8) });
+    const recent = run('singles', 90, 28, { id: 2, hasTake: true, spread: 10.4 });
+    const h = historyModel([old, recent], NOW.getTime());
+    expect(h.pair?.line).toBe('singles: 20 Sep vs 28 Oct.');
+    expect(h.pair?.rows).toEqual([
+      { label: 'A month ago', runId: 1, accuracy: '70%', spread: '15 ms', tempo: '80 BPM', title: 'You, 20 Sep' },
+      { label: 'Now', runId: 2, accuracy: '90%', spread: '10 ms', tempo: '80 BPM', title: 'You, 28 Oct' },
+    ]);
+    expect(h.months.map(m => m.month)).toEqual(['2026-09', '2026-10']);
+    expect(historyModel([recent], NOW.getTime())).toEqual({ pair: undefined, months: [] });
+  });
+});
+
+describe('stored data', () => {
+  it('reads runs, coach lessons and the plan from storage; a fresh iPad is empty', async () => {
+    const store = createDataStore(() => openTestDb(), () => {});
+    expect(await loadStoredData(store)).toEqual({ runs: [], lessons: CURRICULUM, plan: undefined });
+    await store.runs.add({ chartId: 'singles', chartTitle: 'Single strokes (16ths)', startedAt: at(30), durationS: 60, bpm: 70, speed: 1, accuracy: 90, meanOffset: 2, spread: 12, summary: { notes: 32 } });
+    const lesson = { ...CURRICULUM[1], id: 'coach-x', source: 'ai' };
+    store.aiLessons!.put(lesson);
+    store.plans!.add({ title: 'This week', week: '2026-W44', focus: 'even 8ths' });
+    const d = await loadStoredData(store);
+    expect(d.runs).toHaveLength(1);
+    expect(d.runs[0].notes).toBe(32);
+    expect(d.lessons.at(-1)?.id).toBe('coach-x');
+    expect(d.plan).toEqual({ week: '2026-W44', focus: 'even 8ths' });
+    expect(allLessons([{ id: 'broken' }, { ...CURRICULUM[0] }])).toHaveLength(CURRICULUM.length); // junk and duplicates are dropped
+  });
+});
