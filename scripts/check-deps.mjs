@@ -4,15 +4,16 @@
 //
 //   npm run deps:check
 //
-// package.json: every spec is a plain semver range on a stable release (^1.2.3, ~1.2.3 or 1.2.3; major >= 1). No
+// package.json (and each workspace's): every spec is a plain semver range on a stable release (^1.2.3, ~1.2.3 or 1.2.3; major >= 1). No
 // tags (latest, next), no *, no git/URL/file/alias specs, no prereleases.
 // package-lock.json: every package comes from registry.npmjs.org as a tarball of exactly that name and version, with
-// a sha512 hash that matches the one the registry publishes; no prereleases, no aliases, no links; only allowlisted
+// a sha512 hash that matches the one the registry publishes; no prereleases, no aliases, no links except this repo's
+// own private workspaces (packages/*: first-party code, not downloaded; their dependencies are checked); only allowlisted
 // packages may carry install scripts (and .npmrc has ignore-scripts=true anyway); every version is at least
 // MIN_AGE_DAYS old (a hijacked package is usually caught and pulled within days) and not deprecated.
 // Each name@version that passed is cached (a published version never changes), so only lockfile changes need the
 // network. Exits 1 with a list of problems.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const MIN_AGE_DAYS = 7;
@@ -40,12 +41,28 @@ const problems = [];
 const STABLE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 // --- package.json -------------------------------------------------------------------------------------------------
-for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies', 'overrides']) {
-  for (const [name, spec] of Object.entries(pkg[field] ?? {})) {
-    const m = typeof spec === 'string' && /^[\^~]?(.+)$/.exec(spec);
-    if (!m || !STABLE.test(m[1])) problems.push(`package.json ${field}.${name}: ${JSON.stringify(spec)} is not a stable semver range (use ^x.y.z with a released version)`);
-    else if (m[1].startsWith('0.')) problems.push(`package.json ${field}.${name}: ${spec} is a 0.x release (no stable API yet); pick a 1.0+ package`);
+// This repo's own workspaces: directories named exactly in package.json "workspaces" (a trailing /* = its subfolders).
+const workspaces = new Map(); // dir (e.g. packages/core) → its package.json
+for (const glob of pkg.workspaces ?? []) {
+  const dirs = glob.endsWith('/*') ? readdirSync(join(root, glob.slice(0, -2)), { withFileTypes: true }).filter(d => d.isDirectory()).map(d => `${glob.slice(0, -2)}/${d.name}`) : [glob];
+  for (const dir of dirs) {
+    try { workspaces.set(dir, JSON.parse(readFileSync(join(root, dir, 'package.json'), 'utf8'))); } catch { /* not a package */ }
   }
+}
+const checkSpecs = (where, p) => {
+  for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies', 'overrides']) {
+    for (const [name, spec] of Object.entries(p[field] ?? {})) {
+      const m = typeof spec === 'string' && /^[\^~]?(.+)$/.exec(spec);
+      if (!m || !STABLE.test(m[1])) problems.push(`${where} ${field}.${name}: ${JSON.stringify(spec)} is not a stable semver range (use ^x.y.z with a released version)`);
+      else if (m[1].startsWith('0.')) problems.push(`${where} ${field}.${name}: ${spec} is a 0.x release (no stable API yet); pick a 1.0+ package`);
+    }
+  }
+};
+checkSpecs('package.json', pkg);
+for (const [dir, p] of workspaces) {
+  checkSpecs(`${dir}/package.json`, p);
+  if (p.private !== true) problems.push(`${dir}/package.json: a workspace must be "private": true (it is never published)`);
+  if (p.scripts && Object.keys(p.scripts).some(k => /^(pre|post)?install$|^prepare$/.test(k))) problems.push(`${dir}/package.json: workspaces may not have install scripts`);
 }
 if (pkg.bundleDependencies || pkg.bundledDependencies) problems.push('package.json: bundled dependencies skip the lockfile checks; remove them');
 
@@ -60,6 +77,8 @@ for (const [path, e] of Object.entries(lock.packages ?? {})) {
   if (path === '') continue;
   const name = path.slice(path.lastIndexOf('node_modules/') + 'node_modules/'.length);
   const id = `${name}@${e.version}`;
+  if (workspaces.has(path) && !e.link && !e.resolved) continue; // the workspace itself (its specs are checked above)
+  if (e.link && workspaces.has(e.resolved) && path === `node_modules/${workspaces.get(e.resolved).name}`) continue; // its link
   if (e.link || !path.startsWith('node_modules/')) { problems.push(`${path}: linked/workspace package; only registry packages are allowed`); continue; }
   if (e.name && e.name !== name) problems.push(`${path}: npm alias for ${e.name}; aliases hide what is installed`);
   if (!STABLE.test(e.version ?? '') && !ALLOW_PRERELEASE[id]) problems.push(`${id}: not a stable release (prerelease or build tag)`);

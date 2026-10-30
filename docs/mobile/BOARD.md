@@ -97,3 +97,11 @@ results.
   in parallel. A3 does part 1 (native) first; part 2 (TS glue + debug screen) after A1 and A2 merge.
 - 2026-10-30: Owner asked for more parallel work. Added A5s (home-server mode, pulled forward), A7m (iPad mockups) and
   A4d (audio design, docs only). 7 agents running.
+- 2026-10-30: **Rebased onto main** (83cff46: security and quality pipeline). Fix-ups: vitest config conflict
+  markers, `packages/core/src` added to the root tsconfig (type-aware lint), and `scripts/check-deps.mjs` accepts this
+  repo's own private workspaces (packages/*: their dependency specs are checked, the link isn't a download). Main's
+  rules now apply to all mobile work: `npm run check` must pass; dependencies stable, ≥ 7 days old, registry only, no
+  install scripts, exceptions as exact name@version with a reason; render text only; spawn with `childEnv()`; the API
+  stays behind `server/guard.ts`. T0 after the rebase: typecheck clean, lint 0 problems (max-warnings 0), 358/358
+  tests, coverage thresholds met, build OK, deps:check OK. The pre-rebase branch is kept locally as
+  `backup/pre-rebase-1030`.

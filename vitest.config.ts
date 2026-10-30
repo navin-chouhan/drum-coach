@@ -1,6 +1,5 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 
-<<<<<<< HEAD
 export default defineConfig({
   test: {
     exclude: [...configDefaults.exclude, '.claude/**', 'data/**', 'spikes/**', 'apps/**'],
@@ -20,6 +19,3 @@ export default defineConfig({
     },
   },
 });
-=======
-export default defineConfig({ test: { exclude: [...configDefaults.exclude, '.claude/**', 'data/**', 'spikes/**', 'apps/**'] } });
->>>>>>> 6c6f440 (Phase 1 start: core workspace skeleton, platform contracts, briefs A1/A2/A3/A9, board)
