@@ -178,3 +178,5 @@ results.
   3 spots, now fixed. audioPort docs: playNow → NaN when nothing plays; stats.dropped includes malformed events.
   apps/mobile 299 tests; root 422; lint 0. Open: drum-midi's ClickScheduler still sets the audio session (two
   session owners, AUDIO-DESIGN §3.6); A3 is removing it from the app module (the spike keeps it).
+- 2026-10-30: A3 follow-up merged: drum-midi's ClickScheduler and audio functions removed from the app module
+  (drum-audio is the only audio-session owner; the spike keeps its own). apps/mobile 299 tests.
