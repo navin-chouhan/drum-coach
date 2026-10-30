@@ -6,7 +6,6 @@ const DC = { hihat: '#FFE14D', crash: '#FF5FA2', ride: '#7FD3FF', snare: '#2DE1C
 const RES = { ok: '#4BE08A', off: '#FF9F1C', miss: '#FF5A4F' }; // the result colours, bright for the black panel
 const NAME = { hihat: 'Hi-hat', crash: 'Crash', ride: 'Ride', snare: 'Snare', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor tom', kick: 'Kick' };
 const STICK = { hihat: 'R', snare: 'L', kick: 'K' };
-const BURST = { kick: 'BOOM!', snare: 'BAM!', tom1: 'DUM!', tom2: 'DUM!', floor: 'DOOM!', crash: 'KRASH!', ride: 'TING!', hihat: 'TSS!' };
 
 /** The money beat: hi-hat 8ths, kick on 1 and 3, snare on 2 and 4; t = eighths from the first note. */
 function moneyBeat(bars) {
@@ -151,3 +150,6 @@ function fallingHighway({ W, H, pos, px, judged = {}, flash = [], lanes = ['hiha
   s += `<circle cx="${left - 10}" cy="${hitY - 22}" r="8" fill="${POP}" stroke="${INK}" stroke-width="3"/>`;
   return s + `</svg>`;
 }
+
+// The pages call these from inline scripts.
+Object.assign(window, { kit, highway, fallingHighway });

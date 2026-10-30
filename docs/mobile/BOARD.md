@@ -32,7 +32,7 @@ session. The decisions it needs are D1–D5, below.
 | A9 Test harness | **done, merged** (b4a2363) | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
 | A5s Home-server mode | **done, merged** (fe907e1) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
-| A7m iPad mockups | **done, merged**; waiting for the owner's review (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
+| A7m iPad mockups | **v2 merged** (web look, iPad layout; 17 frames incl. falling highway); waiting for the owner's review | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
 | A4d Audio design | **done, merged** (4467428) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
 
 | A4 Audio module part 1 | **done, merged** (a5ddb79) | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
@@ -180,3 +180,8 @@ results.
   session owners, AUDIO-DESIGN §3.6); A3 is removing it from the app module (the spike keeps it).
 - 2026-10-30: A3 follow-up merged: drum-midi's ClickScheduler and audio functions removed from the app module
   (drum-audio is the only audio-session owner; the spike keeps its own). apps/mobile 299 tests.
+- 2026-10-30: A7m v2 merged: all screens redrawn in the web look on the iPad layouts. A black sidebar replaces the
+  web's top bar (landscape is short on height); the full-screen player keeps a black top bar; the kit is drawn in
+  the web kit's style. The kick is white and the floor tom brown, so no drum colour reads as a result colour (green,
+  orange, red). A `lesson-take-falling` frame is there to compare highway directions. `mock.js` lint fix (an unused
+  constant; it exports its drawing functions on window). The gallery artifact is republished.
