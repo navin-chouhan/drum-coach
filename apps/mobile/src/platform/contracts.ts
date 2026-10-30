@@ -76,7 +76,17 @@ export interface HomeServer {
   /** A JSON call with `Authorization: Bearer <token>`; `path` starts with /api/. Times out (default 30 s, coach 120 s). */
   call<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: `/api/${string}`, body?: unknown,
     opts?: { timeoutMs?: number }): Promise<{ ok: true; data: T } | ApiFailure>;
+  /**
+   * A streamed POST (server-sent events, e.g. /api/coach/session) over expo/fetch. `onEvent` gets each event as it
+   * arrives (`json` when its data parses). The timeout covers the whole stream; an abort resolves as cancelled.
+   */
+  stream(path: `/api/${string}`, body: unknown, onEvent: (e: HomeServerEvent) => void,
+    opts?: { timeoutMs?: number; signal?: AbortSignal }): Promise<StreamResult>;
 }
+
+/** One server-sent event: its `event:` name ('message' when none), `data`, and `json` when the data parses. */
+export type HomeServerEvent = { event: string; data: string; id?: string; json?: unknown };
+export type StreamResult = { ok: true; events: number; cancelled?: true } | ApiFailure;
 
 /**
  * On-device storage (D3: the iPad is the source of truth). A5 implements it in src/platform/storage.ts on expo-sqlite,
