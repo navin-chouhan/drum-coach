@@ -22,8 +22,7 @@ export function createFeeder(audio: Pick<AudioPort, 'schedule' | 'route'>, spec:
   function topUp(now: number, endBeat = spec.endBeat) {
     const from = stats.plannedTo;
     if (from >= endBeat || spec.zero + from * spec.beatMs >= now + AHEAD_MS) return;
-    const to = Math.min(endBeat, (now + CHUNK_MS - spec.zero) / spec.beatMs);
-    if (!(to > from)) return;
+    const to = Math.min(endBeat, (now + CHUNK_MS - spec.zero) / spec.beatMs); // > from: from is heard before now + AHEAD_MS
     stats.plannedTo = to;
     const minAt = now + (audio.route()?.minLeadMs ?? 0);
     const all = planEvents(spec, from, to), events = all.filter(e => e.at >= minAt); // after a long stall: drop, never play late
