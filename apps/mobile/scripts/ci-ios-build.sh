@@ -70,7 +70,10 @@ select_xcode() {
   fi
   sudo xcode-select -s "$app/Contents/Developer"
   local got
-  got=$(xcodebuild -version | head -n 1)
+  # Read the whole output, then keep line 1: piping into `head` closes the pipe early, and xcodebuild crashes on
+  # the broken pipe (NSFileHandleOperationException), which failed the first CI run.
+  got=$(xcodebuild -version)
+  got=${got%%$'\n'*}
   if [ "$got" != "Xcode ${XCODE_VERSION}" ]; then
     err "Selected $app, but xcodebuild reports '$got'."
     exit 1
