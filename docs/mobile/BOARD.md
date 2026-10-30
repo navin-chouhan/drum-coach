@@ -31,6 +31,10 @@ session. The decisions it needs are D1–D5, below.
 | A3 MIDI module | running, part 1 (native) | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
 | A9 Test harness | running | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
+| A5s Home-server mode | running (pulled forward from Phase 2) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
+| A7m iPad mockups | running (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
+| A4d Audio design | running (docs only; the build waits for M5) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
@@ -91,3 +95,5 @@ results.
   `platform.ts` contract, `apps/mobile/src/platform/contracts.ts` (MidiPort, KeepAwake, Capabilities), root lint and
   Vitest ignore `apps/`. T0 unchanged (349/349, build OK, lint 310). Briefs A1, A2, A3, A9 written. All four started
   in parallel. A3 does part 1 (native) first; part 2 (TS glue + debug screen) after A1 and A2 merge.
+- 2026-10-30: Owner asked for more parallel work. Added A5s (home-server mode, pulled forward), A7m (iPad mockups) and
+  A4d (audio design, docs only). 7 agents running.
