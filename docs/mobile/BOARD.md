@@ -46,7 +46,7 @@ session. The decisions it needs are D1–D5, below.
 | A7a UI kit + nav + Journey | running | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
 
 | ACI2 Cloud iOS build | running | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
-| A1f Core notation fix | running | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
+| A1f Core notation fix | **done, merged** (c2147ec) | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
 
 | A7b Lesson player | running | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
 | A7c Setup + first run | running | `app/(main)/setup*`, `app/welcome/**`, `src/features/{setup,firstRun,latency,pads}/**` | [briefs/A7c.md](briefs/A7c.md) | Setup, first run |
