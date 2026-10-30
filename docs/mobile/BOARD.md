@@ -53,7 +53,7 @@ results.
 | Layout | apps/mobile in npm workspaces? | — | **No** (orchestrator): React Native needs the exact React version Expo bundles (19.3.0), and the web uses ^19.3.1. Root workspaces = `packages/*` only. `apps/mobile` is its own npm project and uses `file:../../packages/core` + Metro watchFolders. Shims and server imports use relative `.ts` paths (Node type stripping refuses `.ts` in node_modules). |
 | D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
 | D3 | Data | one-time import of `data/`, then the device is the source of truth | **Start fresh on the iPad.** No import tool. `data/` untouched. No sync. |
-| D4 | Mockups | list + designs before A6/A7 build screens | **Fresh iPad-native designs** (iPad conventions: sidebar, sheets, native controls) at 1194×834 for: Journey, lesson player (take + results), Practice, Progress, Setup (kit, pads, latency, coach), coach panel, touch pad kit, first run. The owner approves them before screens are built. |
+| D4 | Mockups | list + designs before A6/A7 build screens | **Revised 2026-10-30: "Web look, iPad layout"**: the web app's identity (pink dotted ground, black outlines, hard shadows, yellow, chunky type, mascot, emoji, web kit drawing) on the iPad layouts (one landscape screen, full-screen player, big type, gesture chips). The first version (iPad-native: sidebar, sheets, native controls) at 1194×834 for: Journey, lesson player (take + results), Practice, Progress, Setup (kit, pads, latency, coach), coach panel, touch pad kit, first run. The owner approves them before screens are built. |
 | D5 | v1 scope | Journey, lesson player, Practice, Progress, Setup, Songs with inline YouTube | **Lean v1**: Journey, lesson player, Practice, Progress, Setup, coach, "Share take" (MIDI export via the share sheet). Songs is the next phase. Later: camera self-check, ear quiz, transcribe, teacher view. |
 
 ## Blocker register
@@ -166,3 +166,6 @@ results.
   default), /dev/play. Renderer: Reanimated 4 + views now. `@shopify/react-native-skia@2.14.0` passes the rules (no
   install scripts; prebuilt binaries from an npm package, ~750 MB in node_modules); add it only if the iPad
   smoothness check fails. apps/mobile 193 tests; root 422. Follow-up: local ChartLike/PadId → core imports.
+- 2026-10-30: Owner reviewed the mockups: the iPad-native look lost the app's character. **D4 revised to "Web look,
+  iPad layout".** A7m is redrawing all 16 frames, plus a falling-highway frame for comparison. A6's components
+  already switch to the web theme and falling lanes; KitView/TouchPads follow the new mockups once approved.
