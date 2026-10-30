@@ -40,7 +40,7 @@ export function JourneyScreen() {
         coach={v.healthLine ? `${v.coachLine} ${v.healthLine}` : v.coachLine}
         right={v.setupDue
           ? <Button size="small" emoji="🛠" label="Check my kit" testID="journey-check-kit" onPress={() => router.navigate('/setup' as never)} />
-          : <Button size="small" emoji="🗺️" label="Skill map" testID="journey-skill-map" onPress={() => router.navigate('/progress' as never)} />}
+          : <Button size="small" emoji="🗺️" label="Skill map" testID="journey-skill-map" onPress={() => router.navigate('/progress?view=skills' as never)} />}
       />
 
       <Card elevation={6} style={styles.next} testID="journey-next">
@@ -68,7 +68,7 @@ export function JourneyScreen() {
             <Label>{v.trail.title}</Label>
             <Body size={13} weight="700">{v.trail.summary}</Body>
             <View style={styles.flex} />
-            <Button tone="plain" size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} onPress={() => router.navigate('/progress' as never)} />
+            <Button tone="plain" size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} onPress={() => router.navigate('/progress?view=path' as never)} />
           </View>
           <Trail stops={v.trail.stops} onOpen={id => { const s = v.trail!.stops.find(x => x.id === id); if (s?.lessonId) open(s.lessonId); }} />
         </Card>
