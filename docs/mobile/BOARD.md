@@ -40,7 +40,7 @@ session. The decisions it needs are D1–D5, below.
 | A6 Play surfaces part 1 | **done, merged** (3d6b725) | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
 | ACI Mobile CI + deps gate | **done, merged** (9acf52b) | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
 
-| A6n Sheet music | running | `apps/mobile/src/notation/**`, `app/dev/sheet.tsx`, apps/mobile package.json (this round) | [briefs/A6n.md](briefs/A6n.md) | NotationView (VexFlow on iPad) |
+| A6n Sheet music | **done, merged** (e1ca412) | `apps/mobile/src/notation/**`, `app/dev/sheet.tsx`, apps/mobile package.json (this round) | [briefs/A6n.md](briefs/A6n.md) | NotationView (VexFlow on iPad) |
 
 | A4p2 Take engine (core) | running | `packages/core/src/play/**` (not audioPort.ts) | [briefs/A4p2.md](briefs/A4p2.md) | createTake, planEvents, createMetronome, parity tests |
 | A7a UI kit + nav + Journey | running | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
@@ -207,3 +207,11 @@ results.
   scan, dependency review, npm audit + signatures, workflow lint). The branch is fast-forwarded to main and carries
   on. Owner **approved the mockups**. Started A4p2 (take engine in core) and A7a (UI kit + nav + Journey). Next
   screen agents start on top of A7a's kit.
+- 2026-10-30: A6n merged: NotationView = VexFlow 5 inside an Expo DOM component (`@expo/dom-webview` 58.0.2, already
+  autolinked, so no new native code); embedded in Release builds (offline); the cursor runs on the WebView's own
+  frames from a Clock offset (short round trips every 2 s); results pushed as they arrive; the log replays after a
+  WebView reload. Added `vexflow` 5.0.0 and `react-native-web` 0.21.4 (needed by the dev DOM bundle; zeroMajor
+  exception). Props mirror NoteHighway. apps/mobile 312 tests; root 422; lint 0; all lockfiles pass. Found a core
+  notation bug (web too): an empty voice in a triplet beat gets a dotted-8th rest (layoutMeasures).
+- 2026-10-30: **Owner: build the complete app; the owner tests the final app** (no device gates between phases).
+  Mitigation for the never-compiled Swift: a cloud iOS simulator build on GitHub's macOS runners (ACI2).
