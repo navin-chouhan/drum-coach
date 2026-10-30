@@ -76,6 +76,7 @@ const packedVectors: [string, number[], number, number][] = [
   ['NaN time skipped, next kept', [0, NaN, 0, 1, 0, 1000, 2, 0.35], 1, 1],
   ['negative index skipped', [0, 1000, -1, 1, 0, 1000, 1, 1], 1, 1],
   ['fractional index skipped', [0, 1000, 1.5, 1], 0, 1],
+  ['huge index skipped', [0, 1000, 1e300, 1], 0, 1],
   ['truncated sound stops reading', [0, 1000, 1], 0, 1],
   ['unknown kind stops reading', [7, 1000, 0, 1, 0, 1000, 0, 1], 0, 1],
   ['band n = 0 stops reading', [1, 1000, 0, 240, 100, 0], 0, 1],

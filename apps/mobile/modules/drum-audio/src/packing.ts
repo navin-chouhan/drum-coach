@@ -74,7 +74,7 @@ export type PackedEvent =
   | { kind: 'band'; at: number; part: 0 | 1; durMs: number; vel: number; midi: number[] };
 
 const finite = (x: number | undefined): x is number => x !== undefined && Number.isFinite(x);
-const isInt = (x: number) => Number.isInteger(x);
+const isInt = (x: number) => Number.isInteger(x) && Math.abs(x) < 1e9; // the bound keeps Swift's Int(x) safe
 
 /**
  * The native side's reader (mirrored in Swift): reads records until the array ends. A malformed record makes the rest
