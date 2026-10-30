@@ -143,7 +143,13 @@ pod_tests() {
     err "ios/Podfile has no plain 'use_expo_modules!' line to add includeTests to; the Expo template changed."
     exit 1
   fi
-  perl -pi -e 's/^  use_expo_modules!$/  use_expo_modules!(includeTests: true)/' ios/Podfile
+  # includeTests turns on every module's test specs, and some of Expo's own (ExpoSQLite/Benchmarks) depend on
+  # ExpoModulesTestCore, which isn't published: the second CI run failed there. Limit test specs to our local modules
+  # by narrowing Expo's own check (scripts/ios/precompiled_modules.rb `should_include_test_specs?`) in the Podfile.
+  local ours
+  ours=$(ls modules | while IFS= read -r m; do ls "modules/$m/ios"/*.podspec 2>/dev/null; done | sed -E 's#.*/([^/]+)\.podspec$#"\1"#' | paste -sd, -)
+  [ -n "$ours" ] || { err "No local module podspecs under modules/*/ios."; exit 1; }
+  perl -pi -e 's/^  use_expo_modules!$/  Expo::PrecompiledModules.singleton_class.prepend(Module.new { define_method(:should_include_test_specs?) { |name| ['"$ours"'].include?(name) && super(name) } })\n  use_expo_modules!(includeTests: true)/' ios/Podfile
   (cd ios && run_logged "$LOG_DIR/pod-install-tests.log" "pod install (with test specs)" pod install)
 
   # Every test spec of a local module: <Pod>-Unit-<TestSpec>, e.g. DrumMidi-Unit-Tests.
