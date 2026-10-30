@@ -151,5 +151,91 @@ function fallingHighway({ W, H, pos, px, judged = {}, flash = [], lanes = ['hiha
   return s + `</svg>`;
 }
 
+/**
+ * Drum notation for the money beat on a cream page, the way the app's sheet view draws it (src/notation/SheetMusic.tsx,
+ * VexFlow): a 5-line percussion staff, hands stems up (hi-hat x-heads above the top line, snare in the 3rd space),
+ * the kick stems down in the bottom space with quarter rests, 8ths beamed per beat, the count under each beat.
+ * rows = [[firstBar, bars], ...]; judged = { 'hihat17': ['off', '+48'], 'snare14': ['miss'] } colours played notes
+ * (the rest of the notes before pos count as on it); pos = the cursor in eighths from the first note.
+ */
+function sheet({ W, rowH, gap, rows, judged = null, pos = null, extras = [], x0 = 14, ball = false, stickers = true }) {
+  const TONE = { ok: '#1E9E5A', off: '#E07B00', miss: '#E8423F' };
+  const H = rows.length * rowH + 8;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${FONT}" style="display:block">`;
+  s += `<rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" fill="#FFFDF5" stroke="${INK}" stroke-width="3"/>`;
+  rows.forEach(([first, bars], ri) => {
+    const top = ri * rowH + gap * 5.4, x1 = W - 16, head = ri === 0 ? gap * 5.4 : gap * 2.6;
+    const BW = (x1 - x0 - head) / bars, barX = b => x0 + head + (b - first) * BW;
+    const xOf = t => barX(Math.floor(t / 8)) + gap * 1.4 + (t % 8) * (BW - gap * 2.2) / 8;
+    const y = { hihat: top - gap / 2, snare: top + 1.5 * gap, kick: top + 3.5 * gap };
+    const stemUp = top - gap * 3.1, stemDown = y.kick + gap * 3.1, countY = stemDown + gap * 2.9; // a row is about 15.4 gaps tall
+    const lw = Math.max(1.4, gap * 0.09);
+    // staff, percussion clef, 4/4 on the first row, bar lines, bar numbers
+    for (let i = 0; i < 5; i++) s += `<line x1="${x0}" x2="${x1}" y1="${top + i * gap}" y2="${top + i * gap}" stroke="${INK}" stroke-width="${lw}"/>`;
+    s += `<rect x="${x0 + gap * .5}" y="${top + gap}" width="${gap * .36}" height="${gap * 2}" fill="${INK}"/><rect x="${x0 + gap * 1.1}" y="${top + gap}" width="${gap * .36}" height="${gap * 2}" fill="${INK}"/>`;
+    if (ri === 0) for (const k of [2, 4]) s += `<text x="${x0 + gap * 3.4}" y="${top + k * gap - gap * .12}" text-anchor="middle" font-family="Georgia,serif" font-weight="900" font-size="${gap * 1.9}" fill="${INK}">4</text>`;
+    for (let b = first; b < first + bars; b++) {
+      const end = barX(b + 1), last = b === 3;
+      s += `<line x1="${end - (last ? gap * .25 : 0)}" x2="${end - (last ? gap * .25 : 0)}" y1="${top}" y2="${top + 4 * gap}" stroke="${INK}" stroke-width="${last ? gap * .4 : lw}"/>`;
+      if (last) s += `<line x1="${end - gap * .75}" x2="${end - gap * .75}" y1="${top}" y2="${top + 4 * gap}" stroke="${INK}" stroke-width="${lw}"/>`;
+      s += `<text x="${barX(b) + 4}" y="${top - gap * 3.5}" font-family="Georgia,serif" font-style="italic" font-size="${gap * .8}" fill="#555">${b + 1}</text>`;
+    }
+    // the cursor goes under the notes
+    if (pos !== null && pos >= first * 8 && pos < (first + bars) * 8) s += `<rect x="${xOf(pos) - gap * 1.2}" y="${stemUp - gap * .6}" width="${gap * 2.4}" height="${countY - stemUp + gap * .9}" rx="${gap * .4}" fill="#2DE1C255"/>`;
+    const tone = (lane, t) => {
+      if (!judged || (pos !== null && t > pos + .01)) return null;
+      const m = judged[lane + t];
+      return m ? m : ['ok'];
+    };
+    const headSvg = (lane, x, t) => {
+      const m = tone(lane, t), c = m ? TONE[m[0]] : INK, miss = m && m[0] === 'miss', yy = y[lane];
+      if (lane === 'hihat') { const r = gap * .42; return `<path d="M${x - r} ${yy - r}L${x + r} ${yy + r}M${x - r} ${yy + r}L${x + r} ${yy - r}" stroke="${c}" stroke-width="${gap * .17}" stroke-linecap="round"${miss ? ' stroke-dasharray="3 2"' : ''}/>`; }
+      return `<ellipse cx="${x}" cy="${yy}" rx="${gap * .62}" ry="${gap * .44}" transform="rotate(-20 ${x} ${yy})" fill="${miss ? '#FFFDF5' : c}" stroke="${c}" stroke-width="${miss ? 2.5 : 1}"${miss ? ' stroke-dasharray="3 2"' : ''}/>`;
+    };
+    const sticker = (x, yy, m) => {
+      const txt = m[0] === 'miss' ? 'MISS!' : m[1], w = txt.length * gap * .62 + gap * .8;
+      return `<g transform="rotate(-6 ${x} ${yy})"><rect x="${x - w / 2}" y="${yy - gap * .62}" width="${w}" height="${gap * 1.24}" fill="${TONE[m[0]]}" stroke="${INK}" stroke-width="2"/><text x="${x}" y="${yy + gap * .32}" text-anchor="middle" font-size="${gap * .82}" font-weight="900" fill="#fff">${txt}</text></g>`;
+    };
+    for (let b = first; b < first + bars; b++) {
+      // hands: hi-hat on every 8th, snare on 2 and 4; stems up, beamed in pairs (one beam per beat)
+      for (let e = 0; e < 8; e++) {
+        const t = b * 8 + e, x = xOf(t), sx = x + gap * .55, low = e === 2 || e === 6 ? y.snare : y.hihat;
+        s += `<line x1="${sx}" x2="${sx}" y1="${low - gap * .1}" y2="${stemUp}" stroke="${INK}" stroke-width="${gap * .12}"/>`;
+        s += headSvg('hihat', x, t);
+        if (e === 2 || e === 6) s += headSvg('snare', x, t);
+        if (e % 2 === 0) s += `<rect x="${sx - gap * .06}" y="${stemUp}" width="${xOf(t + 1) - x + gap * .12}" height="${gap * .42}" fill="${INK}"/>`;
+      }
+      // feet: kick on 1 and 3 (quarter notes, stems down), quarter rests on 2 and 4
+      for (const e of [0, 2, 4, 6]) {
+        const t = b * 8 + e, x = xOf(t);
+        if (e === 0 || e === 4) {
+          s += `<line x1="${x - gap * .55}" x2="${x - gap * .55}" y1="${y.kick + gap * .1}" y2="${stemDown}" stroke="${INK}" stroke-width="${gap * .12}"/>` + headSvg('kick', x, t);
+        } else {
+          const ry = top + 3.2 * gap, k = gap * .26;
+          s += `<path d="M${x - k} ${ry}l${2 * k} ${2.2 * k}l${-1.8 * k} ${1.8 * k}l${2 * k} ${2.2 * k}c${-2.4 * k} ${-1 * k} ${-3.2 * k} ${1 * k} ${-1.2 * k} ${2.6 * k}" fill="none" stroke="${INK}" stroke-width="${gap * .2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+        }
+      }
+      // results stickers: hands above the beams, the kick below its stem
+      if (stickers) for (const lane of ['hihat', 'snare', 'kick']) for (let e = 0; e < 8; e++) {
+        const t = b * 8 + e, m = tone(lane, t);
+        if (!m || m[0] === 'ok') continue;
+        s += sticker(xOf(t), lane === 'kick' ? stemDown + gap * .7 : stemUp - gap * 1.2, m);
+      }
+      // the count: numbers you hit and say, "&"s in blue
+      for (let e = 0; e < 8; e++) {
+        const t = b * 8 + e, num = e % 2 === 0, cur = pos !== null && Math.abs(t - pos) < .01;
+        if (cur) s += `<circle cx="${xOf(t)}" cy="${countY - gap * .55}" r="${gap * 1.05}" fill="${POP}" stroke="${INK}" stroke-width="2.5"/>`;
+        s += `<text x="${xOf(t)}" y="${countY}" text-anchor="middle" font-size="${num ? gap * 1.5 : gap * 1.2}" font-weight="900" fill="${num ? INK : '#2F6FE4'}" opacity="${pos !== null && t < pos - .01 ? .4 : 1}">${num ? e / 2 + 1 : '&amp;'}</text>`;
+      }
+    }
+    for (const ex of extras) if (ex.t >= first * 8 && ex.t < (first + bars) * 8) {
+      const ex0 = xOf(Math.floor(ex.t)) + (ex.t % 1) * (BW - gap * 2.2) / 8;
+      s += `<text x="${ex0}" y="${y[ex.lane] + gap * .5}" text-anchor="middle" font-size="${gap * 1.5}" font-weight="900" fill="${TONE.miss}">✕</text>`;
+    }
+    if (ball && pos !== null && pos >= first * 8 && pos < (first + bars) * 8) s += `<circle cx="${xOf(pos)}" cy="${countY - gap * 2.3}" r="${gap * .55}" fill="${POP}" stroke="${INK}" stroke-width="2.5"/>`;
+  });
+  return s + `</svg>`;
+}
+
 // The pages call these from inline scripts.
-Object.assign(window, { kit, highway, fallingHighway });
+Object.assign(window, { kit, highway, fallingHighway, sheet });
