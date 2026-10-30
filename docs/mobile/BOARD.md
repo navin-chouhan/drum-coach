@@ -42,7 +42,7 @@ session. The decisions it needs are D1–D5, below.
 
 | A6n Sheet music | **done, merged** (e1ca412) | `apps/mobile/src/notation/**`, `app/dev/sheet.tsx`, apps/mobile package.json (this round) | [briefs/A6n.md](briefs/A6n.md) | NotationView (VexFlow on iPad) |
 
-| A4p2 Take engine (core) | running | `packages/core/src/play/**` (not audioPort.ts) | [briefs/A4p2.md](briefs/A4p2.md) | createTake, planEvents, createMetronome, parity tests |
+| A4p2 Take engine (core) | **done, merged** (14b4761) | `packages/core/src/play/**` (not audioPort.ts) | [briefs/A4p2.md](briefs/A4p2.md) | createTake, planEvents, createMetronome, parity tests |
 | A7a UI kit + nav + Journey | **done, merged** (1a9a884) | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
 
 | ACI2 Cloud iOS build | **done, merged** (e00a272); first run on PR #3 | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
@@ -233,3 +233,4 @@ results.
 - 2026-10-30: A7a merged (Journey on core + Storage; nav = js-tabs drawn as the sidebar; old home → /about; Dev row in debug). Integration notes sent: lesson route `/lesson/[id]?item=N&mode=play|hear|jam` + `markDonePatch` (A7b); skill map / full path in Progress (A7d); one source for drum colours (follow-up).
 - 2026-10-30: A8 granted src/data schema/store edits (songs migration 2) and expo-document-picker + expo-file-system. Started A4p3 (backing audio) so imported tracks can play.
 - 2026-10-30: A7e merged (coach panel + Coach tab; expo-speech 58.0.3; voice input left for later, as the web needs STT). Requests forwarded: A7b mounts CoachInspector on results + handles /lesson/chart?chartId=&bpm=; A8 opens /song/<id> from plan items.
+- 2026-10-30: A4p2 merged: createTake/planEvents/createMetronome/feeder in core; both fixtures exactly match the web references at +0 and +1e9; web-parity test runs the unchanged web player.ts side by side over 20 scenarios (identical). Root 495 tests, coverage of play/ 99.8 %. Integration fix: the coach module now uses the take's `Finished` and tempo = chart bpm × speed (as the web). apps/mobile 380 tests.
