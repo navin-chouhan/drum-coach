@@ -9,7 +9,7 @@ export function fakeTake(over: { startedAt?: string; total?: number; title?: str
   return {
     startedAt: over.startedAt ?? '2026-10-30T19:40:00.000Z',
     chart: { ...(over.id && { id: over.id }), title: over.title ?? 'The money beat', bpm: 80, timeSignature: [4, 4], bars: 4, level: 2, kind: 'groove', notes: [{ t: 0, drum: 'kick' }, { t: 0, drum: 'hihat' }, { t: 1, drum: 'snare' }] },
-    options: { bpm: over.bpm ?? 70, fromBar: 1, toBar: 4, repeats: 1 } as SessionTake['options'],
+    options: { speed: (over.bpm ?? 70) / 80, fromBar: 1, toBar: 4, repeats: 1 } as unknown as SessionTake['options'],
     run: { notes: [], beats: 16, beatsPerBar: 4 },
     cues: [{ id: 'rushing', text: 'Rushing by 30 ms. Sit back on the click', spoken: 'Rushing. Sit back', priority: 70 }],
     stats: {

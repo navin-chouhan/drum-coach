@@ -73,7 +73,7 @@ export function CoachPanel({ take, takeExtras, onClose, kitMoves = true, nextLab
       <DottedGround style={styles.body}>
         <ScrollView ref={scroll} contentContainerStyle={styles.thread} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}
           accessibilityLabel="Your conversation with the coach">
-          {take && !ctx ? <Ctx text={`${take.chart.title} · ${Math.round(take.options.bpm)} BPM`} /> : null}
+          {take && !ctx ? <Ctx text={`${take.chart.title} · ${Math.round(take.chart.bpm * take.options.speed)} BPM`} /> : null}
           {take ? <TakeFeedback take={take} extras={takeExtras} /> : null}
           {!take && !items.length ? <Empty liveCoach={settings.liveCoach} /> : null}
           {items.map(i => <Item key={i.key} item={i} />)}
