@@ -5,7 +5,7 @@
 // cursor runs on requestAnimationFrame from performance.now() + a measured Clock offset (sheetModel.ts).
 //
 // Text is set with textContent / React; VexFlow builds SVG nodes. No HTML strings.
-import { useEffect, useRef, useState, type CSSProperties, type Ref } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref } from 'react';
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from 'expo/dom';
 import { engrave, paintHead, type Engraving } from './engrave';
 import {
@@ -65,25 +65,26 @@ export default function SheetDom(props: SheetDomProps) {
   const offset = useRef(NaN);
   const marks = useRef<SheetMarks>(emptyMarks(zero));
   // The current page's drawing and a hook to repaint it when results arrive.
-  const shown = useRef<{ eng: Engraving; fromBar: number; repaint: (notes: number[], newExtras: { beat: number }[]) => void } | null>(null);
+  const shown = useRef<{ eng: Engraving; fromBar: number; repaint: (notes: number[] | null, newExtras: { beat: number }[]) => void } | null>(null);
   const timing = useRef({ zero, beatMs: 60000 / bpm, latencyMs });
   timing.current = { zero, beatMs: 60000 / bpm, latencyMs };
 
   // Results: merged into the marks, painted on the page if it's showing.
-  const apply = (b: ResultBatch) => {
+  const apply = useCallback((b: ResultBatch) => {
     const changed = mergeBatch(marks.current, b, timing.current);
     shown.current?.repaint(changed.notes, changed.extras);
-  };
-  useDOMImperativeHandle(props.ref ?? null, () => ({ push: (b: ResultBatch) => apply(b) }) as unknown as SheetHandle, []);
+  }, []);
+  useDOMImperativeHandle(props.ref ?? null, () => ({ push: (b: ResultBatch) => apply(b) }) as unknown as SheetHandle, [apply]);
 
-  // A new take: clear the marks and ask for what the take has so far.
+  // A new take: clear the marks (and the page's colours) and ask for what the take has so far.
   useEffect(() => {
     marks.current = emptyMarks(zero);
+    extras.current?.replaceChildren();
+    shown.current?.repaint(null, []);
     let live = true;
     ready(zero).then(b => { if (live) apply(b); }, () => {});
     return () => { live = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply reads refs only
-  }, [zero, ready]);
+  }, [zero, ready, apply]);
 
   // The Clock offset, measured now and every few seconds.
   useEffect(() => {
@@ -155,7 +156,7 @@ export default function SheetDom(props: SheetDomProps) {
         for (const x of newExtras) if (x.beat >= first && x.beat < last) placeX(eng, fromBar, x.beat);
       };
       extras.current?.replaceChildren();
-      shown.current = { eng, fromBar, repaint: (n, x) => repaint(n, x) };
+      shown.current = { eng, fromBar, repaint };
       repaint(null, marks.current.extras);
       // The next page is engraved while this one plays: a full render at the turn would stall the downbeat.
       next = undefined;
