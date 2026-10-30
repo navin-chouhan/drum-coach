@@ -1,0 +1,238 @@
+// Journey's view model: everything the screen shows, from the core's rules and the student's data, as plain values.
+// The logic is the web's (src/lesson/TodayView.tsx, src/lesson/state.ts) without what v1 leaves out on the iPad (Songs
+// and real songs: D5; the coach writing lessons: later). Pure: settings, lessons, runs and the time come in.
+import { MILESTONES } from '@drum-coach/core/content/curriculum';
+import { greeting } from '@drum-coach/core/engine/greeting';
+import { soreActive } from '@drum-coach/core/engine/health';
+import { dayKey, isProven, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
+import { buildSession, checkpointsOf, currentMilestone, rankState, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
+import { barsReady, dashboard, type RunRow } from '@drum-coach/core/engine/progress';
+import { skillMap } from '@drum-coach/core/engine/skills';
+import { stageSong } from '@drum-coach/core/engine/stageSong';
+import type { Session, Settings } from '@drum-coach/core/input/settings';
+import { groovePreview, type GroovePreview } from './preview';
+
+export const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
+const KIND_ICON: Record<string, string> = { groove: '🥁', rudiment: '🥢', fill: '💥', song: '🎵', exercise: '🎯' };
+const TOOL_ICON: Record<Tool, string> = { jam: '🎸', copy: '🔁', trade: '🤜', free: '✨', bite: '🎵', challenge: '🔥', layers: '🧱', drill: '' };
+/** The web's lesson icon (src/lesson/tools.ts): the tool's, else the kind's. */
+export const iconOf = (l: Lesson) => TOOL_ICON[toolOf(l.steps[0])] || KIND_ICON[l.kind] || '🎯';
+
+export type JourneyInput = {
+  settings: Settings;
+  /** The built-in curriculum plus the coach's lessons. */
+  lessons: Lesson[];
+  /** Runs, oldest first (Storage.runs.list()). */
+  runs: RunRow[];
+  now: Date;
+  /** "Something else" presses: steps through this stage's other open lessons. */
+  swap?: number;
+  /** This week's lessons from the coach's plan (R6), when there is one. */
+  focusIds?: string[];
+};
+
+export type HeroView = {
+  lessonId: string;
+  /** Index into today's set, or -1 when the lesson isn't from it. */
+  item: number;
+  icon: string;
+  kicker: string;
+  title: string;
+  /** "Step 3 of 4 · + snare" */
+  step: string;
+  /** "12 min · 70 → 90 BPM" */
+  meta: string;
+  what: string;
+  preview: GroovePreview | null;
+  coachWrote: boolean;
+};
+
+export type SetItemView = { index: number; lessonId: string; title: string; detail?: string; value: string; stars?: number; state: 'done' | 'current' | 'todo' };
+export type TrailStopView = { id: string; lessonId?: string; title: string; icon: string; state: 'done' | 'now' | 'todo'; stars?: number; flag?: 'checkpoint' | 'coach'; started?: boolean };
+
+export type JourneyView = {
+  today: string;
+  /** Today's set as stored or proposed (startSessionPatch saves it when an item starts). */
+  session: Session;
+  coachLine: string;
+  /** Pads and latency haven't been checked yet: the title bar offers "Check my kit". */
+  setupDue: boolean;
+  /** A line about today's playing (a sore week, a long day), or null. */
+  healthLine: string | null;
+  hero: HeroView | null;
+  /** The main move: Start (today's set), Next lesson (set done), Jam (nothing left), or none. */
+  main: { label: string; lessonId: string; item: number; emoji: string } | null;
+  somethingElse: boolean;
+  /** The lesson Just jam opens (no score, with the band). */
+  jamLessonId: string | null;
+  you: {
+    rank: string; proven: boolean; nextRank: string | null; rankNote: string | null;
+    ring: { value: string; caption: string; fraction: number } | null;
+    streak: number; landedPct: number | null; minutesToday: number; minutesGoal: number;
+  };
+  set: { items: SetItemView[]; minutesDone: number; minutesTotal: number; done: boolean };
+  song: { lessonId: string; title: string; bars: number; ready: number; text: string } | null;
+  trail: { title: string; summary: string; stops: TrailStopView[] } | null;
+};
+
+const stepOf = (l: Lesson, s: Settings) => l.steps[Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1)];
+const stepIndex = (l: Lesson, s: Settings) => Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1);
+
+/** Today's stored set, or a fresh proposal (saved only when it starts): src/lesson/state.ts currentSession. */
+export function currentSession(settings: Settings, lessons: Lesson[], today: string, focusIds?: string[]): Session {
+  if (settings.session?.date === today) return settings.session;
+  return {
+    date: today, done: [],
+    items: buildSession(MILESTONES, lessons, settings.lessons, settings.profile, today, focusIds,
+      { sore: soreActive(settings.soreUntil, today), skillReview: skillMap(lessons, settings.lessons, today).find(k => k.due)?.reviewLesson }),
+  };
+}
+
+/** The trail's stops (the web's Trail): done, the one you're on, up to 4 more (+N), the ★ checkpoints, the stage song. */
+export function trailStops(trail: Lesson[], current: Lesson | undefined, song: Lesson | undefined, s: Settings, isCheckpoint: (l: Lesson) => boolean, maxStops = 10): TrailStopView[] {
+  const done = (id: string) => !!s.lessons[id]?.completedAt;
+  const started = (id: string) => !!s.lessons[id] && !done(id);
+  const cur = current && trail.includes(current) ? current : trail.find(l => !done(l.id));
+  const finished = trail.filter(l => done(l.id) && l !== cur);
+  const left = trail.filter(l => !done(l.id) && l !== cur);
+  const upcoming = left.filter(l => !isCheckpoint(l)).sort((a, b) => Number(started(b.id)) - Number(started(a.id)));
+  const shown = upcoming.slice(0, 4), later = upcoming.length - shown.length;
+  const stop = (l: Lesson): TrailStopView => ({
+    id: l.id, lessonId: l.id, title: l.title.replace(/^Song: /, ''), icon: iconOf(l), state: l === cur ? 'now' : done(l.id) ? 'done' : 'todo',
+    stars: done(l.id) ? s.lessons[l.id]?.stars ?? 1 : undefined, flag: isCheckpoint(l) ? 'checkpoint' : l.source === 'ai' ? 'coach' : undefined,
+    started: started(l.id) && l !== cur,
+  });
+  const tail: TrailStopView[] = [
+    ...(cur ? [stop(cur)] : []), ...shown.map(stop),
+    ...(later > 0 ? [{ id: 'more', title: 'more', icon: `+${later}`, state: 'todo' as const }] : []),
+    ...left.filter(isCheckpoint).map(stop),
+    ...(song ? [{ ...stop(song), flag: isCheckpoint(song) ? 'checkpoint' as const : undefined }] : []),
+  ];
+  // Done stops show one by one while they fit; older ones fold into "N done" (the web always folds past 2).
+  const room = Math.max(1, maxStops - tail.length);
+  const folded = finished.length > room ? finished.slice(0, finished.length - (room - 1)) : [];
+  const head = [
+    ...(folded.length ? [{ id: 'done', title: `${folded.length} done`, icon: '✓', state: 'done' as const }] : []),
+    ...finished.filter(l => !folded.includes(l)).map(stop),
+  ];
+  return [...head, ...tail];
+}
+
+const hoursOf = (d: Date) => d.getHours();
+
+export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds }: JourneyInput): JourneyView {
+  const today = dayKey(now);
+  const dash = dashboard(runs, now);
+  const lessonById = (id: string) => lessons.find(l => l.id === id);
+  const done = (id: string) => !!s.lessons[id]?.completedAt;
+  const milestone = currentMilestone(MILESTONES, lessons, s.lessons, s.profile);
+  const visible = visibleLessons(lessons, s.profile);
+  const path = MILESTONES.filter(m => checkpointsOf(m, lessons, s.profile).length);
+
+  // Today's set
+  const session = currentSession(s, lessons, today, focusIds);
+  const playable = (i: number) => !!lessonById(session.items[i].lessonId);
+  const firstUndone = session.items.findIndex((_, i) => playable(i) && !session.done.includes(i));
+  const setItems = session.items.flatMap((it, i) => (playable(i) ? [{ it, i, l: lessonById(it.lessonId)! }] : []));
+  const setDone = firstUndone < 0;
+
+  // The stage and its trail
+  const builtinSong = milestone && stageSong(milestone.level, visible);
+  const isCheckpoint = (l: Lesson) => !!milestone?.checkpoints.includes(l.checkpoint ?? l.id);
+  const trail = milestone ? visible.filter(l => l.level === milestone.level && l !== builtinSong && (l.source !== 'ai' || l.id in s.lessons))
+    .sort((a, b) => Number(isCheckpoint(a)) - Number(isCheckpoint(b)) || Number(a.source === 'ai') - Number(b.source === 'ai')) : [];
+
+  // The hero: today's first open item; "Something else" steps through the stage's other open lessons.
+  const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
+  const others = trail.filter(l => !done(l.id) && l !== fromSet)
+    .sort((a, b) => Number(toolOf(a.steps[0]) === toolOf(fromSet?.steps[0] ?? a.steps[0])) - Number(toolOf(b.steps[0]) === toolOf(fromSet?.steps[0] ?? b.steps[0])));
+  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0];
+  const heroItem = hero && hero === fromSet ? firstUndone : -1;
+  const afterSet = !!hero && heroItem < 0 && setDone && !swap;
+  const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
+
+  let heroView: HeroView | null = null;
+  if (hero) {
+    const st: Step = stepOf(hero, s), si = stepIndex(hero, s);
+    const role = heroItem >= 0 ? session.items[heroItem].role : undefined;
+    const setPos = setItems.findIndex(x => x.i === heroItem) + 1;
+    const minutes = heroItem >= 0 ? session.items[heroItem].minutes : Math.round(s.profile.minutesPerDay / 3);
+    const bpm = !st.rest && !st.look ? s.lessons[hero.id]?.bpm ?? st.bpm.start : undefined;
+    const target = hero.steps[hero.steps.length - 1].bpm.target;
+    const prove = role === 'review' && MILESTONES.some(m => m.checkpoints.includes(hero.id)) && !isProven(s.lessons[hero.id]);
+    const kicker = [
+      heroItem >= 0 ? 'Up next' : afterSet ? 'Next on your trail' : swap ? 'Something else' : 'Up next',
+      ...(role && role !== 'skill' ? [ROLE[role]] : []),
+      ...(heroItem >= 0 ? [`${setPos} of ${setItems.length} today`] : []),
+      ...(isCheckpoint(hero) ? ['★ checkpoint'] : []),
+    ].join(' · ');
+    heroView = {
+      lessonId: hero.id, item: heroItem, icon: iconOf(hero), kicker, title: `${prove ? 'Prove it: ' : ''}${hero.title.replace(/^Song: /, '')}`,
+      step: hero.steps.length > 1 ? `Step ${si + 1} of ${hero.steps.length} · ${st.title}` : st.title,
+      meta: [`${minutes} min`, ...(bpm !== undefined ? [`${bpm}${target !== bpm ? ` → ${target}` : ''} BPM`] : [])].join(' · '),
+      what: hero.what, preview: groovePreview(st, s.lessons[hero.id], si > 0 ? hero.steps[si - 1] : undefined), coachWrote: hero.source === 'ai',
+    };
+  }
+  const main = hero ? { label: afterSet ? 'Next lesson' : 'Start', lessonId: hero.id, item: heroItem, emoji: '▶' }
+    : jam ? { label: 'Jam', lessonId: jam.id, item: -1, emoji: '🎸' } : null;
+
+  // You: rank, streak, notes landed, minutes
+  const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
+  const rankNow = passed.length ? rankState(passed[passed.length - 1], lessons, s.lessons, s.profile) : undefined;
+  const checks = milestone ? checkpointsOf(milestone, lessons, s.profile) : [];
+  const checksOpen = checks.filter(l => !done(l.id)).length;
+  const trailDone = trail.filter(l => done(l.id)).length;
+  const stageNo = milestone ? path.indexOf(milestone) + 1 : 0;
+
+  // The stage song: the built-in one (real songs come with Songs, D5).
+  const songBars = builtinSong ? builtinSong.steps[builtinSong.steps.length - 1].chart.bars : 0;
+  const song = builtinSong ? {
+    lessonId: builtinSong.id, title: builtinSong.title.replace(/^Song: /, ''), bars: songBars,
+    ready: done(builtinSong.id) ? songBars : barsReady(runs, builtinSong.id, songBars),
+    text: `${songBars} bars with the band. Fill the ring, then play it for a friend.`,
+  } : null;
+
+  const minutesDone = setItems.filter(x => session.done.includes(x.i)).reduce((a, x) => a + x.it.minutes, 0);
+  const daysPlayed = new Set(runs.map(r => r.startedAt.slice(0, 10))).size;
+  const sore = soreActive(s.soreUntil, today);
+
+  return {
+    today, session,
+    coachLine: greeting({
+      hour: hoursOf(now), streak: dash.streak, runs: dash.totalRuns, landedWeek: dash.landedWeek, landedLastWeek: dash.landedLastWeek,
+      next: hero && { tool: toolOf(hero.steps[0]) }, setDone: afterSet, minutesToday: dash.minutesToday, pathDone: !milestone && path.length > 0 && !hero,
+    }),
+    setupDue: !s.setupDone,
+    healthLine: sore ? `Easy days until ${s.soreUntil}: shorter sets, lighter playing.`
+      : daysPlayed <= 7 && dash.minutesToday >= 40 ? "That's plenty for your first week: short and daily beats long."
+      : dash.minutesToday >= 60 ? 'Over an hour today. Stop while it still feels good.' : null,
+    hero: heroView, main, somethingElse: others.length > 0 && !!hero, jamLessonId: jam && jam !== hero ? jam.id : null,
+    you: {
+      rank: passed.length ? passed[passed.length - 1].rank : 'New drummer', proven: rankNow?.state === 'proven',
+      nextRank: milestone?.rank ?? null,
+      rankNote: rankNow?.state === 'earned' ? `Prove it on another day (${rankNow.proven} of ${rankNow.total}).`
+        : checksOpen ? `Pass the ${checksOpen} ★ checkpoint${checksOpen === 1 ? '' : 's'} on the trail.` : null,
+      ring: milestone ? { value: `${trailDone}/${trail.length}`, caption: `stage ${stageNo}`, fraction: trail.length ? trailDone / trail.length : 0 } : null,
+      streak: dash.streak, landedPct: dash.landedWeek, minutesToday: Math.round(dash.minutesToday), minutesGoal: s.profile.minutesPerDay,
+    },
+    set: {
+      items: setItems.map(({ it, i, l }) => {
+        const isDone = session.done.includes(i), p = s.lessons[l.id];
+        const st = stepOf(l, s);
+        const detail = it.role === 'review' || it.role === 'warmup' || it.role === 'record' ? ROLE[it.role].toLowerCase() : st.bite ? `bars ${st.bite.fromBar}–${st.bite.toBar}` : undefined;
+        return {
+          index: i, lessonId: l.id, title: l.title.replace(/^Song: /, '').replace(/ in bites$/, ''), detail,
+          value: isDone ? (p?.completedAt ? '' : 'done') : `${it.minutes} min`, stars: isDone && p?.completedAt ? p.stars ?? 1 : undefined,
+          state: isDone ? 'done' as const : i === firstUndone ? 'current' as const : 'todo' as const,
+        };
+      }),
+      minutesDone, minutesTotal: setItems.reduce((a, x) => a + x.it.minutes, 0), done: setDone,
+    },
+    song,
+    trail: milestone ? {
+      title: `Stage ${stageNo} · ${milestone.title}`,
+      summary: `${trailDone} of ${trail.length} lessons · ${checks.length - checksOpen} of ${checks.length} ★ checkpoints`,
+      stops: trailStops(trail, hero, builtinSong, s, isCheckpoint),
+    } : null,
+  };
+}
