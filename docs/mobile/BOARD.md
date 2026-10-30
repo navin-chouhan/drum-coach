@@ -48,6 +48,12 @@ session. The decisions it needs are D1–D5, below.
 | ACI2 Cloud iOS build | running | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
 | A1f Core notation fix | running | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
 
+| A7b Lesson player | running | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
+| A7c Setup + first run | running | `app/(main)/setup*`, `app/welcome/**`, `src/features/{setup,firstRun,latency,pads}/**` | [briefs/A7c.md](briefs/A7c.md) | Setup, first run |
+| A7d Practice + Progress | running | `app/(main)/{practice,progress}*`, `app/practice/**`, `src/features/{practice,progress}/**` | [briefs/A7d.md](briefs/A7d.md) | Practice, Progress |
+| A7e Coach panel | running | `app/(main)/coach.tsx`, `src/features/coach/**` | [briefs/A7e.md](briefs/A7e.md) | coach panel |
+| A8 Songs | running | `app/(main)/songs.tsx`, `app/song/**`, `src/features/songs/**`, `src/youtube/**` | [briefs/A8.md](briefs/A8.md) | Songs + imports |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
@@ -60,6 +66,7 @@ results.
 | D6 | Audio (AUDIO-DESIGN §8) | — | **(2026-10-30)** Listening: **USB-C hub, iPad 3.5 mm out → module AUX IN** (click and kit in the module's headphones; latency is measured for that route). **Mix with other apps.** Interrupted take: **keep if ≥ 2 whole bars**, flagged, not counted for the ladder or stars. Calls on the iPad are **Banner** style (`prefersNoInterruptionsFromSystemAlerts` covers declined calls). Offline count-in and tips: **the iPad's built-in voice**. |
 | D7 | Home server (A5s) | — | **(2026-10-30)** Plain HTTP on the home Wi-Fi is fine (Tailscale optional, away from home). Coach context cap stays **50 KB**. Web and iPad **share** one live-coach session and one set of rate limits. |
 | D8 | Sheet music | — | **(2026-10-30) "Sheet music always"**: in v1, and the default view in the lesson player (Highway is the alternative, as on the web). B15 becomes v1 work: A6n. Highway (the alternative view): the owner has no preference, so **left to right** (it reads the same way as the sheet; A6's default, and falling lanes stay a setting). |
+| D9 | Owner away (12 h from 2026-10-30 evening) | — | **Keep going; on any doubt follow the web app's decision; parallelise as much as possible; keep merging to main through green PRs.** |
 | D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | **Go (owner, 2026-10-30)**, with M4–M6 and M8 still open. They run in parallel with Phase 1; **M5 (jitter) must pass before A4 starts in Phase 2.** |
 | Layout | apps/mobile in npm workspaces? | — | **No** (orchestrator): React Native needs the exact React version Expo bundles (19.3.0), and the web uses ^19.3.1. Root workspaces = `packages/*` only. `apps/mobile` is its own npm project and uses `file:../../packages/core` + Metro watchFolders. Shims and server imports use relative `.ts` paths (Node type stripping refuses `.ts` in node_modules). |
 | D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
@@ -218,3 +225,4 @@ results.
   notation bug (web too): an empty voice in a triplet beat gets a dotted-8th rest (layoutMeasures).
 - 2026-10-30: **Owner: build the complete app; the owner tests the final app** (no device gates between phases).
   Mitigation for the never-compiled Swift: a cloud iOS simulator build on GitHub's macOS runners (ACI2).
+- 2026-10-30: Owner away 12 h (D9). Screen agents A7b–A7e and A8 started on their models (part 1); they get the UI kit when A7a commits it.
