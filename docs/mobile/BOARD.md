@@ -40,6 +40,8 @@ session. The decisions it needs are D1–D5, below.
 | A6 Play surfaces part 1 | **done, merged** (3d6b725) | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
 | ACI Mobile CI + deps gate | **done, merged** (9acf52b) | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
 
+| A6n Sheet music | running | `apps/mobile/src/notation/**`, `app/dev/sheet.tsx`, apps/mobile package.json (this round) | [briefs/A6n.md](briefs/A6n.md) | NotationView (VexFlow on iPad) |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
@@ -51,6 +53,7 @@ results.
 | Dev loop | Where builds and tests run | — | **Build + install on the Mac; Metro and tests on Linux** (owner). Rebuild on the Mac only for native changes or every 7 days. M1 and M8 are done on the Mac during the install session. |
 | D6 | Audio (AUDIO-DESIGN §8) | — | **(2026-10-30)** Listening: **USB-C hub, iPad 3.5 mm out → module AUX IN** (click and kit in the module's headphones; latency is measured for that route). **Mix with other apps.** Interrupted take: **keep if ≥ 2 whole bars**, flagged, not counted for the ladder or stars. Calls on the iPad are **Banner** style (`prefersNoInterruptionsFromSystemAlerts` covers declined calls). Offline count-in and tips: **the iPad's built-in voice**. |
 | D7 | Home server (A5s) | — | **(2026-10-30)** Plain HTTP on the home Wi-Fi is fine (Tailscale optional, away from home). Coach context cap stays **50 KB**. Web and iPad **share** one live-coach session and one set of rate limits. |
+| D8 | Sheet music | — | **(2026-10-30) "Sheet music always"**: in v1, and the default view in the lesson player (Highway is the alternative, as on the web). B15 becomes v1 work: A6n. |
 | D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | **Go (owner, 2026-10-30)**, with M4–M6 and M8 still open. They run in parallel with Phase 1; **M5 (jitter) must pass before A4 starts in Phase 2.** |
 | Layout | apps/mobile in npm workspaces? | — | **No** (orchestrator): React Native needs the exact React version Expo bundles (19.3.0), and the web uses ^19.3.1. Root workspaces = `packages/*` only. `apps/mobile` is its own npm project and uses `file:../../packages/core` + Metro watchFolders. Shims and server imports use relative `.ts` paths (Node type stripping refuses `.ts` in node_modules). |
 | D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
@@ -189,3 +192,4 @@ results.
   constant; it exports its drawing functions on window). The gallery artifact is republished.
 - 2026-10-30: Owner answered the 5 audio and 3 home-server questions (D6, D7): all defaults; the listening setup is
   the hub + AUX IN route. Nothing built needs to change; A4 part 2 uses them (route-keyed latency, keep-if-2-bars).
+- 2026-10-30: Owner: "sheet music always" (D8). Started A6n (sheet music on the iPad) and an A7m follow-up (sheet frames).
