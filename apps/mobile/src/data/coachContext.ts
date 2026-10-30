@@ -2,9 +2,11 @@
 // plan, notes and lessons, in the schema server/coachContext.ts accepts, trimmed to at most CONTEXT_MAX_BYTES of JSON
 // (most recent first). Pure: it takes what storage read and returns the JSON object to put in the request body.
 //
-// The small sub-schemas below copy the server's (runs, settings, plan, teacher notes, month report) so one bad local
-// entry is dropped here instead of failing the whole request with a 400; coachContext.test.ts checks them against
-// server/coachContext.ts and runs the output through the server's own CoachContextSchema.
+// Runs, the plan and the month report use the core's schemas. The context's own sub-schemas (lesson progress,
+// profile, teacher notes) live only in server/coachContext.ts, so they are copied here; coachContext.test.ts checks
+// them against the server's and runs the output through the server's own CoachContextSchema. Each entry is checked
+// so one bad local entry is dropped here instead of failing the whole request with a 400.
+import { MonthReportSchema, PlanSchema } from '@drum-coach/core/coach/schemas';
 import { z } from 'zod';
 import { RunInputSchema, type StoredRun } from './runs';
 
@@ -28,15 +30,9 @@ export const ProfileSchema = z.object({
   song: z.object({ id: Id, title: z.string().max(200), stage: z.number().int().min(0).max(12) }).optional(),
 });
 export const SettingsSchema = z.object({ profile: ProfileSchema.optional(), lessons: z.record(Id, ProgressSchema).optional(), soreUntil: Day.optional() });
-const optionalText = (max: number) => z.string().max(max).nullish().transform(v => v ?? undefined);
-/** PlanSchema.pick({ focus, why, drums, notes, week }). */
-export const PlanNotesSchema = z.object({
-  focus: optionalText(120), why: optionalText(300),
-  drums: z.array(z.string().max(20)).max(4).nullish().transform(v => v ?? undefined),
-  notes: optionalText(1000), week: z.string().max(10).optional(),
-});
+/** What the server reads of this week's plan (server/coachContext.ts: PlanSchema.pick). */
+export const PlanNotesSchema = PlanSchema.pick({ focus: true, why: true, drums: true, notes: true, week: true });
 export const TeacherNoteSchema = z.object({ date: Day, text: z.string().max(4000) });
-export const MonthReportSchema = z.object({ headline: z.string().max(200), better: z.array(z.string().max(300)).max(4), next: z.array(z.string().max(300)).max(3), note: z.string().max(600) });
 export const KeptMonthReportSchema = z.object({ month: z.string().regex(/^\d{4}-\d{2}$/), report: MonthReportSchema });
 
 /** The routes that take a context, and what each reads (docs/mobile/HOME-SERVER.md). */

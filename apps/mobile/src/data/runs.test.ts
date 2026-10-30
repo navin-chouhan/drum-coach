@@ -7,7 +7,7 @@ import { openTestDb } from './nodeSqlite.testutil';
 const setup = () => { const db = openTestDb(); migrate(db); return { db, runs: createRunsRepo(db) }; };
 
 describe('RunInputSchema', () => {
-  it('is the web RunRecordSchema (same JSON Schema)', async () => {
+  it('is the schema the server checks POST /api/runs with (same JSON Schema)', async () => {
     const { RunRecordSchema } = await webSchemas();
     expect(RunInputSchema.toJSONSchema()).toEqual(RunRecordSchema.toJSONSchema());
   });

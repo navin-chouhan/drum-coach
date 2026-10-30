@@ -1,38 +1,20 @@
 // Runs (takes) on the device, shaped like the web's POST /api/runs (in) and GET /api/runs (out), with the take's
-// hits kept under the same cap as the server (server/index.ts). RunInputSchema copies the web's RunRecordSchema
-// (src/coach/schemas.ts) until @drum-coach/core exports it; runs.test.ts checks the two agree.
-import { z } from 'zod';
+// hits kept under the same cap as the server (server/index.ts). The schema and row type are the core's, so the iPad
+// and the server accept exactly the same records.
+import { RunRecordSchema } from '@drum-coach/core/coach/schemas';
+import type { RunRow } from '@drum-coach/core/engine/progress';
+import type { z } from 'zod';
 import type { SqlDb } from './sql';
 
-export const RunTakeSchema = z.object({
-  beatMs: z.number().positive().max(5000), beats: z.number().positive().max(10_000), beatsPerBar: z.number().positive().max(32),
-  timeSignature: z.tuple([z.number().int().min(1).max(32), z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)])]),
-  hits: z.array(z.tuple([z.number(), z.string().max(12), z.number().int().min(0).max(127)])).max(4000), // [ms from beat 0, pad, velocity]
-});
-export const RunInputSchema = z.object({
-  chartId: z.string().max(80), chartTitle: z.string().max(200), level: z.number().int().min(0).max(12).optional(),
-  startedAt: z.string().datetime(), durationS: z.number().min(0).max(36_000),
-  bpm: z.number().min(10).max(400), speed: z.number().min(0.25).max(2),
-  accuracy: z.number().min(0).max(100), meanOffset: z.number(), spread: z.number().min(0),
-  summary: z.record(z.string(), z.unknown()),
-  take: RunTakeSchema.optional(),
-});
+export type { RunRow };
+/** What a finished take saves (the core's RunRecordSchema: the web's POST /api/runs body). */
+export const RunInputSchema = RunRecordSchema;
+export const RunTakeSchema = RunRecordSchema.shape.take.unwrap();
 export type RunTake = z.infer<typeof RunTakeSchema>;
 /** What a finished take saves (the web's RunRecord without `id`). */
 export type RunInput = z.infer<typeof RunInputSchema>;
 /** A stored run as the coach context sends it: the input without the take's hits. */
 export type StoredRun = Omit<RunInput, 'take'> & { id: number };
-
-/** GET /api/runs's row (the web's RunRow, src/engine/progress.ts). */
-export type RunRow = {
-  id?: number; hasTake?: boolean;
-  chartId: string; chartTitle: string; level?: number; startedAt: string; durationS: number;
-  bpm: number; speed: number; accuracy: number; meanOffset: number; spread: number;
-  notes?: number; fromBar?: number; toBar?: number; tips?: string[];
-  perDrum?: Record<string, { notes: number; accuracyPct: number; meanOffsetMs: number }>;
-  bite?: { songId: string; fromBar: number; toBar: number };
-  tool?: string;
-};
 
 /** The server's take cap: the latest 300 takes, plus the first take of each exercise each month ("you a month ago"). */
 export const TAKE_CAP_SQL = `DELETE FROM run_hits WHERE run_id NOT IN (SELECT id FROM runs ORDER BY id DESC LIMIT 300)
