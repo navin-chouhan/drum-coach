@@ -3,8 +3,9 @@
 // Contract: packages/core/src/play/audioPort.ts. Design: docs/mobile/AUDIO-DESIGN.md §2.
 
 import type { Clock } from '@drum-coach/core/platform';
-import type { AudioEvent, AudioInterruption, AudioPort, AudioRoute, SoundId } from '@drum-coach/core/play/audioPort';
-import type { BusVolumes, DrumAudioApi, NativeRoute, TimingProbeResult } from '../../modules/drum-audio/src/DrumAudio.types';
+import type { AudioEvent, AudioInterruption, AudioPort, AudioRoute, BackingPort, SoundId } from '@drum-coach/core/play/audioPort';
+import { backingFilePath } from '../../modules/drum-audio/src/backing';
+import type { BackingStartResult, BusVolumes, DrumAudioApi, NativeRoute, TimingProbeResult } from '../../modules/drum-audio/src/DrumAudio.types';
 import { packEvents, soundIndex, wordKey } from '../../modules/drum-audio/src/packing';
 
 type Level = 'click' | 'drums' | 'band' | 'voice' | 'backing';
@@ -41,8 +42,57 @@ export function toAudioRoute(r: Partial<NativeRoute> | null | undefined): AudioR
   };
 }
 
+/** The BackingPort plus what the audio debug screen's Backing card needs. */
+export interface DrumBackingPort extends BackingPort {
+  /** What native planned for the last start (or why it didn't play); null before the first. */
+  lastStart(): BackingStartResult | null;
+  /** Writes the debug test tone (4-bar beat blips, 44.1 kHz) for `seconds` or more and resolves its file:// URI. */
+  testTone(bpm: number, beatsPerBar: number, seconds: number): Promise<string>;
+}
+
+export const LOCAL_FILES_ONLY = 'Backing audio plays local files only (file:// or a path): never YouTube or a stream';
+
+/**
+ * core's BackingPort on the module (AUDIO-DESIGN §1.4, §6). Local files only: a URI that isn't file:// or a path is
+ * refused here and again in native (CLAUDE.md: YouTube audio is never played, streamed or stored). `start`, `stop`
+ * and `anchor` are synchronous JSI calls that never throw; `load` rejects with native's reason.
+ */
+export function createBackingPort(native: DrumAudioApi, log: (message: string, error?: unknown) => void): DrumBackingPort {
+  let last: BackingStartResult | null = null;
+  const safely = <T>(what: string, fallback: T, f: () => T): T => {
+    try {
+      return f();
+    } catch (e) {
+      log(`drum-audio ${what} failed`, e);
+      return fallback;
+    }
+  };
+  return {
+    async load(uri) {
+      if (backingFilePath(uri) == null) throw new Error(LOCAL_FILES_ONLY);
+      const r = await native.backingLoad(uri);
+      return { durationMs: r.durationMs, sampleRate: r.sampleRate };
+    },
+    start({ at, offsetMs, rate }) {
+      last = safely('backingStart', { ok: false, reason: 'native call failed' } as BackingStartResult, () => native.backingStart(at, offsetMs, rate));
+      if (!last.ok) log(`drum-audio backing start: ${last.reason}`);
+    },
+    stop() {
+      safely('backingStop', undefined, () => native.backingStop());
+    },
+    anchor() {
+      const a = safely('backingAnchor', null, () => native.backingAnchor());
+      if (!a || !a.playing || !Number.isFinite(a.at) || !Number.isFinite(a.fileMs)) return null;
+      return { at: a.at, fileMs: a.fileMs };
+    },
+    lastStart: () => last,
+    testTone: (bpm, beatsPerBar, seconds) => native.backingTestTone(bpm, beatsPerBar, seconds),
+  };
+}
+
 /** The AudioPort plus what the audio debug screen needs. */
 export interface DrumAudioPort extends AudioPort {
+  readonly backing: DrumBackingPort | null;
   debugInfo(): Record<string, unknown> | null;
   startTimingProbe(): boolean;
   stopTimingProbe(): TimingProbeResult | null;
@@ -154,7 +204,7 @@ export function createAudioPort(native: DrumAudioApi | null, opts: Options = {})
       if (native) safely('setLevels', undefined, () => native.setBusVolumes(busVolumes(levels)));
     },
 
-    backing: null,
+    backing: native ? createBackingPort(native, log) : null,
 
     onRouteChange(fn) {
       routeListeners.add(fn);
