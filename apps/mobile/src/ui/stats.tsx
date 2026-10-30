@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   tileValue: { ...font.display, fontSize: type.stat, lineHeight: 26, color: color.ink },
   tileUnit: { fontSize: 13, color: color.muted },
   tileLabel: { fontSize: 12, fontWeight: '800', color: color.muted },
-  ring: { borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.panel, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  ring: { borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.panel, alignItems: 'center', justifyContent: 'center' }, // no overflow clip: it would clip the hard shadow; the round half-discs stay inside
   clip: { position: 'absolute', top: 0, overflow: 'hidden' },
   ringCentre: { backgroundColor: color.panel, borderWidth: stroke.card, borderColor: color.ink, alignItems: 'center', justifyContent: 'center' },
   ringValue: { ...font.display, color: color.ink },
