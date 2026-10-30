@@ -48,7 +48,7 @@ const pkt = (hostTimeMs: number, ...bytes: number[]): NativeMidiPacket => ({ byt
 function rig() {
   const m = fakeModule();
   const port = createMidiPortFrom(m.api);
-  const bus = createHitBus({ now: port.clock.now, getNoteMap: () => DEFAULT_NOTE_MAP, getPadCal: () => ({}) });
+  const bus = createHitBus({ now: () => port.clock.now(), getNoteMap: () => DEFAULT_NOTE_MAP, getPadCal: () => ({}) });
   const hits: Hit[] = [];
   bus.onHit(h => hits.push(h));
   const link = connectMidiToHitBus(port, bus);
@@ -258,7 +258,7 @@ describe('fixture replay on the mach host clock = the web hits', () => {
 
     const m = fakeModule();
     const port = createMidiPortFrom(m.api);
-    const bus = createHitBus({ now: port.clock.now, getNoteMap: () => f.noteMap, getPadCal: () => ({}) });
+    const bus = createHitBus({ now: () => port.clock.now(), getNoteMap: () => f.noteMap, getPadCal: () => ({}) });
     const got: Hit[] = [];
     bus.onHit(h => got.push(h));
     const link = connectMidiToHitBus(port, bus);
