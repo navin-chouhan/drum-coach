@@ -45,6 +45,9 @@ session. The decisions it needs are D1–D5, below.
 | A4p2 Take engine (core) | running | `packages/core/src/play/**` (not audioPort.ts) | [briefs/A4p2.md](briefs/A4p2.md) | createTake, planEvents, createMetronome, parity tests |
 | A7a UI kit + nav + Journey | running | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
 
+| ACI2 Cloud iOS build | running | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
+| A1f Core notation fix | running | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
