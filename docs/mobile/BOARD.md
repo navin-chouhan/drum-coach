@@ -43,16 +43,18 @@ session. The decisions it needs are D1–D5, below.
 | A6n Sheet music | **done, merged** (e1ca412) | `apps/mobile/src/notation/**`, `app/dev/sheet.tsx`, apps/mobile package.json (this round) | [briefs/A6n.md](briefs/A6n.md) | NotationView (VexFlow on iPad) |
 
 | A4p2 Take engine (core) | running | `packages/core/src/play/**` (not audioPort.ts) | [briefs/A4p2.md](briefs/A4p2.md) | createTake, planEvents, createMetronome, parity tests |
-| A7a UI kit + nav + Journey | running | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
+| A7a UI kit + nav + Journey | **done, merged** (1a9a884) | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
 
-| ACI2 Cloud iOS build | running | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
-| A1f Core notation fix | running | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
+| ACI2 Cloud iOS build | **done, merged** (e00a272); first run on PR #3 | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
+| A1f Core notation fix | **done, merged** (c2147ec) | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
 
 | A7b Lesson player | running | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
 | A7c Setup + first run | running | `app/(main)/setup*`, `app/welcome/**`, `src/features/{setup,firstRun,latency,pads}/**` | [briefs/A7c.md](briefs/A7c.md) | Setup, first run |
 | A7d Practice + Progress | running | `app/(main)/{practice,progress}*`, `app/practice/**`, `src/features/{practice,progress}/**` | [briefs/A7d.md](briefs/A7d.md) | Practice, Progress |
 | A7e Coach panel | running | `app/(main)/coach.tsx`, `src/features/coach/**` | [briefs/A7e.md](briefs/A7e.md) | coach panel |
 | A8 Songs | running | `app/(main)/songs.tsx`, `app/song/**`, `src/features/songs/**`, `src/youtube/**` | [briefs/A8.md](briefs/A8.md) | Songs + imports |
+
+| A4p3 Backing audio | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio*` | [briefs/A4p3.md](briefs/A4p3.md) | BackingPort |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
@@ -226,3 +228,7 @@ results.
 - 2026-10-30: **Owner: build the complete app; the owner tests the final app** (no device gates between phases).
   Mitigation for the never-compiled Swift: a cloud iOS simulator build on GitHub's macOS runners (ACI2).
 - 2026-10-30: Owner away 12 h (D9). Screen agents A7b–A7e and A8 started on their models (part 1); they get the UI kit when A7a commits it.
+- 2026-10-30: A7a part 1 (UI kit, sidebar, placeholders incl. songs) merged early so the screen agents can build on it.
+- 2026-10-30: ACI2 merged: `.github/workflows/ios.yml` on the `xcode-27` runner (Xcode 27.1, the owner's build), prebuild + xcodebuild for the iPad simulator + Swift unit tests; triggers: dispatch and PRs to main touching apps/mobile. `.github/actionlint.yaml` declares the new hosted label actionlint doesn't know yet.
+- 2026-10-30: A7a merged (Journey on core + Storage; nav = js-tabs drawn as the sidebar; old home → /about; Dev row in debug). Integration notes sent: lesson route `/lesson/[id]?item=N&mode=play|hear|jam` + `markDonePatch` (A7b); skill map / full path in Progress (A7d); one source for drum colours (follow-up).
+- 2026-10-30: A8 granted src/data schema/store edits (songs migration 2) and expo-document-picker + expo-file-system. Started A4p3 (backing audio) so imported tracks can play.
