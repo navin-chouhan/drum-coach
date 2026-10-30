@@ -10,7 +10,7 @@ import { breakDue } from '@drum-coach/core/engine/health';
 import { takeChart } from '@drum-coach/core/engine/transcribe';
 import type { CoachReply } from '@drum-coach/core/coach/schemas';
 import type { RunInput } from '../../data/runs';
-import { coachLine, replyFor, screenAction, thinkingAbout, type CoachSession, type CoachState } from './coach';
+import { coachLine, replyFor, screenAction, thinkingAbout, type Act, type CoachSession, type CoachState } from '../coach/session';
 import { judge, type Outcome, type Probe } from './judge';
 import {
   boxesOf, canProbe, chartFor, frameOf, goalOf, headerOf, introLine, lessonCardOf, myPadsOf, seedBaseOf, takeOptions,
@@ -18,7 +18,8 @@ import {
 } from './lessonView';
 import { progressOf, saveProgress, resetLesson } from './progress';
 import { fixBar, latencyHint, takeCard, takeMarks, timingLine, yourFills } from './results';
-import { runInputOf, shouldSave, summarizeRun } from './runRecord';
+import { runInputOf, shouldSave } from './runRecord';
+import { summarizeTake } from '../coach/summary';
 import type { SettingsStore } from './settings';
 import { canShare } from './share';
 import type { Finished, PlayOptions, TakePort } from './types';
@@ -40,7 +41,8 @@ export type LessonDeps = {
   /** Wall clock (Date.now): coach answer timing. */
   wallNow?: () => number;
   saveRun: (run: RunInput) => Promise<unknown>;
-  coach?: CoachSession;
+  /** The live coach (A7e getCoach().session): hears each take, suggests the next move. */
+  coach?: Pick<CoachSession, 'get' | 'subscribe' | 'coachTake' | 'coachOpen' | 'onCoachAction' | 'dropCoachAction'>;
   /** Speak a verdict (settings.voice is checked by the judge). */
   say?: (text: string) => void;
   /** A drum flourish through the speakers (a lesson done, a record). */
@@ -90,6 +92,8 @@ export class LessonController {
   private chartCache?: { key: string; step: unknown; value: { chart: Chart; freeBars: number[] } };
   private unsub: (() => void)[] = [];
   private disposed = false;
+  /** A line that stands in for the verdict until the next take (an interruption that left nothing to keep). */
+  private notice?: string;
 
   constructor(deps: LessonDeps) {
     this.d = deps;
@@ -97,7 +101,10 @@ export class LessonController {
     this.openedAt = (deps.wallNow ?? Date.now)();
     this.unsub.push(deps.take.subscribe(() => { this.judgeFinished(); this.notify(); }));
     this.unsub.push(deps.settings.subscribe(() => this.notify()));
-    if (deps.coach) this.unsub.push(deps.coach.subscribe(() => this.notify()));
+    if (deps.coach) {
+      this.unsub.push(deps.coach.subscribe(() => this.notify()));
+      this.unsub.push(deps.coach.onCoachAction(a => this.runAction(a)));
+    }
   }
 
   subscribe(fn: () => void) { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; }
@@ -107,7 +114,7 @@ export class LessonController {
   dispose() {
     if (this.disposed) return;
     this.d.take.stop();
-    this.d.coach?.dropAction();
+    this.d.coach?.dropCoachAction();
     this.unsub.forEach(u => u());
     this.disposed = true;
   }
@@ -157,7 +164,7 @@ export class LessonController {
     if (out.flourish) this.d.flourish?.(out.flourish.big);
     if (out.coachLesson) this.d.requestCoachLesson?.(out.coachLesson);
     if (out.speak) this.d.say?.(out.speak);
-    if (out.coachTake) void this.d.coach?.take(f, out.coachTake);
+    if (out.coachTake) void this.d.coach?.coachTake(f, { chartId: f.chart.id, lesson: out.coachTake });
     if (out.itemDone) this.d.onItemDone?.();
     if (out.save && shouldSave(f) && !this.saved.has(f)) {
       this.saved.add(f);
@@ -173,28 +180,38 @@ export class LessonController {
     const f = this.frame(), cur = this.chartOf(f).chart;
     let chart = cur;
     if (!demo && !wait && f.step.variants?.length) { this.takeNo++; chart = this.chartOf(f).chart; }
-    this.d.take.start(chart, { ...this.options(demo, wait), speed: atBpm / chart.bpm });
+    this.start(chart, { ...this.options(demo, wait), speed: atBpm / chart.bpm });
+  }
+  /** Every take starts here: the coach learns what "this" is, an old notice goes. */
+  private start(chart: Chart, o: PlayOptions) {
+    this.notice = undefined;
+    this.d.coach?.coachOpen(chart, chart.bpm * o.speed);
+    this.d.take.start(chart, o);
   }
   /** Listen back: your own hits at their real times, with the click (then `then`). */
   hearTake(t: Finished, then?: () => void) {
     const chart = takeChart(t.hits, { zero: t.zero, beatMs: 60000 / (t.chart.bpm * t.options.speed), beats: t.run.beats, beatsPerBar: t.run.beatsPerBar, title: 'Your take', timeSignature: t.chart.timeSignature });
-    this.d.take.start(chart, { ...this.options(true), fromBar: 1, toBar: 999, repeats: 1, speed: 1, activeLanes: undefined, then });
+    this.start(chart, { ...this.options(true), fromBar: 1, toBar: 999, repeats: 1, speed: 1, activeLanes: undefined, then });
   }
   /** Zoom in: loop one bar 4 times, 10 BPM slower, with the app playing softly underneath. */
   zoomIn(bar: number) {
     const f = this.frame(), { chart } = this.chartOf(f);
-    this.d.take.start(chart, { ...this.options(false), fromBar: bar, toBar: bar, repeats: 4, speed: fixBar(bar, f.bpm).bpm / chart.bpm, guide: true, zoom: bar });
+    this.start(chart, { ...this.options(false), fromBar: bar, toBar: bar, repeats: 4, speed: fixBar(bar, f.bpm).bpm / chart.bpm, guide: true, zoom: bar });
   }
   private probeBar() {
     if (this.disposed) return;
     const f = this.frame(), { chart } = this.chartOf(f);
-    this.d.take.start(chart, { ...this.options(false), toBar: 1, repeats: 1, speed: (this.probe?.tempo ?? f.bpm) / chart.bpm, countInBars: 1, probe: true, band: undefined });
+    this.start(chart, { ...this.options(false), toBar: 1, repeats: 1, speed: (this.probe?.tempo ?? f.bpm) / chart.bpm, countInBars: 1, probe: true, band: undefined });
   }
   findTempo() { this.probe = { tempo: this.frame().step.bpm.start, accs: [] }; this.probeBar(); }
   /** Stop (the Stop button, crash × 4, Esc): an endless take keeps its whole bars. */
   stop() { this.d.take.stop('user'); }
   /** D6: a call, Siri, the app in the background. */
-  interrupt() { if (this.playing) this.d.take.stop('interrupted'); }
+  interrupt() {
+    if (!this.playing) return;
+    this.d.take.stop('interrupted');
+    if (this.d.take.state.phase !== 'done') { this.notice = 'Take stopped. It was too short to keep: press Play when you are ready.'; this.notify(); }
+  }
   private goNext() { this.d.take.stop(); (this.d.onNext ?? this.d.onBack)(); }
   back() { this.d.take.stop(); this.d.onBack(); }
 
@@ -230,7 +247,7 @@ export class LessonController {
   askHelp() {
     const f = this.shownTake(), o = f && this.outcomes.get(f), key = this.helpKey();
     if (!f || !key) return;
-    this.d.requestCoachLesson?.(key, { lessonId: this.lesson.id, step: this.frame().stepIdx + 1, reason: o?.reason ?? '', run: summarizeRun(f) });
+    this.d.requestCoachLesson?.(key, { lessonId: this.lesson.id, step: this.frame().stepIdx + 1, reason: o?.reason ?? '', run: summarizeTake(f, { chartId: f.chart.id, lesson: f.options.lesson }) });
   }
   private helpKey() {
     const f = this.shownTake(), o = f && this.outcomes.get(f);
@@ -241,7 +258,7 @@ export class LessonController {
    * A coach suggestion or a kit move (again / slower / faster / next / zoom / trade / count / layers / listen / drill),
    * or 'main' (the big move). Returns false when nothing here can do it.
    */
-  runAction(a: { kind: string; label?: string; bpm?: number; bar?: number; chartId?: string; chart?: unknown }): boolean {
+  runAction(a: Act | { kind: string; label?: string; bpm?: number; bar?: number }): boolean {
     const f = this.frame(), { chart, freeBars } = this.chartOf(f), step = f.step;
     if (a.kind === 'main') { this.moves()[0].run(); return true; }
     if (a.kind === 'listen') {
@@ -255,7 +272,7 @@ export class LessonController {
       const t = a.kind === 'trade' ? playChart({ chart: step.chart, trade: true }) : { chart, freeBars };
       const first = step.layers?.[0] ?? [step.chart.notes[0].drum];
       const o = this.options(false);
-      this.d.take.start(t.chart, {
+      this.start(t.chart, {
         ...o, toBar: t.chart.bars, repeats: Math.max(1, Math.ceil(8 / t.chart.bars)), speed: f.bpm / t.chart.bpm, oneOff: true,
         freeBars: t.freeBars.length ? t.freeBars : undefined,
         ...(a.kind === 'count' && { countAloud: countAlong(chart) }), ...(a.kind === 'layers' && { activeLanes: first }),
@@ -316,10 +333,10 @@ export class LessonController {
     const probeOk = canProbe(f, p, pace, this.probedStep);
     const main: { label: string; run: () => void } =
       breakNow ? { label: '☕ 2-minute break', run: () => { this.onBreak = true; this.notify(); } }
-      : setup.arcade ? { label: o ? '⏱ Again, 2 minutes' : '⏱ Start the 2 minutes', run: () => { const { chart } = this.chartOf(f); this.d.take.start(chart, { ...this.options(false), endless: true, seconds: 120, speed: f.arcadeBpm / chart.bpm }); } }
+      : setup.arcade ? { label: o ? '⏱ Again, 2 minutes' : '⏱ Start the 2 minutes', run: () => { const { chart } = this.chartOf(f); this.start(chart, { ...this.options(false), endless: true, seconds: 120, speed: f.arcadeBpm / chart.bpm }); } }
       : probeOk ? { label: '🔍 Find my tempo', run: () => this.findTempo() }
       : f.resting ? { label: '✓ Done, next step', run: () => this.finishRest() }
-      : setup.flow ? { label: '🌊 Flow ▶', run: () => { const { chart } = this.chartOf(f); this.d.take.start(chart, { ...this.options(false), endless: true, fadeClick: 8 }); } }
+      : setup.flow ? { label: '🌊 Flow ▶', run: () => { const { chart } = this.chartOf(f); this.start(chart, { ...this.options(false), endless: true, fadeClick: 8 }); } }
       : o?.stuck === 'latency' && this.d.openLatency ? { label: '⏱ Check my latency', run: () => this.d.openLatency!() }
       : o?.stuck === 'count' ? { label: '🗣 Count with me, one take', run: () => void this.runAction({ kind: 'count', label: 'count' }) }
       : o?.stuck === 'listen' && t?.hits.length ? { label: '🎧 Hear mine, then the right way', run: () => this.hearTake(t, () => this.play(true)) }
@@ -353,7 +370,7 @@ export class LessonController {
     const coach = this.coachState(), reply = this.reply();
     const big = this.big(o);
     const breakNow = this.breakNow();
-    const said = breakNow ? { line: `${o?.say ?? ''} You've played over 20 minutes: time for a 2-minute break.`, under: undefined } : coachLine(o?.say, reply, big);
+    const said = this.notice && !playing ? { line: this.notice, under: undefined } : breakNow ? { line: `${o?.say ?? ''} You've played over 20 minutes: time for a 2-minute break.`, under: undefined } : coachLine(o?.say, reply, big);
     const pace = studentRead(s.lessons).pace;
     const line = said.line ?? introLine(setup, f, { can: canProbe(f, p, pace, this.probedStep), explained: probeExplained }, s.arcade?.[this.lesson.id] ?? 0);
     const marks = takeMarks(t, chart, playing);
@@ -376,7 +393,7 @@ export class LessonController {
       band: { available: !!takeOptions(setup, f, chart, freeBars, { ...s, band: true }, false).band, on: s.band !== false },
       playView: s.playView === 'highway' ? 'highway' as const : 'sheet' as const,
       line, under: said.under, thinking: !reply && !!coach && thinkingAbout(coach, t),
-      coachError: coach?.status === 'idle' && !reply && t && coach.error ? coach.failure ?? 'error' : undefined,
+      coachProblem: coach?.status === 'idle' && !reply && t ? coach.problem : undefined,
       moves: this.moves(),
       goal: goalOf(setup, f, chart, freeBars),
       boxes: boxesOf(setup, f, p),

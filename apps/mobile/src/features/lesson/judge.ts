@@ -95,7 +95,7 @@ export function judge(x: JudgeInput): JudgeOutput {
       const t = 'Take stopped. It was too short to keep: press Play when you are ready.';
       return { outcome: { passed: false, itemDone: false, zoomed: true, interrupted: true, text: t, say: t }, itemDone: false, playedS: 0 };
     }
-    const t = `Take stopped${f.interrupted.reason ? ` (${f.interrupted.reason})` : ''}. ${bars} bars kept: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. It doesn't count for the tempo ladder.`;
+    const t = `Take stopped. ${bars} bars kept: ${f.stats.total - f.stats.miss} of ${f.stats.total} notes landed. It doesn't count for the tempo ladder.`;
     return { outcome: { passed: false, itemDone: false, zoomed: true, interrupted: true, text: t, say: t, nums: numsOf(f) }, save: { passed: false, interrupted: true }, itemDone: false, playedS: f.durationS };
   }
   // A step's extra limits (flams, timing) are for the full groove, not its first layers.

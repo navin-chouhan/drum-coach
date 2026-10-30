@@ -1,67 +1,37 @@
-// The lesson player's view of a take, and the port it drives the take engine through.
-//
-// The shapes are the web's (src/play/player.ts PlayOptions, Finished, player state), so the lesson logic ports
-// unchanged. The take engine itself is core's createTake (A4p2, AUDIO-DESIGN §2.3); `TakePort` is the adapter the
-// screens use, so the lesson logic never depends on the engine's exact signature (bindings: ./takePort.ts).
-import type { BandSpec } from '@drum-coach/core/engine/band';
-import type { Chart, ChartDrum } from '@drum-coach/core/engine/chart';
-import type { Cue } from '@drum-coach/core/engine/liveCoach';
-import type { Run, RunOptions } from '@drum-coach/core/engine/run';
-import type { Judgement, NoteResult, PlayedHit, RunStats } from '@drum-coach/core/engine/scoring';
+// The lesson player's view of a take, and the port it drives the take engine through. A take is core's
+// (@drum-coach/core/play/take, A4p2: the web's player.ts, clock-agnostic); the shapes are the web's PlayOptions,
+// Finished and player state, so the lesson logic ports unchanged. Bindings: ./takePort.ts.
+import type { Chart } from '@drum-coach/core/engine/chart';
+import type { Finished as CoreFinished, TakeOptions, TakeState as CoreTakeState } from '@drum-coach/core/play/take';
 import type { PlayResult, Subscribe } from '../../play/events';
 
-/** What a lesson take asks for: the web's PlayOptions without the web-only parts (AudioBuffer backing, YouTube clock). */
-export type PlayOptions = RunOptions & {
-  speed: number;
-  metronome: boolean;
-  subdivision: 1 | 2 | 4;
-  countInBars: number;
-  wait: boolean;
-  activeLanes?: ChartDrum[];
-  demo?: boolean;
-  guide?: boolean;
-  gapBars?: number;
+/** What a lesson take asks for: core's TakeOptions plus the web PlayOptions' lesson parts (kept with the run). */
+export type PlayOptions = TakeOptions & {
+  /** The sheet shows the count and who plays each note. */
   hints?: boolean;
-  countAloud?: string[][];
-  freeBars?: number[];
-  seconds?: number;
+  /** One bar of find-your-tempo. */
   probe?: boolean;
-  endless?: boolean;
-  fadeClick?: number;
-  clickOn?: 'quarters' | '8ths' | '2and4';
+  /** A "fix this bar" loop: practice only, no tempo ladder. */
+  zoom?: number;
+  /** A take the coach asked for in another tool: for fun, no tempo ladder. */
+  oneOff?: boolean;
+  /** Big "1 & 2 &" on the highway, for the counting lessons. */
+  count?: boolean;
   /** A demo that plays to its end runs this next (not when stopped or replaced). */
   then?: () => void;
-  oneOff?: boolean;
-  zoom?: number;
-  goodMs?: number;
-  count?: boolean;
-  band?: BandSpec;
-  feelTarget?: { ms: number; tol: number };
-  swingWant?: [number, number];
   lesson?: { id: string; step: number; title: string; goal: string; tool?: string; bite?: { songId: string; fromBar: number; toBar: number } };
 };
 
 /**
- * A finished take (the web's Finished). `interrupted` (D6, AUDIO-DESIGN §4): a call, Siri or the app going to the
- * background ended it at its last whole bar; it is kept only with ≥ 2 whole bars and never counts for the ladder.
+ * A finished take (core Finished). `interrupted` (D6, AUDIO-DESIGN §4): a call, Siri or the app going to the
+ * background ended it at its last whole bar; core keeps it only with ≥ 2 whole bars, and it never counts for the ladder.
  */
-export type Finished = {
-  cues: Cue[]; zero: number; chart: Chart; run: Run; options: PlayOptions;
-  results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats;
-  startedAt: string; durationS: number;
-  interrupted?: { reason?: string };
-};
+export type Finished = CoreFinished<PlayOptions>;
 
-export type Feedback = { lane: string; judgement: Judgement | 'extra'; time: number };
-
-/** The live state a view reads (the web's `player`). Times are Clock ms. */
-export type TakeState = {
+/** The live state a view reads (core's take state; idle before the first take). */
+export type TakeState = Pick<CoreTakeState<PlayOptions>, 'zero' | 'beatMs' | 'results' | 'feedback' | 'auto' | 'extraBeats' | 'cue' | 'finished'> & {
   phase: 'idle' | 'playing' | 'done';
-  chart?: Chart; run?: Run; options?: PlayOptions;
-  zero: number; beatMs: number;
-  results: NoteResult[]; feedback: Feedback[]; auto: boolean[]; extraBeats: number[];
-  cue?: { cue: Cue; at: number };
-  finished?: Finished;
+  chart?: Chart; run?: CoreTakeState['run']; options?: PlayOptions;
 };
 
 /** The take engine as the lesson player uses it (the web's player.ts module API, one instance per screen). */
@@ -80,4 +50,6 @@ export interface TakePort {
    * window has passed: the stream the highway, the sheet and the kit view listen to.
    */
   results: Subscribe<PlayResult>;
+  /** How the last take ended: 'dropped' when an interruption ended it before 2 whole bars (D6). */
+  readonly lastEnd?: 'end' | 'user' | 'interrupted' | 'dropped';
 }
