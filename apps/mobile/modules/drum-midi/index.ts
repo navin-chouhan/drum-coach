@@ -1,25 +1,35 @@
-// Drum Coach Gate 0 MIDI module: CoreMIDI input with host timestamps, Network MIDI, host-time clicks. iOS only;
-// every function degrades gracefully elsewhere (empty lists, false, performance.now(), a rejected promise).
-
-import type { EventSubscription } from 'expo';
+// Drum Coach's MIDI module: CoreMIDI input with host timestamps, delivered in native batches (onPackets), selection by
+// preferred name, Network MIDI and host-time clicks. iOS only; every function degrades gracefully elsewhere (empty
+// lists, false, null, performance.now(), a rejected promise, a no-op unsubscribe).
+// apps/mobile/src/platform/midi.ts wraps this into the app's `MidiPort` (contracts.ts).
 
 import { native } from './src/DrumMidiModule';
-import type { AudioInfo, ClickSchedule, DebugInfo, MidiInput, MidiPacketEvent } from './src/DrumMidi.types';
+import type { AudioInfo, ClickSchedule, DebugInfo, MidiInput, MidiPacket, MidiPacketBatch, MidiSelection } from './src/DrumMidi.types';
 
 export * from './src/DrumMidi.types';
+export { classifyPacket, defaultBatchPolicy, type BatchPolicy, type FlushReason, type PacketKind } from './src/batchPolicy';
 
-/** True when the native module is linked (an iOS development build). */
+/** True when the native module is linked (an iOS development or release build). */
 export const available = native != null;
 
-const none: EventSubscription = { remove() {} };
+const noop = () => {};
 
 /** The one monotonic ms clock (mach host time). Off iOS: performance.now(), which is NOT the same base. */
 export const nowMs = (): number => (native ? native.nowMs() : performance.now());
 
 export const listInputs = (): MidiInput[] => native?.listInputs() ?? [];
 
-/** Listen to one source (by MidiInput.id), or none. Idempotent. Returns whether a source is connected. */
+/** Listen to one source (by MidiInput.id), or none (which also turns auto-select off). Idempotent. Returns whether a source is connected. */
 export const select = (id: string | null): boolean => native?.select(id) ?? false;
+
+/**
+ * With nothing selected, auto-select the first online source whose name starts with one of `names`
+ * (case-insensitive, in order), now and whenever one appears or comes back after a replug. [] turns it off.
+ * Returns whether a source is connected.
+ */
+export const setPreferredNames = (names: string[]): boolean => native?.setPreferredNames(names) ?? false;
+
+export const getSelection = (): MidiSelection | null => native?.getSelection() ?? null;
 
 /** Publishes this device as a Network MIDI session (policy: anyone) so a Mac can send to it (M8). */
 export const setNetworkSessionEnabled = (enabled: boolean): boolean => native?.setNetworkSessionEnabled(enabled) ?? false;
@@ -34,7 +44,19 @@ export const scheduleClicks = (startHostTimeMs: number, bpm: number, count: numb
 
 export const stopClicks = (): void => native?.stopClicks();
 
-export const addMidiListener = (fn: (e: MidiPacketEvent) => void): EventSubscription => native?.addListener('onMidi', fn) ?? none;
+/**
+ * Packets in arrival order, one call per native batch (a note-on is sent at once; other messages within 8 ms,
+ * clock/active-sensing-only batches within 33 ms). Returns an unsubscribe function.
+ */
+export function onPackets(fn: (packets: MidiPacket[], batch: MidiPacketBatch) => void): () => void {
+  if (!native) return noop;
+  const sub = native.addListener('onPackets', batch => fn(batch.packets, batch));
+  return () => sub.remove();
+}
 
-export const addInputsListener = (fn: (inputs: MidiInput[]) => void): EventSubscription =>
-  native?.addListener('onInputsChanged', e => fn(e.inputs)) ?? none;
+/** The source list (and the selection) on every CoreMIDI setup change. Returns an unsubscribe function. */
+export function onInputsChanged(fn: (inputs: MidiInput[], selection: MidiSelection) => void): () => void {
+  if (!native) return noop;
+  const sub = native.addListener('onInputsChanged', e => fn(e.inputs, e.selection));
+  return () => sub.remove();
+}
