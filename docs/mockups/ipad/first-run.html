@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1194">
+<title>First run · iPad mockup</title>
+<link rel="stylesheet" href="ipad.css">
+<style>
+  /* Four steps in one file: #s1 welcome, #s2 plug in, #s3 hit each pad, #s4 latency. No hash = step 1. */
+  .step { display: none; position: absolute; inset: 0; }
+  .step:target { display: block; }
+  .ipad:not(:has(.step:target)) #s1 { display: block; }
+
+  .prog { position: absolute; left: 0; right: 0; top: 36px; display: flex; justify-content: center; gap: 8px; align-items: center; }
+  .prog span { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--label2); padding: 0 12px 0 5px; height: 32px; border-radius: 16px; background: var(--fill2); }
+  .prog span i { width: 22px; height: 22px; border-radius: 11px; display: grid; place-items: center; font-style: normal; font-size: 12px; background: var(--fill); color: var(--label2); }
+  .prog span.done { color: var(--greenInk); } .prog span.done i { background: var(--green); color: #fff; }
+  .prog span.cur { background: var(--tint); color: #fff; } .prog span.cur i { background: rgba(255,255,255,.25); color: #fff; }
+  .prog b { width: 18px; height: 2px; background: var(--sep); }
+  .skip { position: absolute; right: 28px; top: 36px; }
+  .foot { position: absolute; left: 60px; right: 60px; bottom: 70px; display: flex; align-items: center; gap: 12px; }
+  .foot .btn { height: 54px; border-radius: 27px; font-size: 18px; padding: 0 28px; }
+  .foot .sp { flex: 1; }
+  h1.big { font-size: 46px; letter-spacing: -.03em; line-height: 1.05; }
+  .lead { font-size: 20px; color: var(--label2); line-height: 1.4; margin-top: 14px; }
+
+  /* 1 · welcome */
+  .wl { position: absolute; left: 80px; top: 130px; width: 440px; }
+  .wl .avatar { width: 84px; height: 84px; margin-bottom: 26px; } .wl .avatar .ic { width: 46px; height: 46px; }
+  .wl ul { margin: 22px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; font-size: 17px; }
+  .wl li { display: flex; gap: 12px; align-items: center; }
+  .wl li .ic { width: 22px; height: 22px; color: var(--tint); }
+  .wr { position: absolute; right: 80px; top: 130px; width: 520px; display: flex; flex-direction: column; gap: 18px; }
+  .q h3 { font-size: 19px; margin-bottom: 4px; }
+  .q p { font-size: 14px; color: var(--label2); margin-bottom: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { height: 44px; padding: 0 18px; border-radius: 22px; background: #fff; box-shadow: inset 0 0 0 1px var(--sep); display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 500; }
+  .chip.on { background: var(--tint); color: #fff; box-shadow: none; }
+  .chip .ic { width: 15px; height: 15px; }
+  .q .seg { height: 44px; border-radius: 12px; width: 100%; }
+  .q .seg span { flex: 1; font-size: 16px; border-radius: 10px; flex-direction: column; line-height: 1.1; }
+  .q .seg span small { margin: 2px 0 0; font-size: 11px; }
+
+  /* 2 · plug in */
+  .plug { position: absolute; left: 0; right: 0; top: 110px; text-align: center; }
+  .plug p.lead { max-width: 640px; margin: 10px auto 0; }
+  .found { position: absolute; left: 50%; transform: translateX(-50%); top: 506px; width: 620px; }
+  .found .li { min-height: 58px; }
+  .found .sym { background: var(--green); }
+  .tips { position: absolute; left: 50%; transform: translateX(-50%); top: 650px; display: flex; gap: 24px; font-size: 14px; color: var(--label2); white-space: nowrap; }
+  .tips span { display: flex; align-items: center; gap: 6px; }
+  .tips .ic { width: 16px; height: 16px; }
+
+  /* 3 · hit each pad */
+  .padL { position: absolute; left: 40px; top: 96px; width: 700px; height: 600px; text-align: center; }
+  .padL .k { font-size: 15px; font-weight: 700; color: var(--tint); letter-spacing: .04em; text-transform: uppercase; }
+  .padL h1 { font-size: 76px; letter-spacing: -.035em; line-height: 1; margin: 4px 0 6px; }
+  .padL p { font-size: 18px; color: var(--label2); }
+  .toast { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; height: 38px; padding: 0 16px; border-radius: 19px; background: var(--orangeSoft); color: var(--orangeInk); font-weight: 600; font-size: 15px; }
+  .sent { position: absolute; right: 40px; top: 96px; width: 372px; }
+  .sent .li { min-height: 40px; font-size: 15px; padding: 4px 14px; }
+  .sent .li .val { font-variant-numeric: tabular-nums; }
+  .sent .li.ok .ic { color: var(--green); width: 16px; height: 16px; }
+  .sent .li.now { background: var(--yellowSoft); font-weight: 700; }
+
+  /* 4 · latency */
+  .lat { position: absolute; left: 0; right: 0; top: 110px; text-align: center; }
+  .beat { position: absolute; left: 50%; top: 290px; transform: translateX(-50%); width: 200px; height: 200px; border-radius: 50%; background: var(--snare); display: grid; place-items: center; color: #fff;
+    box-shadow: 0 0 0 16px rgba(88, 86, 214, .14), 0 0 0 34px rgba(88, 86, 214, .07); font-size: 92px; font-weight: 800; }
+  .taps { position: absolute; left: 50%; transform: translateX(-50%); top: 540px; display: flex; gap: 10px; }
+  .taps i { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--label3); }
+  .taps i.on { background: var(--snare); box-shadow: none; }
+  .readout { position: absolute; left: 50%; transform: translateX(-50%); top: 584px; width: 720px; display: flex; gap: 12px; }
+  .readout .card { flex: 1; padding: 12px 16px; }
+  .readout b { font-size: 30px; letter-spacing: -.02em; display: block; line-height: 1.1; }
+  .readout span { white-space: nowrap; font-size: 14px; color: var(--label2); }
+</style>
+</head>
+<body>
+<div class="ipad">
+  <div class="status"><span>18:30</span><span class="date">Mon 2 Nov</span><span class="sp"></span><span class="ic i-wifi"></span><span>100%</span><span class="batt"><i style="width:100%"></i></span></div>
+
+  <!-- 1 · Welcome and the setup questions -->
+  <section class="step" id="s1">
+    <div class="prog"><span class="cur"><i>1</i>Welcome</span><b></b><span><i>2</i>Plug in</span><b></b><span><i>3</i>Your pads</span><b></b><span><i>4</i>Latency</span></div>
+    <div class="wl">
+      <div class="avatar"><span class="ic i-drum"></span></div>
+      <h1 class="big">Your drum teacher, at the kit.</h1>
+      <p class="lead">It listens to your e-Drum, shows what to play, scores every hit and moves the tempo for you.</p>
+      <ul>
+        <li><span class="ic i-map"></span>A daily set: 15–45 minutes, planned for you</li>
+        <li><span class="ic i-sticks"></span>Sticks in hand: the kit drives the app</li>
+        <li><span class="ic i-bubble"></span>A coach that writes your next lesson</li>
+      </ul>
+    </div>
+    <div class="wr">
+      <div class="q"><h3>What do you want to play?</h3><p>Lessons in other styles stay hidden. Pick none if you’re not sure yet.</p>
+        <div class="chips"><span class="chip on"><span class="ic i-check"></span>Rock / pop</span><span class="chip">Funk / R&amp;B</span><span class="chip">Jazz</span><span class="chip">Latin</span><span class="chip">Not sure yet</span></div></div>
+      <div class="q"><h3>Minutes a day</h3><p>Short and daily beats long and weekly.</p>
+        <span class="seg"><span>15</span><span class="on">25<small>recommended</small></span><span>35</span><span>45</span></span></div>
+      <div class="q"><h3>Played drums before?</h3><p>If you have, one take per stage finds where you start.</p>
+        <span class="seg"><span class="on">New to drums</span><span>I’ve played before</span></span></div>
+    </div>
+    <div class="foot"><span class="sp"></span><span class="btn fill">Continue<span class="ic i-chevr" style="width:16px;height:16px"></span></span></div>
+  </section>
+
+  <!-- 2 · Plug in the kit -->
+  <section class="step" id="s2">
+    <div class="prog"><span class="done"><i>✓</i>Welcome</span><b></b><span class="cur"><i>2</i>Plug in</span><b></b><span><i>3</i>Your pads</span><b></b><span><i>4</i>Latency</span></div>
+    <div class="plug">
+      <h1 class="big">Plug in your kit</h1>
+      <p class="lead">Connect the drum module’s USB port to the iPad’s USB-C port. Then hit any pad.</p>
+      <svg width="760" height="230" viewBox="0 0 760 230" style="margin-top:22px" font-family="Inter, sans-serif">
+        <!-- the module -->
+        <rect x="40" y="58" width="220" height="120" rx="18" fill="#2C2C2E"/>
+        <rect x="58" y="76" width="96" height="40" rx="6" fill="#0FA3B1" opacity=".85"/><text x="106" y="102" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">VOICE</text>
+        <circle cx="200" cy="96" r="20" fill="#48484A"/><circle cx="200" cy="96" r="8" fill="#8E8E93"/>
+        <g fill="#636366"><rect x="58" y="132" width="26" height="14" rx="4"/><rect x="92" y="132" width="26" height="14" rx="4"/><rect x="126" y="132" width="26" height="14" rx="4"/></g>
+        <text x="150" y="208" text-anchor="middle" font-size="15" font-weight="600" fill="rgba(60,60,67,.6)">drum module · USB</text>
+        <rect x="256" y="140" width="16" height="22" rx="3" fill="#8E8E93"/>
+        <!-- the cable -->
+        <path d="M272 151 C 360 151, 380 80, 470 92 S 520 151, 536 151" fill="none" stroke="#1C1C1E" stroke-width="7" stroke-linecap="round"/>
+        <!-- the iPad in landscape -->
+        <rect x="536" y="40" width="200" height="146" rx="16" fill="#1C1C1E"/><rect x="546" y="50" width="180" height="126" rx="9" fill="#F2F2F7"/>
+        <rect x="556" y="60" width="44" height="106" rx="7" fill="#fff"/><rect x="608" y="60" width="108" height="50" rx="7" fill="#007AFF"/><rect x="608" y="116" width="52" height="50" rx="7" fill="#fff"/><rect x="664" y="116" width="52" height="50" rx="7" fill="#fff"/>
+        <rect x="528" y="142" width="10" height="20" rx="3" fill="#8E8E93"/>
+        <text x="636" y="208" text-anchor="middle" font-size="15" font-weight="600" fill="rgba(60,60,67,.6)">iPad · USB-C</text>
+      </svg>
+    </div>
+    <div class="found group">
+      <div class="li withSym"><span class="sym"><span class="ic i-check"></span></span><span class="grow"><b style="font-weight:600">e-Drum found</b><small>USB · Medeli · MIDI clock filtered</small></span><span class="val">connected</span></div>
+      <div class="li withSym"><span class="sym" style="background:var(--snare)"><span class="ic i-drum"></span></span><span class="grow"><b style="font-weight:600">You hit the snare</b><small>note 38 · velocity 92</small></span><span class="val" style="color:var(--greenInk);font-weight:600">it works</span></div>
+    </div>
+    <div class="tips"><span><span class="ic i-cable"></span>USB-C to USB-B cable, or a hub if you want to charge too</span><span><span class="ic i-info"></span>Other music apps can hold the kit: close them</span></div>
+    <div class="foot"><span class="btn"><span class="ic i-hand"></span>No kit with me: use touch pads</span><span class="sp"></span><span class="btn fill">Continue<span class="ic i-chevr" style="width:16px;height:16px"></span></span></div>
+  </section>
+
+  <!-- 3 · Hit each pad once (readable from the throne; hitting the pad is the answer) -->
+  <section class="step" id="s3">
+    <div class="prog"><span class="done"><i>✓</i>Welcome</span><b></b><span class="done"><i>✓</i>Plug in</span><b></b><span class="cur"><i>3</i>Your pads</span><b></b><span><i>4</i>Latency</span></div>
+    <div class="padL">
+      <div class="k">Pad 6 of 10</div>
+      <h1>Hit TOM 1</h1>
+      <p>The small tom on the left, above the snare.</p>
+      <span class="toast"><span class="ic i-info" style="width:16px;height:16px"></span>That was tom 2. Hit tom 1.</span>
+      <div id="kit" style="margin-top:6px"></div>
+    </div>
+    <div class="sent">
+      <div class="groupHead">What each pad sent</div>
+      <div class="group">
+        <div class="li ok"><span class="ic i-check"></span><span class="grow">Kick</span><span class="val">36</span></div>
+        <div class="li ok"><span class="ic i-check"></span><span class="grow">Snare</span><span class="val">38</span></div>
+        <div class="li ok"><span class="ic i-check"></span><span class="grow">Hi-hat (open)</span><span class="val">46</span></div>
+        <div class="li ok"><span class="ic i-check"></span><span class="grow">Hi-hat pedal</span><span class="val">44</span></div>
+        <div class="li ok"><span class="ic i-check"></span><span class="grow">Hi-hat, pedal down</span><span class="val">42</span></div>
+        <div class="li now"><span class="spinner" style="width:16px;height:16px"></span><span class="grow">Tom 1</span><span class="val">…</span></div>
+        <div class="li"><span style="width:16px"></span><span class="grow">Tom 2</span><span class="val"></span></div>
+        <div class="li"><span style="width:16px"></span><span class="grow">Floor tom</span><span class="val"></span></div>
+        <div class="li"><span style="width:16px"></span><span class="grow">Crash</span><span class="val"></span></div>
+        <div class="li"><span style="width:16px"></span><span class="grow">Ride</span><span class="val"></span></div>
+      </div>
+      <div class="groupFoot">If two pads send the same note, it stops and shows how to fix it on the module (VOICE, then PAGE to Nxx).</div>
+    </div>
+    <div class="foot"><span class="btn"><span class="ic i-chevl" style="width:15px;height:15px"></span>Back</span><span class="btn">Skip this pad</span><span class="sp"></span><span style="display:flex;align-items:center;gap:8px;font-size:16px;color:var(--label2);font-weight:500"><span class="ic i-sticks" style="color:var(--tint)"></span>Hitting the pad is the answer: no need to touch the screen</span></div>
+  </section>
+
+  <!-- 4 · Latency: tap with the click -->
+  <section class="step" id="s4">
+    <div class="prog"><span class="done"><i>✓</i>Welcome</span><b></b><span class="done"><i>✓</i>Plug in</span><b></b><span class="done"><i>✓</i>Your pads</span><b></b><span class="cur"><i>4</i>Latency</span></div>
+    <div class="lat">
+      <h1 class="big">Hit the snare with the click</h1>
+      <p class="lead">16 hits. The app learns how late your speakers are and corrects every score.</p>
+      <div style="margin-top:12px"><span class="pill tint"><span class="ic i-speaker"></span>Listening through: iPad speakers</span></div>
+    </div>
+    <div class="beat">3</div>
+    <div class="taps"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="readout">
+      <div class="card"><b class="num">11 <small style="font-size:16px;color:var(--label2)">of 16</small></b><span>hits so far</span></div>
+      <div class="card"><b class="num">31 ms</b><span>after the click, on average</span></div>
+      <div class="card"><b class="num">±6 ms</b><span>steady: a good measurement</span></div>
+    </div>
+    <div class="foot"><span class="btn"><span class="ic i-redo" style="width:16px;height:16px"></span>Start again</span><span class="sp"></span><span class="btn fill" style="opacity:.4">Done</span></div>
+  </section>
+
+  <div class="home"></div>
+</div>
+<script>
+// Step 3's kit: done pads green, the one to hit yellow and big, the rest waiting.
+(function () {
+  const done = ['kick', 'snare', 'hihat'], now = 'tom1';
+  const P = [['crash', 'Crash', 150, 70, 52], ['hihat', 'Hi-hat', 110, 196, 60], ['tom1', 'Tom 1', 300, 92, 62], ['tom2', 'Tom 2', 420, 92, 48],
+    ['ride', 'Ride', 580, 92, 64], ['snare', 'Snare', 260, 250, 64], ['floor', 'Floor tom', 500, 250, 64]];
+  let s = `<svg width="700" height="370" viewBox="0 0 700 370" font-family="Inter, -apple-system, sans-serif">`;
+  for (const [id, name, cx, cy, r] of P) {
+    const d = done.includes(id), n = id === now;
+    if (n) s += `<circle cx="${cx}" cy="${cy}" r="${r + 16}" fill="rgba(255,204,0,.25)"/><circle cx="${cx}" cy="${cy}" r="${r + 30}" fill="rgba(255,204,0,.1)"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${n ? '#FFCC00' : d ? '#34C759' : '#E5E5EA'}"/>`;
+    s += `<text x="${cx}" y="${cy + 7}" text-anchor="middle" font-size="${n ? 22 : 17}" font-weight="700" fill="${n ? '#2A1F00' : d ? '#fff' : 'rgba(60,60,67,.55)'}">${d ? '✓ ' : ''}${name}</text>`;
+  }
+  s += `<rect x="330" y="290" width="110" height="64" rx="16" fill="#34C759"/><text x="385" y="328" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">✓ Kick</text>`;
+  s += `<rect x="40" y="300" width="150" height="40" rx="12" fill="#34C759"/><text x="115" y="326" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">✓ Hi-hat pedal</text>`;
+  document.getElementById('kit').innerHTML = s + `</svg>`;
+})();
+</script>
+</body>
+</html>
