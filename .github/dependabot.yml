@@ -18,6 +18,33 @@ updates:
         dependency-type: production
         update-types: [minor, patch]
 
+  # The iPad app: its own lockfile. An Expo SDK upgrade (expo, react-native, react together) is done by hand, from
+  # the SDK's bundledNativeModules.json; CI's `npm run check:versions` catches a native module the SDK doesn't name.
+  - package-ecosystem: npm
+    directory: /apps/mobile
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: expo
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom # moves with react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-native # 0.x: a minor (0.88 → 0.89) is a new React Native, i.e. a new SDK
+        update-types: [version-update:semver-major, version-update:semver-minor]
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      dependencies:
+        dependency-type: production
+        update-types: [minor, patch]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
