@@ -3,7 +3,7 @@
 // TypeScript (Vitest-tested); the screen picks files with expo-document-picker.
 import { CHART_DRUMS } from '@drum-coach/core/engine/chart';
 import { midiToChart, type ImportResult } from '@drum-coach/core/engine/midiImport';
-import type { StoredChart } from './songsRepo';
+import type { StoredChart } from '../../data/songs';
 
 export type ParsedImport = ImportResult & { file: string };
 

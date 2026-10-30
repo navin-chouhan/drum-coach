@@ -2,14 +2,12 @@
 // the server's tables and shapes (server/db.ts, server/index.ts: /api/ytsongs, /api/ytgrids, /api/charts), so the
 // screens port from the web's api.ts and charts.ts unchanged.
 //
-// The tables arrive with schema migration 2 (SONGS_MIGRATION below), which the orchestrator adds to
-// src/data/schema.ts MIGRATIONS (A8 may not edit src/data). Until then `songsTablesReady` is false and the screens
-// say so.
+// The tables are schema migration 2 (SONGS_MIGRATION below, MIGRATIONS[1] in schema.ts). A8 owns this file.
 import { ChartSchema, type Chart } from '@drum-coach/core/engine/chart';
 import { GridSchema, YtSongCreateSchema, YtSongPatchSchema, type Grid, type YtSong } from '@drum-coach/core/youtube/schemas';
-import type { SqlDb } from '../../data/sql';
+import type { SqlDb } from './sql';
 
-/** Migration 2 for src/data/schema.ts: server/db.ts's charts, yt_songs (with verified_at) and yt_grids, unchanged. */
+/** Migration 2 (schema.ts): server/db.ts's charts, yt_songs (with verified_at) and yt_grids, unchanged. */
 export const SONGS_MIGRATION = `CREATE TABLE charts (
     id TEXT PRIMARY KEY, json TEXT NOT NULL, source TEXT NOT NULL,
     audio_file TEXT, sync_offset_ms REAL NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')));

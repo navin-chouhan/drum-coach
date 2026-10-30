@@ -3,7 +3,8 @@ import type { YtSong } from '@drum-coach/core/youtube/schemas';
 import { describe, expect, it } from 'vitest';
 import { openTestDb } from '../../data/nodeSqlite.testutil';
 import { RunInputSchema } from '../../data/runs';
-import { migrate } from '../../data/schema';
+import { migrate, MIGRATIONS } from '../../data/schema';
+import { createDataStore } from '../../data/store';
 import type { ApiFailure, HomeServer } from '../../platform/contracts';
 import { chartToSave, importSummary, libraryRow, parseMidiFile } from './importModel';
 import {
@@ -14,17 +15,29 @@ import { findVersions, searchYt, songsFailureText } from './songsApi';
 import {
   barsParam, concert, initialMode, modeTabs, searchAction, shownMode, songBarCount, songHref, songRow, startConcert, tempoLine, versionButtons,
 } from './songsModel';
-import { createChartsRepo, createSongsRepo, songsTablesReady, SONGS_MIGRATION, SongInputError } from './songsRepo';
+import { createChartsRepo, createSongsRepo, songsTablesReady, SONGS_MIGRATION, SongInputError } from '../../data/songs';
 
 const ID = 'dQw4w9WgXcQ', DL = 'abcdefghijk';
 function db() {
   const d = openTestDb();
   migrate(d);
-  expect(songsTablesReady(d)).toBe(false);
-  d.execSync(SONGS_MIGRATION);
   expect(songsTablesReady(d)).toBe(true);
   return d;
 }
+
+describe('migration 2 (songs)', () => {
+  it('takes a version 1 database to 2, keeping its rows', () => {
+    const d = openTestDb();
+    d.execSync(MIGRATIONS[0]);
+    d.execSync('PRAGMA user_version = 1');
+    d.runSync('INSERT INTO kv (key, value) VALUES (?, ?)', ['a', '1']);
+    expect(songsTablesReady(d)).toBe(false);
+    expect(migrate(d)).toEqual({ from: 1, to: 2 });
+    expect(songsTablesReady(d)).toBe(true);
+    expect(d.getFirstSync<{ value: string }>('SELECT value FROM kv WHERE key = ?', ['a'])?.value).toBe('1');
+    expect(MIGRATIONS[1]).toBe(SONGS_MIGRATION);
+  });
+});
 const song = (o: Partial<YtSong> = {}): YtSong => ({
   id: `yt-${ID}`, title: 'Billie Jean', originalId: ID, drumlessId: null, coverId: null, timeSignature: [4, 4], notes: [], grids: {}, verifiedAt: null, ...o,
 });
@@ -234,5 +247,18 @@ describe('Import files', () => {
   it('library rows', () => {
     const d = libraryRow({ id: 'a', title: 'A', bpm: 90, bars: 8, timeSignature: [4, 4], notes: [], source: 'ai', hasAudio: true, syncOffsetMs: 0 });
     expect(d.detail).toBe('coach exercise · 90 BPM · 8 bars · 🔊 audio');
+  });
+});
+
+describe('storage: songs and charts in the coach context', () => {
+  it('sends the songs and the coach exercises (not imports, no file paths)', async () => {
+    const st = createDataStore(() => openTestDb(), () => {});
+    st.songs!.add({ title: 'S', originalId: ID });
+    st.charts!.save({ title: 'Mine', bpm: 90, timeSignature: [4, 4], bars: 1, notes: [{ t: 0, drum: 'kick' }] }, 'import');
+    const ai = st.charts!.save({ title: 'Drill', bpm: 90, timeSignature: [4, 4], bars: 1, notes: [{ t: 0, drum: 'snare' }] }, 'ai');
+    const src = await st.contextSource();
+    expect(src.songs).toHaveLength(1);
+    expect(src.charts).toEqual([expect.objectContaining({ id: ai.id, title: 'Drill', kind: 'exercise' })]);
+    expect(src.charts![0]).not.toHaveProperty('source');
   });
 });
