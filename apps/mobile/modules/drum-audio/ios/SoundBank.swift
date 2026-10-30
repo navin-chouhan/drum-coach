@@ -6,7 +6,13 @@ import Foundation
 /// a scaled copy, made on first use and cached. Thread-safe (its own lock); never touched by the render thread.
 final class SoundBank {
   private let lock = NSLock()
-  private(set) var sampleRate: Double = 0
+  private var rate: Double = 0
+  /// The rate the buffers are rendered at (0 before the first prepare).
+  var sampleRate: Double {
+    lock.lock()
+    defer { lock.unlock() }
+    return rate
+  }
   private var format: AVAudioFormat?
   private var base: [Int: [Float]] = [:]
   private var onsetMs: [Int: Double] = [:]
@@ -25,22 +31,22 @@ final class SoundBank {
 
   /// Renders the fixed sounds for `rate` (a no-op if already at it). A new rate also forgets the words: the app calls
   /// prepareWords after start() (the take does it before every take).
-  func prepare(sampleRate rate: Double) throws {
+  func prepare(sampleRate newRate: Double) throws {
     lock.lock()
     defer { lock.unlock() }
-    if abs(rate - sampleRate) < 0.5, format != nil { return }
-    guard let mono = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 1) else {
-      throw DrumAudioError("no mono format at \(rate) Hz")
+    if abs(newRate - rate) < 0.5, format != nil { return }
+    guard let mono = AVAudioFormat(standardFormatWithSampleRate: newRate, channels: 1) else {
+      throw DrumAudioError("no mono format at \(newRate) Hz")
     }
     format = mono
-    sampleRate = rate
+    rate = newRate
     base = [:]
     onsetMs = [:]
     cache = [:]
     wordIndex = [:]
     nextWord = SoundTable.firstWord
-    for level in 0...2 { base[level] = Synth.click(level: level, sampleRate: rate) }
-    for (i, pad) in SoundTable.pads.enumerated() { base[SoundTable.firstDrum + i] = Synth.drum(pad, sampleRate: rate) }
+    for level in 0...2 { base[level] = Synth.click(level: level, sampleRate: newRate) }
+    for (i, pad) in SoundTable.pads.enumerated() { base[SoundTable.firstDrum + i] = Synth.drum(pad, sampleRate: newRate) }
     // Warm the usual layers so the first take and the first touch don't render on demand.
     for level in 0...2 { _ = bufferLocked(level, step: AudioPolicy.GainSteps.click) }
     for i in SoundTable.pads.indices { _ = bufferLocked(SoundTable.firstDrum + i, step: AudioPolicy.GainSteps.drum) }
@@ -106,13 +112,13 @@ final class SoundBank {
   }
 
   /// Adds a rendered word (samples at `rate`; ignored if the bank has moved to another rate meanwhile).
-  func addWord(_ key: String, samples: [Float], rate: Double) -> (index: Int, onsetMs: Double)? {
-    let trimmed = Onset.trimTail(samples, sampleRate: rate)
+  func addWord(_ key: String, samples: [Float], rate wordRate: Double) -> (index: Int, onsetMs: Double)? {
+    let trimmed = Onset.trimTail(samples, sampleRate: wordRate)
     guard !trimmed.isEmpty else { return nil }
-    let onset = Onset.seconds(trimmed, sampleRate: rate) * 1000
+    let onset = Onset.seconds(trimmed, sampleRate: wordRate) * 1000
     lock.lock()
     defer { lock.unlock() }
-    guard abs(rate - sampleRate) < 0.5 else { return nil }
+    guard abs(wordRate - rate) < 0.5 else { return nil }
     if let existing = wordIndex[key] { return (existing, onsetMs[existing] ?? 0) }
     let index = nextWord
     nextWord += 1

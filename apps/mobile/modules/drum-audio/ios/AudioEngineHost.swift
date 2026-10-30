@@ -284,6 +284,10 @@ final class AudioEngineHost {
   private func startTimer() {
     dispatchPrecondition(condition: .onQueue(loopQueue))
     if timer != nil { return }
+    lock.lock()
+    lastTickMs = 0 // the loop-gap stats start over with each run
+    maxTickGapMs = 0
+    lock.unlock()
     let t = DispatchSource.makeTimerSource(flags: [.strict], queue: loopQueue)
     t.schedule(deadline: .now(), repeating: .milliseconds(Int(policy.tickMs)), leeway: .milliseconds(1))
     t.setEventHandler { [weak self] in self?.tick() }
