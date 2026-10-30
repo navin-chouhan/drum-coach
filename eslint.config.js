@@ -14,7 +14,7 @@ const UNSAFE = [
 ];
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'prototype', 'data', '.claude', 'public', 'spikes'] },
+  { ignores: ['dist', 'coverage', 'prototype', 'data', '.claude', 'public', 'spikes', 'apps/mobile'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   reactHooks.configs.flat.recommended,

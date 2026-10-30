@@ -19,6 +19,9 @@
     "hooks:install": "git config core.hooksPath .githooks && echo \"Git hooks on: secret check before each commit, npm run check before each push.\""
   },
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
     "@fastify/rate-limit": "^11.2.1",

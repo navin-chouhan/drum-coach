@@ -14,7 +14,7 @@ session. The decisions it needs are D1–D5, below.
 | Phase | Agents | Status | Gate |
 |---|---|---|---|
 | 0 | A0 Recon, S1 MIDI spike | **built; waiting for the owner's device run** | GATE0.md GO + owner decisions D1–D5 |
-| 1 | A1 core, A2 Expo shell, A3 MIDI module, A9 harness skeleton | not started (waits for the gate) | T0 green; core tests green; app on simulator + iPad; kit logs hits |
+| 1 | A1 core, A2 Expo shell, A3 MIDI module, A9 harness skeleton | **in progress** (started 2026-10-30 on the owner's go) | T0 green; core tests green; app on simulator + iPad; kit logs hits |
 | 2 | A4 audio/clock, A5 data/backend, A6 play surfaces (+A7 mockups) | not started | Lesson plays + scores + saves on iPad, offline, T6 timing |
 | 3 | A7 screens, A6 rest | not started | All v1 screens on iPad landscape, with touch pads and kit |
 | 3b | A8 Songs (inline YouTube) | not started (the phase right after v1, D5) | Songs on iPad landscape |
@@ -24,7 +24,12 @@ session. The decisions it needs are D1–D5, below.
 | ID | Status | Owns (exclusive) | Brief | Output |
 |---|---|---|---|---|
 | A0 Recon | **done, merged** (17ff0c6) | `docs/mobile/RECON.md` only (read-only otherwise) | [briefs/A0.md](briefs/A0.md) | RECON.md |
-| S1 MIDI spike | **done, merged** (47c30c0); verdict PENDING the device run | `spikes/midi-probe/**`, `docs/mobile/GATE0.md`, `docs/mobile/GATE0-CHECKLIST.md` | [briefs/S1.md](briefs/S1.md) | GATE0.md, probe app |
+| S1 MIDI spike | **done, merged** (47c30c0); device run: step 0, M2, M3 pass; M4–M6, M8 open | `spikes/midi-probe/**`, `docs/mobile/GATE0.md`, `docs/mobile/GATE0-CHECKLIST.md` | [briefs/S1.md](briefs/S1.md) | GATE0.md, probe app |
+
+| A1 Core extraction | running | `packages/core/**` (not `platform.ts`/`package.json`), shims at old paths, delegated minimal edits to root tsconfig/eslint/vitest | [briefs/A1.md](briefs/A1.md) | `@drum-coach/core` |
+| A2 Expo shell | running | `apps/mobile/**` except A3/A9/contracts paths; `scripts/check-expo-versions.mjs` | [briefs/A2.md](briefs/A2.md) | the app shell |
+| A3 MIDI module | running, part 1 (native) | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
+| A9 Test harness | running | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
@@ -35,7 +40,8 @@ results.
 |---|---|---|---|
 | D0 | Devices | — | **iPad only, landscape locked** (`ios.isTabletOnly`). Layouts are width-based so iPhone can be added later. iPhone joins Android under "later". M7 skipped. |
 | Dev loop | Where builds and tests run | — | **Build + install on the Mac; Metro and tests on Linux** (owner). Rebuild on the Mac only for native changes or every 7 days. M1 and M8 are done on the Mac during the install session. |
-| D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | — (waits for the run) |
+| D1 | Go / no-go on Gate 0 | after the device run ([GATE0-CHECKLIST.md](GATE0-CHECKLIST.md)) | **Go (owner, 2026-10-30)**, with M4–M6 and M8 still open. They run in parallel with Phase 1; **M5 (jitter) must pass before A4 starts in Phase 2.** |
+| Layout | apps/mobile in npm workspaces? | — | **No** (orchestrator): React Native needs the exact React version Expo bundles (19.3.0), and the web uses ^19.3.1. Root workspaces = `packages/*` only. `apps/mobile` is its own npm project and uses `file:../../packages/core` + Metro watchFolders. Shims and server imports use relative `.ts` paths (Node type stripping refuses `.ts` in node_modules). |
 | D2 | Where the coach runs | (a) home server over LAN/Tailscale with a token | **Both, server first**: the home server (Claude subscription via the CLI) when reachable, else an optional Anthropic API key in the Keychain. The subscription can't be used from the iPad directly (Anthropic allows subscription logins only in its own apps; no CLI on iOS). The iPad sends compact context with each coach request. |
 | D3 | Data | one-time import of `data/`, then the device is the source of truth | **Start fresh on the iPad.** No import tool. `data/` untouched. No sync. |
 | D4 | Mockups | list + designs before A6/A7 build screens | **Fresh iPad-native designs** (iPad conventions: sidebar, sheets, native controls) at 1194×834 for: Journey, lesson player (take + results), Practice, Progress, Setup (kit, pads, latency, coach), coach panel, touch pad kit, first run. The owner approves them before screens are built. |
@@ -81,3 +87,7 @@ results.
 - 2026-10-28: Device run day 1 (owner, MacBook Air on macOS 27.2 with Xcode 27.1; iPad M1 on iPadOS 26.5). Step 0 passes
   after the expo 58.0.20 fix. M2 passes (every note, choke, note-off, bounce filter, clock filtering). M3 passes
   (all changes in under 2 s). M4 is in progress; M5, M6 and M8 are still to do. Resume next session.
+- 2026-10-30: Owner: start Phase 1. Orchestrator: root workspaces `packages/*`, `packages/core` skeleton +
+  `platform.ts` contract, `apps/mobile/src/platform/contracts.ts` (MidiPort, KeepAwake, Capabilities), root lint and
+  Vitest ignore `apps/`. T0 unchanged (349/349, build OK, lint 310). Briefs A1, A2, A3, A9 written. All four started
+  in parallel. A3 does part 1 (native) first; part 2 (TS glue + debug screen) after A1 and A2 merge.
