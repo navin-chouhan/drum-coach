@@ -3,7 +3,10 @@ import type { ChartDrum } from '../engine/chart';
 import { DEFAULT_NOTE_MAP } from '../engine/kit';
 import { emulateKit, MPS150, playNotes, seededRandom, STEADY_PLAYER, type KitProfile } from '../engine/kitEmulator';
 import { scoreRun, type PlayedHit } from '../engine/scoring';
-import { onHit, receiveMidi } from './hits';
+import { createHitBus } from './hits.ts';
+
+// One bus for the file, like the web's singleton, with the default note map and no pad calibration.
+const { onHit, receiveMidi } = createHitBus({ now: () => 0, getNoteMap: () => DEFAULT_NOTE_MAP, getPadCal: () => ({}) });
 
 const CLEAN: KitProfile = { retrigger: {}, crosstalk: 0, usbJitterMs: 0, clockBpm: 120 };
 let base = 100_000; // each take later than the last: the bounce filter remembers the previous take's notes

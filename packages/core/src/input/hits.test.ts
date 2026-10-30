@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { emitNote, onHit } from './hits';
+import { DEFAULT_NOTE_MAP } from '../engine/kit.ts';
+import type { KitCalibration } from '../engine/padCal.ts';
+import { createHitBus } from './hits.ts';
+
+// One bus for the file, like the web's singleton: the default note map, a calibration the N9 test sets.
+let padCal: KitCalibration = {};
+const setPadCal = (c: KitCalibration) => { padCal = c; };
+const { emitNote, onHit } = createHitBus({ now: () => 0, getNoteMap: () => DEFAULT_NOTE_MAP, getPadCal: () => padCal });
 
 describe('stick bounces', () => {
   it('drops a softer repeat of the same note within 60 ms, keeps a flam and real strokes', () => {
@@ -47,15 +54,14 @@ describe('stick bounces', () => {
 });
 
 describe('per-pad calibration (N9)', () => {
-  it('a calibrated pad uses its own retrigger window and reports velocity on the common scale', async () => {
-    const { setPadCal } = await import('./store');
-    setPadCal({ snare: { soft: 10, loud: 100, bounceMs: 80, bounceRatio: 0.8 } }, false);
+  it('a calibrated pad uses its own retrigger window and reports velocity on the common scale', () => {
+    setPadCal({ snare: { soft: 10, loud: 100, bounceMs: 80, bounceRatio: 0.8 } });
     const got: number[] = [];
     const off = onHit(h => got.push(h.velocity));
     emitNote(38, 100, 50000); emitNote(38, 70, 50075); // a 75 ms retrigger at 70%: this pad's own filter drops it
     emitNote(38, 10, 51000);
     off();
-    setPadCal({}, false);
+    setPadCal({});
     expect(got).toEqual([120, 30]);
   });
 });
