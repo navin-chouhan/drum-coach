@@ -24,6 +24,18 @@ describe('layoutMeasures', () => {
     expect(brief(m.hands).slice(0, 3)).toEqual(['snare:1t', 'snare:1t', 'snare:1t']);
     expect(layoutMeasures(pattern({ hihat: 'xxxxxx' }, 2), 3)[0].hands).toHaveLength(6);
   });
+  it('a voice with no notes in a triplet beat gets one quarter rest on the beat; the other voice keeps its triplets', () => {
+    // hands play triplets on beat 1, feet play only on beat 2: the feet's beat 1 is empty while the beat is a triplet beat
+    const [m] = layoutMeasures([...pattern({ snare: 'xxx' }, 3), { t: 1, drum: 'kick' as const }], 4);
+    expect(brief(m.hands).slice(0, 3)).toEqual(['snare:1t', 'snare:1t', 'snare:1t']);
+    expect(brief(m.feet)).toEqual(['rest:4', 'kick:4', 'rest:4', 'rest:4']);
+    expect(m.feet.map(e => e.beat)).toEqual([0, 1, 2, 3]);
+    expect(durationOf(m.feet[0])).toEqual({ duration: 'q', dots: 0, inTuplet: false }); // a quarter rest, not a dotted 8th
+    // the empty hands beat of a feet-only triplet beat, likewise
+    const [f] = layoutMeasures(pattern({ kick: 'x.x' }, 3), 4);
+    expect(brief(f.feet).slice(0, 2)).toEqual(['kick:2t', 'kick:1t']);
+    expect(durationOf(f.hands[0])).toEqual({ duration: 'q', dots: 0, inTuplet: false });
+  });
   it('one measure per bar up to the last note, or the requested range', () => {
     const notes = [{ t: 0, drum: 'kick' as const }, { t: 9, drum: 'kick' as const }];
     expect(layoutMeasures(notes, 4).map(m => m.index)).toEqual([1, 2, 3]);
