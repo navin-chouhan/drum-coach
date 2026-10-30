@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1194">
+<title>Touch pads · iPad mockup</title>
+<link rel="stylesheet" href="ipad.css">
+<style>
+  /* No kit connected: the same lesson take, with a multi-touch kit laid out as you'd sit at the MPS-150. */
+  .banner { position: absolute; left: 24px; right: 24px; top: 30px; height: 52px; border-radius: 16px; background: var(--orangeSoft); display: flex; align-items: center; gap: 12px; padding: 0 8px 0 16px; }
+  .banner .ic { width: 22px; height: 22px; color: var(--orange); }
+  .banner b { font-size: 16px; }
+  .banner span.t { font-size: 15px; color: var(--label2); }
+  .banner .btn { margin-left: auto; background: #fff; }
+  .top { position: absolute; left: 24px; right: 24px; top: 92px; height: 50px; display: flex; align-items: center; gap: 14px; }
+  .title b { font-size: 19px; letter-spacing: -.01em; }
+  .title span { font-size: 14px; color: var(--label2); margin-left: 6px; }
+  .sp { flex: 1; }
+  .tempo { font-size: 34px; font-weight: 700; letter-spacing: -.03em; }
+  .tempo small { font-size: 14px; color: var(--label2); font-weight: 600; margin-left: 3px; letter-spacing: 0; }
+  .barNow { font-size: 15px; font-weight: 600; color: var(--label2); }
+  .barNow b { color: var(--label); font-size: 19px; }
+  .panel svg { display: block; }
+  .panel { position: absolute; left: 24px; right: 24px; top: 150px; height: 178px; background: #fff; border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; }
+  .pads { position: absolute; left: 0; right: 0; top: 338px; height: 436px; }
+  .padsCap { position: absolute; left: 0; right: 0; top: 338px; text-align: center; font-size: 14px; color: var(--label2); font-weight: 600; z-index: 2; }
+</style>
+</head>
+<body>
+<div class="ipad">
+  <div class="status"><span>12:20</span><span class="date">Sat 31 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>64%</span><span class="batt"><i style="width:62%"></i></span></div>
+
+  <div class="banner">
+    <span class="ic i-hand"></span><b>No kit connected: touch pads are on.</b><span class="t">Plug the e-Drum into the USB-C port and the kit takes over.</span>
+    <span class="btn sm"><span class="ic i-cable"></span>Kit help</span>
+  </div>
+
+  <header class="top">
+    <div class="title"><b>The money beat</b><span>step 3 · + snare</span></div>
+    <span class="barNow"><b>Bar 2</b> of 4</span>
+    <span class="sp"></span>
+    <span class="pill">touch timing: scored a little looser</span>
+    <div class="tempo num">70<small>BPM</small></div>
+    <span class="btn red" style="height:46px;font-size:18px;padding:0 22px"><span class="ic i-stop" style="width:16px;height:16px"></span>Stop</span>
+  </header>
+
+  <section class="panel"><div id="hw"></div></section>
+
+  <div class="padsCap">Tap two pads at once for hi-hat + kick · nearer the centre = louder</div>
+  <div class="pads" id="pads"></div>
+  <div class="home"></div>
+</div>
+<script>
+const C = { hihat: '#0FA3B1', snare: '#5856D6', kick: '#48484A' };
+// A short highway: the same lanes and colours as the lesson screen.
+(function () {
+  const W = 1146, H = 178, lanes = ['hihat', 'snare', 'kick'], left = 110, laneH = 46, top = 16, nowX = 360, pos = 12, px = 52;
+  const x = t => nowX + (t - pos) * px, y = i => top + laneH * i + laneH / 2;
+  let s = `<svg width="${W}" height="${H}" font-family="Inter, sans-serif"><defs><clipPath id="c"><rect x="${left}" y="0" width="${W - left}" height="${H}"/></clipPath></defs>`;
+  lanes.forEach((l, i) => {
+    s += `<rect x="${left}" y="${y(i) - laneH / 2 + 3}" width="${W - left - 12}" height="${laneH - 6}" rx="11" fill="${i % 2 ? '#F6F6F9' : '#FAFAFC'}"/>`;
+    s += `<circle cx="20" cy="${y(i)}" r="6" fill="${C[l]}"/><text x="33" y="${y(i) + 6}" font-size="17" font-weight="700">${{ hihat: 'Hi-hat', snare: 'Snare', kick: 'Kick' }[l]}</text>`;
+  });
+  s += `<g clip-path="url(#c)">`;
+  for (let t = 0; t < 32; t++) {
+    const e = t % 8;
+    if (e % 2 === 0) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top}" y2="${top + laneH * 3}" stroke="rgba(60,60,67,${e ? .1 : .35})" stroke-width="${e ? 1 : 2}"/>`;
+    const notes = ['hihat', ...(e === 0 || e === 4 ? ['kick'] : []), ...(e === 2 || e === 6 ? ['snare'] : [])];
+    for (const l of notes) {
+      const cx = x(t), cy = y(lanes.indexOf(l)), past = t <= pos, fill = past ? (l === 'snare' && t === 10 ? '#FF9500' : '#34C759') : C[l];
+      s += l === 'kick' ? `<rect x="${cx - 17}" y="${cy - 13}" width="34" height="26" rx="7" fill="${fill}"/>` : `<circle cx="${cx}" cy="${cy}" r="15" fill="${fill}"/>`;
+    }
+    s += `<text x="${x(t)}" y="${H - 8}" text-anchor="middle" font-size="${t === pos ? 20 : 16}" font-weight="800" fill="${e % 2 ? '#007AFF' : '#1C1C1E'}" opacity="${t < pos ? .35 : 1}">${e % 2 ? '&' : e / 2 + 1}</text>`;
+  }
+  s += `</g><rect x="${nowX - 2}" y="${top - 6}" width="4" height="${laneH * 3 + 8}" rx="2" fill="#FFCC00"/>`;
+  document.getElementById('hw').innerHTML = s + `</svg>`;
+})();
+// The touch kit, as you see the MPS-150 from the throne. Pads in this lesson are bright; the rest still play.
+(function () {
+  const W = 1194, H = 436, mine = ['hihat', 'snare', 'kick', 'hhPedal'];
+  const P = [
+    ['crash', 'Crash', 168, 92, 70, '#D99A00'], ['hihat', 'Hi-hat', 150, 262, 96, '#0FA3B1'], ['tom1', 'Tom 1', 470, 96, 70, '#AF52DE'],
+    ['tom2', 'Tom 2', 650, 96, 70, '#C93A9E'], ['ride', 'Ride', 1030, 108, 92, '#00A383'], ['snare', 'Snare', 400, 292, 104, '#5856D6'],
+    ['floor', 'Floor tom', 900, 300, 100, '#A2845E'],
+  ];
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Inter, -apple-system, sans-serif"><defs>
+    <radialGradient id="sheen" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`;
+  for (const [id, name, cx, cy, r, c] of P) {
+    const on = mine.includes(id);
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${on ? c : '#E3E3E8'}"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#sheen)"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r * .45}" fill="none" stroke="${on ? 'rgba(255,255,255,.35)' : 'rgba(60,60,67,.12)'}" stroke-width="2" stroke-dasharray="4 5"/>`;
+    s += `<text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="${on ? 24 : 19}" font-weight="700" fill="${on ? '#fff' : 'rgba(60,60,67,.55)'}">${name}</text>`;
+  }
+  // kick and hi-hat pedal: the feet, along the bottom (kept above the home-indicator zone)
+  s += `<rect x="560" y="300" width="200" height="120" rx="26" fill="#48484A"/><rect x="560" y="300" width="200" height="120" rx="26" fill="url(#sheen)"/>`;
+  s += `<text x="690" y="396" text-anchor="middle" font-size="24" font-weight="700" fill="#fff">Kick</text>`;
+  s += `<rect x="40" y="380" width="200" height="44" rx="16" fill="#0B7F8A"/><text x="140" y="408" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">Hi-hat pedal (hold)</text>`;
+  // two fingers landing together: hi-hat and kick
+  for (const [cx, cy] of [[188, 200], [612, 336]]) {
+    s += `<circle cx="${cx}" cy="${cy}" r="42" fill="none" stroke="#34C759" stroke-width="5" opacity=".9"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="56" fill="none" stroke="#34C759" stroke-width="2.5" opacity=".35"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="20" fill="rgba(255,255,255,.55)" stroke="rgba(0,0,0,.15)"/>`;
+  }
+  s += `<g><rect x="246" y="128" width="96" height="34" rx="17" fill="#34C759"/><text x="294" y="151" text-anchor="middle" font-size="16" font-weight="800" fill="#fff">on it</text></g>`;
+  document.getElementById('pads').innerHTML = s + `</svg>`;
+})();
+</script>
+</body>
+</html>
