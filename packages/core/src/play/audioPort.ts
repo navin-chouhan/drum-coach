@@ -59,12 +59,13 @@ export interface AudioPort {
   schedule(events: AudioEvent[]): { accepted: number; late: number };
   /** Drops every event not yet sounding that is heard at or after `fromMs` (default: all). Sounding ones ring out. */
   cancel(fromMs?: number): void;
-  /** Touch pads: plays now, lowest latency, synchronous. Returns the estimated heard time (Clock ms). */
+  /** Touch pads: plays now, lowest latency, synchronous. Returns the estimated heard time (Clock ms), or NaN when nothing plays (unknown sound, engine off). */
   playNow(sound: SoundId, gain: number): number;
   /** Bus levels 0..1 from settings (clickVolume, bandVolume, voiceVolume…). Not time-critical. */
   setLevels(levels: Partial<Record<'click' | 'drums' | 'band' | 'voice' | 'backing', number>>): void;
   readonly backing: BackingPort | null;   // null until Phase 3b
   onRouteChange(fn: (r: AudioRoute) => void): () => void;
   onInterruption(fn: (e: AudioInterruption) => void): () => void;
+  /** `dropped` also counts malformed events and sounds that couldn't be resolved. */
   stats(): { scheduled: number; late: number; dropped: number; engineStarts: number; lastError?: string };
 }

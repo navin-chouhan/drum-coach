@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
-import type { AudioInterruption, AudioPort, AudioRoute } from '@drum-coach/core/play/audioPort';
+import type { AudioInterruption, AudioPort, AudioRoute, SoundId } from '@drum-coach/core/play/audioPort';
 import type { DrumAudioApi, DrumAudioEvents, NativeRoute } from '../../modules/drum-audio/src/DrumAudio.types';
 import { unpackEvents } from '../../modules/drum-audio/src/packing';
 import { busVolumes, createAudioPort, toAudioRoute, type DrumAudioPort } from './audioCore';
@@ -125,7 +125,7 @@ describe('createAudioPort on the module', () => {
     const f = fakeNative();
     const port = createAudioPort(f.api);
     expect(port.playNow('drum.snare', 0.8)).toBeCloseTo(1e9 + 27, 9);
-    expect(port.playNow('drum.cowbell', 1)).toBeNaN();
+    expect(port.playNow('drum.cowbell' as SoundId, 1) /* not a pad */).toBeNaN();
     expect(f.calls.playNow).toEqual([[11, 0.8]]);
     port.cancel();
     port.cancel(5);

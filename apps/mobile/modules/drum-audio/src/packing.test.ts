@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AudioEvent } from '@drum-coach/core/play/audioPort';
+import type { AudioEvent, SoundId } from '@drum-coach/core/play/audioPort';
 import { busOfSound, packEvents, PAD_ORDER, soundIndex, unpackEvents, wordKey } from './packing';
 
 // ios/Core/Tests/DrumAudioCoreTests/EventPackingTests.swift reads the same `packedVectors`.
@@ -15,7 +15,7 @@ describe('soundIndex', () => {
     expect(PAD_ORDER.map(p => soundIndex(`drum.${p}`, words))).toEqual([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
     expect(soundIndex('word.One ', words)).toBe(1000);
     expect(soundIndex('word.seven', words)).toBeNull();
-    expect(soundIndex('drum.cowbell', words)).toBeNull();
+    expect(soundIndex('drum.cowbell' as SoundId, words) /* not a pad: tests the unknown-sound path */).toBeNull();
   });
   it('buses', () => {
     expect([0, 2, 3, 9, 10, 19, 20, 999, 1000, 5000].map(busOfSound)).toEqual(

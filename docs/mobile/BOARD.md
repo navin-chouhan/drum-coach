@@ -35,9 +35,9 @@ session. The decisions it needs are D1–D5, below.
 | A7m iPad mockups | **done, merged**; waiting for the owner's review (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
 | A4d Audio design | **done, merged** (4467428) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
 
-| A4 Audio module part 1 | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
-| A5 Data + server client | **done, merged** (90bf393); follow-ups running | `src/platform/{storage,api}.ts`, `src/data/**`, `app/dev/server.tsx`, `src/dev/server/**`, apps/mobile package.json (this round) | [briefs/A5.md](briefs/A5.md) | Storage, HomeServer, coach context builder |
-| A6 Play surfaces part 1 | **done, merged** (ae9148f); swap to core types running | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
+| A4 Audio module part 1 | **done, merged** (a5ddb79) | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
+| A5 Data + server client | **done, merged** (94ad37b, with follow-ups) | `src/platform/{storage,api}.ts`, `src/data/**`, `app/dev/server.tsx`, `src/dev/server/**`, apps/mobile package.json (this round) | [briefs/A5.md](briefs/A5.md) | Storage, HomeServer, coach context builder |
+| A6 Play surfaces part 1 | **done, merged** (3d6b725) | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
 | ACI Mobile CI + deps gate | **done, merged** (9acf52b) | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
@@ -169,3 +169,12 @@ results.
 - 2026-10-30: Owner reviewed the mockups: the iPad-native look lost the app's character. **D4 revised to "Web look,
   iPad layout".** A7m is redrawing all 16 frames, plus a falling-highway frame for comparison. A6's components
   already switch to the web theme and falling lanes; KitView/TouchPads follow the new mockups once approved.
+- 2026-10-30: A5 follow-ups merged (core schemas where they exist; the token health check; home links to
+  /dev/{midi,server,audio,play}; `HomeServer.stream` for SSE over expo/fetch, now in contracts.ts). A4 part 1 merged:
+  the `drum-audio` module (10 ms DispatchSourceTimer on a userInteractive queue, 120 ms window, late events dropped
+  and never played late, player-node pools click/drums/band/voice, synthesized click and drum velocity layers cached
+  on first use, words via AVSpeechSynthesizer with onset detection like the web, ducking), `AudioPort` on iOS
+  unchanged, /dev/audio, CHECKS.md D1–D3 for the owner. Integration: the tightened `SoundId` (drum.${PadId}) flagged
+  3 spots, now fixed. audioPort docs: playNow → NaN when nothing plays; stats.dropped includes malformed events.
+  apps/mobile 299 tests; root 422; lint 0. Open: drum-midi's ClickScheduler still sets the audio session (two
+  session owners, AUDIO-DESIGN §3.6); A3 is removing it from the app module (the spike keeps it).

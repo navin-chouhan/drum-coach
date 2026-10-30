@@ -2,6 +2,7 @@
 // metronome built from AudioPort.schedule, hit touch pads (playNow), prepare and say count-in words, run the T6-8
 // timing probe, and watch the scheduler's stats. Owner checks: modules/drum-audio/CHECKS.md.
 import type { AudioInterruption, AudioRoute, SoundId } from '@drum-coach/core/play/audioPort';
+import type { PadId } from '@drum-coach/core/engine/kit';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +12,7 @@ import { audio } from '../../platform/audio';
 import { colors } from '../../theme';
 import { createMetronome, type Metronome, type MetronomeSpec } from './metronome';
 
-const PADS: { id: string; label: string }[] = [
+const PADS: { id: PadId; label: string }[] = [
   { id: 'kick', label: 'Kick' }, { id: 'snare', label: 'Snare' }, { id: 'hhClosed', label: 'HH closed' },
   { id: 'hhOpen', label: 'HH open' }, { id: 'hhPedal', label: 'HH pedal' }, { id: 'tom1', label: 'Tom 1' },
   { id: 'tom2', label: 'Tom 2' }, { id: 'floor', label: 'Floor' }, { id: 'crash', label: 'Crash' }, { id: 'ride', label: 'Ride' },
