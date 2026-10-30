@@ -50,7 +50,8 @@ export function layoutMeasures(notes: (ChartNote & { i?: number })[], beatsPerBa
         });
         const starts = [...bySlot.keys()].sort((a, c) => a - c);
         const events = measure[voice];
-        if (!starts.length) { events.push({ heads: [], slots: slotsInBeat, triplet: false, beat: beatStart }); continue; }
+        // a voice with nothing in this beat: one rest on the 16th grid (a quarter), even in the other voice's triplet beat
+        if (!starts.length) { events.push({ heads: [], slots: Math.round(beatLen * 4), triplet: false, beat: beatStart }); continue; }
         if (starts[0] > 0) events.push({ heads: [], slots: starts[0], triplet, beat: beatStart });
         starts.forEach((s, i) => events.push({ heads: bySlot.get(s)!, slots: (starts[i + 1] ?? slotsInBeat) - s, triplet, beat: beatStart + s / steps }));
       }
