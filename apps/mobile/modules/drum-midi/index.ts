@@ -1,10 +1,11 @@
 // Drum Coach's MIDI module: CoreMIDI input with host timestamps, delivered in native batches (onPackets), selection by
-// preferred name, Network MIDI and host-time clicks. iOS only; every function degrades gracefully elsewhere (empty
-// lists, false, null, performance.now(), a rejected promise, a no-op unsubscribe).
+// preferred name and Network MIDI. No audio: clicks and the audio session are modules/drum-audio's (one session
+// owner). iOS only; every function degrades gracefully elsewhere (empty lists, false, null, performance.now(), a
+// no-op unsubscribe).
 // apps/mobile/src/platform/midi.ts wraps this into the app's `MidiPort` (contracts.ts).
 
 import { native } from './src/DrumMidiModule';
-import type { AudioInfo, ClickSchedule, DebugInfo, MidiInput, MidiPacket, MidiPacketBatch, MidiSelection } from './src/DrumMidi.types';
+import type { DebugInfo, MidiInput, MidiPacket, MidiPacketBatch, MidiSelection } from './src/DrumMidi.types';
 
 export * from './src/DrumMidi.types';
 export { classifyPacket, defaultBatchPolicy, type BatchPolicy, type FlushReason, type PacketKind } from './src/batchPolicy';
@@ -35,14 +36,6 @@ export const getSelection = (): MidiSelection | null => native?.getSelection() ?
 export const setNetworkSessionEnabled = (enabled: boolean): boolean => native?.setNetworkSessionEnabled(enabled) ?? false;
 
 export const getDebugInfo = (): DebugInfo | null => native?.getDebugInfo() ?? null;
-
-export const getAudioInfo = (): AudioInfo | null => native?.getAudioInfo() ?? null;
-
-/** Clicks at host times (AVAudioPlayerNode + AVAudioTime(hostTime:)): the same clock as MIDI hostTimeMs. */
-export const scheduleClicks = (startHostTimeMs: number, bpm: number, count: number, accentEvery = 4): Promise<ClickSchedule> =>
-  native ? native.scheduleClicks(startHostTimeMs, bpm, count, accentEvery) : Promise.reject(new Error('DrumMidi is iOS only'));
-
-export const stopClicks = (): void => native?.stopClicks();
 
 /**
  * Packets in arrival order, one call per native batch (a note-on is sent at once; other messages within 8 ms,

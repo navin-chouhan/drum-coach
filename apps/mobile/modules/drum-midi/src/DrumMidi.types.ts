@@ -38,10 +38,6 @@ export type MidiSelection = {
   autoSelect: boolean;
 };
 
-export type AudioInfo = { outputLatencyMs: number; ioBufferMs: number; sampleRate: number; route?: string };
-
-export type ClickSchedule = AudioInfo & { scheduledHostTimesMs: number[] };
-
 export type DebugInfo = {
   started: boolean;
   connectCalls: number;

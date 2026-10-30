@@ -9,7 +9,6 @@ import ExpoModulesCore
 public final class DrumMidiModule: Module {
   private let hub = MidiInputHub()
   private let batcher = PacketBatcher()
-  private let clicks = ClickScheduler()
 
   public func definition() -> ModuleDefinition {
     Name("DrumMidi")
@@ -29,7 +28,6 @@ public final class DrumMidiModule: Module {
     }
 
     OnDestroy {
-      self.clicks.stop()
       self.hub.shutdown()
       self.batcher.reset()
     }
@@ -75,16 +73,5 @@ public final class DrumMidiModule: Module {
       return self.hub.debugInfo().merging(self.batcher.debugInfo()) { _, batch in batch }
     }
 
-    Function("getAudioInfo") { () -> [String: Any] in
-      return ClickScheduler.audioInfo()
-    }
-
-    AsyncFunction("scheduleClicks") { (startHostTimeMs: Double, bpm: Double, count: Int, accentEvery: Int) -> [String: Any] in
-      return try self.clicks.schedule(startHostTimeMs: startHostTimeMs, bpm: bpm, count: count, accentEvery: accentEvery)
-    }
-
-    Function("stopClicks") {
-      self.clicks.stop()
-    }
   }
 }
