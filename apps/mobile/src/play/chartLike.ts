@@ -1,48 +1,26 @@
-// Local mirrors of the core's chart and kit types, so the play surfaces build before A1 moves the engine into
-// packages/core. SWAP after A1 merges: import ChartDrum/ChartNote/Chart from '@drum-coach/core/engine/chart' and
-// PadId/DrumId from '@drum-coach/core/engine/kit', then delete the copies here (chartLike.test.ts pins them to the web's).
+// The core's chart and kit types as the play surfaces use them, plus the few play-only helpers built on them.
+// Types and constants come from @drum-coach/core (packages/core/src/engine/{chart,kit}.ts); nothing is copied here.
+import type { Chart, ChartDrum, ChartNote } from '@drum-coach/core/engine/chart';
+import { PAD_INFO, PADS, type DrumId, type PadId } from '@drum-coach/core/engine/kit';
 
-/** Chart lanes (src/engine/chart.ts CHART_DRUMS). 'hihat' accepts open or closed; 'hhOpen' asks for open. */
-export const CHART_DRUMS = ['kick', 'snare', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'crash', 'ride'] as const;
-export type ChartDrum = (typeof CHART_DRUMS)[number];
+export { beatsPerBar, CHART_DRUMS } from '@drum-coach/core/engine/chart';
+export { PADS } from '@drum-coach/core/engine/kit';
+export type { ChartDrum, DrumId, PadId };
 
-/** What the module can send (src/engine/kit.ts PADS). */
-export const PADS = ['kick', 'snare', 'hhClosed', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'crash', 'ride'] as const;
-export type PadId = (typeof PADS)[number];
+/** A chart note as the play surfaces read it (the core's ChartNote). */
+export type ChartNoteLike = ChartNote;
 
-/** What the kit view draws: the hi-hat is one drum with three pads (src/engine/kit.ts DrumId). */
-export const DRUM_IDS = ['kick', 'snare', 'hihat', 'tom1', 'tom2', 'floor', 'crash', 'ride'] as const;
-export type DrumId = (typeof DRUM_IDS)[number];
+/** The parts of the core's Chart the play surfaces read (a full Chart fits; so does a fixture without an id). */
+export type ChartLike = Pick<Chart, 'bpm' | 'timeSignature' | 'bars'> & { title?: string; notes: readonly ChartNote[] };
 
-/** The fields of src/engine/chart.ts ChartNote the play surfaces read. */
-export type ChartNoteLike = {
-  t: number; // quarter-note beats from the start
-  drum: ChartDrum;
-  accent?: boolean;
-  ghost?: boolean;
-  auto?: boolean; // played by the app, not the student
-  grace?: 1 | 2 | 3;
-  stick?: 'R' | 'L';
-  buzz?: boolean;
-};
+/** Every drum the kit view draws (the core's DrumId as a list; `satisfies` keeps it complete). */
+export const DRUM_IDS = ['kick', 'snare', 'hihat', 'tom1', 'tom2', 'floor', 'crash', 'ride'] as const satisfies readonly DrumId[];
+type MissingDrum = Exclude<DrumId, (typeof DRUM_IDS)[number]>;
+const allDrums: MissingDrum extends never ? true : never = true;
+void allDrums;
 
-/** The fields of src/engine/chart.ts Chart the play surfaces read. */
-export type ChartLike = {
-  title?: string;
-  bpm: number;
-  timeSignature: readonly [number, number];
-  bars: number;
-  notes: readonly ChartNoteLike[];
-};
-
-/** Quarter-note beats per bar (6/8 → 3), as src/engine/chart.ts beatsPerBar. */
-export const beatsPerBar = (c: { timeSignature: readonly [number, number] }): number => (c.timeSignature[0] * 4) / c.timeSignature[1];
-
-/** The drum (lane) a pad belongs to (src/engine/kit.ts PAD_INFO[pad].drum). */
-export const PAD_DRUM: Record<PadId, DrumId> = {
-  kick: 'kick', snare: 'snare', hhClosed: 'hihat', hhOpen: 'hihat', hhPedal: 'hihat',
-  tom1: 'tom1', tom2: 'tom2', floor: 'floor', crash: 'crash', ride: 'ride',
-};
+/** The drum (lane) a pad belongs to (the core's PAD_INFO[pad].drum). */
+export const PAD_DRUM = Object.fromEntries(PADS.map(p => [p, PAD_INFO[p].drum])) as Record<PadId, DrumId>;
 
 /** The drum (lane) a chart note is drawn in: the hi-hat's three articulations share one lane. */
 export function laneOf(drum: ChartDrum): DrumId {
@@ -50,7 +28,7 @@ export function laneOf(drum: ChartDrum): DrumId {
   return drum === 'hhOpen' || drum === 'hhPedal' ? 'hihat' : drum;
 }
 
-/** Short names (src/engine/kit.ts PAD_INFO / src/ui/drums.ts). */
+/** Lane names, as the web kit names its drums (src/ui/drums.ts; chartLike.test.ts pins them). */
 export const DRUM_NAME: Record<DrumId, string> = {
   kick: 'Kick', snare: 'Snare', hihat: 'Hi-hat', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor tom', crash: 'Crash', ride: 'Ride',
 };
