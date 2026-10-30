@@ -104,6 +104,24 @@ describe('progress', () => {
   });
 });
 
+describe('your path', () => {
+  it('every stage with its challenges; the first is current on day one', async () => {
+    const { pathModel, progressViewOf } = await import('./path');
+    const stages = pathModel(CURRICULUM, {}, DEFAULTS.profile);
+    expect(stages[0]).toMatchObject({ n: 1, title: MILESTONES[0].title, state: 'current', canDo: MILESTONES[0].canDo });
+    expect(stages[1].state).toBe('later');
+    expect(stages[0].chips.filter(c => c.checkpoint).map(c => c.id)).toEqual(MILESTONES[0].checkpoints);
+    expect(stages[0].chips[0]).toMatchObject({ state: 'todo', detail: 'Not started' });
+    const done = { step: 0, bpm: 60, clean: 0, fails: 0, bestBpm: 70, reviewStage: 0, completedAt: '2026-10-29', stars: 2 };
+    const progress = Object.fromEntries(MILESTONES[0].checkpoints.map(id => [id, done]));
+    const after = pathModel(CURRICULUM, progress, DEFAULTS.profile);
+    expect(after[0].state).toBe('passed');
+    expect(after[0].chips[0]).toMatchObject({ state: 'done', stars: 2, detail: 'Done · 2 of 3 stars · best 70 BPM' });
+    expect(after[1].state).toBe('current');
+    expect([progressViewOf('skills'), progressViewOf('path'), progressViewOf('month'), progressViewOf('x'), progressViewOf(undefined)]).toEqual(['skills', 'path', 'month', 'main', 'main']);
+  });
+});
+
 describe('skill map', () => {
   it('every skill with its mastery and 6 months of growth', () => {
     const rows = skillMapModel(CURRICULUM, {}, '2026-10-30', NOW.getTime());

@@ -1,8 +1,9 @@
 // Progress (docs/mockups/ipad/progress.html): getting better (notes landed per day played, with the coach's line), this
 // week against your goal, the skill map, trophies and the closest, your time against the daily goal, and your lessons
-// in plain words. "This month's report" and the full skill map open in place. The numbers are in progress.ts.
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+// in plain words. "This month's report", the full skill map and your path open in place, as /progress?view=month,
+// /progress?view=skills and /progress?view=path (Journey's Skill map and Full path buttons). The numbers are in progress.ts.
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Body, Button, Card, CardTitle, CoachLine, Label, ListRow, Screen, Stars, StatTile, Strong, TitleBar,
@@ -11,6 +12,8 @@ import {
 import { lessonHref } from '../journey/JourneyScreen';
 import { Bars, Track } from '../practice/parts';
 import { MonthReportView } from './MonthReportView';
+import { progressViewOf, type ProgressViewId } from './path';
+import { PathView } from './PathView';
 import { progressModel, type PractiseTarget } from './progress';
 import { SkillMapView } from './SkillMapView';
 import { useStoredData } from './useStoredData';
@@ -25,19 +28,23 @@ export function openTarget(t: PractiseTarget) {
 export function ProgressScreen() {
   const settings = useAppSettings();
   const { data } = useStoredData();
-  const [view, setView] = useState<'main' | 'month' | 'skills'>('main');
+  const params = useLocalSearchParams<{ view?: string }>();
+  const view = progressViewOf(params.view);
+  const setView = (v: ProgressViewId) => router.setParams({ view: v === 'main' ? undefined : v });
   const m = useMemo(() => progressModel({ runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, badges: settings.badges, lessons: data?.lessons ?? [], plan: data?.plan }),
     [data, settings.lessons, settings.profile, settings.badges]);
 
   const head = (
     <TitleBar title="Progress" right={<View style={styles.right}>
-      {m.since ? <View style={styles.since}><Body size={14} weight="800">{m.since}</Body></View> : <View style={styles.grow} />}
+      {m.since ? <View style={styles.since}><Body size={14} weight="800" numberOfLines={1}>{m.since}</Body></View> : null}
+      <View style={styles.grow} />
       {view === 'main'
         ? <Button label="This month's report" emoji="📝" onPress={() => setView('month')} testID="progress-month" />
         : <Button label="Progress" emoji="←" onPress={() => setView('main')} testID="progress-back" />}
     </View>} />
   );
   if (view === 'month') return <Screen testID="screen-progress">{head}<MonthReportView runs={data?.runs ?? []} /></Screen>;
+  if (view === 'path') return <Screen testID="screen-progress">{head}<PathView lessons={data?.lessons ?? []} progress={settings.lessons} profile={settings.profile} /></Screen>;
   if (view === 'skills') return <Screen testID="screen-progress">{head}<SkillMapView lessons={data?.lessons ?? []} progress={settings.lessons} /></Screen>;
 
   const b = m.better, w = m.week, t = m.trophies;
@@ -167,8 +174,8 @@ export function ProgressScreen() {
 }
 
 const styles = StyleSheet.create({
-  right: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, justifyContent: 'space-between' },
-  since: { backgroundColor: color.cream, borderWidth: stroke.card, borderColor: color.ink, paddingHorizontal: 10, paddingVertical: 3 },
+  right: { flex: 6, flexDirection: 'row', alignItems: 'center', gap: 12 }, // the title bar's spacer (flex 1) gives way to the since line
+  since: { flexShrink: 1, backgroundColor: color.cream, borderWidth: stroke.card, borderColor: color.ink, paddingHorizontal: 10, paddingVertical: 3 },
   grow: { flex: 1, minWidth: 0 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   row1: { flexDirection: 'row', gap: 18, height: 232 },
