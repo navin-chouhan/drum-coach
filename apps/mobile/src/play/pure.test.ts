@@ -70,6 +70,7 @@ describe('kit layout', () => {
     expect(hitTest(TOUCH_KIT, 400 + 104 + 5, 292)?.id).toBe('snare');
     expect(hitTest(TOUCH_KIT, 660, 360)?.id).toBe('kick');
     expect(hitTest(TOUCH_KIT, 140, 400)?.id).toBe('hhPedal');
+    expect(hitTest(TOUCH_KIT, 140, 370)?.id).toBe('hhPedal'); // the strip's top edge, just under the hi-hat
     expect(hitTest(TOUCH_KIT, 560, 200)).toBeNull();
     expect(hitTest(MINI_KIT, 191, 127)?.id).toBe('kick');
   });
@@ -78,9 +79,10 @@ describe('kit layout', () => {
     expect(edgeDistance(snare, 400, 292)).toBe(0);
     expect(edgeDistance(snare, 452, 292)).toBeCloseTo(0.5);
   });
-  it('keeps every touch target at least 44 pt on an iPad (pad area down to 1000 × 380)', () => {
-    expect(minTargetPt(TOUCH_KIT, fitLayout(TOUCH_KIT, 1000, 380).scale)).toBeGreaterThanOrEqual(44);
-    expect(minTargetPt(TOUCH_KIT, 1)).toBe(56);
+  it('keeps every touch target at least 44 pt on an iPad (pad area down to 800 × 290, two thirds of the design)', () => {
+    expect(minTargetPt(TOUCH_KIT, fitLayout(TOUCH_KIT, 1194, 436).scale)).toBe(66);
+    expect(minTargetPt(TOUCH_KIT, fitLayout(TOUCH_KIT, 800, 380).scale)).toBeGreaterThanOrEqual(44);
+    expect(minTargetPt(TOUCH_KIT, fitLayout(TOUCH_KIT, 1194, 292).scale)).toBeGreaterThanOrEqual(44);
   });
   it('lights the pedal strip for the foot when there is one, else the hi-hat', () => {
     expect(partForPad(TOUCH_KIT, 'hhPedal')).toBe('hhPedal');

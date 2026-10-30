@@ -19,11 +19,13 @@ export type KitViewProps = {
   layout?: KitLayout;
   /** Tap a drum to play it (like clicking a pad on the web). The hi-hat sends closed. */
   onPadPress?: (pad: PadId) => void;
+  /** Pad-name size in design units of the layout (MINI_KIT: 11). */
+  labelSize?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
 
-export function KitView({ hits, results, activeDrums, theme = IPAD_THEME, layout = MINI_KIT, onPadPress, style, testID }: KitViewProps) {
+export function KitView({ hits, results, activeDrums, theme = IPAD_THEME, layout = MINI_KIT, onPadPress, labelSize: labelUnits = 11, style, testID }: KitViewProps) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -47,7 +49,7 @@ export function KitView({ hits, results, activeDrums, theme = IPAD_THEME, layout
     }
   }, [onPadPress, fit, layout]);
 
-  const labelSize = Math.max(9, 11 * fit.scale * (layout === MINI_KIT ? 1 : 2));
+  const labelSize = Math.max(9, labelUnits * fit.scale);
   return (
     <View
       style={[{ flex: 1 }, style]}

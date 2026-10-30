@@ -26,8 +26,8 @@ export const MINI_KIT: KitLayout = {
 };
 
 /**
- * The multi-touch kit (docs/mockups/ipad/touch-pads.html, 1194 × 436). The hi-hat pedal strip is 56 high (the mockup
- * has 44) so it stays at least 44 pt when the area shrinks.
+ * The multi-touch kit (docs/mockups/ipad/touch-pads.html, 1194 × 436). The hi-hat pedal strip is 66 high (the mockup
+ * has 44) so it stays at least 44 pt when the area shrinks to two thirds (a pad area beside a side column).
  */
 export const TOUCH_KIT: KitLayout = {
   width: 1194, height: 436,
@@ -36,7 +36,7 @@ export const TOUCH_KIT: KitLayout = {
     circle('tom2', 'Tom 2', 650, 96, 70), circle('ride', 'Ride', 1030, 108, 92), circle('snare', 'Snare', 400, 292, 104),
     circle('floor', 'Floor tom', 900, 300, 100),
     { id: 'kick', drum: 'kick', label: 'Kick', kind: 'rect', cx: 660, cy: 360, w: 200, h: 120, radius: 26 },
-    { id: 'hhPedal', drum: 'hihat', label: 'Hi-hat pedal', kind: 'rect', cx: 140, cy: 400, w: 200, h: 56, radius: 16 },
+    { id: 'hhPedal', drum: 'hihat', label: 'Hi-hat pedal', kind: 'rect', cx: 140, cy: 400, w: 200, h: 66, radius: 16 },
   ],
 };
 

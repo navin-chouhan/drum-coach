@@ -84,21 +84,21 @@ export function NoteHighway(props: NoteHighwayProps) {
     },
     [past, future, span],
   );
-  const pageCache = useRef(new Map<number, PageScene>());
-  useEffect(() => pageCache.current.clear(), [layout, chart, theme, o]);
+  // Built pages, kept while what they're drawn from stays the same (a new cache in the same render as the change).
+  const pageCache = useMemo(() => new Map<number, PageScene>(), [layout, chart, span, theme, o]);
   const pages = useMemo(() => {
     if (!layout) return [];
     const out: PageScene[] = [];
     for (let p = range[0]; p <= range[1]; p++) {
-      let page = pageCache.current.get(p);
+      let page = pageCache.get(p);
       if (!page) {
         page = buildPage(p, chart, layout, span, theme, o);
-        pageCache.current.set(p, page);
+        pageCache.set(p, page);
       }
       out.push(page);
     }
     return out;
-  }, [layout, range, chart, span, theme, o]);
+  }, [layout, range, chart, span, theme, o, pageCache]);
 
   // Results: markers (React, once per result) and now-line flashes (shared values).
   const [markers, setMarkers] = useState<MarkerGlyph[]>([]);

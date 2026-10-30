@@ -61,7 +61,7 @@ const Page = memo(function Page({ page, layout, theme }: { page: PageScene; layo
         const height = n.shape === 'bar' ? n.size * 0.35 : n.size;
         const radius = n.shape === 'square' ? n.size * 0.26 : n.size / 2;
         const ring = n.shape === 'ring';
-        const before = layout.sign; // grace strokes sit just before the note in time
+        const back = -layout.sign * n.size; // grace strokes sit just before the note in time: left (leftward), below (downward)
         return (
           <View key={`n${n.index}`} pointerEvents="none" style={[box(layout, n.main, n.cross, n.size * 2, n.size * 2), styles.center, { opacity: (n.ghost ? 0.6 : 1) * (n.auto ? 0.3 : 1) }]}>
             {Array.from({ length: n.grace }, (_, k) => (
@@ -70,7 +70,7 @@ const Page = memo(function Page({ page, layout, theme }: { page: PageScene; layo
                 style={[
                   styles.grace,
                   { backgroundColor: n.color, width: n.size * 0.24, height: n.size * 0.24, borderRadius: n.size * 0.12 },
-                  layout.flow === 'leftward' ? { transform: [{ translateX: -before * n.size * (0.55 + 0.3 * k) }] } : { transform: [{ translateY: before * n.size * (0.55 + 0.3 * k) }] },
+                  layout.flow === 'leftward' ? { transform: [{ translateX: back * (0.55 + 0.3 * k) }] } : { transform: [{ translateY: back * (0.55 + 0.3 * k) }] },
                 ]}
               />
             ))}
