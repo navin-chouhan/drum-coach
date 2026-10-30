@@ -2,7 +2,8 @@
 import { requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 import type { Capabilities } from './contracts';
-import { buildCapabilities, probeCoachServer } from './capabilitiesCore';
+import { getHomeServer, serverStatusOf } from './api';
+import { buildCapabilities } from './capabilitiesCore';
 
 /** True when this build contains A3's native DrumMidi module (iOS dev/release builds; never Expo Go, web or Android). */
 export function hasMidiModule(): boolean {
@@ -14,13 +15,20 @@ export function hasMidiModule(): boolean {
   }
 }
 
-/** Synchronous facts; coachServer is 'unknown' or 'not-configured' until checkCapabilities probes it. */
-export function getCapabilities(coachServerUrl: string | null = null): Capabilities {
+/**
+ * Synchronous facts. coachServer is 'not-configured' without a saved home server, else 'unknown' until
+ * checkCapabilities asks it. The URL defaults to the saved one (src/platform/api.ts).
+ */
+export function getCapabilities(coachServerUrl: string | null = getHomeServer().configured()?.url ?? null): Capabilities {
   return buildCapabilities({ midiModulePresent: hasMidiModule(), coachServerUrl });
 }
 
-/** getCapabilities plus a probe of the coach server's /api/health (A5 adds where the URL is stored). */
-export async function checkCapabilities(coachServerUrl: string | null = null): Promise<Capabilities> {
-  const caps = getCapabilities(coachServerUrl);
-  return { ...caps, coachServer: await probeCoachServer(coachServerUrl, (url, init) => fetch(url, init)) };
+/**
+ * getCapabilities plus the home server's answer to GET /api/health, sent with the saved token (a home-server-mode
+ * server answers 401 without it). Never throws.
+ */
+export async function checkCapabilities(): Promise<Capabilities> {
+  const server = getHomeServer();
+  const caps = getCapabilities(server.configured()?.url ?? null);
+  return { ...caps, coachServer: serverStatusOf(await server.health()) };
 }

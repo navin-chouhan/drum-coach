@@ -1,12 +1,20 @@
 // Placeholder home: proves the build, the core link and the platform pieces. Real screens wait for the mockups (D4).
 import Constants from 'expo-constants';
 import { Link } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { coreLink } from '../src/coreLink';
-import { getCapabilities } from '../src/platform/capabilities';
+import { checkCapabilities, getCapabilities } from '../src/platform/capabilities';
 import { colors } from '../src/theme';
+
+// Debug screens. A route that isn't in this build yet (audio and play are still being built) opens +not-found.
+const DEV_LINKS = [
+  { href: '/dev/midi', title: 'MIDI debug', testID: 'home-dev-midi-link' },
+  { href: '/dev/server', title: 'Home server', testID: 'home-dev-server-link' },
+  { href: '/dev/audio', title: 'Audio debug', testID: 'home-dev-audio-link' },
+  { href: '/dev/play', title: 'Play surfaces', testID: 'home-dev-play-link' },
+] as const;
 
 function reactNativeVersion(): string {
   const v = Platform.constants.reactNativeVersion;
@@ -26,7 +34,12 @@ function Row({ label, value, testID, tone }: { label: string; value: string; tes
 
 export default function Home() {
   const core = useMemo(coreLink, []);
-  const caps = useMemo(() => getCapabilities(), []);
+  const [caps, setCaps] = useState(getCapabilities);
+  useEffect(() => {
+    let live = true;
+    void checkCapabilities().then(c => { if (live) setCaps(c); });
+    return () => { live = false; };
+  }, []);
   const config = Constants.expoConfig;
 
   return (
@@ -50,14 +63,18 @@ export default function Home() {
             value={core.ok ? `reachable: snare = note ${core.snareNote}` : `not linked yet (${core.reason})`}
           />
           <Row label="MIDI module" testID="home-midi-status" tone={caps.midi ? 'ok' : 'warn'} value={caps.midi ? 'in this build' : 'not in this build'} />
-          <Row label="Coach server" value={caps.coachServer} />
+          <Row label="Coach server" testID="home-coach-status" tone={caps.coachServer === 'reachable' ? 'ok' : 'warn'} value={caps.coachServer} />
         </View>
 
-        <Link href="/dev/midi" asChild>
-          <Pressable testID="home-dev-midi-link" accessibilityRole="link" style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-            <Text style={styles.buttonText}>MIDI debug</Text>
-          </Pressable>
-        </Link>
+        <View style={styles.devLinks}>
+          {DEV_LINKS.map(l => (
+            <Link key={l.href} href={l.href} asChild>
+              <Pressable testID={l.testID} accessibilityRole="link" style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+                <Text style={styles.buttonText}>{l.title}</Text>
+              </Pressable>
+            </Link>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -75,6 +92,7 @@ const styles = StyleSheet.create({
   value: { flex: 1, fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
   ok: { color: colors.ok },
   warn: { color: colors.warn },
+  devLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   button: { alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 22 },
   pressed: { opacity: 0.7 },
   buttonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '600' },
