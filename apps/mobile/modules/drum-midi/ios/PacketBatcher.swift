@@ -3,7 +3,7 @@ import Foundation
 /// Collects CoreMIDI packets and hands them to JS in batches (B24), following `BatchPolicy`: a note-on goes out at
 /// once with everything before it, other messages within 8 ms, clock/active-sensing-only batches within 33 ms.
 ///
-/// Threads: `add` runs on CoreMIDI's MIDI thread, the timer on `queue`, `debugInfo`/lifecycle marks on the JS or main
+/// Threads: `add` runs on CoreMIDI's MIDI thread, the timer on its own serial queue, `debugInfo`/lifecycle marks on the JS or main
 /// thread. All state is behind `lock`, and `emit` is called while holding it, so batches leave in packet order whichever
 /// thread sends them. `emit` is the module's `sendEvent`, which only schedules onto the JS runtime (it never runs JS
 /// here), so holding the lock across it is short and can't re-enter.
@@ -16,7 +16,7 @@ final class PacketBatcher {
   private let timerToleranceMs = 0.25
 
   private let lock = NSLock()
-  private let queue = DispatchQueue(label: "drumcoach.midi.batch", qos: .userInteractive)
+  /// One-shot, re-armed per batch; fires on its own serial queue.
   private let timer: DispatchSourceTimer
 
   private var pending: [[String: Any]] = []
@@ -40,6 +40,7 @@ final class PacketBatcher {
 
   init(policy: BatchPolicy = BatchPolicy()) {
     self.policy = policy
+    let queue = DispatchQueue(label: "drumcoach.midi.batch", qos: .userInteractive)
     timer = DispatchSource.makeTimerSource(flags: .strict, queue: queue)
     timer.setEventHandler { [weak self] in self?.timerFired() }
     timer.schedule(deadline: .distantFuture, repeating: .never)
