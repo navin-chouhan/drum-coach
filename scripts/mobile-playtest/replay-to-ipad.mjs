@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The emulated kit over Network MIDI (M8 / T4): the Mac plays recorded fixtures (src/input/fixtures/*.json) to a
+// The emulated kit over Network MIDI (M8 / T4): the Mac plays recorded fixtures (packages/core/src/input/fixtures/*.json) to a
 // MIDI output, e.g. the Network MIDI session connected to the iPad. Needs `npm ci` in this folder (@julusian/midi).
 //
 //   node replay-to-ipad.mjs --list

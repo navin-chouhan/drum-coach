@@ -1,8 +1,10 @@
-// Renders every mockup to png/<name>.png at 1194×834 (1×). Run: node docs/mockups/ipad/render.cjs [name ...]
+// Renders every mockup to png/<name>.png at 1194×834 (1×). Run: node docs/mockups/ipad/render.mjs [name ...]
 // Uses the Playwright Chromium that's already installed; nothing to install.
-const path = require('path');
-const fs = require('fs');
-const { chromium } = require('playwright');
+import path from 'node:path';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+
+const { chromium } = createRequire(import.meta.url)('playwright'); // the pre-installed global Playwright, not a repo dependency
 
 // [png name, html file, #hash variant]
 const SHOTS = [
@@ -26,7 +28,7 @@ const SHOTS = [
 
 (async () => {
   const only = process.argv.slice(2);
-  const dir = __dirname, out = path.join(dir, 'png');
+  const dir = import.meta.dirname, out = path.join(dir, 'png');
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1194, height: 834 }, deviceScaleFactor: 1 });

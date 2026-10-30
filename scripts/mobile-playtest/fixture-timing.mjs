@@ -1,17 +1,17 @@
 // The testable half of replay-to-ipad.mjs (from spikes/midi-probe/tools/fixture-timing.mjs): find and load
-// src/input/fixtures/*.json fixtures, turn one into a send schedule, pace it against a clock. No MIDI here, so it
+// packages/core/src/input/fixtures/*.json fixtures, turn one into a send schedule, pace it against a clock. No MIDI here, so it
 // runs in the Linux container's tests.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const FIXTURE_DIR = fileURLToPath(new URL('../../src/input/fixtures/', import.meta.url));
+export const FIXTURE_DIR = fileURLToPath(new URL('../../packages/core/src/input/fixtures/', import.meta.url));
 export const REFERENCE_DIR = fileURLToPath(new URL('./reference/', import.meta.url));
 
 /**
- * `all` → every fixture in src/input/fixtures (file-name order); a path → that file; a bare name such as
- * `emulated-ghost-groove` → that fixture in src/input/fixtures.
+ * `all` → every fixture in packages/core/src/input/fixtures (file-name order); a path → that file; a bare name such as
+ * `emulated-ghost-groove` → that fixture in packages/core/src/input/fixtures.
  */
 export function resolveFixtures(arg, { dir = FIXTURE_DIR, cwd = process.cwd() } = {}) {
   if (!arg) throw new Error('--fixture <file|name|all> is required');

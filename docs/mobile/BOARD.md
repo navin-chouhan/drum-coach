@@ -26,13 +26,13 @@ session. The decisions it needs are D1–D5, below.
 | A0 Recon | **done, merged** (17ff0c6) | `docs/mobile/RECON.md` only (read-only otherwise) | [briefs/A0.md](briefs/A0.md) | RECON.md |
 | S1 MIDI spike | **done, merged** (47c30c0); device run: step 0, M2, M3 pass; M4–M6, M8 open | `spikes/midi-probe/**`, `docs/mobile/GATE0.md`, `docs/mobile/GATE0-CHECKLIST.md` | [briefs/S1.md](briefs/S1.md) | GATE0.md, probe app |
 
-| A1 Core extraction | running | `packages/core/**` (not `platform.ts`/`package.json`), shims at old paths, delegated minimal edits to root tsconfig/eslint/vitest | [briefs/A1.md](briefs/A1.md) | `@drum-coach/core` |
+| A1 Core extraction | **done, merged** (63f08d1) | `packages/core/**` (not `platform.ts`/`package.json`), shims at old paths, delegated minimal edits to root tsconfig/eslint/vitest | [briefs/A1.md](briefs/A1.md) | `@drum-coach/core` |
 | A2 Expo shell | **done, merged** (278c5de) | `apps/mobile/**` except A3/A9/contracts paths; `scripts/check-expo-versions.mjs` | [briefs/A2.md](briefs/A2.md) | the app shell |
-| A3 MIDI module | part 1 **merged** (2478544); part 2 waits for A1 | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
-| A9 Test harness | **done, reviewed** (b4a2363); merges after A1 (proves the move keeps the reference scores) | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
+| A3 MIDI module | part 1 merged; **part 2 running** | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
+| A9 Test harness | **done, merged** (b4a2363) | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
 | A5s Home-server mode | **done, merged** (fe907e1) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
-| A7m iPad mockups | running (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
+| A7m iPad mockups | **done, merged**; waiting for the owner's review (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
 | A4d Audio design | **done, merged** (4467428) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
 
 | A4 Audio module part 1 | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
@@ -131,3 +131,11 @@ results.
   `HomeServer`/`Storage` in `apps/mobile/src/platform/contracts.ts`. Started A4 (audio part 1), A5 (data + server
   client), A6 (play surfaces part 1) and ACI (mobile CI + deps gate). 7 agents running: A1, A7m, A4, A5, A6, ACI
   (+ A3 part 2 after A1).
+- 2026-10-30: **A1 merged**: `@drum-coach/core` has 47 source files + 2 fixtures and 42 test files (327 tests run
+  alone, without `performance`); 35 engine shims plus content/schemas/fixtures shims at the old paths; engine coverage
+  threshold moved unchanged. A9 merged after it. Its **reference scores are identical after the move** (flam taps
+  32/32, mean 7.4 ms; ghost groove 136/136, mean 20.1 ms). A7m mockups merged. Integration fixes: A9's fixture dir
+  now points to the core folder; the mockup renderer became ESM (`render.mjs`, lint 0). `AudioPort` now uses
+  `PadId`; A1's `take.ts` draft is marked superseded by `audioPort.ts` and AUDIO-DESIGN §2.3. T0: typecheck, lint
+  0, 408/408 tests (54 files), build, deps:check, `reference.ts --check`, mobile-playtest `node --test` 24/24;
+  apps/mobile tsc + 55 tests. **Phase 1 code is complete apart from A3 part 2.**

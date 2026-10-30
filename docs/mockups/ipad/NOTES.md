@@ -7,7 +7,7 @@ no app code. Open `index.html` for the grid; every PNG in `png/` is one 1194 × 
   "+ snare" at 70 BPM, a 6-day streak. Lesson names, steps, tempos, pass rules and ranks come from
   `src/content/curriculum.ts` and `docs/LEARNING.md` (80% pass at level 2 → "39 of 48 notes", 2 clean takes → +5 BPM).
   The iPad starts fresh (D3), so on day one Journey shows Stage 1 instead.
-- **Re-render:** `node docs/mockups/ipad/render.cjs [name …]` (Playwright Chromium, 1×). It also reports anything that
+- **Re-render:** `node docs/mockups/ipad/render.mjs [name …]` (Playwright Chromium, 1×). It also reports anything that
   overflows its box or ends inside the bottom 60 pt.
 - **Variants** use the URL hash: `lesson-take.html#ready` / `#countin`, `lesson-results.html#share`,
   `coach.html#offline`, `first-run.html#s1`…`#s4`.

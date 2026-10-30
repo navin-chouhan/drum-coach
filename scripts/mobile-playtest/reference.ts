@@ -21,7 +21,7 @@ for (const [file, ref] of refs) {
 }
 for (const stale of readdirSync(REFERENCE_DIR).filter(n => n.endsWith('.json') && !refs.has(n))) {
   bad++;
-  console.log(`STALE ${stale}: no fixture of that name in src/input/fixtures/`);
+  console.log(`STALE ${stale}: no fixture of that name in packages/core/src/input/fixtures/`);
 }
 if (check && bad) {
   console.error(`${bad} reference(s) out of date: run node scripts/mobile-playtest/reference.ts and commit the result`);

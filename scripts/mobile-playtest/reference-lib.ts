@@ -1,4 +1,4 @@
-// T4 parity, the web side: replays each src/input/fixtures/*.json through the web input path and matcher
+// T4 parity, the web side: replays each packages/core/src/input/fixtures/*.json through the web input path and matcher
 // (replayFixture, as src/input/fixtures.test.ts does) and builds the reference the iPad's score must equal.
 // Imports go through the src/ paths (they stay valid through A1's packages/core move, via its re-export shims).
 // Under plain Node, import ./resolve-ts.mjs first (src/ imports are extensionless).
@@ -13,7 +13,7 @@ import { replayFixture, type MidiFixture } from '../../src/input/fixtures.ts';
 import { BOUNCE_MS, BOUNCE_RATIO, CROSSTALK_MS, CROSSTALK_SNARE_MAX } from '../../src/input/hits.ts';
 import type { Finished } from '../../src/play/player.ts';
 
-export const FIXTURE_DIR = fileURLToPath(new URL('../../src/input/fixtures/', import.meta.url));
+export const FIXTURE_DIR = fileURLToPath(new URL('../../packages/core/src/input/fixtures/', import.meta.url));
 export const REFERENCE_DIR = fileURLToPath(new URL('./reference/', import.meta.url));
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
