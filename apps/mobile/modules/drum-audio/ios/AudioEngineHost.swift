@@ -56,6 +56,8 @@ final class AudioEngineHost {
   private let policy = LoopPolicy.standard
   private let bank = SoundBank()
   private let words = WordRenderer()
+  /// The backing bus's player (BackingPlayer.swift). Lock order: `lock` → the backing's own lock.
+  private let backing = BackingPlayer()
 
   private var engine: AVAudioEngine? // (L)
   private var buses: [Bus: AVAudioMixerNode] = [:] // (L)
@@ -207,6 +209,7 @@ final class AudioEngineHost {
   func suspend() {
     lock.lock()
     cancelLocked(fromMs: nil)
+    backing.stop()
     running = false
     lock.unlock()
     loopQueue.async { self.stopEngineOnQueue(deactivate: true) }
@@ -240,10 +243,11 @@ final class AudioEngineHost {
       e.attach(mixer)
       e.connect(mixer, to: e.mainMixerNode, format: nil)
       buses[bus] = mixer
-      // The backing bus gets its player (+ AVAudioUnitTimePitch) in Phase 3b.
+      // The backing bus has no pool: BackingPlayer owns its player node and AVAudioUnitTimePitch.
       let initial = bus == .backing ? 0 : AudioPolicy.pool(bus).initial
       pools[bus] = (0..<initial).map { _ in makeVoiceLocked(engine: e, mixer: mixer, format: mono) }
     }
+    if let m = buses[.backing] { backing.attach(engine: e, mixer: m) }
     engine = e
     observeConfigChange(e)
   }
@@ -261,6 +265,7 @@ final class AudioEngineHost {
     probe = nil
     probeLock.unlock()
     if hadProbe { engine?.mainMixerNode.removeTap(onBus: 0) }
+    backing.detach()
     for voices in pools.values { for v in voices { v.node.stop() } }
     engine?.stop()
     if let o = configObserver { NotificationCenter.default.removeObserver(o) }
@@ -584,7 +589,45 @@ final class AudioEngineHost {
       "probe": probeActive,
       "timebase": HostClock.timebaseDescription,
       "loop": ["tickMs": policy.tickMs, "windowMs": policy.windowMs, "safetyMs": policy.safetyMs],
+      "backing": backing.debugInfo(),
     ]
+  }
+
+  // MARK: - Backing (BackingPort, AUDIO-DESIGN §1.4)
+
+  private func backingTimingLocked() -> BackingTiming {
+    return BackingTiming(heardOffsetMs: heardOffsetMs, ioBufferMs: ioBufferMs, safetyMs: policy.safetyMs, pitchLatencyMs: 0)
+  }
+
+  /// Opens a local file (on the caller's queue) and installs it on the loop queue, where graph changes happen. Returns
+  /// {durationMs, sampleRate, frames, channels}.
+  func backingLoad(_ uri: String) throws -> [String: Any] {
+    let opened: BackingPlayer.Opened
+    do {
+      opened = try BackingPlayer.openFile(uri)
+    } catch {
+      setError("\(error)")
+      throw error
+    }
+    return loopQueue.sync { backing.install(opened) }
+  }
+
+  func backingStart(at: Double, offsetMs: Double, rate: Double) -> [String: Any] {
+    lock.lock()
+    let isRunning = running
+    let timing = backingTimingLocked()
+    if !isRunning { lastError = "backing start() before start()" }
+    lock.unlock()
+    guard isRunning else { return ["ok": false, "reason": "backing start() before start()"] }
+    return backing.start(BackingStartRequest(at: at, offsetMs: offsetMs, rate: rate), timing: timing)
+  }
+
+  func backingStop() {
+    backing.stop()
+  }
+
+  func backingAnchor() -> [String: Any] {
+    return backing.anchor()
   }
 
   // MARK: - Words
@@ -683,6 +726,7 @@ final class AudioEngineHost {
       self.isForeground = false
       let wasRunning = self.running
       self.cancelLocked(fromMs: nil)
+      self.backing.stop()
       self.running = false
       self.lock.unlock()
       self.stopEngineOnQueue(deactivate: true)
@@ -709,6 +753,7 @@ final class AudioEngineHost {
       lock.lock()
       resumeAfterInterruption = running || resumeAfterInterruption
       cancelLocked(fromMs: nil)
+      backing.stop() // never resumed on its own: the user presses Start
       running = false // the system stopped the engine
       lock.unlock()
       stopTimer()
@@ -747,6 +792,9 @@ final class AudioEngineHost {
     let (info, newFacts) = Self.readRoute(AVAudioSession.sharedInstance())
     lock.lock()
     let changed = facts.map { !AudioPolicy.sameRoute($0, newFacts) } ?? false
+    let oldHeard = heardOffsetMs
+    // The backing's line before the heard offset changes: what core has been correcting against.
+    let line = changed && running ? backing.reanchorLine() : nil
     if changed {
       cancelLocked(fromMs: nil)
       route = info
@@ -754,7 +802,11 @@ final class AudioEngineHost {
       heardOffsetMs = info["heardOffsetMs"] as? Double ?? 0
       ioBufferMs = info["ioBufferMs"] as? Double ?? 0
     }
+    let timing = backingTimingLocked()
     lock.unlock()
+    // Re-anchor: the file stays on its line under the new route's offset (if the format changed too, the engine has
+    // stopped; the config-change handler restarts it and the backing then).
+    if let l = line, abs(timing.heardOffsetMs - oldHeard) >= 0.5 { backing.restart(on: l, timing: timing) }
     if changed { emitRoute?(Self.body(info)) }
   }
 
@@ -766,6 +818,8 @@ final class AudioEngineHost {
     let foreground = isForeground
     cancelLocked(fromMs: nil)
     running = false
+    // The engine has stopped: the line from the last anchor read (else the plan's).
+    let line = wasRunning ? backing.reanchorLine() : nil
     lock.unlock()
     if !wasRunning { return }
     emitInterruption?(["type": "engine-stopped", "at": HostClock.nowMs(), "cause": "config-change"])
@@ -773,10 +827,19 @@ final class AudioEngineHost {
     if foreground {
       do {
         let info = try startOnQueue()
+        if let l = line {
+          lock.lock()
+          let timing = backingTimingLocked()
+          lock.unlock()
+          backing.restart(on: l, timing: timing) // re-anchored on the new render clock
+        }
         emitRoute?(Self.body(info))
       } catch {
+        backing.stop()
         setError("restart after config change: \(error)")
       }
+    } else {
+      backing.stop()
     }
   }
 
