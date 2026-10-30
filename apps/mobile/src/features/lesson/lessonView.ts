@@ -33,6 +33,8 @@ export type LessonSetup = {
   arcade?: boolean;
   /** Opened from today's session (there's a next item); else Next goes back to Journey. */
   hasNext: boolean;
+  /** A coach drill or plan item (/lesson/chart): one take, no lesson progress. */
+  drill?: boolean;
 };
 
 /** Clean takes a step needs at one tempo: a streak challenge is done on its first pass. */
@@ -59,7 +61,7 @@ export type Frame = {
 /** Which step and tempo the lesson is on (LessonPlayer lines 88–112). */
 export function frameOf(setup: LessonSetup, p: LessonProgress, routineStep = 0): Frame {
   const { lesson, role } = setup;
-  const oneTake = role === 'warmup' || role === 'review' || role === 'record';
+  const oneTake = role === 'warmup' || role === 'review' || role === 'record' || !!setup.drill;
   const stepIdx = role === 'stretch' ? Math.min(routineStep, lesson.steps.length - 1) : oneTake ? lesson.steps.length - 1 : Math.min(p.step, lesson.steps.length - 1);
   const step = lesson.steps[stepIdx];
   const recordStreak = role === 'record' ? recordTarget(step, p) : undefined;
@@ -177,6 +179,7 @@ export function goalOf(setup: LessonSetup, f: Frame, chart: Chart, free: number[
   if (setup.flow) return { bold: 'Just play.', text: ' Nothing to pass.' };
   if (step.jam) return { bold: 'Any full take', text: ' counts. Just play along and enjoy it.' };
   if (role === 'review') return { bold: 'One take', text: ` at ${bpm} BPM: does it still sit?` };
+  if (setup.drill) return { bold: 'One take', text: ` at ${bpm} BPM.` };
   if (role === 'warmup' || role === 'stretch') return { bold: 'One take', text: ' to warm up.' };
   if (role === 'record') return { bold: f.recordStreak ? `${f.recordStreak} in a row` : `${bpm} BPM`, text: ' beats your record.' };
   if (step.pass?.streak) return { bold: `${step.pass.streak} notes in a row`, text: ` and ${f.lastStep ? 'the lesson is done' : 'on to the next step'}.`, small: 'Miss one and the count starts again.' };
