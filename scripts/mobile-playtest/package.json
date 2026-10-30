@@ -1,0 +1,14 @@
+{
+  "name": "mobile-playtest",
+  "private": true,
+  "type": "module",
+  "description": "iPad play-test harness: web reference scores (T4), the Mac-side Network MIDI fixture player (M8) and the results comparer",
+  "scripts": {
+    "test": "node --test",
+    "replay": "node replay-to-ipad.mjs",
+    "compare": "node compare.mjs"
+  },
+  "dependencies": {
+    "@julusian/midi": "3.8.1"
+  }
+}
