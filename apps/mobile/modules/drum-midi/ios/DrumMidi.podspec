@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
   s.name           = 'DrumMidi'
   s.version        = '0.2.0'
-  s.summary        = 'Drum Coach: CoreMIDI input (raw bytes + host timestamps, batched), Network MIDI and host-time clicks'
+  s.summary        = 'Drum Coach: CoreMIDI input (raw bytes + host timestamps, batched), Network MIDI (no audio: drum-audio owns the audio session)'
   s.description    = 'Local Expo module for apps/mobile. iOS only. Native code forwards bytes and timestamps in batches; all MIDI semantics live in TypeScript.'
   s.author         = ''
   s.homepage       = 'https://docs.expo.dev/modules/'
@@ -14,7 +14,7 @@ Pod::Spec.new do |s|
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
-  s.frameworks = 'CoreMIDI', 'AVFoundation'
+  s.frameworks = 'CoreMIDI'
 
   # Swift/Objective-C compatibility
   s.pod_target_xcconfig = {

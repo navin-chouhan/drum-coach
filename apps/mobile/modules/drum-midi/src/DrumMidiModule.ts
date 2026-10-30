@@ -1,7 +1,7 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 
-import type { AudioInfo, ClickSchedule, DebugInfo, DrumMidiEvents, MidiInput, MidiSelection } from './DrumMidi.types';
+import type { DebugInfo, DrumMidiEvents, MidiInput, MidiSelection } from './DrumMidi.types';
 
 declare class DrumMidiNative extends NativeModule<DrumMidiEvents> {
   nowMs(): number;
@@ -11,9 +11,6 @@ declare class DrumMidiNative extends NativeModule<DrumMidiEvents> {
   getSelection(): MidiSelection;
   setNetworkSessionEnabled(enabled: boolean): boolean;
   getDebugInfo(): DebugInfo;
-  getAudioInfo(): AudioInfo;
-  scheduleClicks(startHostTimeMs: number, bpm: number, count: number, accentEvery: number): Promise<ClickSchedule>;
-  stopClicks(): void;
 }
 
 /**
