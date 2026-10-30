@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1194">
+<title>Journey · iPad mockup</title>
+<link rel="stylesheet" href="ipad.css">
+<style>
+  .next { padding: 16px 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .nextTop { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: center; }
+  .nextTop h2 { font-size: 32px; letter-spacing: -.025em; line-height: 1.1; margin: 4px 0 2px; }
+  .nextTop .step { font-size: 17px; font-weight: 600; color: var(--label); }
+  .nextTop .step span { color: var(--label2); font-weight: 500; }
+  .nextTop .what { font-size: 16px; color: var(--label2); margin-top: 6px; }
+  .metaRow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .preview { background: var(--bg); border-radius: 16px; padding: 10px 12px 8px; }
+  .preview .cap { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; color: var(--label2); margin-bottom: 4px; }
+  .next .moves { grid-template-columns: 2fr 1fr 1fr 1fr; }
+  .rowB { display: grid; grid-template-columns: 286px 292px minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+  .next .move { min-height: 86px; padding: 12px 16px; } .next .move.go b { font-size: 26px; }
+  .rowB .card { padding: 12px 16px; }
+  .you { display: flex; flex-direction: column; gap: 10px; }
+  .youTop { display: flex; gap: 12px; align-items: center; }
+  .ring { width: 66px; height: 66px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    background: conic-gradient(var(--tint) 0 var(--p), var(--fill) var(--p) 100%); }
+  .ring > div { width: 52px; height: 52px; border-radius: 50%; background: #fff; display: grid; place-items: center; text-align: center; font-size: 11px; font-weight: 600; line-height: 1.1; color: var(--label2); }
+  .ring > div b { display: block; font-size: 16px; color: var(--label); }
+  .rank { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+  .youTop p { font-size: 13px; color: var(--label2); margin-top: 2px; }
+  .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .three div { background: var(--bg); border-radius: 12px; padding: 7px 9px; }
+  .three b { font-size: 24px; font-weight: 700; letter-spacing: -.02em; display: block; line-height: 1.1; }
+  .three b small { font-size: 14px; color: var(--label2); font-weight: 600; }
+  .three span { white-space: nowrap; font-size: 12px; color: var(--label2); font-weight: 600; }
+  .setHead { display: flex; justify-content: space-between; align-items: baseline; }
+  .setHead h3 { font-size: 17px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--fill); margin: 8px 0 4px; overflow: hidden; display: flex; gap: 2px; }
+  .bar i { display: block; height: 100%; background: var(--green); }
+  .bar i.cur { background: var(--yellow); }
+  .setList .li { padding: 3px 0; min-height: 31px; font-size: 15px; gap: 10px; --inset: 30px; }
+  .setList .li .val { font-size: 13px; }
+  .tick { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--green); color: #fff; }
+  .tick .ic { width: 12px; height: 12px; }
+  .tick.cur { background: var(--yellow); box-shadow: 0 0 0 4px rgba(255, 204, 0, .25); }
+  .tick.todo { background: none; box-shadow: inset 0 0 0 2px var(--label3); }
+  .stars { color: var(--yellow); letter-spacing: -1px; font-size: 14px; }
+  .stars .off { color: var(--fill); color: rgba(120,120,128,.28); }
+  .song { display: flex; flex-direction: column; gap: 8px; }
+  .songTop { display: flex; gap: 12px; align-items: center; }
+  .songTop .ring { --p: 31%; background: conic-gradient(var(--hihat) 0 var(--p), var(--fill) var(--p) 100%); width: 70px; height: 70px; }
+  .songTop .ring > div { width: 56px; height: 56px; }
+  .songTop h3 { font-size: 19px; letter-spacing: -.01em; }
+  .songTop p { font-size: 13px; color: var(--label2); }
+  .song .btns { display: flex; gap: 8px; }
+  .trail { margin-top: 12px; padding: 10px 18px 8px; height: 118px; }
+  .trailHead { display: flex; align-items: baseline; gap: 10px; }
+  .trailHead h3 { font-size: 17px; }
+  .trailHead span { font-size: 13px; color: var(--label2); }
+  .trailHead .sp { flex: 1; }
+  .stops { position: relative; display: grid; grid-template-columns: repeat(9, 1fr); margin-top: 10px; }
+  .stops::before { content: ""; position: absolute; left: 5.5%; right: 5.5%; top: 21px; height: 3px; background: repeating-linear-gradient(90deg, var(--label3) 0 6px, transparent 6px 11px); }
+  .stops::after { content: ""; position: absolute; left: 5.5%; width: 33%; top: 21px; height: 3px; background: var(--green); }
+  .stop { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+  .stop .d { width: 44px; height: 44px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--label3); color: var(--label2); position: relative; }
+  .stop .d .ic { width: 20px; height: 20px; }
+  .stop.done .d { background: var(--green); color: #fff; box-shadow: none; }
+  .stop.now .d { background: var(--yellow); color: #3A2A00; box-shadow: 0 0 0 5px rgba(255, 204, 0, .3); }
+  .stop.gate .d { box-shadow: inset 0 0 0 2.5px var(--label); color: var(--label); }
+  .stop.gate.now .d { box-shadow: 0 0 0 5px rgba(255, 204, 0, .3), inset 0 0 0 2.5px #3A2A00; }
+  .stop .flag { position: absolute; top: -7px; right: -9px; width: 20px; height: 20px; border-radius: 50%; background: var(--label); color: var(--yellow); display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+  .stop .flag .ic { width: 11px; height: 11px; }
+  .stop .flag.pen { background: var(--tint); color: #fff; }
+  .stop > span { font-size: 11.5px; line-height: 1.15; color: var(--label2); font-weight: 500; max-width: 90px; }
+  .stop.now > span { color: var(--label); font-weight: 700; }
+  .stop > .stars { font-size: 11px; margin-top: -3px; color: var(--yellow); }
+</style>
+</head>
+<body>
+<div class="ipad">
+  <div class="status"><span>19:42</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>87%</span><span class="batt"><i style="width:84%"></i></span></div>
+
+  <nav class="sb">
+    <div class="sbTop"><span class="ic i-sidebar"></span></div>
+    <div class="sbTitle">Drum Coach</div>
+    <a class="sbItem on"><span class="ic i-map"></span>Journey</a>
+    <a class="sbItem"><span class="ic i-metro"></span>Practice</a>
+    <a class="sbItem"><span class="ic i-chart"></span>Progress</a>
+    <a class="sbItem"><span class="ic i-bubble"></span>Coach</a>
+    <a class="sbItem"><span class="ic i-gear"></span>Setup</a>
+    <div class="sbStatus">
+      <div class="row"><i class="dot"></i><b>e-Drum</b><span>connected</span></div>
+      <div class="row"><span class="ic i-clock" style="width:15px;height:15px;color:var(--label2)"></span><b>Latency</b><span>31 ms</span></div>
+      <div class="row"><i class="dot"></i><b>Coach</b><span>home server</span></div>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="navbar">
+      <div class="titleBlock"><h1>Journey</h1></div>
+      <span class="sub">Stage 3 · The money beat</span>
+      <span class="sp"></span>
+      <span class="btn glass sm"><span class="ic i-drum"></span>Kit gestures on</span>
+      <span class="btn glass sm"><span class="ic i-map"></span>Skill map</span>
+    </div>
+
+    <div class="coach">
+      <div class="avatar"><span class="ic i-drum"></span></div>
+      <p>Evening! <b>Six days in a row.</b> Today the snare joins the hi-hat.</p>
+    </div>
+
+    <section class="card next" style="margin-top:10px">
+      <div class="nextTop">
+        <div>
+          <div class="kicker tint">Up next · 3 of 4 today · ★ checkpoint</div>
+          <h2>The money beat</h2>
+          <div class="step">Step 3 of 4 · + snare <span>· all three limbs · 12 min · 70 → 90 BPM</span></div>
+          <p class="what">Hi-hat 8ths, kick on 1 and 3, snare on 2 and 4.</p>
+          
+        </div>
+        <div class="preview">
+          <div class="cap"><span>One bar · you play all three</span><span>new: snare</span></div>
+          <svg viewBox="0 0 276 96" width="276" height="84" role="img" aria-label="The money beat, one bar">
+            <g font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="rgba(60,60,67,.62)">
+              <text x="0" y="17">Hi-hat</text><text x="0" y="41">Snare</text><text x="0" y="65">Kick</text>
+            </g>
+            <rect x="46" y="30" width="228" height="18" rx="5" fill="rgba(255,204,0,.28)"/>
+            <g stroke="rgba(60,60,67,.14)"><line x1="46" x2="274" y1="13" y2="13"/><line x1="46" x2="274" y1="39" y2="39"/><line x1="46" x2="274" y1="61" y2="61"/></g>
+            <g fill="#0FA3B1"><circle cx="60" cy="13" r="7"/><circle cx="88" cy="13" r="7"/><circle cx="116" cy="13" r="7"/><circle cx="144" cy="13" r="7"/><circle cx="172" cy="13" r="7"/><circle cx="200" cy="13" r="7"/><circle cx="228" cy="13" r="7"/><circle cx="256" cy="13" r="7"/></g>
+            <g fill="#5856D6"><circle cx="116" cy="39" r="7.5"/><circle cx="228" cy="39" r="7.5"/></g>
+            <g fill="#48484A"><rect x="52" y="54" width="16" height="14" rx="3.5"/><rect x="164" y="54" width="16" height="14" rx="3.5"/></g>
+            <g font-family="Inter, sans-serif" font-size="13" font-weight="700" text-anchor="middle">
+              <text x="60" y="90">1</text><text x="88" y="90" fill="#007AFF">&amp;</text><text x="116" y="90">2</text><text x="144" y="90" fill="#007AFF">&amp;</text><text x="172" y="90">3</text><text x="200" y="90" fill="#007AFF">&amp;</text><text x="228" y="90">4</text><text x="256" y="90" fill="#007AFF">&amp;</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="moves">
+        <div class="move go"><b><span class="ic i-play"></span>Start</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span><span class="or">or say “yes”</span></div></div>
+        <div class="move"><b><span class="ic i-redo"></span>Something else</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+        <div class="move"><b><span class="ic i-ear"></span>Hear it</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
+        <div class="move"><b><span class="ic i-note"></span>Just jam</b><div class="gs"><small>no score, with the band</small></div></div>
+      </div>
+    </section>
+
+    <div class="rowB">
+      <section class="card you">
+        <div class="youTop">
+          <div class="ring" style="--p:33%"><div><span><b>3/9</b>stage 3</span></div></div>
+          <div><div class="kicker">Your rank</div><div class="rank">Limb Wrangler</div><p>Next rank: <b style="color:var(--label)">Groove Keeper</b></p></div>
+        </div>
+        <div class="three">
+          <div><b class="num">6</b><span>day streak</span></div>
+          <div><b class="num">82%</b><span>landed</span></div>
+          <div><b class="num">14<small>/25</small></b><span>min today</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="setHead"><h3>Today’s set</h3><span style="font-size:13px;color:var(--label2)" class="num">8 of 25 min</span></div>
+        <div class="bar"><i style="width:8%"></i><i style="width:24%"></i><i class="cur" style="width:3%"></i></div>
+        <div class="setList">
+          <div class="li"><span class="tick"><span class="ic i-check"></span></span><span class="grow">Two-minute stretch</span><span class="val">2 min</span></div>
+          <div class="li"><span class="tick"><span class="ic i-check"></span></span><span class="grow">Double strokes <span style="color:var(--label2)">· review</span></span><span class="val"><span class="stars">★★<span class="off">★</span></span></span></div>
+          <div class="li"><span class="tick cur"></span><span class="grow"><b>The money beat</b></span><span class="val">12 min</span></div>
+          <div class="li"><span class="tick todo"></span><span class="grow">Steady Eight <span style="color:var(--label2)">· bars 5–8</span></span><span class="val">5 min</span></div>
+        </div>
+      </section>
+
+      <section class="card song">
+        <div class="kicker">Stage song</div>
+        <div class="songTop">
+          <div class="ring"><div><span><b>5/16</b>bars</span></div></div>
+          <div><h3>Steady Eight</h3><p>16 bars with the band. Fill the ring, then play it for a friend.</p></div>
+        </div>
+        <div class="btns"><span class="btn sm"><span class="ic i-ear"></span>Hear it</span><span class="btn sm"><span class="ic i-play"></span>Play it</span></div>
+      </section>
+    </div>
+
+    <section class="card trail">
+      <div class="trailHead"><h3>Stage 3 · The money beat</h3><span>3 of 9 lessons · 0 of 2 ★ checkpoints</span><span class="sp"></span><span class="btn plain sm" style="height:24px">Full path<span class="ic i-chevr" style="width:12px;height:12px"></span></span></div>
+      <div class="stops">
+        <div class="stop done"><div class="d"><span class="ic i-check"></span></div><span>Your first beat</span><span class="stars">★★★</span></div>
+        <div class="stop done"><div class="d"><span class="ic i-check"></span></div><span>Double strokes</span><span class="stars">★★<span class="off">★</span></span></div>
+        <div class="stop done"><div class="d"><span class="ic i-check"></span></div><span>Four on the floor</span><span class="stars">★<span class="off">★★</span></span></div>
+        <div class="stop now gate"><div class="d"><span class="ic i-target"></span><i class="flag"><span class="ic i-star"></span></i></div><span>The money beat</span></div>
+        <div class="stop"><div class="d"><span class="ic i-sticks"></span><i class="flag pen"><span class="ic i-sparkle"></span></i></div><span>Kick with the hat</span></div>
+        <div class="stop"><div class="d"><span class="ic i-book"></span></div><span>Road maps</span></div>
+        <div class="stop"><div class="d"><span class="ic i-ear"></span></div><span>Write what you hear</span></div>
+        <div class="stop"><div class="d"><span class="ic i-music"></span></div><span>Listen: real songs</span></div>
+        <div class="stop gate"><div class="d"><span class="ic i-music"></span><i class="flag"><span class="ic i-star"></span></i></div><span>Steady Eight</span></div>
+      </div>
+    </section>
+  </main>
+  <div class="home"></div>
+</div>
+</body>
+</html>
