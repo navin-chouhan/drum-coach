@@ -1,138 +1,104 @@
-// A scored take over a YouTube song (Play / Stage mode). The song is the clock, as the web's player.ts `external`
-// path (zero = 0; a stroke's time = position(stroke − latency) × beatMs): the core's matcher judges each stroke as it
-// comes, a note is missed once the song is past its Good window, and the core's computeStats scores the take.
-//
-// Interim: the core take engine (createTake, A4p2) isn't merged yet. When it is, this becomes
-// createTake(deps, songTakeOptions(...)) and this file goes; the screen only uses start / stop / results / onFinish.
-// Pure TypeScript (Vitest-tested).
-import { beatsPerBar, type Chart } from '@drum-coach/core/engine/chart';
+// A scored take over a YouTube song (Play / Stage mode) on the core take engine (@drum-coach/core/play/take
+// createTake) with the song as its ExternalClock, exactly as the web's player.ts startExternal: zero = 0, a stroke's
+// time = position(stroke − latency) × beatMs. This file only adapts the take for the screen: it ticks it, and turns
+// its judgements into the PlayResult stream NoteHighway draws (a note shows as missed once the song is past it).
+// Pure TypeScript (Vitest-tested with the core's fake audio port).
+import type { Chart } from '@drum-coach/core/engine/chart';
 import { PAD_INFO } from '@drum-coach/core/engine/kit';
+import { WINDOWS } from '@drum-coach/core/engine/scoring';
 import type { Hit } from '@drum-coach/core/input/hits';
-import { buildRun, type Run } from '@drum-coach/core/engine/run';
-import { computeStats, createMatcher, noteWindows, toResult, WINDOWS, type NoteResult, type PlayedHit, type RunStats } from '@drum-coach/core/engine/scoring';
+import { createTake, type Finished, type TakeDeps, type TakeOptions } from '@drum-coach/core/play/take';
 import type { RunInput } from '../../data/runs';
-import { createStream, type PlayResult, type Subscribe } from '../../play/events';
 import { laneOf } from '../../play/chartLike';
+import { createStream, type PlayResult, type Subscribe } from '../../play/events';
 
-export type SongTakeResult = {
-  chart: Chart; run: Run; results: NoteResult[]; extras: PlayedHit[]; hits: PlayedHit[]; stats: RunStats;
-  beatMs: number; bpm: number; speed: number; fromBar: number; toBar: number; startedAt: string; durationS: number;
-};
+export type SongTakeResult = Finished;
 
 export type SongTake = {
-  /** Seeks a bar before `from`, plays, and listens to the hits. */
-  start(): void;
-  /** Stops early: the take is dropped (as the web's Stop). */
+  /** Resolves once the song has been asked to play (the take's begin). */
+  start(): Promise<void>;
+  /** Stops early: the take is dropped (the web's Stop). */
   stop(): void;
-  /** Run position in beats at Clock `now` (negative in the pre-roll bar). */
   position(now: number): number;
-  /** The highway's clock: run ms (position × beatMs), so the highway's zero is 0. */
+  /** The highway's clock: run ms (position × beatMs); the highway's zero is 0. */
   runMs(now: number): number;
   readonly beatMs: number;
-  /** The chart cut to the section (run beats from 0), for the highway. */
+  /** The section as a chart from beat 0 (the run's notes, in the order results index them). */
   readonly runChart: Chart;
   readonly results: Subscribe<PlayResult>;
   onFinish(fn: (r: SongTakeResult) => void): () => void;
   readonly running: boolean;
 };
 
-export type SongTakeDeps = {
-  now: () => number;
+export type SongTakeDeps = Omit<TakeDeps, 'onHit'> & {
   onHit: (fn: (h: Hit) => void) => () => void;
-  /** Polls (the web polls the external clock every 50 ms); returns a stop function. */
+  /** Ticks the take (the web polls the external clock every 50 ms); returns a stop function. */
   every: (ms: number, fn: () => void) => () => void;
-  wallClock?: () => Date;
 };
 
-export function createSongTake(deps: SongTakeDeps, o: {
-  chart: Chart; bpm: number; speed: number; fromBar: number; toBar: number; latencyMs: number;
-  external: { position(hostMs: number): number; begin(): void; end(): void };
-}): SongTake {
-  const run = buildRun(o.chart, { fromBar: o.fromBar, toBar: o.toBar, repeats: 1 });
-  const beatMs = 60000 / o.bpm;
-  const expected = noteWindows(run.notes.map(n => ({ time: n.t * beatMs, drum: n.drum })));
+export function createSongTake(deps: SongTakeDeps, chart: Chart, opts: TakeOptions & { external: NonNullable<TakeOptions['external']> }): SongTake {
   const stream = createStream<PlayResult>();
+  // The take's own hit listener runs first; then the change it made becomes a result.
+  let after: ((h: Hit) => void) | null = null;
+  const take = createTake({ ...deps, onHit: fn => deps.onHit(h => { fn(h); after?.(h); }) }, chart, opts);
+  const run = take.state.run, beatMs = take.state.beatMs;
+  const runChart: Chart = {
+    ...chart, bars: Math.max(1, Math.ceil(run.beats / run.beatsPerBar - 1e-9)),
+    notes: run.notes.map(({ t, drum, accent, ghost }) => ({ t, drum, ...(accent && { accent }), ...(ghost && { ghost }) })),
+  };
+  let stopTick: (() => void) | null = null, shown: boolean[] = [], extras = 0;
   const finishers = new Set<(r: SongTakeResult) => void>();
-  const bpb = beatsPerBar(o.chart);
-  const runChart: Chart = { ...o.chart, bars: Math.max(1, Math.ceil(run.beats / bpb - 1e-9)), notes: run.notes.map(({ t, drum, accent, ghost }) => ({ t, drum, ...(accent && { accent }), ...(ghost && { ghost }) })) };
-  let running = false, offs: (() => void)[] = [], startedAt = '', startedMs = 0;
-  let match = createMatcher(expected), results: NoteResult[] = [], judged: boolean[] = [], hits: PlayedHit[] = [], extras: PlayedHit[] = [];
+  take.onFinish(f => finishers.forEach(fn => fn(f)));
+  take.onEnd(() => { stopTick?.(); stopTick = null; after = null; });
 
-  const position = (now: number) => o.external.position(now);
-  const cleanup = () => { offs.forEach(f => f()); offs = []; running = false; };
-  function finish() {
-    for (let i = 0; i < expected.length; i++) if (!judged[i]) missed(i);
-    const stats = computeStats(run, results, extras.length, beatMs);
-    const r: SongTakeResult = {
-      chart: o.chart, run, results, extras, hits, stats, beatMs, bpm: o.bpm, speed: o.speed, fromBar: o.fromBar, toBar: o.toBar,
-      startedAt, durationS: Math.round((deps.now() - startedMs) / 1000),
-    };
-    cleanup();
-    o.external.end();
-    finishers.forEach(f => f(r));
-  }
-  function missed(i: number) {
-    judged[i] = true;
-    stream.emit({ kind: 'judged', index: i, lane: laneOf(expected[i].drum), judgement: 'miss', at: expected[i].time });
+  function judged(i: number) {
+    shown[i] = true;
+    const r = take.state.results[i];
+    stream.emit({ kind: 'judged', index: i, lane: laneOf(run.notes[i].drum), judgement: r.judgement, at: run.notes[i].t * beatMs + (r.offset ?? 0),
+      ...(r.offset !== undefined && { offsetMs: r.offset }), ...(r.pad && { pad: r.pad }) });
   }
   return {
     beatMs, runChart, results: stream.subscribe,
-    get running() { return running; },
-    position,
-    runMs: now => position(now) * beatMs,
+    get running() { return take.state.phase === 'starting' || take.state.phase === 'playing'; },
+    position: now => take.position(now),
+    runMs: now => take.position(now) * beatMs,
     start() {
-      if (running) return;
-      match = createMatcher(expected);
-      results = expected.map(() => ({ judgement: 'miss' }));
-      judged = expected.map(() => false); hits = []; extras = [];
-      startedAt = (deps.wallClock?.() ?? new Date()).toISOString(); startedMs = deps.now();
-      running = true;
-      o.external.begin();
-      offs.push(deps.onHit(h => {
-        if (!h.pad) return;
-        const t = position(h.time - o.latencyMs) * beatMs;
-        if (t < -WINDOWS.near) return; // the pre-roll bar
-        const hit: PlayedHit = { time: t, pad: h.pad, velocity: h.velocity };
-        hits.push(hit);
-        const m = match(hit);
-        if (m?.bounce) return;
-        if (m) {
-          results[m.index] = toResult(m, h.velocity, h.pad);
-          judged[m.index] = true;
-          stream.emit({ kind: 'judged', index: m.index, lane: laneOf(expected[m.index].drum), judgement: m.judgement, offsetMs: m.offset, at: t, pad: h.pad });
-        } else {
-          extras.push(hit);
-          stream.emit({ kind: 'extra', lane: PAD_INFO[h.pad].drum, at: t, pad: h.pad });
+      shown = run.notes.map(() => false); extras = 0;
+      after = h => {
+        const s = take.state;
+        for (let i = 0; i < s.results.length; i++) if (!shown[i] && (s.results[i].judgement !== 'miss' || s.results[i].offset !== undefined)) judged(i);
+        if (s.extraBeats.length > extras) {
+          for (const b of s.extraBeats.slice(extras)) stream.emit({ kind: 'extra', lane: h.pad ? PAD_INFO[h.pad].drum : 'snare', at: b * beatMs, ...(h.pad && { pad: h.pad }) });
+          extras = s.extraBeats.length;
         }
-      }));
-      offs.push(deps.every(50, () => {
-        const ms = position(deps.now()) * beatMs;
-        for (let i = 0; i < expected.length; i++) if (!judged[i] && ms > expected[i].time + (expected[i].good ?? WINDOWS.good) + WINDOWS.near) missed(i);
-        if (ms > run.beats * beatMs + WINDOWS.near) finish();
-      }));
+      };
+      const started = take.start();
+      stopTick = deps.every(50, () => {
+        const now = deps.clock.now(), ms = take.position(now) * beatMs;
+        // a note nobody played: missed once the song is well past it
+        for (let i = 0; i < run.notes.length; i++) if (!shown[i] && ms > run.notes[i].t * beatMs + WINDOWS.good + WINDOWS.near) judged(i);
+        take.tick(now);
+      });
+      return started;
     },
-    stop() {
-      if (!running) return;
-      cleanup();
-      o.external.end();
-    },
+    stop() { take.stop('user'); },
     onFinish(fn) { finishers.add(fn); return () => { finishers.delete(fn); }; },
   };
 }
 
 /** The run a scored song take saves (the web's POST /api/runs from Results.saveRun), with the take's hits (N8). */
 export function songRun(r: SongTakeResult, title: string, songId: string): RunInput {
-  const s = r.stats;
+  const s = r.stats, o = r.options, beatMs = 60000 / (r.chart.bpm * o.speed);
   return {
     chartId: songId.slice(0, 80), chartTitle: title.slice(0, 200), startedAt: r.startedAt, durationS: Math.min(36_000, Math.max(0, r.durationS)),
-    bpm: r.bpm, speed: r.speed, accuracy: s.accuracy, meanOffset: s.meanOffset, spread: s.spread,
+    bpm: r.chart.bpm * o.speed, speed: o.speed, accuracy: s.accuracy, meanOffset: s.meanOffset, spread: s.spread,
     summary: {
       mode: 'play', song: title, notes: s.total, perfect: s.perfect, good: s.good, miss: s.miss, extra: s.extra,
       meanOffsetMs: s.meanOffset, spreadMs: s.spread, perDrum: s.perDrum, velocity: s.velocity, streak: s.streak,
-      section: { fromBar: r.fromBar, toBar: r.toBar },
+      section: { fromBar: o.fromBar, toBar: o.toBar },
     },
     take: {
-      beatMs: r.beatMs, beats: r.run.beats, beatsPerBar: r.run.beatsPerBar, timeSignature: r.chart.timeSignature,
+      beatMs, beats: r.run.beats, beatsPerBar: r.run.beatsPerBar, timeSignature: r.chart.timeSignature,
       hits: r.hits.slice(0, 4000).map(h => [Math.round(h.time), h.pad ?? 'snare', Math.max(0, Math.min(127, Math.round(h.velocity)))]),
     },
   };

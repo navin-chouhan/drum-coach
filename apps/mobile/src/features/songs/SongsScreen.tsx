@@ -46,12 +46,11 @@ export function SongsScreen() {
     setResults(null);
     open(w.value.id);
   }
-  function remove(id: string, title: string, question: string) {
+  function remove(id: string, question: string) {
     Alert.alert('Remove song', question, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => { songsWrite(s => s.songs.remove(id)); } },
     ], { cancelable: true });
-    void title;
   }
 
   return (
@@ -98,7 +97,7 @@ export function SongsScreen() {
                   <ListRow first={i === 0} title={row.title} detail={row.detail} onPress={() => open(s.id)} testID={`songs-open-${s.id}`} accessibilityLabel={`Open ${row.title}. ${row.detail}`} />
                 </View>
                 <Button size="small" tone="blue" label="Open" onPress={() => open(s.id)} accessibilityLabel={`Open ${row.title}`} />
-                <Button size="small" label="Remove" onPress={() => remove(s.id, s.title, row.removeQuestion)} accessibilityLabel={`Remove ${row.title}`} testID={`songs-remove-${s.id}`} />
+                <Button size="small" label="Remove" onPress={() => remove(s.id, row.removeQuestion)} accessibilityLabel={`Remove ${row.title}`} testID={`songs-remove-${s.id}`} />
               </View>
             );
           })}

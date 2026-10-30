@@ -156,19 +156,22 @@ export function songPart(s: YtSong, g: BeatGrid) {
   return { chart, bpb, firstBar, lastBar };
 }
 /**
- * The take's options for the core take engine: the song is the clock (`external`), one bar of count-in from the
- * video itself (it starts a bar before `from`), no click, scored like any exercise.
+ * The chart and options for the core take engine (the web's PlayMode start()): the song is the clock (`external`),
+ * one bar of count-in from the video itself (it starts a bar before `from`), no click, scored like any exercise.
  */
-export function songTakeOptions(o: { s: YtSong; g: BeatGrid; yt: SongPlayer; range: BarRange; rate: number; latencyMs: number }) {
+export function songTakeOptions(o: { s: YtSong; g: BeatGrid; yt: SongPlayer; range: BarRange; rate: number }) {
   const { chart, bpb } = songPart(o.s, o.g);
   const from = o.range.from, to = Math.max(from, o.range.to);
   return {
-    chart, bpm: o.g.bpm * o.rate, fromBar: from, toBar: to, repeats: 1, speed: o.rate,
-    metronome: false, subdivision: 1 as const, countInBars: 1, wait: false, latencyMs: o.latencyMs,
-    external: {
-      position: (now: number) => beatAt(o.yt.songTime(now), o.g) - (from - 1) * bpb,
-      begin: () => { o.yt.seek(Math.max(0, songSecAt((from - 2) * bpb, o.g))); o.yt.play(); },
-      end: () => o.yt.pause(),
+    chart,
+    opts: {
+      fromBar: from, toBar: to, repeats: 1, speed: o.rate,
+      metronome: false, subdivision: 1 as const, countInBars: 1, wait: false,
+      external: {
+        position: (now: number) => beatAt(o.yt.songTime(now), o.g) - (from - 1) * bpb,
+        begin: () => { o.yt.seek(Math.max(0, songSecAt((from - 2) * bpb, o.g))); o.yt.play(); },
+        end: () => o.yt.pause(),
+      },
     },
   };
 }

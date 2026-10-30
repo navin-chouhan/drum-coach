@@ -5,7 +5,8 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BigMove, Body, Card, CardTitle, Display, StatTile, color, gesturesFor, useKitMoves } from '../../ui';
+import { BigMove, Body, Card, CardTitle, Display, StatTile, color, gesturesFor, readSettings, useKitMoves } from '../../ui';
+import { audio } from '../../platform/audio';
 import { NoteHighway } from '../../play';
 import { getStorage } from '../../platform/storage';
 import { CheckRow, Row, Small, Stepper } from './bits';
@@ -14,7 +15,7 @@ import type { ModeProps } from './modeProps';
 import { concert, songHref } from './songsModel';
 import { createSongTake, songRun, type SongTake, type SongTakeResult } from './songTake';
 
-export function PlayPanel({ song, videoId, yt, rate, bars, bus, latencyMs, now, onStage }: ModeProps & { onStage: (on: boolean) => void }) {
+export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: ModeProps & { onStage: (on: boolean) => void }) {
   const grid = song.grids[videoId];
   const part = songPart(song, grid);
   const [range, setRange] = useState(bars ?? { from: part.firstBar, to: part.lastBar });
@@ -28,17 +29,18 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, latencyMs, now, 
   function go() {
     take?.stop();
     setDone(null);
-    const o = songTakeOptions({ s: song, g: grid, yt, range, rate, latencyMs });
+    const { chart, opts } = songTakeOptions({ s: song, g: grid, yt, range, rate });
     const t = createSongTake({
-      now, onHit: fn => bus.onHit(fn),
+      clock: { now }, audio, onHit: fn => bus.onHit(fn),
+      settings: () => { const st = readSettings(getStorage().kv); return { latencyMs: st.latencyMs, countIn: st.countIn, liveTips: st.liveTips, chattiness: st.chattiness }; },
       every: (ms, fn) => { const id = setInterval(fn, ms); return () => clearInterval(id); },
-    }, o);
+    }, chart, opts);
     t.onFinish(r => {
       setDone(r); setTake(null);
       void getStorage().runs.add(songRun(r, song.title, song.id)).catch(() => {});
     });
     setTake(t);
-    t.start();
+    void t.start();
   }
   const stop = () => { take?.stop(); setTake(null); };
   const playing = !!take;
@@ -65,7 +67,7 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, latencyMs, now, 
 
   if (done) return (
     <Card testID="song-results">
-      <CardTitle>Play (scored): bars {done.fromBar}–{done.toBar}</CardTitle>
+      <CardTitle>Play (scored): bars {done.options.fromBar}–{done.options.toBar}</CardTitle>
       <View style={styles.tiles}>
         <StatTile value={`${done.stats.accuracy}%`} label="on time" />
         <StatTile value={`${done.stats.meanOffset > 0 ? '+' : ''}${done.stats.meanOffset} ms`} label="early (−) / late (+)" />

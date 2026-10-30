@@ -211,12 +211,13 @@ describe('Play (scored)', () => {
     const calls: string[] = [];
     let t = 0;
     const yt: SongPlayer = { playing: true, duration: 100, songTime: () => t, seek: x => calls.push(`seek ${x}`), play: () => calls.push('play'), pause: () => calls.push('pause') };
-    const o = songTakeOptions({ s, g, yt, range: { from: 2, to: 3 }, rate: 1, latencyMs: 20 });
+    const { chart, opts: o } = songTakeOptions({ s, g, yt, range: { from: 2, to: 3 }, rate: 1 });
     t = 3; // song 3 s = beat 4 = bar 2 beat 0
     expect(o.external.position(0)).toBeCloseTo(0, 6);
     o.external.begin(); o.external.end();
     expect(calls).toEqual(['seek 1', 'play', 'pause']);
-    expect(o).toMatchObject({ fromBar: 2, toBar: 3, metronome: false, countInBars: 1, bpm: 120 });
+    expect(o).toMatchObject({ fromBar: 2, toBar: 3, metronome: false, countInBars: 1, speed: 1 });
+    expect(chart.bpm).toBe(120);
   });
 });
 
