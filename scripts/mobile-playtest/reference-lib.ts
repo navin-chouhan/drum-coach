@@ -6,9 +6,11 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { summarizeRun } from '../../src/coach/summary.ts';
+import { padForNote } from '../../src/engine/kit.ts';
 import { parseMidiMessage } from '../../src/engine/midi.ts';
 import { buildRun } from '../../src/engine/run.ts';
 import { replayFixture, type MidiFixture } from '../../src/input/fixtures.ts';
+import { BOUNCE_MS, BOUNCE_RATIO, CROSSTALK_MS, CROSSTALK_SNARE_MAX } from '../../src/input/hits.ts';
 import type { Finished } from '../../src/play/player.ts';
 
 export const FIXTURE_DIR = fileURLToPath(new URL('../../src/input/fixtures/', import.meta.url));
@@ -40,16 +42,17 @@ function buildReference(file: string, f: MidiFixture) {
   const summary = summarizeRun({ stats: r.stats, run, chart: f.chart, options, cues: [] } as unknown as Finished);
 
   // Every raw Note On, marked as the input path decided: the hits come out in the same order as their Note Ons
-  const hits = r.hits.map(h => ({ t: r3(h.time), pad: h.pad ?? null, velocity: h.velocity }));
-  let k = 0;
+  const hitNotes: number[] = [];
   const noteOns = f.midi.flatMap(([t, ...data]) => {
     const n = parseMidiMessage(data);
     if (!n) return [];
-    const h = r.hits[k], hit = !!h && Math.abs(h.time + f.latencyMs - t) < 0.01 && (h.pad === undefined || f.noteMap[h.pad] === n.note);
-    if (hit) k++;
-    return [{ t, note: n.note, velocity: n.velocity, verdict: hit ? 'hit' as const : 'filtered' as const }];
+    const pad = padForNote(f.noteMap, n.note) ?? null, h = r.hits[hitNotes.length];
+    const hit = !!h && Math.abs(h.time + f.latencyMs - t) < 0.01 && (h.pad ?? null) === pad;
+    if (hit) hitNotes.push(n.note);
+    return [{ t, pad, note: n.note, velocity: n.velocity, verdict: hit ? 'hit' as const : 'filtered' as const }];
   });
-  if (k !== r.hits.length) throw new Error(`${file}: matched ${k} of ${r.hits.length} hits to their Note Ons`);
+  if (hitNotes.length !== r.hits.length) throw new Error(`${file}: matched ${hitNotes.length} of ${r.hits.length} hits to their Note Ons`);
+  const hits = r.hits.map((h, i) => ({ t: r3(h.time), pad: h.pad ?? null, note: hitNotes[i], velocity: h.velocity }));
 
   const e = f.expect;
   return {
@@ -59,6 +62,8 @@ function buildReference(file: string, f: MidiFixture) {
     fixtureMidiSha256: createHash('sha256').update(JSON.stringify(f.midi)).digest('hex'),
     take: { chart: f.chart.title, bpm: f.chart.bpm, speed: f.speed, fromBar: f.fromBar, toBar: f.toBar, repeats: f.repeats,
       latencyMs: f.latencyMs, goodMs: f.goodMs ?? null, beatMs: r3(beatMs), notes: run.notes.length },
+    /** The input filters' windows (src/input/hits.ts), for compare.mjs's window-crossing report. */
+    windows: { bounceMs: BOUNCE_MS, bounceRatio: BOUNCE_RATIO, crosstalkMs: CROSSTALK_MS, crosstalkSnareMax: CROSSTALK_SNARE_MAX },
     counts: { ...countMessages(f.midi), hits: hits.length, filtered: noteOns.length - hits.length },
     landed: r.landed,
     extras: r.extras.length,
@@ -66,7 +71,7 @@ function buildReference(file: string, f: MidiFixture) {
     expectMet: (e.minLanded === undefined || r.landed >= e.minLanded) && (e.maxExtras === undefined || r.extras.length <= e.maxExtras)
       && (e.minAccuracy === undefined || r.stats.accuracy >= e.minAccuracy),
     summary,
-    /** Hits after the bounce and crosstalk filters: ms after beat 0 (latency removed), pad, velocity. */
+    /** Hits after the bounce and crosstalk filters: ms after beat 0 (latency removed), pad, MIDI note, velocity. */
     hits,
     /** Every Note On in the fixture (ms after beat 0, before latency) and whether it became a hit. */
     noteOns,
