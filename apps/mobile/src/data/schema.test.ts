@@ -18,7 +18,7 @@ describe('migrate', () => {
   it('creates every table on a fresh database and sets user_version', () => {
     const db = fresh();
     expect(migrate(db)).toEqual({ from: 0, to: SCHEMA_VERSION });
-    expect(tables(db)).toEqual(['ai_lessons', 'kv', 'plans', 'run_hits', 'runs', 'settings']);
+    expect(tables(db)).toEqual(['ai_lessons', 'charts', 'kv', 'plans', 'run_hits', 'runs', 'settings', 'yt_grids', 'yt_songs']);
     expect(db.getFirstSync<{ user_version: number }>('PRAGMA user_version', [])?.user_version).toBe(SCHEMA_VERSION);
   });
 
@@ -33,6 +33,16 @@ describe('migrate', () => {
     expect(columns(db, 'plans').map(c => c.name)).toEqual(['id', 'json', 'checks_json', 'created_at']);
     expect(columns(db, 'ai_lessons').map(c => c.name)).toEqual(['id', 'json', 'created_at']);
     expect(db.getAllSync<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'runs_started'", [])).toHaveLength(1);
+  });
+
+  it('mirrors server/db.ts columns for charts, yt_songs and yt_grids (migration 2, Songs)', () => {
+    const db = fresh();
+    migrate(db);
+    expect(columns(db, 'charts').map(c => c.name)).toEqual(['id', 'json', 'source', 'audio_file', 'sync_offset_ms', 'created_at']);
+    expect(columns(db, 'yt_songs').map(c => c.name)).toEqual([
+      'id', 'title', 'original_id', 'drumless_id', 'cover_id', 'ts_num', 'ts_den', 'notes_json', 'created_at', 'verified_at',
+    ]);
+    expect(columns(db, 'yt_grids').map(c => c.name)).toEqual(['video_id', 'bpm', 'offset_sec']);
   });
 
   it('is a no-op the second time and keeps rows', () => {
