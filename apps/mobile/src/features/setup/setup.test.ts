@@ -78,7 +78,7 @@ describe('coach server and API key', () => {
     let t = 0;
     const now = () => (t += 140) - 140;
     expect(await testConnection(client(health), now)).toMatchObject({ ok: true, text: 'Connected · 140 ms' });
-    expect(await testConnection(client({ ok: false, reason: 'unauthorized', status: 401 }), now)).toMatchObject({ ok: false, title: 'Wrong token (HTTP 401)' });
+    expect(await testConnection(client({ ok: false, reason: 'unauthorized', status: 401 }), now)).toMatchObject({ ok: false, title: 'The server didn’t accept the token' });
   });
   it('validates before saving, and asks for the token again to change the address', async () => {
     const c = client(health);

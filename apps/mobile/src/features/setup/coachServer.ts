@@ -3,7 +3,7 @@
 // how long it took. The API key is kept in the Keychain for later: the iPad's API-key coach isn't built yet.
 // Pure: takes the client, the secret store and a clock; never sees or logs the token beyond passing it on.
 import type { ApiFailure, HomeServer, ServerHealth } from '../../platform/contracts';
-import { failureText } from '../../dev/server/model';
+import { coachProblem } from '../coach/problem';
 
 export type ServerClient = Pick<HomeServer, 'configure' | 'configured' | 'health'> & { hasToken(): Promise<boolean> };
 type Validate = (url: string, token: string) => { ok: true; url: string; token: string } | { ok: false; error: string };
@@ -19,11 +19,13 @@ function healthResult(h: ServerHealth, ms: number): TestResult {
 }
 
 /** GET /api/health, timed. */
-export async function testConnection(client: Pick<HomeServer, 'health'>, now: () => number): Promise<TestResult> {
+export async function testConnection(client: Pick<HomeServer, 'health'> & Partial<Pick<HomeServer, 'configured'>>, now: () => number): Promise<TestResult> {
   const t0 = now();
   const r: ServerHealth | ApiFailure = await client.health();
   if (r.ok) return healthResult(r, now() - t0);
-  return { ok: false, ...failureText(r) };
+  // The coach panel's words for the same failure (features/coach/problem.ts), without its fallback line.
+  const p = coachProblem(r, { url: client.configured?.()?.url });
+  return { ok: false, title: p.title, hint: p.lines[0] ?? '' };
 }
 
 /**
