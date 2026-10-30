@@ -36,7 +36,7 @@ session. The decisions it needs are D1–D5, below.
 | A4d Audio design | **done, merged** (4467428) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
 
 | A4 Audio module part 1 | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
-| A5 Data + server client | running | `src/platform/{storage,api}.ts`, `src/data/**`, `app/dev/server.tsx`, `src/dev/server/**`, apps/mobile package.json (this round) | [briefs/A5.md](briefs/A5.md) | Storage, HomeServer, coach context builder |
+| A5 Data + server client | **done, merged** (90bf393); follow-ups running | `src/platform/{storage,api}.ts`, `src/data/**`, `app/dev/server.tsx`, `src/dev/server/**`, apps/mobile package.json (this round) | [briefs/A5.md](briefs/A5.md) | Storage, HomeServer, coach context builder |
 | A6 Play surfaces part 1 | running | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
 | ACI Mobile CI + deps gate | **done, merged** (9acf52b) | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
 
@@ -153,3 +153,11 @@ results.
   path). Both fixtures replayed as native batches on a shifted host clock give exactly the web hits. apps/mobile: 77
   tests; root: 422 tests, typecheck/lint clean. **Phase 1 code complete.** The gate needs the owner's iPad run: the
   first compile of the new Swift; checklist in PHASE1-CHECKLIST.md. Still running: A4, A5, A6.
+- 2026-10-30: A5 merged: expo-sqlite storage mirroring server/db.ts (versioned, WAL, kv store with the web's keys),
+  HomeServer (token only in the Keychain, scrubbed from errors, no Origin, typed failures), coach-context builder
+  (≤ 50 KB, checked against the server's own schema), /dev/server. Added expo-sqlite 58.0.13 and expo-secure-store
+  58.0.2 (both ≥ 7 days, no install scripts). Orchestrator fixes: root `.gitignore` `data` → `/data` (it hid
+  apps/mobile/src/data); the CI mobile job also runs the root `npm ci` (parity tests use the root's zod). apps/mobile:
+  141 tests, check:versions OK; root: 422 tests, lint 0; all 5 lockfiles pass. A5 follow-ups: capabilities uses the
+  token health check, home links to the dev screens, core imports replace the schema copies, SSE coach session via
+  `expo/fetch` streaming.

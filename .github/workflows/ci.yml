@@ -65,10 +65,15 @@ jobs:
         with:
           node-version: '24'
           cache: npm # npm's tarball cache only; npm ci still checks every tarball against the lockfile's sha512
-          cache-dependency-path: apps/mobile/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile/package-lock.json
       - name: Dependencies of every sub-project are stable, aged and from the registry
         working-directory: .
         run: node scripts/check-deps.mjs --projects
+      - name: Install the root too (parity tests import the web and server schemas, which need the root's zod)
+        working-directory: .
+        run: npm ci
       - name: Install (lockfile only, no install scripts)
         run: npm ci
       - name: Typecheck
