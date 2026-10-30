@@ -8,7 +8,7 @@
 <style>
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
   .col { display: flex; flex-direction: column; gap: 14px; }
-  .li { min-height: 50px; }
+  .li { min-height: 45px; padding-top: 4px; padding-bottom: 4px; }
   .li .grow b { font-weight: 500; }
   .li .grow small { margin-top: 1px; }
   .sym.green { background: var(--green); } .sym.blue { background: var(--tint); } .sym.orange { background: var(--orange); }
@@ -27,7 +27,8 @@
   .groupHead { padding-top: 0; }
   .kitHero { display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
   .kitHero .big { width: 52px; height: 52px; border-radius: 14px; background: var(--green); color: #fff; display: grid; place-items: center; }
-  .kitHero .big .ic { width: 30px; height: 30px; }
+  .kitHero .big { border: 3px solid var(--line); }
+  .kitHero .big .em { font-size: 30px; }
   .kitHero b { font-size: 20px; display: block; letter-spacing: -.01em; }
   .kitHero span { font-size: 14px; color: var(--label2); }
   .kitHero .hit { margin-left: auto; text-align: right; }
@@ -70,7 +71,7 @@
           <div class="groupHead">Pads</div>
           <div class="group">
             <div class="li withSym"><span class="sym indigo"><span class="em">🎯</span></span><span class="grow"><b>Hit each pad once</b><small>10 of 10 pads · checked 28 Oct</small></span><span class="val"><span class="btn sm" style="height:32px">Again</span></span></div>
-            <div class="li withSym"><span class="sym teal"><span class="em">🎧</span></span><span class="grow"><b>Soft, then loud</b><small>accents and ghost notes judged fairly</small></span><span class="val"><span class="ic i-check chk"></span><span class="ic i-chevr chev"></span></span></div>
+            <div class="li withSym"><span class="sym teal"><span class="em">🎧</span></span><span class="grow"><b>Soft, then loud</b><small>accents and ghost notes judged fairly</small></span><span class="val"><span class="pill green" style="height:26px">✓ done</span><span class="ic i-chevr chev"></span></span></div>
             <div class="li withSym"><span class="sym gray"><span class="em">🎸</span></span><span class="grow"><b>Note map</b></span><span class="val">General MIDI, tom 1 = 48 <span class="ic i-chevr chev"></span></span></div>
           </div>
         </div>
