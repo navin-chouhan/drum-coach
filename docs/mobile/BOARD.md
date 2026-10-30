@@ -14,7 +14,7 @@ session. The decisions it needs are D1–D5, below.
 | Phase | Agents | Status | Gate |
 |---|---|---|---|
 | 0 | A0 Recon, S1 MIDI spike | **built; waiting for the owner's device run** | GATE0.md GO + owner decisions D1–D5 |
-| 1 | A1 core, A2 Expo shell, A3 MIDI module, A9 harness skeleton | **in progress** (started 2026-10-30 on the owner's go) | T0 green; core tests green; app on simulator + iPad; kit logs hits |
+| 1 | A1 core, A2 Expo shell, A3 MIDI module, A9 harness skeleton | **code complete, merged; waiting for the owner's iPad check** ([PHASE1-CHECKLIST.md](PHASE1-CHECKLIST.md)) | T0 green; core tests green; app on simulator + iPad; kit logs hits |
 | 2 | A4 audio/clock, A5 data/backend, A6 play surfaces (+A7 mockups) | not started | Lesson plays + scores + saves on iPad, offline, T6 timing |
 | 3 | A7 screens, A6 rest | not started | All v1 screens on iPad landscape, with touch pads and kit |
 | 3b | A8 Songs (inline YouTube) | not started (the phase right after v1, D5) | Songs on iPad landscape |
@@ -28,7 +28,7 @@ session. The decisions it needs are D1–D5, below.
 
 | A1 Core extraction | **done, merged** (63f08d1) | `packages/core/**` (not `platform.ts`/`package.json`), shims at old paths, delegated minimal edits to root tsconfig/eslint/vitest | [briefs/A1.md](briefs/A1.md) | `@drum-coach/core` |
 | A2 Expo shell | **done, merged** (278c5de) | `apps/mobile/**` except A3/A9/contracts paths; `scripts/check-expo-versions.mjs` | [briefs/A2.md](briefs/A2.md) | the app shell |
-| A3 MIDI module | part 1 merged; **part 2 running** | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
+| A3 MIDI module | **done, merged** (46cded5) | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
 | A9 Test harness | **done, merged** (b4a2363) | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
 | A5s Home-server mode | **done, merged** (fe907e1) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
@@ -147,3 +147,9 @@ results.
   install script: ships prebuilds). `noxcturnal` (new, in both Expo sets) checked: Expo's own package
   (github.com/expo/noxcturnal, maintained by an Expo engineer). `mobile:test` reinstalls only when node_modules is out
   of date. All 5 lockfiles pass; T0 green. B26 opened for the apps/mobile audit findings.
+- 2026-10-30: A3 part 2 merged: `createMidiPort`/`getMidiPort` (one native subscription, auto-select e-Drum),
+  `connectMidiToHitBus` (one framer per connection, stale drop > 250 ms within 1 s of a foreground or while
+  backgrounded), and the MIDI debug screen (`dev-midi-devices`, snapshot redraw 4×/s, on-screen pads through the same
+  path). Both fixtures replayed as native batches on a shifted host clock give exactly the web hits. apps/mobile: 77
+  tests; root: 422 tests, typecheck/lint clean. **Phase 1 code complete.** The gate needs the owner's iPad run: the
+  first compile of the new Swift; checklist in PHASE1-CHECKLIST.md. Still running: A4, A5, A6.
