@@ -54,6 +54,8 @@ session. The decisions it needs are D1–D5, below.
 | A7e Coach panel | running | `app/(main)/coach.tsx`, `src/features/coach/**` | [briefs/A7e.md](briefs/A7e.md) | coach panel |
 | A8 Songs | running | `app/(main)/songs.tsx`, `app/song/**`, `src/features/songs/**`, `src/youtube/**` | [briefs/A8.md](briefs/A8.md) | Songs + imports |
 
+| A4p3 Backing audio | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio*` | [briefs/A4p3.md](briefs/A4p3.md) | BackingPort |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
@@ -229,3 +231,4 @@ results.
 - 2026-10-30: A7a part 1 (UI kit, sidebar, placeholders incl. songs) merged early so the screen agents can build on it.
 - 2026-10-30: ACI2 merged: `.github/workflows/ios.yml` on the `xcode-27` runner (Xcode 27.1, the owner's build), prebuild + xcodebuild for the iPad simulator + Swift unit tests; triggers: dispatch and PRs to main touching apps/mobile. `.github/actionlint.yaml` declares the new hosted label actionlint doesn't know yet.
 - 2026-10-30: A7a merged (Journey on core + Storage; nav = js-tabs drawn as the sidebar; old home → /about; Dev row in debug). Integration notes sent: lesson route `/lesson/[id]?item=N&mode=play|hear|jam` + `markDonePatch` (A7b); skill map / full path in Progress (A7d); one source for drum colours (follow-up).
+- 2026-10-30: A8 granted src/data schema/store edits (songs migration 2) and expo-document-picker + expo-file-system. Started A4p3 (backing audio) so imported tracks can play.
