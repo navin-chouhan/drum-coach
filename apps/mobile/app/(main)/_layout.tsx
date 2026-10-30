@@ -3,6 +3,8 @@
 // Full-screen frames (the lesson player, first run) are routes outside this group and hide the sidebar.
 import { router } from 'expo-router';
 import { Tabs, type BottomTabBarProps } from 'expo-router/js-tabs';
+import { FirstRunGate } from '../../src/features/firstRun/FirstRunGate';
+import { useLatencyRouteSync } from '../../src/features/setup/useSetup';
 import { DevRow, NAV, Sidebar, color, useStatusRows } from '../../src/ui';
 
 // Debug screens (app/dev/*, the build info): a small row in the sidebar of debug builds. The testIDs are A2's home links.
@@ -35,7 +37,10 @@ function SidebarTabs({ state, navigateToTab }: BottomTabBarProps) {
 }
 
 export default function MainLayout() {
+  useLatencyRouteSync(); // latencyMs follows the audio output (D6: per route) on every screen, not only in Setup
   return (
+    <>
+    <FirstRunGate />
     <Tabs
       tabBar={props => <SidebarTabs {...props} />}
       screenOptions={{ headerShown: false, tabBarPosition: 'left', sceneStyle: { backgroundColor: color.ground }, animation: 'none' }}
@@ -48,5 +53,6 @@ export default function MainLayout() {
       <Tabs.Screen name="setup" options={{ title: 'Setup' }} />
       <Tabs.Screen name="about" options={{ title: 'Build info' }} />
     </Tabs>
+    </>
   );
 }

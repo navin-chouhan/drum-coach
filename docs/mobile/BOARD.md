@@ -49,7 +49,7 @@ session. The decisions it needs are D1–D5, below.
 | A1f Core notation fix | **done, merged** (c2147ec) | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
 
 | A7b Lesson player | running | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
-| A7c Setup + first run | running | `app/(main)/setup*`, `app/welcome/**`, `src/features/{setup,firstRun,latency,pads}/**` | [briefs/A7c.md](briefs/A7c.md) | Setup, first run |
+| A7c Setup + first run | **done, merged** (098893a) | `app/(main)/setup*`, `app/welcome/**`, `src/features/{setup,firstRun,latency,pads}/**` | [briefs/A7c.md](briefs/A7c.md) | Setup, first run |
 | A7d Practice + Progress | running | `app/(main)/{practice,progress}*`, `app/practice/**`, `src/features/{practice,progress}/**` | [briefs/A7d.md](briefs/A7d.md) | Practice, Progress |
 | A7e Coach panel | **done, merged** (490b4ec) | `app/(main)/coach.tsx`, `src/features/coach/**` | [briefs/A7e.md](briefs/A7e.md) | coach panel |
 | A8 Songs | running | `app/(main)/songs.tsx`, `app/song/**`, `src/features/songs/**`, `src/youtube/**` | [briefs/A8.md](briefs/A8.md) | Songs + imports |
@@ -235,3 +235,5 @@ results.
 - 2026-10-30: A7e merged (coach panel + Coach tab; expo-speech 58.0.3; voice input left for later, as the web needs STT). Requests forwarded: A7b mounts CoachInspector on results + handles /lesson/chart?chartId=&bpm=; A8 opens /song/<id> from plan items.
 - 2026-10-30: A4p2 merged: createTake/planEvents/createMetronome/feeder in core; both fixtures exactly match the web references at +0 and +1e9; web-parity test runs the unchanged web player.ts side by side over 20 scenarios (identical). Root 495 tests, coverage of play/ 99.8 %. Integration fix: the coach module now uses the take's `Finished` and tempo = chart bpm × speed (as the web). apps/mobile 380 tests.
 - 2026-10-30: iOS runs 2-5 were cancelled by frequent pushes (concurrency cancel-in-progress). Holding pushes until run 6 (3aa7a15) reports; merges continue locally.
+- 2026-10-30: A7c merged (Setup + 4-step first run; latency per route under `drumcoach.latencyByRoute`). Orchestrator glue: `<FirstRunGate/>` and `useLatencyRouteSync()` mounted in `app/(main)/_layout.tsx`. apps/mobile 406 tests.
+- **Integration backlog** (for the final integration pass): placement test when `drumcoach.firstRun.placement` = '1' (web TodayView onboarding); the coach's `hasFallbackKey` is sync but the Keychain read is async (the API-key coach path isn't built: keep false); promote Group/GroupRow/Stepper/ToolFrame/PadMap and the coach bubbles into the kit; one source for drum colours (`src/play/theme` ↔ `ui/tokens`); the A9 Maestro `dev-midi.yaml` taps "MIDI" only in debug builds; Metro export needs `--clear` when worktrees share the /tmp cache.
