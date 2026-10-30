@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { COACH_TIMEOUT_MS, createHomeServer, TOKEN_KEY, type FetchInit, type HomeServerEvent, type StreamFetchLike, type StreamResponse } from './homeServer';
 import { createKv, KV_KEYS } from './kv';
 
-const TOKEN = 'tok_9f8e7d6c5b4a39281706f5e4d3c2b1a0';
+const TOKEN = 'fake-test-token-'.padEnd(36, 'x'); // obviously fake, low entropy: secret scanners leave it alone
 const URL_ = 'http://192.168.1.20:8787';
 const SERVER = 'event: say\ndata: "Nice ✓ and even"\n\nevent: reply\ndata: {"say":"Nice ✓ and even","screen":"Relax 🥁"}\n\n';
 

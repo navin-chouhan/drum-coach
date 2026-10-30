@@ -59,7 +59,7 @@ describe('child process environment', () => {
 });
 
 // ---------- home-server mode (D2) ----------
-const TOKEN = 'k3Jq9vR2xL7mN4pT8wY1zB6cD0fG5hS=';
+const TOKEN = 'fake-test-token-'.padEnd(32, 'x'); // obviously fake, low entropy: secret scanners leave it alone
 const home = accessConfig({ APP_HOST: '192.168.1.20', APP_TOKEN: TOKEN, ALLOWED_HOSTS: 'My-Mac.tailnet.ts.net, 100.64.0.7' });
 const local = accessConfig({});
 const ask = (remoteAddress: string, headers: Record<string, string>, a = home) => verdict({ remoteAddress, headers }, a);

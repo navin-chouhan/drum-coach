@@ -5,7 +5,7 @@ import {
 } from './homeServer';
 import { createKv, KV_KEYS } from './kv';
 
-const TOKEN = 'tok_9f8e7d6c5b4a39281706f5e4d3c2b1a0';
+const TOKEN = 'fake-test-token-'.padEnd(36, 'x'); // obviously fake, low entropy: secret scanners leave it alone
 const URL_ = 'http://192.168.1.20:8787';
 const HEALTH = { ok: true, version: '1.0.0', coach: true, tts: false, stt: true, youtube: false, provider: 'claude-cli' };
 
