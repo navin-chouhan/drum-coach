@@ -27,11 +27,11 @@ session. The decisions it needs are D1–D5, below.
 | S1 MIDI spike | **done, merged** (47c30c0); device run: step 0, M2, M3 pass; M4–M6, M8 open | `spikes/midi-probe/**`, `docs/mobile/GATE0.md`, `docs/mobile/GATE0-CHECKLIST.md` | [briefs/S1.md](briefs/S1.md) | GATE0.md, probe app |
 
 | A1 Core extraction | running | `packages/core/**` (not `platform.ts`/`package.json`), shims at old paths, delegated minimal edits to root tsconfig/eslint/vitest | [briefs/A1.md](briefs/A1.md) | `@drum-coach/core` |
-| A2 Expo shell | running | `apps/mobile/**` except A3/A9/contracts paths; `scripts/check-expo-versions.mjs` | [briefs/A2.md](briefs/A2.md) | the app shell |
-| A3 MIDI module | part 1 **done, reviewed** (2478544); waits for A1+A2 to merge, then part 2 | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
-| A9 Test harness | running | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
+| A2 Expo shell | **done, merged** (278c5de) | `apps/mobile/**` except A3/A9/contracts paths; `scripts/check-expo-versions.mjs` | [briefs/A2.md](briefs/A2.md) | the app shell |
+| A3 MIDI module | part 1 **merged** (2478544); part 2 waits for A1 | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
+| A9 Test harness | **done, reviewed** (b4a2363); merges after A1 (proves the move keeps the reference scores) | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
-| A5s Home-server mode | running (pulled forward from Phase 2) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
+| A5s Home-server mode | done; **2 hardening changes requested** (proxied requests need the token; HOST → APP_HOST) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
 | A7m iPad mockups | running (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
 | A4d Audio design | **done, merged** (4467428) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
 
@@ -111,3 +111,12 @@ results.
   `react-native-audio-api` fails the dependency rule (0.x, downloads binaries at pod install). Five owner questions
   (listening setup, mixing with other apps, interrupted takes, call banners, offline count-in voice) are queued for
   the Phase 2 gate.
+- 2026-10-30: A2 merged out of order (no file overlap with A1, nothing depends on A1 but a guarded optional
+  require). It uses the newest **Expo SDK set where every package is ≥ 7 days old: expo 58.0.17**, RN 0.88.0,
+  expo-modules-core 58.0.24, pinned exactly per bundledNativeModules. This set has never run on the iPad (Gate 0 ran
+  58.0.20). There are 4 exceptions in `apps/mobile/deps-allow.json` (react-native and react-native-worklets 0.x,
+  fsevents install script, gensync prerelease). A3 part 1 merged after it. T0: typecheck, lint 0, 358/358, build,
+  deps:check all pass; apps/mobile: tsc clean, 54 passed + 1 skipped (waits for core), check:versions OK. A9 done
+  (reference scores: flam taps 32/32, mean 7.4 ms; ghost groove 136/136, mean 20.1 ms), held until after A1. A5s
+  done (token access inside guard.ts, `/api/health`, coach context on 5 routes, 23 tests). Review asked for two
+  hardening changes. `npm audit signatures` can't download keys in this container; plain `npm audit` reports 0.
