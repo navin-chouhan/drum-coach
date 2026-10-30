@@ -31,9 +31,14 @@ session. The decisions it needs are D1–D5, below.
 | A3 MIDI module | part 1 **merged** (2478544); part 2 waits for A1 | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
 | A9 Test harness | **done, reviewed** (b4a2363); merges after A1 (proves the move keeps the reference scores) | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
-| A5s Home-server mode | done; **2 hardening changes requested** (proxied requests need the token; HOST → APP_HOST) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
+| A5s Home-server mode | **done, merged** (fe907e1) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
 | A7m iPad mockups | running (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
 | A4d Audio design | **done, merged** (4467428) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
+
+| A4 Audio module part 1 | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
+| A5 Data + server client | running | `src/platform/{storage,api}.ts`, `src/data/**`, `app/dev/server.tsx`, `src/dev/server/**`, apps/mobile package.json (this round) | [briefs/A5.md](briefs/A5.md) | Storage, HomeServer, coach context builder |
+| A6 Play surfaces part 1 | running | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
+| ACI Mobile CI + deps gate | running | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
@@ -120,3 +125,9 @@ results.
   (reference scores: flam taps 32/32, mean 7.4 ms; ghost groove 136/136, mean 20.1 ms), held until after A1. A5s
   done (token access inside guard.ts, `/api/health`, coach context on 5 routes, 23 tests). Review asked for two
   hardening changes. `npm audit signatures` can't download keys in this container; plain `npm audit` reports 0.
+- 2026-10-30: A5s merged after review fixes (proxied requests always need the token; `HOST` → `APP_HOST`). T0:
+  383/383, typecheck, lint 0, coverage, build OK. The owner asked for more parallel work. Contracts added:
+  `packages/core/src/play/audioPort.ts` (from AUDIO-DESIGN §2.1; `drum.${string}` until A1 lands PadId) and
+  `HomeServer`/`Storage` in `apps/mobile/src/platform/contracts.ts`. Started A4 (audio part 1), A5 (data + server
+  client), A6 (play surfaces part 1) and ACI (mobile CI + deps gate). 7 agents running: A1, A7m, A4, A5, A6, ACI
+  (+ A3 part 2 after A1).

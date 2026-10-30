@@ -51,4 +51,44 @@ export type Capabilities = {
   coachServer: 'unknown' | 'reachable' | 'unreachable' | 'not-configured';
 };
 
-// Phase 2 contracts (AudioPort, Storage, Api) are added here before A4/A5 start.
+// AudioPort lives in core (@drum-coach/core/play/audioPort): createTake uses it on every platform. A4 implements it
+// in src/platform/audio.ts on the drum-audio module.
+
+/** What GET /api/health says about the home server (server/guard.ts `health`). */
+export type ServerHealth = { ok: true; version: string; coach: boolean; tts: boolean; stt: boolean; youtube: boolean };
+
+export type ApiFailure = {
+  ok: false;
+  reason: 'not-configured' | 'unreachable' | 'unauthorized' | 'forbidden' | 'rate-limited' | 'bad-response' | 'server-error';
+  status?: number;
+  detail?: string;
+};
+
+/**
+ * The home server (D2: the owner's Mac or Linux machine running `npm run server` with APP_TOKEN). A5 implements it in
+ * src/platform/api.ts. The URL lives in the key-value store; the token lives only in expo-secure-store (Keychain).
+ * Never throws: every failure is a typed ApiFailure that screens can show.
+ */
+export interface HomeServer {
+  configure(cfg: { url: string; token: string } | null): Promise<void>;
+  configured(): { url: string } | null;
+  health(): Promise<ServerHealth | ApiFailure>;
+  /** A JSON call with `Authorization: Bearer <token>`; `path` starts with /api/. Times out (default 30 s, coach 120 s). */
+  call<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: `/api/${string}`, body?: unknown,
+    opts?: { timeoutMs?: number }): Promise<{ ok: true; data: T } | ApiFailure>;
+}
+
+/**
+ * On-device storage (D3: the iPad is the source of truth). A5 implements it in src/platform/storage.ts on expo-sqlite,
+ * with tables and row shapes mirroring server/db.ts, so the screens' logic ports from the web app unchanged.
+ * `kv` is synchronous (the core KeyValueStore: settings, note maps, pad calibration).
+ */
+export interface Storage {
+  readonly kv: import('@drum-coach/core/platform').KeyValueStore;
+  /** Runs (takes) as the web's POST/GET /api/runs shape them; A5 defines RunInput/RunRow next to the schema. */
+  runs: {
+    add(run: unknown): Promise<string>;
+    list(q?: { since?: number; limit?: number }): Promise<unknown[]>;
+    take(id: string): Promise<unknown | null>;
+  };
+}
