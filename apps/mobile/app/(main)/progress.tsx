@@ -1,11 +1,4 @@
-// Progress: a placeholder in the kit's look until its screen is built (another agent replaces this file).
-import { ComingNext, Screen, TitleBar } from '../../src/ui';
+// Progress: the screen lives in src/features/progress (A7d).
+import { ProgressScreen } from '../../src/features/progress/ProgressScreen';
 
-export default function ProgressScreen() {
-  return (
-    <Screen testID="screen-progress">
-      <TitleBar title="Progress" />
-      <ComingNext title="Progress" emoji="📈" what="Getting better, this week, the skill map, trophies, your time and your lessons in plain words." />
-    </Screen>
-  );
-}
+export default ProgressScreen;
