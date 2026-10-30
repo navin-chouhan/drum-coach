@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1194">
+<title>Lesson results · iPad mockup</title>
+<link rel="stylesheet" href="ipad.css">
+<script src="mock.js"></script>
+<style>
+  .viewSeg { height: 36px; } .viewSeg span { font-size: 13.5px; padding: 0 11px; }
+  .top .ladder { display: none; } /* the next tempo says it; room for Sheet / Highway and Share take */
+  .tempo .up { white-space: nowrap; font: 900 14px var(--display); color: var(--line); background: #4BE08A; border: 2px solid #fff; border-radius: 999px; padding: 3px 10px; }
+  .verdict { position: absolute; left: 24px; right: 30px; top: 116px; }
+  .verdict .bubble { flex: 1; display: flex; align-items: center; gap: 14px; }
+  .verdict p { font-size: 22px; }
+  .verdict .think { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 800; white-space: nowrap; background: var(--panel2); border: 2px solid var(--line); border-radius: 999px; padding: 4px 10px; }
+  .resMoves { position: absolute; left: 24px; right: 30px; top: 198px; grid-template-columns: 2fr 1fr 1fr 1fr; }
+
+  .notesPanel { position: absolute; left: 24px; top: 310px; width: 790px; height: 456px; padding: 10px 14px; background: var(--night); color: #fff; box-shadow: 6px 6px 0 var(--pop); }
+  .ph { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+  .ph h3 { font-size: 15px; color: var(--pop); letter-spacing: .05em; text-transform: uppercase; }
+  .legend { margin-left: auto; display: flex; gap: 12px; font-size: 13px; font-weight: 800; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; border: 2px solid #fff; }
+  .side { position: absolute; left: 832px; right: 30px; top: 310px; height: 456px; display: flex; flex-direction: column; gap: 12px; }
+  .take .landed { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+  .take .landed b { font: 900 52px/1 var(--display); }
+  .take .landed span { font-size: 15px; font-weight: 800; }
+  .stars { font-size: 30px; color: var(--pop); -webkit-text-stroke: 1.5px var(--line); letter-spacing: 1px; line-height: 1.1; }
+  .stars .off { color: #D6D6D6; }
+  .facts { margin-top: 4px; display: grid; gap: 1px; font-size: 14.5px; }
+  .facts b { font-family: var(--display); font-weight: 900; }
+  .fix { background: var(--orangeSoft); }
+  .fix p { font-size: 15.5px; font-weight: 700; margin: 6px 0 8px; line-height: 1.28; }
+  .ask { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--panel2); }
+  .ask p { font-size: 13.5px; line-height: 1.25; font-weight: 600; }
+  .ask p b { display: block; font: 900 15px var(--display); }
+
+  /* The share sheet is iOS's own (D5: Share take = MIDI export via the share sheet), so it keeps the system look. */
+  .pop { display: none; position: absolute; z-index: 20; right: 84px; top: 96px; width: 380px; background: rgba(250, 250, 252, .98); border-radius: 26px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .3), 0 0 0 .5px rgba(0,0,0,.1); padding: 14px; font-family: var(--sf); }
+  #share:target ~ .pop, #share:target ~ .scrim { display: block; }
+  .scrim { display: none; position: absolute; inset: 0; z-index: 15; background: rgba(0, 0, 0, .18); }
+  .pop::before { content: ""; position: absolute; top: -9px; right: 80px; width: 20px; height: 20px; background: rgba(250, 250, 252, .98); transform: rotate(45deg); border-radius: 3px; }
+  .file { display: flex; gap: 12px; align-items: center; padding: 4px 4px 12px; border-bottom: .5px solid rgba(60,60,67,.2); }
+  .file .fi { width: 46px; height: 54px; border-radius: 8px; background: var(--pop); border: 2px solid var(--line); display: grid; place-items: center; font: 900 11px var(--display); }
+  .file b { display: block; font-size: 16px; }
+  .file span { font-size: 13px; color: rgba(60,60,67,.65); }
+  .targets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 14px 0 12px; border-bottom: .5px solid rgba(60,60,67,.2); }
+  .targets div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; }
+  .targets i { width: 58px; height: 58px; border-radius: 15px; display: grid; place-items: center; color: #fff; font-size: 26px; font-style: normal; }
+  .targets i .ic { width: 28px; height: 28px; }
+  .acts { margin-top: 10px; }
+  .acts .li { background: #fff; min-height: 46px; border: 0; }
+  .acts .li + .li { border-top: .5px solid rgba(60,60,67,.2); }
+  .acts .li:first-child { border-radius: 12px 12px 0 0; } .acts .li:last-child { border-radius: 0 0 12px 12px; }
+  .acts .li .em { margin-left: auto; }
+</style>
+</head>
+<body>
+<div class="ipad">
+  <i id="share"></i><i id="sheet"></i>
+  <div class="status"><span>19:45</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>87%</span><span class="batt"><i style="width:84%"></i></span></div>
+
+  <header class="top">
+    <span class="btn round sm" style="width:40px"><span class="ic i-chevl"></span></span>
+    <div class="title"><b>The money beat</b><span>Step 3 of 4 · ★ checkpoint</span></div>
+    <div class="steps"><i class="done">✓</i><i class="done">✓</i><i class="cur"><em>3</em>+ snare</i><i>4</i></div>
+    <span class="seg viewSeg"><span data-v="sheet">Sheet</span><span data-v="highway">Highway</span></span>
+    <span class="sp"></span>
+    <div class="tempo">
+      <div class="big num">70<small>BPM</small></div><span class="up">→ 75 next</span>
+      <div class="ladder"><div class="rungs"><i class="start done" style="height:10px"></i><i class="done" style="height:13px"></i><i class="done" style="height:16px"></i><i class="at" style="height:19px"></i><i style="height:22px"></i><i style="height:25px"></i><i class="goal" style="height:28px"></i></div><span>start 60 · goal 90</span></div>
+    </div>
+    <span class="btn" style="margin-left:6px;background:var(--pop)"><span class="em">📤</span>Share take</span>
+    <span class="btn round sm" style="width:40px">⋯</span>
+  </header>
+
+  <div class="coach verdict">
+    <div class="avatar lg">🥁</div>
+    <div class="bubble"><p><b>Clean!</b> 46 of 48 landed, 21 in a row. Two clean takes: up to 75.</p>
+      <span class="think"><span class="spinner"></span>Coach is listening back</span></div>
+  </div>
+
+  <div class="moves resMoves">
+    <div class="move go"><b><span class="em">▶</span>Play at 75</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span><span class="or">or say “yes”</span></div></div>
+    <div class="move"><b><span class="em">🎧</span>Hear your take</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
+    <div class="move alt"><b><span class="em">🐢</span>Stay at 70</b><div class="gs"><span class="gest g-floor">floor × 2</span></div></div>
+    <div class="move alt"><b><span class="em">⏭</span>Skip to next</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+  </div>
+
+  <section class="card notesPanel">
+    <div class="ph"><h3>Your take, on the notes</h3>
+      <div class="legend"><span><i style="background:#4BE08A"></i>on it</span><span><i style="background:#FF9F1C"></i>early / late</span><span><i style="background:none;border:2px dashed #FF5A4F"></i>missed</span><span style="color:#FF5A4F">✕ extra</span></div></div>
+    <div id="notes"></div>
+  </section>
+
+  <div class="side">
+    <section class="card take">
+      <div class="kicker">Take 2 · 70 BPM</div>
+      <div class="landed"><b class="num">46</b><span>of 48 notes landed</span></div>
+      <div class="stars">★★<span class="off">★</span></div>
+      <div class="facts"><div><b>21</b> in a row, your best</div><div><b>18 ms</b> after the click, on average</div><div><b>1</b> extra hit</div></div>
+    </section>
+    <section class="card fix">
+      <div class="kicker">One thing to fix</div>
+      <p>The kick rushed in bar 3, twice about 60 ms early. Let your foot fall <b>with</b> the hi-hat, heel down.</p>
+      <span class="btn sm"><span class="em">🔁</span>Fix bar 3 · 4× at 60</span>
+    </section>
+    <section class="card ask">
+      <div class="avatar sm">🥁</div>
+      <p><b>Ask the coach</b>Feedback and a drill for this take</p>
+      <span class="ic i-chevr chev" style="margin-left:auto"></span>
+    </section>
+  </div>
+
+  <div class="scrim"></div>
+  <div class="pop">
+    <div class="file"><div class="fi">MIDI</div><div><b>The money beat · take 2.mid</b><span>Your 47 hits at their real times · 4 bars · 70 BPM · 2 KB</span></div></div>
+    <div class="targets">
+      <div><i style="background:linear-gradient(#5AC8FA,#007AFF)"><span class="ic i-wifi"></span></i>AirDrop</div>
+      <div><i style="background:linear-gradient(#5BE37D,#28C840)">💬</i>Messages</div>
+      <div><i style="background:linear-gradient(#62B7FF,#1A82FB)"><span class="ic i-send"></span></i>Mail</div>
+      <div><i style="background:linear-gradient(#FFE27A,#FFC600)">📝</i>Notes</div>
+    </div>
+    <div class="acts">
+      <div class="li">Save to Files<span class="em">📁</span></div>
+      <div class="li">Copy<span class="em">📋</span></div>
+    </div>
+  </div>
+
+  <div class="home"></div>
+</div>
+<script>
+// The take's 4 bars, two bars per row, on the black panel; every note says how it landed (src/engine/takeMarks.ts).
+const marks = { kick16: ['off', '−62'], kick20: ['off', '−55'], hihat9: ['off', '+52'], hihat31: ['miss'], snare14: ['miss'] };
+const lanes = ['hihat', 'snare', 'kick'];
+function row(first, y0, W) {
+  const left = 80, colW = (W - left - 4) / 16, laneH = 34;
+  const x = t => left + colW * (t - first * 8) + colW / 2, y = i => y0 + 20 + laneH * i + laneH / 2;
+  let s = '';
+  for (let b = 0; b < 2; b++) {
+    const bx = left + b * 8 * colW;
+    s += `<rect x="${bx + 2}" y="${y0 + 20}" width="${8 * colW - 4}" height="${laneH * 3}" fill="#ffffff12"/>`;
+    s += `<text x="${bx + 6}" y="${y0 + 13}" font-size="12" font-weight="900" fill="${POP}">BAR ${first + b + 1}</text>`;
+  }
+  lanes.forEach((l, i) => { s += `<circle cx="10" cy="${y(i)}" r="6" fill="${DC[l]}" stroke="#fff" stroke-width="1.5"/><text x="22" y="${y(i) + 5}" font-size="14" font-weight="900" fill="#fff">${NAME[l]}</text>`; });
+  for (const n of moneyBeat(4)) {
+    if (n.t < first * 8 || n.t >= first * 8 + 16) continue;
+    const m = marks[n.lane + n.t], cx = x(n.t), cy = y(lanes.indexOf(n.lane));
+    s += gem(n.lane, cx, cy, 12, m ? m[0] : 'ok');
+    if (m && m[1]) s += `<text x="${cx}" y="${cy - 15}" text-anchor="middle" font-size="11" font-weight="900" fill="#FF9F1C">${m[1]}</text>`;
+  }
+  if (first === 2) s += `<text x="${x(18.5)}" y="${y(1) + 8}" text-anchor="middle" font-size="24" font-weight="900" fill="#FF5A4F">✕</text>`;
+  for (let t = first * 8; t < first * 8 + 16; t++) {
+    const e = t % 8, isNum = e % 2 === 0;
+    s += `<text x="${x(t)}" y="${y0 + 20 + laneH * 3 + 18}" text-anchor="middle" font-size="15" font-weight="900" fill="${isNum ? '#fff' : '#8FB4FF'}">${isNum ? e / 2 + 1 : '&amp;'}</text>`;
+  }
+  return s;
+}
+function timing(y0, W) {
+  // Where every hit landed against the click; the green band is "right on it".
+  const offs = [12, 18, 22, 9, 31, 25, 14, 52, 19, 27, 8, 16, 21, 33, 11, 24, 15, 20, 28, 6, 17, 23, 13, 30, -62, 19, 26, -55, 14, 22, 18, 25, 10, 29, 16, 21, 12, 27, 35, 19, 24, 15, 20, 11, 26, 18, -4];
+  const mid = W / 2, sc = (W / 2 - 50) / 100, x = ms => mid + ms * sc, h = 104;
+  let s = `<rect x="0" y="${y0}" width="${W}" height="${h}" fill="#FFFDF6" stroke="${INK}" stroke-width="3"/>`;
+  s += `<text x="12" y="${y0 + 20}" font-size="14" font-weight="900" fill="${INK}">Where your hits landed</text><text x="${W - 12}" y="${y0 + 20}" text-anchor="end" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#4A4A4A">on average 18 ms after the click · 2 missed · 1 extra</text>`;
+  const cy = y0 + 56;
+  s += `<rect x="${x(-40)}" y="${cy - 20}" width="${x(40) - x(-40)}" height="40" fill="#E3F5EA" stroke="#1E9E5A" stroke-width="2"/>`;
+  s += `<line x1="${x(-100)}" x2="${x(100)}" y1="${cy}" y2="${cy}" stroke="${INK}" stroke-width="3"/><line x1="${mid}" x2="${mid}" y1="${cy - 24}" y2="${cy + 24}" stroke="${INK}" stroke-width="3"/>`;
+  offs.forEach((ms, k) => { s += `<circle cx="${x(ms)}" cy="${cy + ((k % 3) - 1) * 9}" r="6" fill="${Math.abs(ms) <= 40 ? '#1E9E5A' : '#FF9F1C'}" stroke="${INK}" stroke-width="1.5"/>`; });
+  s += `<text x="${x(-100)}" y="${cy + 40}" font-size="12" font-weight="900" fill="#4A4A4A">← EARLY</text><text x="${mid}" y="${cy + 40}" text-anchor="middle" font-size="12" font-weight="900">THE CLICK</text><text x="${x(100)}" y="${cy + 40}" text-anchor="end" font-size="12" font-weight="900" fill="#4A4A4A">LATE →</text>`;
+  return s;
+}
+/** A slimmer timing line for under the sheet. */
+function timingSlim(W, h) {
+  const offs = [12, 18, 22, 9, 31, 25, 14, 52, 19, 27, 8, 16, 21, 33, 11, 24, 15, 20, 28, 6, 17, 23, 13, 30, -62, 19, 26, -55, 14, 22, 18, 25, 10, 29, 16, 21, 12, 27, 35, 19, 24, 15, 20, 11, 26, 18, -4];
+  const mid = W / 2 + 90, sc = (W / 2 - 150) / 100, x = ms => mid + ms * sc, cy = h / 2;
+  let s = `<svg width="${W}" height="${h}" viewBox="0 0 ${W} ${h}" font-family='${FONT}' style="display:block;margin-top:6px"><rect x="1.5" y="1.5" width="${W - 3}" height="${h - 3}" fill="#FFFDF6" stroke="${INK}" stroke-width="3"/>`;
+  s += `<text x="12" y="${cy - 3}" font-size="13" font-weight="900" fill="${INK}">WHERE YOUR</text><text x="12" y="${cy + 13}" font-size="13" font-weight="900" fill="${INK}">HITS LANDED</text>`;
+  s += `<rect x="${x(-40)}" y="${cy - 17}" width="${x(40) - x(-40)}" height="34" fill="#E3F5EA" stroke="#1E9E5A" stroke-width="2"/>`;
+  s += `<line x1="${x(-100)}" x2="${x(100)}" y1="${cy}" y2="${cy}" stroke="${INK}" stroke-width="3"/><line x1="${mid}" x2="${mid}" y1="${cy - 20}" y2="${cy + 20}" stroke="${INK}" stroke-width="3"/>`;
+  offs.forEach((ms, k) => { s += `<circle cx="${x(ms)}" cy="${cy + ((k % 3) - 1) * 8}" r="5.5" fill="${Math.abs(ms) <= 40 ? '#1E9E5A' : '#FF9F1C'}" stroke="${INK}" stroke-width="1.5"/>`; });
+  s += `<text x="${x(-100) - 8}" y="${cy + 5}" text-anchor="end" font-size="11" font-weight="900" fill="#4A4A4A">EARLY</text><text x="${x(100) + 8}" y="${cy + 5}" font-size="11" font-weight="900" fill="#4A4A4A">LATE</text>`;
+  return s + `</svg>`;
+}
+const W = 756, onSheet = location.hash === '#sheet';
+document.querySelectorAll('.viewSeg span').forEach(el => el.classList.toggle('on', el.dataset.v === (onSheet ? 'sheet' : 'highway')));
+document.getElementById('notes').innerHTML = onSheet
+  // results on the sheet-music notes: the whole take, two bars a row, each note in how it went
+  ? sheet({ W, rowH: 166, gap: 10.8, rows: [[0, 2], [2, 2]], judged: { kick16: ['off', '−62'], kick20: ['off', '−55'], hihat9: ['off', '+52'], hihat31: ['miss'], snare14: ['miss'] }, extras: [{ lane: 'snare', t: 18.5 }] }) + timingSlim(W, 58)
+  : `<svg width="${W}" height="418" viewBox="0 0 ${W} 418" font-family='${FONT}' style="display:block">${row(0, 0, W)}${row(2, 150, W)}${timing(306, W)}</svg>`;
+</script>
+</body>
+</html>

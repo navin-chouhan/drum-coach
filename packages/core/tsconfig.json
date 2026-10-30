@@ -1,0 +1,18 @@
+{
+  // Core on its own: no DOM lib, so browser APIs don't type-check here (lint's boundary rule covers the rest).
+  // The root tsconfig also includes packages/core/src, so `npm run typecheck` checks it with the web app.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vitest.config.ts", "vitest.setup.ts"]
+}

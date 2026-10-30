@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Drum Coach",
+    "slug": "drum-coach",
+    "version": "0.1.0",
+    "scheme": "drumcoach",
+    "orientation": "landscape",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.drumcoach.app",
+      "supportsTablet": true,
+      "isTabletOnly": true,
+      "requireFullScreen": true,
+      "infoPlist": {
+        "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
+        "NSLocalNetworkUsageDescription": "Drum Coach uses your local network to load the app from your computer while developing, to reach your home coach server, and to receive drum hits over Network MIDI.",
+        "NSBonjourServices": ["_apple-midi._udp"],
+        "NSMicrophoneUsageDescription": "Drum Coach uses the microphone only when you talk to the voice coach.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F6F4EF"
+        }
+      ]
+    ]
+  }
+}

@@ -99,3 +99,9 @@ jobs:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: low
+          # Exceptions, each one approved by the owner (2026-10-30, docs/mobile/BOARD.md B26). Both are in Expo's
+          # command-line tooling in apps/mobile and spikes/midi-probe (runs on the dev machine at build time, never
+          # ships in the iPad app), and neither has a fixed release yet. Remove each one when Expo ships a fix.
+          # - GHSA-mrhx-c7xc-m3w5 (zod < 4.6.6, high): @expo/cli pins zod 3.25.76; no 3.x fix exists.
+          # - GHSA-gcqx-w48m-w2h4 (deepmerge <= 4.3.1, low): @expo/config; 4.3.1 is deepmerge's latest release.
+          allow-ghsas: GHSA-mrhx-c7xc-m3w5, GHSA-gcqx-w48m-w2h4

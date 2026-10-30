@@ -1,0 +1,187 @@
+/* Drum Coach · iPad mockups (D4 revised: "web look, iPad layout"). One 1194×834 pt frame per page.
+   The look is the web app's (src/ui/styles.css): hot-pink dotted ground, thick black ink outlines, hard offset
+   shadows, yellow highlights, cream cards, a black bar, chunky display type, the teal drum mascot.
+   1 CSS px = 1 pt. Linux renders use Inter Display Black for the display face when Arial Black isn't installed. */
+
+:root {
+  /* The web app's tokens */
+  --bg: #FF5FA2; --panel: #FFFFFF; --panel2: #FFF6CC; --line: #141414; --text: #141414; --muted: #4A4A4A;
+  --accent: #2F6FE4; --pop: #FFE14D; --cyan: #2DE1C2; --night: #141414; --nightText: #FFFFFF;
+  --good: #1E9E5A; --ok: #C77700; --bad: #E8423F;
+  --display: "Arial Black", "Archivo Black", "Inter Display", Impact, sans-serif;
+  --sf: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  --dots: radial-gradient(#ffffff66 1.6px, transparent 1.8px) 0 0 / 12px 12px;
+  /* Names the page styles use, mapped onto the web palette */
+  --card: var(--panel); --label: var(--line); --label2: var(--muted); --label3: rgba(20, 20, 20, .35);
+  --sep: rgba(20, 20, 20, .16); --fill: rgba(20, 20, 20, .08); --fill2: rgba(20, 20, 20, .05);
+  --tint: var(--accent); --tintSoft: #DCE7FF;
+  --green: var(--good); --greenInk: #127A43; --greenSoft: #E3F5EA;
+  --orange: #FF9F1C; --orangeInk: #8A4B00; --orangeSoft: #FFE9C2;
+  --red: var(--bad); --redInk: #B42320; --redSoft: #FFE3E2;
+  --yellow: var(--pop); --yellowSoft: var(--panel2);
+  --r-card: 0; --shadow: 5px 5px 0 var(--line);
+  /* One colour per drum: the web kit's colours, moved off green, orange and red, which mean on it / early-late / missed */
+  --hihat: #FFE14D; --crash: #FF5FA2; --ride: #7FD3FF; --snare: #2DE1C2; --tom1: #2F6FE4; --tom2: #8C5CFF;
+  --floor: #9C6B4A; --kick: #FFFFFF;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2A2A2A; font-family: var(--sf); color: var(--text); -webkit-font-smoothing: antialiased; font-size: 15px; line-height: 1.35; }
+p { margin: 0; }
+h1, h2, h3, h4 { margin: 0; font-family: var(--display); font-weight: 900; letter-spacing: .005em; }
+.num, .tnum { font-variant-numeric: tabular-nums; }
+.em { font-style: normal; line-height: 1; display: inline-block; }
+.ck { font-family: var(--display); font-weight: 900; }
+
+/* ---------- The device frame ---------- */
+.ipad { position: relative; width: 1194px; height: 834px; overflow: hidden; background: var(--bg) var(--dots); }
+.status { position: absolute; z-index: 50; left: 0; right: 0; top: 0; height: 24px; display: flex; align-items: center; gap: 6px;
+  padding: 0 22px 0 26px; font-size: 14px; font-weight: 600; color: #fff; pointer-events: none; }
+.status .date { margin-left: 4px; }
+.status .sp { flex: 1; }
+.status .ic { width: 17px; height: 17px; }
+.batt { width: 25px; height: 12px; border: 1.5px solid currentColor; border-radius: 4px; padding: 1.5px; position: relative; }
+.batt::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: currentColor; border-radius: 0 1px 1px 0; }
+.batt i { display: block; height: 100%; background: currentColor; border-radius: 1.5px; }
+.home { position: absolute; z-index: 50; left: 50%; bottom: 8px; width: 150px; height: 5px; margin-left: -75px; border-radius: 3px; background: var(--line); }
+.home.light { background: #fff; }
+.guides::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: repeating-linear-gradient(45deg, rgba(0,0,0,.15) 0 6px, transparent 6px 12px); z-index: 60; }
+
+/* ---------- Navigation: the web's black header bar, turned into a sidebar (landscape is short, not narrow) ---------- */
+.sb { position: absolute; z-index: 10; left: 0; top: 0; bottom: 0; width: 228px; background: var(--night); color: var(--nightText);
+  border-right: 3px solid var(--line); box-shadow: 6px 0 0 var(--pop); padding: 34px 14px 0; display: flex; flex-direction: column; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 10px; font: 900 21px var(--display); letter-spacing: .02em; padding: 4px 8px 16px; }
+.brand .logo { width: 16px; height: 16px; border-radius: 50%; background: var(--cyan); border: 3px solid var(--pop); flex: none; }
+.sbItem { display: flex; align-items: center; gap: 12px; height: 50px; padding: 0 14px; border-radius: 999px; font: 900 17px var(--display); color: var(--nightText); text-decoration: none; letter-spacing: .01em; }
+.sbItem .em { font-size: 21px; width: 26px; text-align: center; }
+.sbItem.on { background: var(--pop); color: var(--line); box-shadow: 3px 3px 0 #ffffff55; }
+.sbStatus { margin: auto 0 64px; display: flex; flex-direction: column; gap: 8px; }
+.sbStatus .row { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--panel); color: var(--text); font-size: 13.5px; border: 2px solid var(--line); }
+.sbStatus .row b { font-weight: 800; }
+.sbStatus .row span:last-child { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+.sbStatus .row .em { font-size: 14px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--good); display: inline-block; box-shadow: 0 0 6px var(--good); }
+.dot.off { background: #9A9A9A; box-shadow: none; } .dot.warn { background: var(--orange); box-shadow: none; } .dot.bad { background: var(--bad); box-shadow: none; }
+
+/* ---------- Content area ---------- */
+.main { position: absolute; left: 234px; right: 0; top: 0; bottom: 0; padding: 32px 24px 0 26px; }
+.navbar { display: flex; align-items: center; gap: 12px; height: 50px; margin-bottom: 12px; }
+.navbar h1 { font-size: 28px; line-height: 1; background: var(--panel); border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--line); padding: 7px 14px 6px; }
+.navbar .sub { font-size: 14px; font-weight: 700; background: var(--panel2); border: 2px solid var(--line); padding: 4px 10px; }
+.navbar .sp { flex: 1; }
+.navbar .titleBlock { display: flex; flex-direction: column; }
+
+/* ---------- Controls ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 44px; padding: 0 16px; border-radius: 999px; border: 3px solid var(--line);
+  font: 800 15px var(--sf); color: var(--text); background: var(--panel); white-space: nowrap; box-shadow: 3px 3px 0 var(--line); }
+.btn.sm { height: 38px; padding: 0 13px; font-size: 14px; }
+.btn.fill { background: var(--accent); color: #fff; }
+.btn.glass { background: var(--panel); }
+.btn.pop { background: var(--pop); }
+.btn.red { background: var(--bad); color: #fff; }
+.btn.plain { background: none; border: 0; box-shadow: none; padding: 0 6px; }
+.btn .ic { width: 18px; height: 18px; }
+.btn .em { font-size: 17px; }
+.btn.round { width: 44px; padding: 0; }
+.seg { display: inline-flex; background: var(--panel); border: 3px solid var(--line); border-radius: 999px; padding: 2px; gap: 2px; height: 38px; box-shadow: 3px 3px 0 var(--line); }
+.seg span { display: flex; align-items: center; justify-content: center; padding: 0 13px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.seg span.on { background: var(--pop); font-weight: 900; box-shadow: inset 0 0 0 2px var(--line); }
+.seg span small { color: var(--muted); font-size: 12px; margin-left: 5px; font-weight: 700; }
+.toggle { width: 56px; height: 32px; border-radius: 16px; background: #DADADA; position: relative; flex: none; display: inline-block; border: 3px solid var(--line); }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2.5px solid var(--line); box-sizing: border-box; }
+.toggle.on { background: var(--good); }
+.toggle.on::after { left: 26px; }
+.field { display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 8px; background: var(--panel2); border: 2px solid var(--line); font-size: 16px; color: var(--text); gap: 8px; }
+.search { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 999px; background: var(--panel); border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--line); color: var(--muted); font-size: 15px; font-weight: 600; }
+.chev { width: 14px; height: 14px; color: var(--line); }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid rgba(20,20,20,.15); border-top-color: var(--line); display: inline-block; flex: none; }
+
+/* A kit gesture: the web's pill (black with yellow text; yellow on the blue main move), plus the pad's colour dot. */
+.gest { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px 0 7px; border-radius: 999px; background: var(--night);
+  color: var(--pop); font-size: 13.5px; font-weight: 800; white-space: nowrap; }
+.gest::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--c, #fff); box-shadow: 0 0 0 2px var(--pop); flex: none; }
+.gest.on-tint { background: var(--pop); color: var(--line); }
+.gest.on-tint::before { box-shadow: 0 0 0 2px var(--line); }
+.gest.lg { height: 32px; font-size: 15px; padding: 0 13px 0 8px; }
+.g-hhp { --c: var(--hihat); } .g-crash { --c: var(--crash); } .g-ride { --c: var(--ride); } .g-tom1 { --c: var(--tom1); }
+.g-tom2 { --c: var(--tom2); } .g-floor { --c: var(--floor); } .g-snare { --c: var(--snare); } .g-kick { --c: var(--kick); }
+.or { font-size: 13px; font-weight: 700; }
+
+/* ---------- Cards and lists ---------- */
+.card { background: var(--panel); border: 3px solid var(--line); border-radius: 0; box-shadow: 5px 5px 0 var(--line); padding: 14px 16px; }
+.card.cream { background: var(--panel2); }
+.card.pop { background: var(--pop); }
+.card.night { background: var(--night); color: var(--nightText); box-shadow: 6px 6px 0 var(--pop); }
+.kicker { display: inline-block; align-self: flex-start; font: 900 11.5px var(--display); letter-spacing: .06em; text-transform: uppercase; background: var(--line); color: var(--pop); padding: 3px 8px 2px; }
+.kicker.tint { background: var(--line); color: var(--pop); }
+.pill { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px; border-radius: 999px; background: var(--panel); border: 2px solid var(--line); font-size: 13.5px; font-weight: 800; color: var(--text); white-space: nowrap; }
+.pill .em { font-size: 14px; }
+.pill.star { background: var(--pop); } .pill.green { background: var(--greenSoft); } .pill.orange { background: var(--orangeSoft); }
+.pill.red { background: var(--redSoft); } .pill.tint { background: var(--tintSoft); }
+.group { background: var(--panel); border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); }
+.groupHead { display: inline-block; font: 900 12px var(--display); letter-spacing: .06em; text-transform: uppercase; background: var(--line); color: var(--pop); padding: 3px 9px 2px; margin-bottom: 8px; }
+.groupFoot { font-size: 13px; font-weight: 600; color: var(--line); padding: 7px 4px 0; line-height: 1.35; }
+.li { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 6px 14px; position: relative; font-size: 16px; }
+.li + .li { border-top: 2px solid rgba(20, 20, 20, .12); }
+.li .val { margin-left: auto; color: var(--muted); text-align: right; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.li .sym { width: 34px; height: 34px; border: 2px solid var(--line); display: grid; place-items: center; flex: none; background: var(--panel2); font-size: 18px; }
+.li small { display: block; color: var(--muted); font-size: 13px; }
+.li .grow { flex: 1; min-width: 0; }
+.li b { font-weight: 800; }
+
+/* ---------- The coach: the teal drum mascot and a speech bubble ---------- */
+.coach { display: flex; align-items: center; gap: 14px; }
+.avatar { width: 50px; height: 50px; flex: none; border-radius: 50%; background: var(--cyan); border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--line); display: grid; place-items: center; font-size: 25px; line-height: 1; }
+.avatar.lg { width: 66px; height: 66px; font-size: 33px; box-shadow: 4px 4px 0 var(--line); }
+.avatar.sm { width: 36px; height: 36px; font-size: 18px; border-width: 2.5px; box-shadow: 2px 2px 0 var(--line); }
+.bubble, .coach > p { background: var(--panel); border: 3px solid var(--line); border-radius: 18px; box-shadow: 5px 5px 0 var(--line); padding: 9px 18px; }
+.coach p { font-size: 20px; font-weight: 700; line-height: 1.3; }
+.coach p b { font-weight: 900; }
+
+/* ---------- Move tiles: big, ink-outlined, each with its gesture ---------- */
+.moves { display: grid; gap: 14px; }
+.move { background: var(--panel); border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; min-height: 92px; }
+.move b { font: 900 21px var(--display); display: flex; align-items: center; gap: 8px; line-height: 1.1; }
+.move b .em { font-size: 23px; flex: none; }
+.move .gs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); }
+.move small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.move.go { background: var(--accent); color: #fff; }
+.move.go b { font-size: 30px; }
+.move.go .gs, .move.go small, .move.go .or { color: #fff; }
+.move.alt { background: var(--panel2); }
+.move.dark { background: var(--night); color: var(--nightText); }
+
+/* ---------- Full-screen player: the web's black header bar as its top bar ---------- */
+.top { position: absolute; left: 0; right: 0; top: 0; height: 100px; background: var(--night); color: #fff; border-bottom: 3px solid var(--line); box-shadow: 0 5px 0 var(--pop);
+  display: flex; align-items: center; gap: 14px; padding: 26px 24px 0; }
+.title { white-space: nowrap; }
+.title b { display: block; font: 900 22px var(--display); }
+.title span { font-size: 13.5px; color: #ccc; font-weight: 700; }
+.steps { display: flex; gap: 6px; align-items: center; margin-left: 4px; white-space: nowrap; }
+.steps i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 900 13px var(--display); font-style: normal; background: var(--panel); color: var(--line); border: 2.5px solid var(--line); box-shadow: 0 0 0 2px #fff; }
+.steps i.done { background: var(--good); color: #fff; }
+.steps i.cur { width: auto; padding: 0 12px 0 3px; gap: 7px; display: flex; background: var(--pop); border-radius: 999px; font-size: 14px; }
+.steps i.cur em { font-style: normal; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); background: #fff; display: grid; place-items: center; font-size: 11px; }
+.sp { flex: 1; }
+.tempo { display: flex; align-items: center; gap: 12px; }
+.tempo .big { font: 900 46px/1 var(--display); }
+.tempo .big small { font: 800 14px var(--sf); color: #ccc; margin-left: 4px; }
+.ladder { display: flex; flex-direction: column; gap: 4px; }
+.rungs { display: flex; align-items: flex-end; gap: 3px; }
+.rungs i { width: 14px; border: 2px solid #fff; background: transparent; }
+.rungs i.start { border-style: dashed; } .rungs i.done { background: var(--good); } .rungs i.at { background: var(--pop); } .rungs i.goal { background: #fff; }
+.ladder span { font-size: 11.5px; color: #ccc; font-weight: 800; }
+.stopGroup { display: flex; gap: 10px; align-items: center; }
+.top .btn.red { height: 52px; font-size: 20px; padding: 0 22px; font-family: var(--display); font-weight: 900; box-shadow: 3px 3px 0 #fff; }
+.top .btn { box-shadow: 3px 3px 0 #ffffff88; }
+.top .seg { box-shadow: 3px 3px 0 #ffffff88; }
+
+/* ---------- Icons kept from v1 (small UI glyphs only; everything else is emoji, as on the web) ---------- */
+.ic { display: inline-block; width: 20px; height: 20px; background: currentColor; flex: none;
+  -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+.i-chevr { --m: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4.5l7.5 7.5L9 19.5'/></svg>"); }
+.i-chevl { --m: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M15 4.5L7.5 12l7.5 7.5'/></svg>"); }
+.i-search { --m: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'><circle cx='10.5' cy='10.5' r='6.5'/><path d='M15.5 15.5l5 5'/></svg>"); }
+.i-wifi { --m: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 18.5l2.6-3.1a4 4 0 0 0-5.2 0z'/><path d='M12 9.5c2.7 0 5.1 1 7 2.6l1.7-2A13.4 13.4 0 0 0 12 6.5c-3.3 0-6.3 1.2-8.7 3.6l1.7 2c1.9-1.6 4.3-2.6 7-2.6z' /><path d='M12 13c1.6 0 3.1.6 4.3 1.6l1.6-2a9.2 9.2 0 0 0-11.8 0l1.6 2A6.6 6.6 0 0 1 12 13z'/></svg>"); }
+.i-send { --m: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='M12 19.5V5M6 11l6-6 6 6'/></svg>"); }

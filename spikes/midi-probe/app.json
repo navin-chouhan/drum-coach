@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "MIDI Probe",
+    "slug": "drum-coach-midi-probe",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.drumcoach.midiprobe",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "MIDI Probe receives drum hits from your Mac over Network MIDI.",
+        "NSBonjourServices": ["_apple-midi._udp"]
+      }
+    },
+    "plugins": ["expo-dev-client"]
+  }
+}

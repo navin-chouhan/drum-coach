@@ -22,7 +22,7 @@ const T = window.T = {
   player: (o) => ek.setEmulatedKit({ on: true, retriggers: true, crosstalk: true, ...o }),
 };
 // Real-kit fixtures (N11): T.recordMidi() before a take, play it on the kit, then T.saveFixture('name', 'what it guards')
-// downloads src/input/fixtures/<name>.json with this take's result as its expectation (save it in that folder).
+// downloads packages/core/src/input/fixtures/<name>.json with this take's result as its expectation (save it in that folder).
 const hits = await import('/src/input/hits.ts');
 let recorded = [];
 T.recordMidi = () => { recorded = []; T.stopRecording?.(); T.stopRecording = hits.onRawMidi((data, time) => recorded.push([time, ...Array.from(data)])); return 'recording: play one take on the kit'; };

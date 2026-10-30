@@ -1,0 +1,12 @@
+{
+  "name": "midi-probe-tools",
+  "private": true,
+  "type": "module",
+  "description": "Mac-side helpers for Gate 0 (M8): replay a recorded fixture to a MIDI output such as the Network MIDI session",
+  "scripts": {
+    "replay": "node replay-fixture.mjs"
+  },
+  "dependencies": {
+    "@julusian/midi": "3.8.1"
+  }
+}

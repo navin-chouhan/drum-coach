@@ -1,0 +1,61 @@
+import type { AudioInterruption, AudioRoute } from '@drum-coach/core/play/audioPort';
+import type { Bus } from './policy';
+
+/** The route as native reports it: exactly `AudioRoute` (contract.test.ts checks it), plus the raw port fields. */
+export type NativeRoute = AudioRoute & { portType: string; uid: string };
+
+export type PreparedWords = {
+  /** Words ready to schedule: their normalised text (wordKey), native sound index and onset (ms into the buffer). */
+  ready: { word: string; index: number; onsetMs: number }[];
+  /** Words that couldn't be rendered (no voice, timeout). */
+  missing: string[];
+};
+
+export type ScheduleResult = {
+  /** Kept for playing. */
+  accepted: number;
+  /** Already too late to play exactly: dropped (isLate). */
+  late: number;
+  /** Past the queue cap. */
+  dropped: number;
+  /** Malformed records (unpackEvents). */
+  invalid: number;
+};
+
+export type NativeStats = { scheduled: number; late: number; dropped: number; engineStarts: number; lastError?: string };
+
+export type TimingProbeResult = {
+  /** Host ms of each click onset found in the main mixer's output (installTap buffer AVAudioTime + frame offset). */
+  onsetsMs: number[];
+  /** Schedule host ms of each click handed to a player node while the probe ran. */
+  scheduledMs: number[];
+  sampleRate: number;
+  tapBuffers: number;
+  /** Tap buffers without a valid host time (their onsets are skipped). */
+  noHostTime: number;
+};
+
+export type DrumAudioEvents = {
+  onRoute: (route: NativeRoute) => void;
+  onInterruption: (e: AudioInterruption) => void;
+};
+
+export type BusVolumes = Partial<Record<Bus, number>>;
+
+/** The native surface (ios/DrumAudioModule.swift). Sync calls are JSI `Function`s; start/prepareWords are async. */
+export interface DrumAudioApi {
+  nowMs(): number;
+  start(): Promise<NativeRoute>;
+  suspend(): void;
+  route(): NativeRoute | null;
+  prepareWords(words: string[]): Promise<PreparedWords>;
+  schedule(packed: number[]): ScheduleResult;
+  cancel(fromMs: number | null): void;
+  playNow(index: number, gain: number): number;
+  setBusVolumes(volumes: BusVolumes): void;
+  stats(): NativeStats;
+  debugInfo(): Record<string, unknown>;
+  startTimingProbe(): boolean;
+  stopTimingProbe(): TimingProbeResult;
+  addListener<E extends keyof DrumAudioEvents>(event: E, listener: DrumAudioEvents[E]): { remove(): void };
+}

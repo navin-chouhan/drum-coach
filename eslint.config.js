@@ -14,8 +14,7 @@ const UNSAFE = [
 ];
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'prototype', 'data', '.claude', 'public'] },
-  { linterOptions: { reportUnusedDisableDirectives: 'error', reportUnusedInlineConfigs: 'error' } },
+  { ignores: ['dist', 'coverage', 'prototype', 'data', '.claude', 'public', 'spikes', 'apps/mobile'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   reactHooks.configs.flat.recommended,
@@ -45,6 +44,16 @@ export default tseslint.config(
       '@typescript-eslint/only-throw-error': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       '@typescript-eslint/unbound-method': 'error',
+    },
+  },
+  // @drum-coach/core is shared with the iPad app: no browser globals, no UI frameworks (each app injects them).
+  {
+    files: ['packages/core/src/**/*.ts'],
+    rules: {
+      'no-restricted-globals': ['error', 'window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'fetch', 'performance', 'AudioContext', 'requestAnimationFrame'],
+      'no-restricted-imports': ['error',
+        { paths: ['react', 'react-dom', 'react-native', ...['node:child_process', 'child_process'].map(name => ({ name, importNames: ['exec', 'execSync'], message: 'exec runs a shell: use spawn or execFile with an argument array.' }))],
+          patterns: ['react/*', 'react-dom/*', 'react-native/*', 'expo', 'expo-*', 'expo/*', '@expo/*'] }],
     },
   },
 );

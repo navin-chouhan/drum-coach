@@ -3,6 +3,8 @@ dist
 coverage
 .env
 *.tsbuildinfo
-data
+/data
 # stray DB from an empty DATA_DIR= (fixed); never commit app data
 /drum-coach.db*
+# sub-agent git worktrees
+.claude/worktrees

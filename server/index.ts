@@ -22,7 +22,8 @@ import type { Lesson } from '../src/engine/lesson.ts';
 import { AiError } from './ai/providers.ts';
 import { coachTurn } from './ai/session.ts';
 import { AUDIO_DIR, db } from './db.ts';
-import { allowedRequest, looksLikeAudio } from './guard.ts';
+import { accessConfig, accessSummary, childEnv, guardHook, health, looksLikeAudio } from './guard.ts';
+import { contextData, splitContext, weekFocus, type CoachData, type Settings } from './coachContext.ts';
 import { sameSong, searchYouTube, YtError } from './youtube.ts';
 import { speech, ttsStatus } from './tts.ts';
 import { sttStatus, transcribe } from './stt.ts';
@@ -32,11 +33,14 @@ const PORT = Number(process.env.PORT || 8787);
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 1_000_000 });
 
 // Only the local app may call this API (guard.ts): not other websites, not pages on other local ports, no DNS rebinding.
-app.addHook('onRequest', async (req, reply) => {
-  if (!allowedRequest(req.headers)) return reply.code(403).send({ error: 'Forbidden' });
-});
-// Everyone is 127.0.0.1, so these are totals: plenty for the app, a stop for a runaway loop. What spends your Claude
-// usage, the YouTube quota or a speech model's CPU gets its own, smaller budget.
+// With APP_HOST/APP_TOKEN/ALLOWED_HOSTS set (home-server mode, docs/mobile/HOME-SERVER.md) the iPad may too, with the token.
+// A setting that would expose the API without a strong token stops the server here, before it listens.
+const access = (() => {
+  try { return accessConfig(process.env); } catch (e) { console.error(`\n${(e as Error).message}\n`); process.exit(1); }
+})();
+app.addHook('onRequest', guardHook(access)); // first: a refused request never reaches the rate limits below
+// These are totals for every caller (this machine's app and the iPad): plenty for the app, a stop for a runaway loop.
+// What spends your Claude usage, the YouTube quota or a speech model's CPU gets its own, smaller budget.
 const COSTLY = /^\/api\/(coach\/(?!status)|stt$|youtube\/)/;
 await app.register(rateLimit, {
   timeWindow: '1 minute',
@@ -56,12 +60,16 @@ type ChartRow = { id: string; json: string; source: string; audio_file: string |
 const chartOut = (r: ChartRow) => ({ ...JSON.parse(r.json), id: r.id, source: r.source, hasAudio: !!r.audio_file, syncOffsetMs: r.sync_offset_ms });
 const IdParam = z.object({ id: z.string().regex(/^[\w-]{1,80}$/) });
 
-function catalog() {
-  const saved = (db.prepare("SELECT id, json FROM charts WHERE source = 'ai'").all() as ChartRow[]).map(r => ({ ...JSON.parse(r.json), id: r.id }));
+const savedAiCharts = () => (db.prepare("SELECT id, json FROM charts WHERE source = 'ai'").all() as ChartRow[]).map(r => ({ ...JSON.parse(r.json), id: r.id }));
+function catalog(saved: { id: string; title: string; kind?: string; level?: number; bpm: number; timeSignature?: unknown; description?: string }[] = savedAiCharts()) {
   return [...LIBRARY, ...saved].map(c => ({ id: c.id, title: c.title, kind: c.kind, level: c.level, bpm: c.bpm, timeSignature: c.timeSignature, description: c.description }));
 }
 
-app.get('/api/health', async () => ({ ok: true, provider: getProvider().name }));
+// The iPad's "Test connection" (home-server mode): what works here. `provider` is the coach's kind, as before.
+app.get('/api/health', async () => ({
+  ...health({ coach: coachCheck().ready, tts: ttsStatus().engine !== null, stt: sttStatus().available, youtube: !!process.env.YOUTUBE_API_KEY }),
+  provider: getProvider().name,
+}));
 
 app.get('/api/charts', async () => (db.prepare('SELECT * FROM charts ORDER BY created_at').all() as ChartRow[]).map(chartOut));
 
@@ -130,10 +138,32 @@ const latestPlan = () => {
   const row = db.prepare('SELECT * FROM plans ORDER BY id DESC LIMIT 1').get() as { id: number; json: string; checks_json: string } | undefined;
   return row ? { id: row.id, plan: JSON.parse(row.json) as Plan, checks: JSON.parse(row.checks_json) } : null;
 };
-/** This week's focus from the coach's plan, for the lesson writer and the live coach (R6). */
 /** The latest notes from the student's human teacher (N2), for the coach. */
 const teacherNotes = (): { date: string; text: string }[] => { const v = (db.prepare("SELECT value FROM settings WHERE key = 'teacherNotes'").get() as { value: string } | undefined)?.value; try { return v ? JSON.parse(v).slice(-3) : []; } catch { return []; } };
-const weekFocus = () => { const p = latestPlan()?.plan; return p?.focus ? { focus: p.focus, why: p.why, drums: p.drums } : undefined; };
+/** What the coach routes read about the student: this server's SQLite (the web app), or the iPad's `context` (B22). */
+const dbData: CoachData = {
+  fromDevice: false,
+  runRows,
+  settings: () => appSettings() as Settings,
+  plan: () => latestPlan()?.plan,
+  teacherNotes,
+  aiLessons: () => aiLessons(),
+  songs: () => (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong),
+  song: id => { const row = ytById(id); return row && ytSong(row); },
+  savedCharts: savedAiCharts,
+  recentForLesson: () => (db.prepare('SELECT chart_title, started_at, bpm, accuracy, summary_json FROM runs ORDER BY started_at DESC LIMIT 15').all() as
+    { chart_title: string; started_at: string; bpm: number; accuracy: number; summary_json: string }[]).reverse()
+    .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; }),
+  pastTakes: chartId => (db.prepare('SELECT started_at, bpm, accuracy, mean_offset, spread FROM runs WHERE chart_id = ? ORDER BY started_at DESC LIMIT 5').all(chartId) as
+    { started_at: string; bpm: number; accuracy: number; mean_offset: number; spread: number }[]).reverse()
+    .map(r => ({ at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracyPct: r.accuracy, meanOffsetMs: r.mean_offset, spreadMs: r.spread })),
+  monthReport: () => { const kept = (db.prepare("SELECT value FROM settings WHERE key = 'monthReport'").get() as { value: string } | undefined)?.value; return kept ? JSON.parse(kept) as { month: string; report: unknown } : undefined; },
+};
+/** A coach route's body: `context` taken out and checked (400 if bad), the rest for the route's own schema. */
+function coachInput(body: unknown): { error: string } | { rest: unknown; d: CoachData } {
+  const { rest, context, error } = splitContext(body);
+  return error ? { error } : { rest, d: context ? contextData(context) : dbData };
+}
 app.get('/api/profile', async () => studentProfile(runRows()));
 
 app.post('/api/runs', async (req, reply) => {
@@ -159,22 +189,25 @@ app.get('/api/runs/:id/take', async (req, reply) => {
 });
 
 // N8: the coach's monthly report, written once a month (or on "ask again") and kept in settings.
+// With the iPad's context, its last report comes in `context.monthReport` and the new one goes back only in the answer.
 app.post('/api/coach/month', async (req, reply) => {
-  const b = MonthReportRequestSchema.safeParse(req.body ?? {});
+  const ci = coachInput(req.body);
+  if ('error' in ci) return bad(reply, ci.error);
+  const { d } = ci;
+  const b = MonthReportRequestSchema.safeParse(ci.rest ?? {});
   if (!b.success) return bad(reply, b.error);
   const month = dayKey(new Date()).slice(0, 7);
-  const kept = (db.prepare("SELECT value FROM settings WHERE key = 'monthReport'").get() as { value: string } | undefined)?.value;
-  const last = kept ? JSON.parse(kept) as { month: string; report: unknown } : undefined;
+  const last = d.monthReport();
   if (last?.month === month && !b.data.again) return { data: last.report, cached: true, month };
-  const runs = runRows(), s = appSettings(), progress = s.lessons ?? {}, all = [...CURRICULUM, ...aiLessons()];
+  const runs = d.runRows(), s = d.settings(), progress: Record<string, LessonProgress> = s.lessons ?? {}, all = [...CURRICULUM, ...d.aiLessons()];
   const input = {
     month, months: monthly(runs, Date.now()), skills: skillMap(all, progress, dayKey(new Date())).map(k => ({ skill: k.name, mastery: k.mastery, due: k.due })),
-    lessonsFinished: Object.values(progress as Record<string, LessonProgress>).filter(p => p.completedAt?.startsWith(month)).length,
-    teacherNotes: teacherNotes(), lastReport: last?.month !== month ? last?.report : undefined,
+    lessonsFinished: Object.values(progress).filter(p => p.completedAt?.startsWith(month)).length,
+    teacherNotes: d.teacherNotes(), lastReport: last?.month !== month ? last?.report : undefined,
   };
   try {
     const r = await ask('month', MonthReportSchema, input, { noCache: b.data.again });
-    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('monthReport', ?)").run(JSON.stringify({ month, report: r.data }));
+    if (!d.fromDevice) db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('monthReport', ?)").run(JSON.stringify({ month, report: r.data }));
     return { ...r, month };
   } catch (e) { return aiFail(reply, e); }
 });
@@ -191,49 +224,63 @@ app.put('/api/settings/:key', async (req, reply) => {
 
 // ---------- AI coach ----------
 let cliCheck: { ok: boolean; version?: string } | undefined;
-app.get('/api/coach/status', async () => {
+/** Whether the coach can answer: the API provider, or a claude CLI that runs (checked until it does, then remembered). */
+function coachCheck() {
   const name = getProvider().name;
-  if (!name.startsWith('claude-cli')) return { provider: name, ready: true, message: `Using the Anthropic API (${process.env.CLAUDE_MODEL || 'claude-sonnet-5-5'}).` };
+  if (!name.startsWith('claude-cli')) return { name, api: true, ready: true };
   if (!cliCheck?.ok) {
-    const r = spawnSync(process.env.CLAUDE_BIN || 'claude', ['--version'], { timeout: 10_000, encoding: 'utf8' });
+    const r = spawnSync(process.env.CLAUDE_BIN || 'claude', ['--version'], { timeout: 10_000, encoding: 'utf8', env: childEnv() });
     cliCheck = r.status === 0 ? { ok: true, version: r.stdout.trim() } : { ok: false };
   }
-  return cliCheck.ok
+  return { name, api: false, ready: cliCheck.ok };
+}
+app.get('/api/coach/status', async () => {
+  const { name, api } = coachCheck();
+  if (api) return { provider: name, ready: true, message: `Using the Anthropic API (${process.env.CLAUDE_MODEL || 'claude-sonnet-5-5'}).` };
+  return cliCheck?.ok
     ? { provider: name, ready: true, message: `Using your Claude subscription via ${cliCheck.version}, model ${process.env.CLAUDE_CLI_MODEL || 'your Claude Code default'}${process.env.CLAUDE_CLI_EFFORT ? `, ${process.env.CLAUDE_CLI_EFFORT} effort` : ''}; lessons and plans are written by ${lessonModel().model} on ${lessonModel().effort} effort.` }
     : { provider: name, ready: false, message: 'The claude CLI was not found. Install Claude Code and run `claude` once to log in. Everything else works without it.' };
 });
 
+// Coach routes take an optional `context` (the iPad's data, server/coachContext.ts); without it they read this server's
+// SQLite as before. With it, nothing is written to this server's tables: plans and lessons come back in the answer.
 app.post('/api/coach/feedback', async (req, reply) => {
-  const b = z.object({ summary: z.record(z.string(), z.unknown()) }).safeParse(req.body);
+  const ci = coachInput(req.body);
+  if ('error' in ci) return bad(reply, ci.error);
+  const b = z.object({ summary: z.record(z.string(), z.unknown()) }).safeParse(ci.rest);
   if (!b.success) return bad(reply, b.error);
-  try { return await ask('feedback', FeedbackSchema, { run: b.data.summary, library: catalog() }); } catch (e) { return aiFail(reply, e); }
+  try { return await ask('feedback', FeedbackSchema, { run: b.data.summary, library: catalog(ci.d.savedCharts()) }); } catch (e) { return aiFail(reply, e); }
 });
 
 // The weekly plan (R6): written from the student profile, the stage and last week's notes; its lessons lead the Journey.
 app.post('/api/coach/plan', async (req, reply) => {
-  const b = PlanRequestSchema.safeParse(req.body ?? {});
+  const ci = coachInput(req.body);
+  if ('error' in ci) return bad(reply, ci.error);
+  const { d } = ci;
+  const b = PlanRequestSchema.safeParse(ci.rest ?? {});
   if (!b.success) return bad(reply, b.error);
-  const recent = runRows(30).map(r => ({ chart: r.chartTitle, bpm: Math.round(r.bpm), accuracy: r.accuracy, at: r.startedAt.slice(0, 10) }));
-  const s = appSettings(), profile = s.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress = s.lessons ?? {};
-  const all = [...CURRICULUM, ...aiLessons()];
+  const recent = d.runRows(30).map(r => ({ chart: r.chartTitle, bpm: Math.round(r.bpm), accuracy: r.accuracy, at: r.startedAt.slice(0, 10) }));
+  const s = d.settings(), profile = s.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress = s.lessons ?? {};
+  const all = [...CURRICULUM, ...d.aiLessons()];
   const m = currentMilestone(MILESTONES, all, progress, profile) ?? MILESTONES.filter(x => checkpointsOf(x, all, profile).length).at(-1);
   const level = m?.level ?? 0;
   // the lessons it may pick: this stage's, plus finished ones from earlier stages that came out shaky (1–2 stars)
   const pickable = visibleLessons(all, profile).filter(l => l.level === level || (l.level < level && (progress[l.id]?.stars ?? 3) <= 2)).slice(-30);
-  const last = latestPlan()?.plan;
+  const last = d.plan();
   try {
-    const songs = (db.prepare('SELECT id, title FROM yt_songs').all() as { id: string; title: string }[]); // so play-along items can link to them
+    const songs = d.songs().map(x => ({ id: x.id, title: x.title })); // so play-along items can link to them
     const r = await ask('plan', PlanSchema, {
       ...b.data, goals: b.data.goals ?? (profile.goals.length ? profile.goals.join(', ') : 'not sure yet'), minutesPerDay: b.data.minutesPerDay ?? profile.minutesPerDay,
-      student: { read: studentRead(progress, runRows(12)), profile: studentProfile(runRows()), ...(soreActive(s.soreUntil, dayKey(new Date())) && { sore: true }), teacherNotes: teacherNotes() },
+      student: { read: studentRead(progress, d.runRows(12)), profile: studentProfile(d.runRows()), ...(soreActive(s.soreUntil, dayKey(new Date())) && { sore: true }), teacherNotes: d.teacherNotes() },
       stage: m && { level, title: m.title, canDo: m.canDo },
       lessons: pickable.map(l => ({ id: l.id, title: l.title, level: l.level, kind: l.kind, checkpoint: !!m?.checkpoints.includes(l.id), done: !!progress[l.id]?.completedAt, stars: progress[l.id]?.stars })),
       lastWeek: last && { focus: last.focus, notes: last.notes, week: last.week },
       skills: skillMap(all, progress, dayKey(new Date())).map(k => ({ skill: k.name, mastery: k.mastery, due: k.due })), // N5: plan from the skill map
-      recent, library: catalog(), songs,
+      recent, library: catalog(d.savedCharts()), songs,
     });
     const ids = new Set(pickable.map(l => l.id));
     const plan = { ...r.data, lessonIds: r.data.lessonIds?.filter(id => ids.has(id)), week: b.data.week ?? r.data.week };
+    if (d.fromDevice) return { plan, checks: {} }; // the iPad keeps it
     const { lastInsertRowid } = db.prepare('INSERT INTO plans (json) VALUES (?)').run(JSON.stringify(plan));
     return { id: Number(lastInsertRowid), plan, checks: {} };
   } catch (e) { return aiFail(reply, e); }
@@ -248,21 +295,22 @@ app.put('/api/plan/:id/checks', async (req, reply) => {
 
 // ---------- the live coaching conversation (streams sentences as server-sent events) ----------
 app.post('/api/coach/session', async (req, reply) => {
-  const b = SessionEventSchema.safeParse(req.body);
+  const ci = coachInput(req.body); // the context stays here: the coach gets what's derived from it, not the payload
+  if ('error' in ci) return bad(reply, ci.error);
+  const { d } = ci;
+  const b = SessionEventSchema.safeParse(ci.rest);
   if (!b.success) return bad(reply, b.error);
   const event: Record<string, unknown> = { ...b.data };
   if (event.type === 'open' && typeof event.chartId === 'string') { // give the coach their history on this exercise
-    event.pastTakes = (db.prepare('SELECT started_at, bpm, accuracy, mean_offset, spread FROM runs WHERE chart_id = ? ORDER BY started_at DESC LIMIT 5').all(event.chartId) as
-      { started_at: string; bpm: number; accuracy: number; mean_offset: number; spread: number }[]).reverse()
-      .map(r => ({ at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracyPct: r.accuracy, meanOffsetMs: r.mean_offset, spreadMs: r.spread }));
+    event.pastTakes = d.pastTakes(event.chartId);
   }
   if (event.type === 'open' || event.type === 'take') { // how they're doing overall, so the coach teaches this student, not a stereotype
-    const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined;
-    event.student = studentRead(row ? JSON.parse(row.value).lessons ?? {} : {}, runRows(12));
-    const focus = weekFocus();
+    const s = d.settings();
+    event.student = studentRead(s.lessons ?? {}, d.runRows(12));
+    const focus = weekFocus(d);
     if (focus) event.weekFocus = focus; // this week's plan, so the coach's tips point the same way
-    if (soreActive(appSettings().soreUntil, dayKey(new Date()))) event.sore = true; // N10: go easy
-    const notes = teacherNotes();
+    if (soreActive(s.soreUntil, dayKey(new Date()))) event.sore = true; // N10: go easy
+    const notes = d.teacherNotes();
     if (notes.length) event.teacherNotes = notes.map(n => ({ date: n.date, text: n.text.slice(0, 300) })); // N2: what their teacher said (trimmed: it goes with every take)
   }
   reply.hijack();
@@ -398,35 +446,43 @@ app.delete('/api/lessons/:id', async (req, reply) => {
   return db.prepare('DELETE FROM ai_lessons WHERE id = ?').run(p.data.id).changes ? { ok: true } : reply.code(404).send({ error: 'Not found' });
 });
 
+// With the iPad's context, the lesson comes back with `replaces`: the coach's unstarted lessons for this stage, which the
+// iPad drops (for the web app this server does that in its own table).
 app.post('/api/coach/lesson', async (req, reply) => {
-  const b = LessonRequestSchema.safeParse(req.body ?? {});
+  const ci = coachInput(req.body);
+  if ('error' in ci) return bad(reply, ci.error);
+  const { d } = ci;
+  const b = LessonRequestSchema.safeParse(ci.rest ?? {});
   if (!b.success) return bad(reply, b.error);
-  const row = db.prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined;
-  const app = row ? JSON.parse(row.value) : {};
-  const recent = (db.prepare('SELECT chart_title, started_at, bpm, accuracy, summary_json FROM runs ORDER BY started_at DESC LIMIT 15').all() as
-    { chart_title: string; started_at: string; bpm: number; accuracy: number; summary_json: string }[]).reverse()
-    .map(r => { const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = JSON.parse(r.summary_json); return { chart: r.chart_title, at: r.started_at.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } }; });
-  const existing = aiLessons();
-  const input = lessonInput({ profile: app.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: app.lessons ?? {}, aiLessons: existing, recent, struggle: b.data.struggle,
-    songs: (db.prepare('SELECT * FROM yt_songs').all() as YtRow[]).map(ytSong), studentProfile: studentProfile(runRows()), weekFocus: weekFocus(), sore: soreActive(app.soreUntil, dayKey(new Date())), teacherNotes: teacherNotes() });
+  const s = d.settings();
+  const existing = d.aiLessons();
+  const input = lessonInput({ profile: s.profile ?? { goals: [], minutesPerDay: 25, onboarded: true }, progress: s.lessons ?? {}, aiLessons: existing, recent: d.recentForLesson(), struggle: b.data.struggle,
+    songs: d.songs(), studentProfile: studentProfile(d.runRows()), weekFocus: weekFocus(d), sore: soreActive(s.soreUntil, dayKey(new Date())), teacherNotes: d.teacherNotes() });
   if (!input) return bad(reply, 'No stage fits your goals yet. Change them under Journey → Goals.');
   try {
     const r = await ask('lesson', AiLessonSchema, input);
     // Never a built-in's title, nor a coach lesson's from another stage (F8; the same stage's twin is caught below).
     r.data = { ...r.data, title: uniqueTitle(r.data.title, r.data.focus, [...Object.values(LESSON_BY_ID), ...existing.filter(l => l.level !== input.milestone.level)].map(l => l.title)) };
-    const now = aiLessons(); // re-read: another request may have saved a lesson while the coach was thinking
+    const now = d.aiLessons(); // re-read: another request may have saved a lesson while the coach was thinking
     const same = now.find(l => l.title === r.data.title && l.level === input.milestone.level);
     if (same) return { data: same, cached: true };
     // Only a checkpoint of this stage can be stood in for, and only by a lesson that ends in a drill.
     const end = r.data.steps[r.data.steps.length - 1], cpLesson = r.data.checkpoint ? LESSON_BY_ID[r.data.checkpoint] : undefined;
     const cp = input.milestone.checkpoints.some(c => c.id === r.data.checkpoint) && canStandIn(end) && cpLesson && standsInFor(end, cpLesson) ? r.data.checkpoint : undefined;
-    const lesson = toLesson(applyBites({ ...r.data, checkpoint: cp }, id => { const row = ytById(id); return row && ytSong(row); }), input.milestone.level);
+    const lesson = toLesson(applyBites({ ...r.data, checkpoint: cp }, id => d.song(id)), input.milestone.level);
     // The new lesson replaces the coach's unstarted ones for this stage, so they don't pile up.
-    const progress = app.lessons ?? {};
-    for (const old of now) if (old.level === lesson.level && !progress[old.id]) db.prepare('DELETE FROM ai_lessons WHERE id = ?').run(old.id);
+    const progress = s.lessons ?? {};
+    const replaced = now.filter(old => old.level === lesson.level && !progress[old.id]).map(old => old.id);
+    if (d.fromDevice) return { data: lesson, cached: r.cached, replaces: replaced };
+    for (const id of replaced) db.prepare('DELETE FROM ai_lessons WHERE id = ?').run(id);
     db.prepare('INSERT INTO ai_lessons (id, json) VALUES (?, ?)').run(lesson.id, JSON.stringify(lesson));
     return { data: lesson, cached: r.cached };
   } catch (e) { return aiFail(reply, e); }
 });
 
-await app.listen({ port: PORT, host: '127.0.0.1' });
+// Listen only when started as a program (npm run server); the route tests import `app` and call it with inject.
+if (import.meta.main) {
+  await app.listen({ port: PORT, host: access.host });
+  app.log.info(accessSummary(access));
+}
+export { app };

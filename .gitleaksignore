@@ -1,0 +1,6 @@
+# Findings gitleaks may ignore: exact fingerprints only (commit:file:rule:line), each one checked by hand.
+# These three were made-up tokens in tests (never real credentials). The test files now use obviously fake,
+# low-entropy values, so only these old commits still carry them.
+94ad37bc26d5c2527cc63b1504e926ab83c31392:apps/mobile/src/data/homeServerStream.test.ts:generic-api-key:5
+0b0c701a947ce5cfe158449a236f7809193f7bbd:server/guard.test.ts:generic-api-key:62
+94d05e6c819407561350e0293bcfad44a7030bcb:apps/mobile/src/data/homeServer.test.ts:generic-api-key:8

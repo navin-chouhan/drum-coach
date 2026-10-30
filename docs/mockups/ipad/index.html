@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPad mockups · Drum Coach</title>
+<link rel="stylesheet" href="ipad.css">
+<style>
+  body { background: var(--bg) var(--dots); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 40px 24px 60px; }
+  h1 { font-size: 38px; display: inline-block; background: var(--panel); border: 4px solid var(--line); box-shadow: 6px 6px 0 var(--line); padding: 8px 16px; }
+  .intro { font-size: 16px; font-weight: 600; max-width: 860px; margin-top: 18px; line-height: 1.45; background: var(--panel2); border: 3px solid var(--line); padding: 12px 16px; }
+  .intro a { color: var(--accent); }
+  h2 { display: inline-block; font-size: 15px; letter-spacing: .05em; text-transform: uppercase; margin: 34px 0 14px; background: var(--line); color: var(--pop); padding: 4px 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+  a.shot { display: block; background: var(--panel); border: 3px solid var(--line); box-shadow: 6px 6px 0 var(--line); overflow: hidden; color: inherit; text-decoration: none; }
+  a.shot img { display: block; width: 100%; aspect-ratio: 1194 / 834; border-bottom: 3px solid var(--line); }
+  a.shot div { padding: 10px 14px 12px; }
+  a.shot b { font: 900 16px var(--display); display: block; }
+  a.shot span { font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.35; display: block; margin-top: 3px; }
+  a.shot.cmp { outline: 5px solid var(--pop); outline-offset: 3px; }
+  code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; background: var(--panel); border: 1.5px solid var(--line); padding: 0 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Drum Coach on iPad · mockups</h1>
+  <p class="intro">The v1 screens at the kit, in the web app’s look on iPad layouts (D4, revised: “web look, iPad layout”): iPad only,
+    landscape, 1194 × 834 pt, one screen per view, no scrolling. The example data is a plausible student three weeks in
+    (Stage 3, The money beat); the iPad starts fresh (D3). Each picture links to its page. What changed, the design notes and
+    the open questions are in <a href="NOTES.md">NOTES.md</a>. Re-render with <code>node docs/mockups/ipad/render.mjs</code>.</p>
+
+  <h2>Home and the lesson player</h2>
+  <div class="grid">
+    <a class="shot" href="journey.html"><img src="png/journey.png" alt=""><div><b>Journey</b><span>Coach line, the next lesson with its moves and kit gestures, rank and numbers, today’s set, the stage song and the trail.</span></div></a>
+    <a class="shot" href="lesson-take.html#ready"><img src="png/lesson-ready.png" alt=""><div><b>Lesson · before the take</b><span>Full screen. Steps, tempo ladder, the coach line, four moves with gestures, the sheet music for your 4 bars, the goal.</span></div></a>
+    <a class="shot" href="lesson-take.html#countin"><img src="png/lesson-countin.png" alt=""><div><b>Lesson · count-in</b><span>One bar counted out loud, the big number on the beat, the first page of the sheet waiting.</span></div></a>
+    <a class="shot" href="lesson-take.html"><img src="png/lesson-take.png" alt=""><div><b>Lesson · during the take, on the highway</b><span>Only the music, one live tip and Stop (or crash × 4). Hits land on the notes and light the kit.</span></div></a>
+    <a class="shot" href="lesson-take.html#sheet"><img src="png/lesson-take-sheet.png" alt=""><div><b>Lesson · during the take, on the sheet</b><span>The default view (D8): drum notation with a moving cursor, the count, and results on the notes as you play.</span></div></a>
+    <a class="shot cmp" href="lesson-take.html#falling"><img src="png/lesson-take-falling.png" alt=""><div><b>Reference · the falling highway</b><span>The same moment on the web’s falling lanes. The highway runs left to right; falling lanes stay a setting.</span></div></a>
+    <a class="shot" href="lesson-results.html"><img src="png/lesson-results.png" alt=""><div><b>Lesson · results</b><span>Every note says on it, early, late or missed; the timing line; one thing to fix; the next move.</span></div></a>
+    <a class="shot" href="lesson-results.html#sheet"><img src="png/lesson-results-sheet.png" alt=""><div><b>Lesson · results on the sheet</b><span>The whole take on the sheet-music notes: green on it, orange early/late, MISS!, ✕ extra.</span></div></a>
+    <a class="shot" href="lesson-results.html#share"><img src="png/lesson-share.png" alt=""><div><b>Share take</b><span>The take as a MIDI file through the iOS share sheet (D5).</span></div></a>
+  </div>
+
+  <h2>The other sections</h2>
+  <div class="grid">
+    <a class="shot" href="practice.html"><img src="png/practice.png" alt=""><div><b>Practice</b><span>Pick up where you left off, a 5-minute warm-up, For you cards the ride moves through, the library by kind.</span></div></a>
+    <a class="shot" href="progress.html"><img src="png/progress.png" alt=""><div><b>Progress</b><span>Getting better, this week, the skill map, trophies with how close you are, your time and your lessons.</span></div></a>
+    <a class="shot" href="setup.html"><img src="png/setup.png" alt=""><div><b>Setup</b><span>Kit, pads, latency, sound; the coach’s home server, token, Test connection and the optional API key.</span></div></a>
+    <a class="shot" href="coach.html"><img src="png/coach.png" alt=""><div><b>Coach</b><span>An inspector over the screen you’re on: feedback on the take, a drill, the next step, chat, “thinking”.</span></div></a>
+    <a class="shot" href="coach.html#offline"><img src="png/coach-offline.png" alt=""><div><b>Coach · server unreachable</b><span>What failed, Try again, settings; the app’s own verdict stays and everything else keeps working.</span></div></a>
+    <a class="shot" href="touch-pads.html"><img src="png/touch-pads.png" alt=""><div><b>Touch pads</b><span>No kit connected: a multi-touch kit laid out like the MPS-150, under a short highway.</span></div></a>
+  </div>
+
+  <h2>First run</h2>
+  <div class="grid">
+    <a class="shot" href="first-run.html#s1"><img src="png/first-run-1-welcome.png" alt=""><div><b>1 · Welcome</b><span>What the app does; styles, minutes a day, played before.</span></div></a>
+    <a class="shot" href="first-run.html#s2"><img src="png/first-run-2-plug-in.png" alt=""><div><b>2 · Plug in the kit</b><span>USB to USB-C, “e-Drum found”, hit any pad to check; touch pads if there’s no kit.</span></div></a>
+    <a class="shot" href="first-run.html#s3"><img src="png/first-run-3-pads.png" alt=""><div><b>3 · Hit each pad</b><span>The pad to hit in huge type on a drawing of the kit, what each pad sent, readable from the throne.</span></div></a>
+    <a class="shot" href="first-run.html#s4"><img src="png/first-run-4-latency.png" alt=""><div><b>4 · Latency</b><span>Hit the snare with 16 clicks; the delay and how steady it was.</span></div></a>
+  </div>
+</div>
+</body>
+</html>

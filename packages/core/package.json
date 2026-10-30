@@ -1,0 +1,14 @@
+{
+  "name": "@drum-coach/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drum Coach's teaching brain: engine, content, schemas and the MIDI input path. Pure TypeScript (no DOM, no React Native), consumed as source.",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@tonejs/midi": "^2.0.28",
+    "zod": "^4.6.7"
+  }
+}

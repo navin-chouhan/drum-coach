@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1194">
+<title>Practice · iPad mockup</title>
+<link rel="stylesheet" href="ipad.css">
+<style>
+  .row1 { display: grid; grid-template-columns: minmax(0, 1fr) 286px; gap: 18px; }
+  .last { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+  .lastTop { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 14px; align-items: center; background: var(--pop); border: 3px solid var(--line); padding: 8px 14px; }
+  .lastTop .big { font-size: 50px; line-height: 1; grid-row: span 3; }
+  .last h2 { font-size: 27px; margin: 4px 0 2px; }
+  .last .d { font-size: 15px; font-weight: 600; }
+  .last .pills { display: flex; gap: 6px; margin-top: 6px; }
+  .last .moves { grid-template-columns: 2.1fr 1fr 1fr; }
+  .last .move { min-height: 84px; }
+  .last .move.go b { font-size: 26px; }
+  .last .move b { font-size: 20px; white-space: nowrap; }
+  .warm { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .warm .kicker { background: var(--pop); color: var(--line); }
+  .warm p.s { font-size: 13.5px; color: #ddd; font-weight: 600; }
+  .warm .list .li { padding: 0; min-height: 31px; font-size: 14.5px; font-weight: 700; color: #fff; }
+  .warm .list .li + .li { border-top: 1px solid #ffffff2a; }
+  .warm .list .li .val { font-size: 13.5px; color: #ccc; }
+  .warmGo { margin-top: auto; background: var(--pop); color: var(--line); border: 3px solid var(--line); box-shadow: 4px 4px 0 #fff; padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .warmGo b { font: 900 18px var(--display); display: flex; align-items: center; gap: 8px; }
+  .forHead { display: flex; align-items: center; gap: 12px; margin: 14px 2px 9px; }
+  .forHead h3 { font-size: 20px; background: var(--panel); border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--line); padding: 3px 10px; }
+  .forHead .gs { display: flex; gap: 6px; align-items: center; font-size: 13.5px; font-weight: 800; }
+  .cards4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .fy { padding: 9px 12px; height: 98px; display: flex; flex-direction: column; gap: 4px; position: relative; background: var(--panel2); box-shadow: 4px 4px 0 var(--line); }
+  .fy.ring { outline: 5px solid var(--pop); outline-offset: 2px; background: var(--panel); }
+  .fy .tag { align-self: flex-start; font-size: 11.5px; font-weight: 800; padding: 1px 9px; border-radius: 999px; background: var(--night); color: #fff; }
+  .fy .tag.coach { background: var(--panel); color: var(--line); border: 2px dashed var(--line); }
+  .fy b { font: 900 16px/1.15 var(--display); }
+  .fy span.m { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: auto; }
+  .fy .play { position: absolute; right: 10px; top: 10px; width: 38px !important; height: 38px; font-size: 14px; }
+  .lib { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .cols .li { min-height: 44px; padding: 3px 12px; }
+  .cols .li b { font-size: 15.5px; }
+  .cols .li .sym { background: var(--cyan); width: 32px; height: 32px; font-size: 17px; }
+  .best { font-size: 13.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .best b { color: var(--line); font-family: var(--display); }
+</style>
+</head>
+<body>
+<div class="ipad">
+  <div class="status"><span>18:58</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>92%</span><span class="batt"><i style="width:90%"></i></span></div>
+
+  <nav class="sb">
+    <div class="brand"><span class="logo"></span>Drum Coach</div>
+    <a class="sbItem"><span class="em">🗺️</span>Journey</a>
+    <a class="sbItem on"><span class="em">🎯</span>Practice</a>
+    <a class="sbItem"><span class="em">📈</span>Progress</a>
+    <a class="sbItem"><span class="em">💬</span>Coach</a>
+    <a class="sbItem"><span class="em">⚙️</span>Setup</a>
+    <div class="sbStatus">
+      <div class="row"><i class="dot"></i><b>e-Drum</b><span>connected</span></div>
+      <div class="row"><span class="em">⏱</span><b>Latency</b><span>31 ms</span></div>
+      <div class="row"><i class="dot"></i><b>Coach</b><span>home server</span></div>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="navbar">
+      <h1>Practice</h1>
+      <span class="sp"></span>
+      <div class="search" style="width:280px"><span class="ic i-search"></span>Search 20 exercises</div>
+    </div>
+
+    <div class="row1">
+      <section class="card last">
+        <div class="lastTop">
+          <span class="big">🥢</span>
+          <div>
+            <div class="kicker">Pick up where you left off · yesterday · 9 takes</div>
+            <h2>Single strokes (16ths)</h2>
+            <p class="d">Even 16ths on the snare, R L R L. One bar, round and round.</p>
+            <div class="pills"><span class="pill"><span class="em">⏱</span>starts at 70 today</span><span class="pill green">⭐ best clean: 80 BPM</span><span class="pill">1 bar · 4× round</span></div>
+          </div>
+        </div>
+        <div class="moves">
+          <div class="move go"><b><span class="em">▶</span>Play it</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span style="display:inline-flex;gap:6px;align-items:center"><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span></span></div></div>
+          <div class="move"><b><span class="em">👂</span>Hear it</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
+          <div class="move"><b><span class="em">⏭</span>Next card</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+        </div>
+      </section>
+
+      <section class="card night warm">
+        <div class="kicker">🔥 5-minute warm-up</div>
+        <p class="s">Four short ones at your tempos. No score.</p>
+        <div class="list">
+          <div class="li"><span class="grow">Single strokes (16ths)</span><span class="val num">1 min · 70</span></div>
+          <div class="li"><span class="grow">Double strokes</span><span class="val num">1 min · 60</span></div>
+          <div class="li"><span class="grow">Accents on the beat</span><span class="val num">1½ min · 65</span></div>
+          <div class="li"><span class="grow">Hi-hat 8th notes</span><span class="val num">1½ min · 90</span></div>
+        </div>
+        <div class="warmGo"><b><span class="em">▶</span>Start the warm-up</b><div><span class="gest g-tom1">tom 1 × 2</span></div></div>
+      </section>
+    </div>
+
+    <div class="forHead">
+      <h3>For you</h3>
+      <div class="gs"><span class="gest g-ride">ride × 2</span>moves the ring<span class="gest g-hhp" style="margin-left:6px">hi-hat pedal × 3</span>plays it</div>
+    </div>
+    <div class="cards4">
+      <div class="card fy ring"><span class="tag">at your level</span><b>Basic rock beat</b><span class="m">starts at 80 · 2 bars</span><span class="play btn round fill"><span class="em">▶</span></span></div>
+      <div class="card fy"><span class="tag coach">✍ from your coach</span><b>Kick with the hat</b><span class="m">starts at 65 · 1 bar</span></div>
+      <div class="card fy"><span class="tag">good warm-up</span><b>Accents on the beat</b><span class="m">starts at 65 · 2 bars</span></div>
+      <div class="card fy"><span class="tag">a step up 🐇</span><b>Disco (four on the floor)</b><span class="m">starts at 90 · 2 bars</span></div>
+    </div>
+
+    <div class="lib">
+      <span class="seg"><span>For you</span><span>Grooves<small>6</small></span><span class="on">Rudiments and drills<small>9</small></span><span>Fills<small>3</small></span><span>From your coach<small>2</small></span></span>
+    </div>
+    <div class="cols">
+      <div class="group">
+        <div class="li withSym"><span class="sym"><span class="em">🥢</span></span><span class="grow"><b>Single strokes (16ths)</b><small>R L R L, even</small></span><span class="best">best clean <b>80</b></span><span class="ic i-chevr chev"></span></div>
+        <div class="li withSym"><span class="sym"><span class="em">🥢</span></span><span class="grow"><b>Accents on the beat</b><small>loud on 1, 2, 3, 4</small></span><span class="best">best clean <b>70</b></span><span class="ic i-chevr chev"></span></div>
+        <div class="li withSym"><span class="sym"><span class="em">🥢</span></span><span class="grow"><b>Paradiddle accents</b><small>R L R R  L R L L</small></span><span class="best">not played</span><span class="ic i-chevr chev"></span></div>
+      </div>
+      <div class="group">
+        <div class="li withSym"><span class="sym"><span class="em">🥢</span></span><span class="grow"><b>Double strokes</b><small>R R L L, second note as loud</small></span><span class="best">best clean <b>65</b></span><span class="ic i-chevr chev"></span></div>
+        <div class="li withSym"><span class="sym"><span class="em">🥢</span></span><span class="grow"><b>Singles around the toms</b><small>snare, tom 1, tom 2, floor</small></span><span class="best">not played</span><span class="ic i-chevr chev"></span></div>
+        <div class="li withSym"><span class="sym"><span class="em">🥢</span></span><span class="grow"><b>Eight in a row</b><small>a streak challenge</small></span><span class="best">best <b>8 / 8</b></span><span class="ic i-chevr chev"></span></div>
+      </div>
+    </div>
+  </main>
+  <div class="home"></div>
+</div>
+</body>
+</html>

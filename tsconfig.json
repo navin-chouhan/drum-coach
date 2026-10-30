@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src", "server", "scripts", "vite.config.ts", "vitest.config.ts", "vitest.setup.ts"]
+  "include": ["src", "server", "packages/core/src", "scripts", "vite.config.ts", "vitest.config.ts", "vitest.setup.ts"]
 }

@@ -1,0 +1,149 @@
+import { z } from 'zod';
+import { CHART_DRUMS, ChartSchema } from '../engine/chart.ts';
+import { DEMO_IDS } from '../content/demos.ts';
+import { chordMidi } from '../engine/band.ts';
+
+const chordsOk = (line: string) => { try { line.trim().split(/\s+/).forEach(c => chordMidi(c)); return true; } catch { return false; } };
+
+// Shapes the coach must answer with. Validated on the server before anything reaches the app.
+export const FeedbackSchema = z.object({
+  feedback: z.string().min(1).max(2000),
+  spoken: z.string().max(500).optional(), // 2–3 conversational sentences the coach says out loud
+  drill: z.object({
+    title: z.string().max(120),
+    instructions: z.string().max(1000),
+    bpm: z.number().min(30).max(300).optional(),
+    chartId: z.string().max(80).optional(),
+    chart: ChartSchema.optional(),
+  }),
+});
+/** The coach's weekly plan (R6): one focus, why, up to 6 lessons the Journey leads with, and notes it reads next week. */
+export const PlanSchema = z.object({
+  title: z.string().max(120),
+  focus: z.string().max(120).nullish().transform(v => v ?? undefined), why: z.string().max(300).nullish().transform(v => v ?? undefined),
+  lessonIds: z.array(z.string().max(80)).max(6).nullish().transform(v => v ?? undefined), // filtered to known lessons by the server
+  drums: z.array(z.string().max(20)).max(4).nullish().transform(v => v ?? undefined),
+  notes: z.string().max(1000).nullish().transform(v => v ?? undefined), // the coach's notebook, given back next week
+  week: z.string().max(10).optional(), // ISO week it's for (set by the server)
+  days: z.array(z.object({
+    day: z.string().max(30),
+    items: z.array(z.object({
+      title: z.string().max(120), minutes: z.number().min(1).max(120),
+      chartId: z.string().max(80).optional(), bpm: z.number().min(30).max(300).optional(), notes: z.string().max(300).optional(),
+    })).max(10),
+  })).min(1).max(7).nullish().transform(v => v ?? undefined), // the model writes "days": null when there are none
+});
+/** Show-off songs: real songs a student at this stage can play for friends. Video ids are looked up by the server. */
+export const ShowoffRequestSchema = z.object({ stage: z.string().max(120), canDo: z.array(z.string().max(200)).max(8), goals: z.array(z.string().max(20)).max(5) });
+export const ShowoffSchema = z.object({ songs: z.array(z.object({ title: z.string().max(120), artist: z.string().max(120), why: z.string().max(300) })).min(1).max(3) });
+export type ShowoffSongs = { songs: (z.infer<typeof ShowoffSchema>['songs'][number] & { video?: { id: string; title: string; thumbnail: string } })[] };
+export const ChatReplySchema = z.object({ reply: z.string().min(1).max(4000), spoken: z.string().max(500).optional(), chart: ChartSchema.optional() });
+/** A real song's groove: "know" = the coach knows this recording, "style-guess" = a typical groove for its style. */
+export const GrooveSchema = ChatReplySchema.extend({ confidence: z.enum(['know', 'style-guess']).catch('style-guess') });
+
+/** Live-tip wording written by the coach for one exercise (ids = engine/liveCoach.ts cue ids). "{ms}" = the measured ms. */
+// A tip that's too long for the banner (70) or to say mid-bar (45) is dropped on its own (that cue keeps the
+// built-in wording) instead of failing the whole answer.
+const fits = (t: { text: string; spoken: string }) => t.text.length <= 70 && t.spoken.length <= 45;
+export const TipsSchema = z.object({
+  tips: z.record(z.string().max(40), z.object({ text: z.string().min(1).max(500), spoken: z.string().min(1).max(500) }))
+    .transform(tips => Object.fromEntries(Object.entries(tips).filter(([, t]) => fits(t)))),
+});
+export const TipsRequestSchema = z.object({
+  title: z.string().min(1).max(160), kind: z.string().max(20).optional(), level: z.number().int().min(0).max(12).optional(),
+  goal: z.string().max(400).optional(), cueIds: z.array(z.string().max(40)).min(1).max(30),
+});
+
+/** A lesson the coach writes for this student (see server/prompts/lesson.md). */
+export const AiLessonSchema = z.object({
+  title: z.string().min(1).max(80),
+  kind: z.enum(['groove', 'rudiment', 'fill', 'song', 'exercise']),
+  focus: z.string().max(400),
+  checkpoint: z.string().max(40).optional(),
+  what: z.string().max(400), why: z.string().max(600), how: z.string().max(1200),
+  steps: z.array(z.object({
+    title: z.string().min(1).max(60), text: z.string().max(400),
+    chart: ChartSchema,
+    activeLanes: z.array(z.enum(CHART_DRUMS)).min(1).optional(),
+    bpm: z.object({ start: z.number().min(30).max(300), target: z.number().min(30).max(300) }),
+    pass: z.object({
+      accuracy: z.number().min(50).max(100), maxExtraPct: z.number().min(0).max(100), maxAbsOffsetMs: z.number().min(5).max(100),
+      maxVelocityCv: z.number().min(3).max(100), maxGhostToAccent: z.number().min(0.1).max(1),
+      maxSpreadMs: z.number().min(5).max(100), maxFlamMs: z.number().min(5).max(100), maxPairDropPct: z.number().min(0).max(100),
+      streak: z.number().int().min(4).max(64),
+      swingPct: z.tuple([z.number().min(45).max(80), z.number().min(45).max(80)]), minDynamicsR: z.number().min(0).max(1),
+      offsetTarget: z.object({ drum: z.enum(CHART_DRUMS).optional(), ms: z.number().min(-60).max(60), tol: z.number().min(3).max(40) }),
+      minFreeOnBeatPct: z.number().min(0).max(100),
+      minGracePct: z.number().min(0).max(100), graceGapMs: z.tuple([z.number().min(0).max(100), z.number().min(0).max(150)]), maxGraceRatio: z.number().min(0.1).max(1),
+    }).partial().optional(),
+    gapBars: z.number().int().min(2).max(8).optional(),
+    jam: z.boolean().optional(), copy: z.boolean().optional(),
+    countAloud: z.enum(['quarters', '8ths']).optional(),
+    fadeClick: z.number().int().min(1).max(16).optional(), clickOn: z.enum(['quarters', '8ths', '2and4']).optional(),
+    variants: z.array(ChartSchema).min(2).max(4).optional(), bars: z.number().int().min(4).max(32).optional(), rest: z.number().int().min(5).max(60).optional(), probe: z.boolean().optional(),
+    bite: z.object({ songId: z.string().max(80), title: z.string().max(200).optional(), fromBar: z.number().int().min(1).max(999), toBar: z.number().int().min(1).max(999) })
+      .refine(b => b.fromBar <= b.toBar && b.toBar - b.fromBar < 8, { message: 'a bite is 1–8 bars' }).optional(),
+    freeBars: z.array(z.number().int().min(1).max(16)).min(1).max(8).optional(), trade: z.boolean().optional(),
+    layers: z.array(z.array(z.enum(CHART_DRUMS)).min(1)).min(2).max(5).optional(),
+    demo: z.enum(DEMO_IDS).optional(), look: z.boolean().optional(), read: z.boolean().optional(), quiz: z.enum(['steady', 'kick']).optional(),
+    transcribe: z.boolean().optional(), listen: z.object({ song: z.string().max(120), what: z.string().max(300) }).optional(),
+  }).refine(s => s.bpm.start <= s.bpm.target, { message: 'bpm.start must not exceed bpm.target' })
+    .refine(s => [...(s.activeLanes ?? []), ...(s.layers ?? []).flat()].every(d => s.chart.notes.some(n => n.drum === d)), { message: 'every active lane needs notes in the chart' })
+    .refine(s => (s.variants ?? []).every(v => v.bars === s.chart.bars && v.timeSignature.join() === s.chart.timeSignature.join()), { message: 'variants need the same bars and time signature as the chart' }))
+    .min(1).max(4)
+    .refine(steps => { const end = steps[steps.length - 1]; return !end.rest && !end.probe && !end.look && !end.quiz && !end.transcribe && !end.listen; }, { message: 'rest, probe, look, quiz, transcribe and listen are never the last step' }),
+  demo: z.enum(DEMO_IDS).optional(),
+  // the backing band's chords, one per bar (engine/band.ts); a line the app can't read is dropped, not a failed lesson
+  band: z.object({ chords: z.string().max(400).optional() }).optional().transform(b => (b?.chords && chordsOk(b.chords) ? b : undefined)).optional(),
+});
+export const LessonRequestSchema = z.object({
+  struggle: z.object({ lessonId: z.string().max(80), step: z.number().int().min(1).max(10), reason: z.string().max(400), run: z.record(z.string(), z.unknown()) }).optional(),
+});
+export type AiLesson = z.infer<typeof AiLessonSchema>;
+
+export type Feedback = z.infer<typeof FeedbackSchema>;
+export type Plan = z.infer<typeof PlanSchema>;
+export type ChatReply = z.infer<typeof ChatReplySchema>;
+export type Groove = z.infer<typeof GrooveSchema>;
+
+// Requests from the browser (validated at the server boundary).
+export const RunRecordSchema = z.object({
+  chartId: z.string().max(80), chartTitle: z.string().max(200), level: z.number().int().min(0).max(12).optional(),
+  startedAt: z.string().datetime(), durationS: z.number().min(0).max(36_000),
+  bpm: z.number().min(10).max(400), speed: z.number().min(0.25).max(2),
+  accuracy: z.number().min(0).max(100), meanOffset: z.number(), spread: z.number().min(0),
+  summary: z.record(z.string(), z.unknown()),
+  // N8: the take itself, hits as [ms from beat 0, pad, velocity]
+  take: z.object({ beatMs: z.number().positive().max(5000), beats: z.number().positive().max(10_000), beatsPerBar: z.number().positive().max(32),
+    timeSignature: z.tuple([z.number().int().min(1).max(32), z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)])]),
+    hits: z.array(z.tuple([z.number(), z.string().max(12), z.number().int().min(0).max(127)])).max(4000) }).optional(),
+});
+export type RunTake = NonNullable<z.infer<typeof RunRecordSchema>['take']>;
+export const MonthReportRequestSchema = z.object({ again: z.boolean().optional() });
+/** The coach's monthly report (N8). */
+export const MonthReportSchema = z.object({ headline: z.string().max(200), better: z.array(z.string().max(300)).max(4), next: z.array(z.string().max(300)).max(3), note: z.string().max(600) });
+export type RunRecord = z.infer<typeof RunRecordSchema> & { id: number };
+export const PlanRequestSchema = z.object({
+  goals: z.string().min(1).max(500).optional(), minutesPerDay: z.number().int().min(5).max(180).optional(), daysPerWeek: z.number().int().min(1).max(7).optional(),
+  week: z.string().regex(/^\d{4}-W\d{2}$/).optional(), // the automatic weekly plan
+});
+
+/** The live coaching conversation (server/ai/session.ts, server/prompts/session.md). */
+export const SessionEventSchema = z.object({
+  type: z.enum(['open', 'take', 'said']),
+}).catchall(z.unknown()).refine(e => JSON.stringify(e).length < 20_000, { message: 'event too large' });
+// The screen line is read from the throne: one thing to do, ≤ 12 words. An overlong one is dropped (the screen then
+// shows "say") instead of failing the whole reply.
+const fitsScreen = (t: string) => t.length <= 90 && t.trim().split(/\s+/).length <= 14;
+export const CoachReplySchema = z.object({
+  say: z.string().min(1).max(400),
+  show: z.string().max(500).optional().transform(t => (t && fitsScreen(t) ? t : undefined)),
+  action: z.object({
+    kind: z.enum(['again', 'slower', 'faster', 'next', 'drill', 'zoom', 'trade', 'count', 'layers', 'listen']), label: z.string().min(1).max(40),
+    bar: z.number().int().min(1).max(64).optional(), // zoom: the bar to loop (default: the stickiest bar of the last take)
+    bpm: z.number().min(30).max(300).optional(), chartId: z.string().max(80).optional(), chart: ChartSchema.optional(), now: z.boolean().optional(),
+  }).optional(),
+  ask: z.boolean().optional(),
+});
+export type SessionEvent = z.infer<typeof SessionEventSchema>;
+export type CoachReply = z.infer<typeof CoachReplySchema>;
