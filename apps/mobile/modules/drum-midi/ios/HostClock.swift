@@ -15,12 +15,33 @@ enum HostClock {
   static var timebaseDescription: String { "\(Int(timebase.numer))/\(Int(timebase.denom))" }
 
   static func ticksToMs(_ ticks: UInt64) -> Double {
-    return Double(ticks) * timebase.numer / timebase.denom / 1_000_000.0
+    return ticksToMs(ticks, numer: timebase.numer, denom: timebase.denom)
   }
 
   static func msToTicks(_ ms: Double) -> UInt64 {
-    let ticks = ms * 1_000_000.0 * timebase.denom / timebase.numer
+    return msToTicks(ms, numer: timebase.numer, denom: timebase.denom)
+  }
+
+  // MARK: - Pure conversions (unit-tested in Tests/HostClockTests.swift with fixed timebases)
+
+  /// Ticks → ms for a given timebase (ns per tick = numer / denom).
+  static func ticksToMs(_ ticks: UInt64, numer: Double, denom: Double) -> Double {
+    return Double(ticks) * numer / denom / 1_000_000.0
+  }
+
+  /// ms → ticks for a given timebase; negative or zero ms give 0.
+  static func msToTicks(_ ms: Double, numer: Double, denom: Double) -> UInt64 {
+    let ticks = ms * 1_000_000.0 * denom / numer
     return ticks <= 0 ? 0 : UInt64(ticks.rounded())
+  }
+
+  /// A packet's time in ms: its CoreMIDI timestamp, or the receive time when the timestamp is 0 ("now").
+  static func packetMs(timeStamp: UInt64, receivedMs: Double, numer: Double, denom: Double) -> Double {
+    return timeStamp == 0 ? receivedMs : ticksToMs(timeStamp, numer: numer, denom: denom)
+  }
+
+  static func packetMs(timeStamp: UInt64, receivedMs: Double) -> Double {
+    return packetMs(timeStamp: timeStamp, receivedMs: receivedMs, numer: timebase.numer, denom: timebase.denom)
   }
 
   static func nowMs() -> Double {

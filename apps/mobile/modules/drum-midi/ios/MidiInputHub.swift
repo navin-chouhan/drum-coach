@@ -1,16 +1,23 @@
 import CoreMIDI
 import Foundation
 
-/// CoreMIDI input for one selected source. Forwards each packet's MIDI 1.0 bytes with its host timestamp and does
-/// nothing else: note/velocity semantics, channels, filtering and framing are TypeScript's.
+/// CoreMIDI input for one selected source. Forwards each packet's MIDI 1.0 bytes with its host timestamp (to the
+/// PacketBatcher, which sends them to JS in batches) and does nothing else: note/velocity semantics, channels,
+/// filtering and framing are TypeScript's.
+///
+/// Selection (InputSelection, mirrored in src/selection.ts): an explicit `select` wins, by unique ID or else by name
+/// (a replugged device can come back with a new ID); with nothing selected, `setPreferredNames` auto-selects the
+/// first online source whose name starts with a preferred name, on start, on every setup change and after a replug.
 ///
 /// Threads: `listInputs`/`select`/`resync` come from the JS thread, the notify block from CoreMIDI, the receive block
 /// from CoreMIDI's high-priority MIDI thread. All mutable state is touched only on `stateQueue`; the receive block
 /// only reads the packet it is given and bumps a locked counter.
 final class MidiInputHub {
-  /// bytes, hostTimeMs (packet timestamp, or the receive time when the packet says 0 = "now"), nativeReceivedMs.
-  var onMidi: (([Int], Double, Double) -> Void)?
-  var onInputsChanged: (([[String: Any]]) -> Void)?
+  /// One packet: bytes, hostTimeMs (packet timestamp, or the receive time when the packet says 0 = "now"),
+  /// nativeReceivedMs. Called on CoreMIDI's MIDI thread.
+  var onPacket: (([Int], Double, Double) -> Void)?
+  /// inputs (as listInputs), selection (as selection()).
+  var onInputsChanged: (([[String: Any]], [String: Any]) -> Void)?
 
   private let stateQueue = DispatchQueue(label: "drumcoach.midi.state")
   private var client = MIDIClientRef()
@@ -22,6 +29,10 @@ final class MidiInputHub {
   private var selectedID: Int32?
   private var selectedName: String?
   private var connected = MIDIEndpointRef() // 0 = none
+  private var connectedID: Int32?
+  private var preferredNames: [String] = []
+  /// Auto-select by preferredNames when nothing is selected. Off after select(nil), on after setPreferredNames.
+  private var autoSelect = false
 
   // Debug counters (M4: connect/disconnect must not pile up).
   private var connectCalls = 0
@@ -70,6 +81,7 @@ final class MidiInputHub {
     stateQueue.sync {
       started = true
       _ = refreshLocked()
+      reconcileLocked()
     }
   }
 
@@ -90,7 +102,8 @@ final class MidiInputHub {
   }
 
   /// Selects a source by unique ID (the `id` from listInputs), or none with nil. Idempotent: selecting the source
-  /// that is already connected changes nothing. Returns whether a source is connected afterwards.
+  /// that is already connected changes nothing. None (or an id that isn't a number) also turns auto-select off
+  /// until the next setPreferredNames. Returns whether a source is connected afterwards.
   func select(id: String?) throws -> Bool {
     try startIfNeeded()
     return stateQueue.sync {
@@ -100,11 +113,32 @@ final class MidiInputHub {
       } else {
         selectedID = nil
         selectedName = nil
+        autoSelect = false
       }
       _ = refreshLocked()
       reconcileLocked()
       return connected != 0
     }
+  }
+
+  /// Auto-select: with nothing selected, connect the first online source whose name starts with one of `names`
+  /// (case-insensitive, in order), now and whenever one appears. An empty list turns auto-select off. Emits
+  /// onInputsChanged so JS learns the selection. Returns whether a source is connected afterwards.
+  func setPreferredNames(_ names: [String]) throws -> Bool {
+    try startIfNeeded()
+    return stateQueue.sync {
+      preferredNames = InputSelection.cleanPreferredNames(names)
+      autoSelect = !preferredNames.isEmpty
+      _ = refreshLocked()
+      reconcileLocked()
+      emitInputsLocked()
+      return connected != 0
+    }
+  }
+
+  /// selectedId, selectedName, connectedId ("" = none), preferredNames, autoSelect.
+  func selection() -> [String: Any] {
+    return stateQueue.sync { selectionLocked() }
   }
 
   /// Re-lists and reconnects the selected source if needed (app back in the foreground). Idempotent.
@@ -137,9 +171,12 @@ final class MidiInputHub {
         "disconnectCalls": disconnectCalls,
         "setupNotifications": setupNotifications,
         "connected": connected != 0,
-        "connectedName": connected != 0 ? (known.values.first { $0.endpoint == connected }?.name ?? "?") : "",
+        "connectedName": connectedID.flatMap { known[$0]?.name } ?? (connected != 0 ? "?" : ""),
         "selectedId": selectedID.map { String($0) } ?? "",
         "selectedName": selectedName ?? "",
+        "connectedId": connectedID.map { String($0) } ?? "",
+        "preferredNames": preferredNames,
+        "autoSelect": autoSelect,
         "packetsReceived": packets,
         "zeroTimestampPackets": zeroTs,
         "lastError": Int(lastError),
@@ -169,7 +206,18 @@ final class MidiInputHub {
 
   private func emitInputsLocked() {
     let list = known.values.sorted { $0.name < $1.name }.map { $0.dictionary }
-    onInputsChanged?(list) // sendEvent only schedules onto the JS runtime: safe to call here, and keeps the order
+    // sendEvent only schedules onto the JS runtime: safe to call here, and keeps the order
+    onInputsChanged?(list, selectionLocked())
+  }
+
+  private func selectionLocked() -> [String: Any] {
+    return [
+      "selectedId": selectedID.map { String($0) } ?? "",
+      "selectedName": selectedName ?? "",
+      "connectedId": connectedID.map { String($0) } ?? "",
+      "preferredNames": preferredNames,
+      "autoSelect": autoSelect,
+    ]
   }
 
   /// Re-reads the present sources; anything known but no longer present (or flagged offline) is offline.
@@ -196,16 +244,13 @@ final class MidiInputHub {
     return known.values.sorted { $0.name < $1.name }
   }
 
-  /// Connects exactly the selected source when it is online (by unique ID, else by name: a replugged device can
-  /// come back with a new ID), and nothing else.
+  /// Connects exactly the source InputSelection picks (the selected one by unique ID, else by name; else, with
+  /// nothing selected, the first preferred one), and nothing else. The connected source becomes the selection.
   private func reconcileLocked() {
-    let target: Source? = {
-      guard selectedID != nil || selectedName != nil else { return nil }
-      if let uid = selectedID, let s = known[uid], s.online { return s }
-      if let name = selectedName { return known.values.first { $0.online && $0.name == name } }
-      return nil
-    }()
-    guard let source = target else {
+    let candidates = known.values.map { InputSelection.Candidate(uniqueID: $0.uniqueID, name: $0.name, online: $0.online) }
+    let targetID = InputSelection.target(
+      candidates, selectedID: selectedID, selectedName: selectedName, preferredNames: preferredNames, autoSelect: autoSelect)
+    guard let uid = targetID, let source = known[uid] else {
       disconnectLocked()
       return
     }
@@ -215,6 +260,7 @@ final class MidiInputHub {
     connectCalls += 1
     if status == noErr {
       connected = source.endpoint
+      connectedID = source.uniqueID
       selectedID = source.uniqueID
       selectedName = source.name
     } else {
@@ -228,6 +274,7 @@ final class MidiInputHub {
     disconnectCalls += 1
     if status != noErr { lastError = status }
     connected = 0
+    connectedID = nil
   }
 
   // MARK: - Receive (CoreMIDI's MIDI thread)
@@ -248,8 +295,7 @@ final class MidiInputHub {
       guard !bytes.isEmpty else { continue }
       let ts = packet.pointee.timeStamp
       if ts == 0 { zeroTs += 1 }
-      let hostMs = ts == 0 ? receivedMs : HostClock.ticksToMs(ts) // 0 means "now"
-      onMidi?(bytes, hostMs, receivedMs)
+      onPacket?(bytes, HostClock.packetMs(timeStamp: ts, receivedMs: receivedMs), receivedMs) // 0 means "now"
     }
     packetLock.lock()
     packetsReceived += packets
