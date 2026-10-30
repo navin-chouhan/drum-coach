@@ -13,6 +13,7 @@
       "isTabletOnly": true,
       "requireFullScreen": true,
       "infoPlist": {
+        "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
         "NSLocalNetworkUsageDescription": "Drum Coach uses your local network to load the app from your computer while developing, to reach your home coach server, and to receive drum hits over Network MIDI.",
         "NSBonjourServices": ["_apple-midi._udp"],
         "NSMicrophoneUsageDescription": "Drum Coach uses the microphone only when you talk to the voice coach.",
