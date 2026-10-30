@@ -12,6 +12,7 @@ const SHOTS = [
   ['lesson-ready', 'lesson-take.html', 'ready'],
   ['lesson-countin', 'lesson-take.html', 'countin'],
   ['lesson-take', 'lesson-take.html'],
+  ['lesson-take-falling', 'lesson-take.html', 'falling'],
   ['lesson-results', 'lesson-results.html'],
   ['lesson-share', 'lesson-results.html', 'share'],
   ['practice', 'practice.html'],
