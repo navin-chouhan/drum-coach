@@ -45,7 +45,7 @@ session. The decisions it needs are D1–D5, below.
 | A4p2 Take engine (core) | running | `packages/core/src/play/**` (not audioPort.ts) | [briefs/A4p2.md](briefs/A4p2.md) | createTake, planEvents, createMetronome, parity tests |
 | A7a UI kit + nav + Journey | running | `apps/mobile/src/ui/**`, `app/(main)/**`, `src/features/journey/**` | [briefs/A7a.md](briefs/A7a.md) | the screens' foundation |
 
-| ACI2 Cloud iOS build | running | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
+| ACI2 Cloud iOS build | **done, merged** (e00a272); first run on PR #3 | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
 | A1f Core notation fix | **done, merged** (c2147ec) | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
 
 | A7b Lesson player | running | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
@@ -227,3 +227,4 @@ results.
   Mitigation for the never-compiled Swift: a cloud iOS simulator build on GitHub's macOS runners (ACI2).
 - 2026-10-30: Owner away 12 h (D9). Screen agents A7b–A7e and A8 started on their models (part 1); they get the UI kit when A7a commits it.
 - 2026-10-30: A7a part 1 (UI kit, sidebar, placeholders incl. songs) merged early so the screen agents can build on it.
+- 2026-10-30: ACI2 merged: `.github/workflows/ios.yml` on the `xcode-27` runner (Xcode 27.1, the owner's build), prebuild + xcodebuild for the iPad simulator + Swift unit tests; triggers: dispatch and PRs to main touching apps/mobile. `.github/actionlint.yaml` declares the new hosted label actionlint doesn't know yet.
