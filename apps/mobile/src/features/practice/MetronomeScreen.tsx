@@ -1,17 +1,17 @@
 // Practice's metronome-only mode: just the click, no take and no score. − / + tempo (tom 1 / floor × 2 from the kit),
 // clicks per bar, quarters / 8ths / 16ths, tap tempo, and Start / Stop (hi-hat pedal × 3). The clicks are planned on
-// the AudioPort's clock ahead of time (createMetronome: heard times as zero + k × tick, ≥ 2 s handed over).
+// the AudioPort's clock ahead of time by the take engine's planner (core createMetronome: ≥ 2 s handed over).
 import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { createMetronome, type Metronome } from '../../dev/audio/metronome';
+import { createMetronome, type Metronome } from '@drum-coach/core/play/metronome';
 import { audio } from '../../platform/audio';
 import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, Display, MAX_FONT_SCALE, Screen, Segmented,
   color, gesturesFor, stroke, tabular, useAppSettings, useKitMoves,
 } from '../../ui';
-import { beatAt, METERS, nudgeBpm, readMetronome, SUBDIVISIONS, tapTempo, writeMetronome, type MetronomeSettings } from './metronome';
+import { METERS, nudgeBpm, readMetronome, SUBDIVISIONS, tapTempo, writeMetronome, type MetronomeSettings } from './metronome';
 import { Notice } from './parts';
 
 export function MetronomeScreen() {
@@ -31,8 +31,8 @@ export function MetronomeScreen() {
     try {
       await audio.start();
       audio.setLevels({ click: settings.clickVolume });
-      const m = createMetronome(audio, { bpm: spec.bpm, beatsPerBar: spec.beatsPerBar, subdivision: spec.subdivision });
-      m.start(audio.clock.now());
+      const m = createMetronome({ clock: audio.clock, audio }, { bpm: spec.bpm, timeSignature: [spec.beatsPerBar, 4], subdivision: spec.subdivision });
+      await m.start();
       metro.current = m;
       setRunning(true); setError('');
     } catch (e) { setError(`The click could not start: ${e instanceof Error ? e.message : 'audio error'}`); }
@@ -57,7 +57,8 @@ export function MetronomeScreen() {
       if (!m) return;
       const n = audio.clock.now();
       m.tick(n);
-      setBeat(beatAt(s, m.zero, n));
+      const b = Math.floor(m.position(n));
+      setBeat(b < 0 ? -1 : b % s.beatsPerBar);
     }, 50);
     return () => clearInterval(t);
   }, [running, s]);

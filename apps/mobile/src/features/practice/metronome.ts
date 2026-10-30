@@ -29,13 +29,6 @@ export function writeMetronome(kv: KeyValueStore, s: MetronomeSettings) {
   try { kv.set(METRONOME_KEY, JSON.stringify(s)); } catch { /* kept for this session */ }
 }
 
-/** The beat (0-based, within the bar) a click time falls on, for the beat dots: negative before the first click. */
-export function beatAt(s: MetronomeSettings, zero: number, now: number): number {
-  if (now < zero) return -1;
-  const beat = Math.floor((now - zero) / (60_000 / s.bpm));
-  return beat % s.beatsPerBar;
-}
-
 /** Tap tempo: the median gap of the last taps (2 s or less apart) as BPM, or undefined with fewer than 3 taps. */
 export function tapTempo(taps: number[]): number | undefined {
   const recent: number[] = [];

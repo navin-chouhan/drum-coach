@@ -1,8 +1,10 @@
 // Practice (docs/mockups/ipad/practice.html): pick up where you left off, the warm-up, For you with the yellow ring
 // (ride × 2 moves it, hi-hat pedal × 3 plays it), and the library by kind with your best clean tempo. Choosing opens
 // the play screen (app/practice/play). The rules are in chooser.ts and catalog.ts.
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { getStorage } from '../../platform/storage';
+import { getCoach } from '../coach';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, Display, GestureChip, Label, ListRow, MAX_FONT_SCALE, Panel, Pill, Screen, Segmented, TitleBar,
@@ -13,13 +15,14 @@ import { chartRow, listFor, practiceCharts, type ChartRow, type TabId } from './
 import { chooserModel, focusedRow, initialFocus, playLabel, stepFocus } from './chooser';
 import { practiceEngine } from './engine';
 import { Notice } from './parts';
+import { readPlayOptions, speedFor } from './play';
 
 const openPlay = (id: string, extra: Record<string, string> = {}) => router.push({ pathname: '/practice/play', params: { chartId: id, ...extra } });
 
 export function PracticeScreen() {
   const settings = useAppSettings();
   const { data } = useStoredData();
-  const charts = useMemo(() => practiceCharts(), []);
+  const charts = useMemo(() => practiceCharts(getCoach().charts.list()), [data]); // eslint-disable-line react-hooks/exhaustive-deps -- re-read with the runs
   const m = useMemo(() => chooserModel({ charts, runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, lessons: data?.lessons ?? [] }),
     [charts, data, settings.lessons, settings.profile]);
   const [picked, setFocus] = useState<number>();
@@ -30,7 +33,16 @@ export function PracticeScreen() {
   const [notice, setNotice] = useState('');
 
   const play = (row?: ChartRow) => { if (row) openPlay(row.id); };
-  const hear = (row?: ChartRow) => { if (!row) return; if (!practiceEngine.ready) setNotice(practiceEngine.notReady); };
+  const eng = useSyncExternalStore(practiceEngine.subscribe, practiceEngine.get);
+  const hearing = eng.demo && (eng.phase === 'playing' || eng.phase === 'starting');
+  const hear = (row?: ChartRow) => {
+    if (hearing) { practiceEngine.stop(); return; }
+    const c = row && charts.find(x => x.id === row.id);
+    if (!c || !row) return;
+    if (!practiceEngine.start({ chart: c, options: { ...readPlayOptions(getStorage().kv), chartId: c.id, speed: speedFor(row.startsAt, c.bpm), metronome: true, subdivision: 1, countInBars: 1, wait: false },
+      section: null, demo: true, repeats: 1 })) setNotice(practiceEngine.notReady);
+  };
+  useFocusEffect(useCallback(() => () => practiceEngine.stop(), []));
   const warm = () => { if (m.warm) openPlay(m.warm.items[0].id, { warm: m.warm.items.map(w => w.id).join(','), bpm: String(m.warm.items[0].bpm) }); };
   const step = () => setFocus(stepFocus(focus, m));
   useKitMoves({ yes: () => play(focused), next: step, listen: () => hear(focused), faster: warm });
@@ -73,7 +85,7 @@ export function PracticeScreen() {
           )}
           <View style={styles.moves}>
             <BigMove tone="go" label={playLabel(focus, m).replace(/^▶ /, '')} emoji="▶" gestures={gesturesFor('yes')} onPress={() => play(focused)} disabled={!focused} testID="practice-play" style={styles.moveGo} />
-            <BigMove label="Hear it" emoji="👂" gestures={gesturesFor('listen')} onPress={() => hear(focused)} disabled={!focused} testID="practice-hear" style={styles.move} />
+            <BigMove label={hearing ? 'Stop' : 'Hear it'} emoji={hearing ? '■' : '👂'} gestures={gesturesFor('listen')} onPress={() => hear(focused)} disabled={!focused} testID="practice-hear" style={styles.move} />
             <BigMove label="Next card" emoji="⏭" gestures={gesturesFor('next')} onPress={step} testID="practice-next" style={styles.move} />
           </View>
           {notice ? <Notice text={notice} onClose={() => setNotice('')} /> : null}

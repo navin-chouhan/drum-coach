@@ -1,11 +1,13 @@
 // Practice's play screen (full screen, the web's PlayView): the exercise, − / + tempo with your best clean tempo, the
 // coach line and the moves with their kit gestures, the sheet music of the bars you loop, times round, Climb, How it
-// plays, and your takes here. Takes run through practiceEngine (the take engine, once it is in this build).
+// plays, and your takes here. Takes run on the core take engine (engine.ts); a finished one is saved and Climb applies.
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import type { Finished } from '@drum-coach/core/play/take';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NotationView } from '../../notation';
 import { getMidiPort } from '../../platform/midi';
+import type { RunsRepo } from '../../data/runs';
 import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Screen, Toggle,
@@ -13,11 +15,13 @@ import {
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
-import { kindIcon, practiceCharts } from './catalog';
+import { getCoach } from '../coach';
+import { kindIcon, practiceCharts, startOf, type PracticeChart } from './catalog';
+import { warmRepeats } from './chooser';
 import { practiceEngine } from './engine';
 import { Dots, Notice } from './parts';
 import {
-  barPickKind, clampRepeats, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
+  barPickKind, clampRepeats, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
   sectionRange, speedFor, writePlayOptions, type PracticeOptions, type Section, type WarmState,
 } from './play';
 
@@ -27,14 +31,16 @@ export function PlayScreen() {
   const params = useLocalSearchParams<{ chartId?: string; bpm?: string; warm?: string }>();
   const kv = getStorage().kv;
   const settings = useAppSettings();
-  const { data } = useStoredData();
-  const charts = useMemo(() => practiceCharts(), []);
+  const { data, reload } = useStoredData();
+  const charts = useMemo(() => practiceCharts(getCoach().charts.list()), []);
   const [o, setO] = useState<PracticeOptions>(() => readPlayOptions(kv));
   const set = (patch: Partial<PracticeOptions>) => setO(prev => writePlayOptions(kv, prev, patch));
   const [section, setSection] = useState<Section>(null);
   const [notice, setNotice] = useState('');
   const runs = data?.runs ?? [];
   const read = useMemo(() => studentRead(settings.lessons, runs), [settings.lessons, runs]);
+  const eng = useSyncExternalStore(practiceEngine.subscribe, practiceEngine.get);
+  const playing = eng.phase === 'playing' || eng.phase === 'starting';
 
   // "Play this" (from the chooser, Progress or the coach): select the chart, at the tempo asked for exactly.
   const warmIds = params.warm ? params.warm.split(',').filter(id => charts.some(c => c.id === id)) : [];
@@ -47,39 +53,82 @@ export function PlayScreen() {
     set({ chartId: target.id, ...(bpm > 0 && { speed: speedFor(bpm, target.bpm) }) });
     setSection(null);
   }, [params.chartId, params.bpm]); // eslint-disable-line react-hooks/exhaustive-deps -- once per request
+  useEffect(() => () => practiceEngine.stop(), []);
 
   const chart = charts.find(c => c.id === o.chartId) ?? charts[0];
-  const m = playModel({ chart, options: o, runs, read, playing: false, warm });
+  // The last scored take of this chart on this screen (not a demo): the moves and the line follow it.
+  const f = !playing && eng.finished && eng.chartId === chart.id ? eng.finished : undefined;
+  const [climbedFor, setClimbedFor] = useState<Finished>();
+  const m = playModel({ chart, options: o, runs, read, playing, warm,
+    take: f && { accuracy: f.stats.accuracy, hits: f.hits.length, wait: f.options.wait, demo: false, climbed: f === climbedFor } });
   const { from, to } = sectionRange(section, chart.bars);
   const shown = useMemo(() => sectionChart(chart, section), [chart, section]);
-  const [zero] = useState(() => now() + 1e9); // before a take: the sheet stands still on its first page
+  const [idleZero] = useState(() => now() + 1e9); // before a take: the sheet stands still on its first page
+  const zero = playing && eng.take ? eng.take.state.zero : idleZero;
   const hints = settings.hints !== false;
   const myPads = [...new Set(chart.notes.filter(n => !n.auto).map(n => n.drum))];
 
-  const go = (bpm = m.bpm, extra: { demo?: boolean } = {}) => {
-    const speed = speedFor(bpm, chart.bpm);
-    if (speed !== o.speed) set({ speed });
-    if (!practiceEngine.start({ chart, options: { ...o, speed }, section, ...extra })) setNotice(practiceEngine.notReady);
+  // Once a take is saved: the runs again (history, best), and Climb: 2 clean takes here move the tempo up 5.
+  const latest = useRef({ chart, o, warm });
+  latest.current = { chart, o, warm };
+  useEffect(() => practiceEngine.onSaved(take => {
+    reload();
+    const { chart: c, o: cur, warm: w } = latest.current;
+    if (!cur.climb || w || take.chart.title !== c.title) return;
+    void (getStorage().runs as RunsRepo).list().then(rs => {
+      const speed = climbAfterTake(c, rs, cur.speed);
+      if (speed) { set({ speed }); setClimbedFor(take); }
+    }).catch(() => {});
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps -- one listener
+
+  const start = (c: PracticeChart, bpm: number, extra: { demo?: boolean; repeats?: number } = {}, sec: Section = section) => {
+    const speed = speedFor(bpm, c.bpm);
+    if (c.id !== o.chartId || speed !== o.speed) set({ chartId: c.id, speed });
+    setNotice('');
+    if (!practiceEngine.start({ chart: c, options: { ...o, chartId: c.id, speed }, section: sec, hints, ...extra })) setNotice(practiceEngine.notReady);
   };
+  const go = (bpm = m.bpm, extra: { demo?: boolean } = {}) => start(chart, bpm, extra);
+  // The warm-up: about a minute of each at its tempo today; the next starts by itself 3 s after the last one ends.
+  const warmTakeOf = useRef<unknown>(undefined);
+  const warmTake = (i: number) => {
+    const c = charts.find(x => x.id === warm?.ids[i]);
+    if (!c || !warm) return;
+    const bpm = startOf(c, runs, read);
+    setSection(null);
+    setWarm({ ...warm, i, done: false });
+    start(c, bpm, { repeats: warmRepeats(c, bpm) }, null);
+    warmTakeOf.current = practiceEngine.get().take;
+  };
+  useEffect(() => { if (warm) warmTake(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- the warm-up starts when it opens
+  useEffect(() => {
+    if (!warm || eng.phase !== 'done' || warm.done || !eng.take || eng.take !== warmTakeOf.current) return;
+    setWarm({ ...warm, done: true });
+    if (warm.i + 1 >= warm.ids.length) { setWarm(undefined); return; }
+    const t = setTimeout(() => warmTake(warm.i + 1), 3000);
+    return () => clearTimeout(t);
+  }, [eng.phase]); // eslint-disable-line react-hooks/exhaustive-deps -- once per finished take
+
   const main = () => {
-    if (m.main.kind === 'stopWarm') { setWarm(undefined); practiceEngine.stop(); return; }
+    if (m.main.kind === 'stopWarm') { stop(); return; }
     if (m.main.kind === 'play') go(m.main.bpm);
-    else setNotice('The coach panel opens this once it is in this build.');
+    else router.push('/coach' as never);
   };
   const listen = () => go(m.bpm, { demo: true });
   const next = () => { set({ chartId: nextChartId(charts, chart.id) }); setSection(null); };
   const playAt = (bpm: number) => go(bpm);
+  const stop = () => { setWarm(undefined); practiceEngine.stop(); };
   useKitMoves({
-    yes: main, listen, next,
+    yes: main, listen, next, stop,
     faster: () => { const a = playGesture('faster', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
     slower: () => { const a = playGesture('slower', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
-  });
+  }, { playing });
   const flip = (id: Parameters<typeof flipChip>[0]) => {
     const p = flipChip(id, o, settings);
     if (p.options) set(p.options);
     if (p.settings) writeSettings(kv, p.settings);
   };
-  const back = () => { practiceEngine.stop(); if (router.canGoBack()) router.back(); else router.replace('/practice'); };
+  const back = () => { stop(); if (router.canGoBack()) router.back(); else router.replace('/practice'); };
+  const cue = playing ? eng.take?.state.cue?.cue.text : undefined;
 
   return (
     <Screen withSidebar={false} testID="screen-practice-play">
@@ -99,6 +148,12 @@ export function PlayScreen() {
         <Button label="Hints" emoji="💡" size="small" tone={hints ? 'pop' : 'white'} onPress={() => flip('hints')} accessibilityLabel={`Hints ${hints ? 'on' : 'off'}`} testID="practice-hints" />
       </View>
 
+      {playing ? (
+        <View style={styles.playingRow}>
+          <CoachLine size={20} style={styles.grow} testID="practice-live-tip">{cue ?? (eng.demo ? 'Listen: this is how it goes.' : `${chart.title} at ${m.bpm}.`)}</CoachLine>
+          <BigMove tone="night" emoji="⏹" label="Stop" gestures={gesturesFor('stop')} onPress={stop} testID="practice-stop" style={styles.stop} />
+        </View>
+      ) : <>
       <CoachLine size={20} style={styles.coach} testID="practice-coach-line">{m.line}</CoachLine>
       <View style={styles.moves}>
         <BigMove tone="go" label={m.main.label.replace(/^\S+ /, '')} emoji={m.main.label.split(' ')[0]} gestures={gesturesFor('yes')} onPress={main} testID="practice-main" style={styles.moveGo} />
@@ -108,6 +163,8 @@ export function PlayScreen() {
             onPress={mv.id === 'listen' ? listen : mv.id === 'next' ? next : () => playAt(mv.bpm ?? m.bpm)} testID={`practice-move-${mv.id}`} style={styles.move} />
         ))}
       </View>
+      </>}
+      {eng.error ? <Notice text={eng.error} testID="practice-error" /> : null}
       {notice ? <Notice text={notice} onClose={() => setNotice('')} testID="practice-notice" /> : null}
 
       <View style={styles.main}>
@@ -203,6 +260,8 @@ const styles = StyleSheet.create({
   stepText: { fontSize: 30, fontWeight: '900', color: color.ink, lineHeight: 34 },
   pressed: { opacity: 0.7 },
   coach: { marginTop: 12 },
+  playingRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 },
+  stop: { width: 260, minHeight: 88 },
   moves: { flexDirection: 'row', gap: 12, marginTop: 12 },
   moveGo: { flex: 1.6, minHeight: 88 },
   move: { flex: 1, minHeight: 88 },

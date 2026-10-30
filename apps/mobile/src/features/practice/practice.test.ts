@@ -5,7 +5,7 @@ import type { RunRow } from '@drum-coach/core/engine/progress';
 import { describe, expect, it } from 'vitest';
 import { bestClean, chartRow, listFor, practiceCharts, segments, startOf, type PracticeChart } from './catalog';
 import { CHOOSER_GESTURES, chooserModel, focusedRow, initialFocus, playLabel, stepFocus, warmRepeats } from './chooser';
-import { beatAt, clampBpm, nudgeBpm, readMetronome, tapTempo, writeMetronome } from './metronome';
+import { clampBpm, nudgeBpm, readMetronome, tapTempo, writeMetronome } from './metronome';
 import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
   PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
@@ -221,11 +221,7 @@ describe('metronome mode', () => {
     kv.set('drumcoach.metronome', '{"bpm":9999,"beatsPerBar":99,"subdivision":3}');
     expect(readMetronome(kv)).toEqual({ bpm: 240, beatsPerBar: 4, subdivision: 1 });
   });
-  it('finds the beat in the bar and taps a tempo', () => {
-    const s = { bpm: 120, beatsPerBar: 4, subdivision: 1 as const };
-    expect(beatAt(s, 1000, 900)).toBe(-1);
-    expect(beatAt(s, 1000, 1000)).toBe(0);
-    expect(beatAt(s, 1000, 1000 + 500 * 5 + 10)).toBe(1);
+  it('taps a tempo', () => {
     expect(tapTempo([0, 500])).toBeUndefined();
     expect(tapTempo([0, 500, 1000, 1510])).toBe(120);
     expect(tapTempo([0, 500, 5000, 5500])).toBeUndefined(); // a long pause starts over
