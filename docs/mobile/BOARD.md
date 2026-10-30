@@ -37,7 +37,7 @@ session. The decisions it needs are D1–D5, below.
 
 | A4 Audio module part 1 | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
 | A5 Data + server client | **done, merged** (90bf393); follow-ups running | `src/platform/{storage,api}.ts`, `src/data/**`, `app/dev/server.tsx`, `src/dev/server/**`, apps/mobile package.json (this round) | [briefs/A5.md](briefs/A5.md) | Storage, HomeServer, coach context builder |
-| A6 Play surfaces part 1 | running | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
+| A6 Play surfaces part 1 | **done, merged** (ae9148f); swap to core types running | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
 | ACI Mobile CI + deps gate | **done, merged** (9acf52b) | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
@@ -161,3 +161,8 @@ results.
   141 tests, check:versions OK; root: 422 tests, lint 0; all 5 lockfiles pass. A5 follow-ups: capabilities uses the
   token health check, home links to the dev screens, core imports replace the schema copies, SSE coach session via
   `expo/fetch` streaming.
+- 2026-10-30: A6 part 1 merged: NoteHighway (scrolls on the UI thread; direction, lane order and colours
+  configurable; defaults follow the mockups), KitView, TouchPads (velocity auto/fixed/centre, hi-hat closed by
+  default), /dev/play. Renderer: Reanimated 4 + views now. `@shopify/react-native-skia@2.14.0` passes the rules (no
+  install scripts; prebuilt binaries from an npm package, ~750 MB in node_modules); add it only if the iPad
+  smoothness check fails. apps/mobile 193 tests; root 422. Follow-up: local ChartLike/PadId → core imports.
