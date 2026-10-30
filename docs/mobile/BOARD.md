@@ -194,3 +194,8 @@ results.
   the hub + AUX IN route. Nothing built needs to change; A4 part 2 uses them (route-keyed latency, keep-if-2-bars).
 - 2026-10-30: Owner: "sheet music always" (D8). Started A6n (sheet music on the iPad) and an A7m follow-up (sheet frames).
 - 2026-10-30: Owner doesn't mind the highway direction: left to right (matches the sheet), falling lanes stay a setting.
+- 2026-10-30: PR #2 (branch → main). Dependency review failed on 3 advisories, all in Expo CLI dev tooling. Owner
+  approved: **node-forge forced to 1.4.2** (fixed, 3 days old: exact `young` exception in apps/mobile/deps-allow.json
+  until 2026-11-03), and **zod 3.x under @expo/cli (GHSA-mrhx-c7xc-m3w5) and deepmerge (GHSA-gcqx-w48m-w2h4)** listed
+  in Dependency review's `allow-ghsas` with reasons, because no fixed release exists. Remove each when Expo ships a
+  fix (B26).

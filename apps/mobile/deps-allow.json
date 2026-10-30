@@ -2,7 +2,9 @@
   "prerelease": {
     "gensync@1.0.0-beta.2": "Babel's own dependency (via babel-preset-expo / Metro), the same one the web root allows; gensync's latest release, unchanged since 2020"
   },
-  "young": {},
+  "young": {
+    "node-forge@1.4.2": "Urgent security fix: Expo CLI pulls node-forge 1.4.0 (GHSA-86w9-cpqp-85rv, high). 1.4.2 is the fixed release (2026-10-27), forced via overrides in package.json. Owner approved 2026-10-30. Remove this entry once it is 7 days old (2026-11-03)"
+  },
   "zeroMajor": {
     "react-native@0.88.0": "React Native itself has no 1.0; this is the exact version expo 58.0.17's bundledNativeModules.json names",
     "react-native-worklets@0.13.0": "Required by react-native-reanimated 4 (pulled in by expo-router); exact version expo 58.0.17 names; no 1.0 exists"
