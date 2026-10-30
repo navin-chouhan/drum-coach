@@ -13,9 +13,11 @@ on:
 
 permissions: {}
 
+# A build takes 20-35 min and pushes come often: let a running build finish (its result still tells us whether the
+# Swift compiles), and keep only the newest push waiting behind it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
