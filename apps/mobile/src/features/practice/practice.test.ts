@@ -8,8 +8,20 @@ import { CHOOSER_GESTURES, chooserModel, focusedRow, initialFocus, playLabel, st
 import { beatAt, clampBpm, nudgeBpm, readMetronome, tapTempo, writeMetronome } from './metronome';
 import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
-  PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionRange, speedFor, writePlayOptions,
+  PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
 } from './play';
+
+describe('section chart', () => {
+  it('cuts the looped bars out, starting at beat 0', () => {
+    const c = practiceCharts().find(x => x.id === 'rock-8ths')!; // 4 bars of 4/4
+    expect(sectionChart(c, null)).toBe(c);
+    const s = sectionChart(c, { from: 2, to: 3 });
+    expect(s.bars).toBe(2);
+    expect(s.notes.length).toBe(c.notes.filter(n => n.t >= 4 && n.t < 12).length);
+    expect(Math.min(...s.notes.map(n => n.t))).toBe(0);
+    expect(Math.max(...s.notes.map(n => n.t))).toBeLessThan(8);
+  });
+});
 
 const at = (day: number, hour = 18) => new Date(2026, 9, day, hour).toISOString();
 const run = (chartId: string, accuracy: number, bpm: number, day = 20, over: Partial<RunRow> = {}): RunRow => ({

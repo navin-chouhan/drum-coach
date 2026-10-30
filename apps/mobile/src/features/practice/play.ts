@@ -56,6 +56,14 @@ export const pickBar = (section: Section, b: number): Section =>
 export const barPickKind = (bars: number) => (bars <= 1 ? 'none' : bars <= 16 ? 'buttons' : 'fields');
 export const clampRepeats = (n: number) => Math.max(1, Math.min(50, Math.round(n)));
 
+/** The bars a take covers as their own chart (what the sheet shows before a take), starting at beat 0. */
+export function sectionChart<C extends Pick<PracticeChart, 'notes' | 'bars' | 'timeSignature'>>(c: C, section: Section): C {
+  const { from, to } = sectionRange(section, c.bars);
+  if (from === 1 && to === c.bars) return c;
+  const bpb = (c.timeSignature[0] * 4) / c.timeSignature[1], start = (from - 1) * bpb, end = to * bpb;
+  return { ...c, bars: to - from + 1, notes: c.notes.filter(n => n.t >= start - 1e-9 && n.t < end - 1e-9).map(n => ({ ...n, t: n.t - start })) };
+}
+
 /** What a finished take tells this screen (the take engine's Finished, as far as Practice reads it). */
 export type TakeSummary = {
   accuracy: number; hits: number; wait: boolean; demo: boolean;
