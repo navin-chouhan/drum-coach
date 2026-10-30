@@ -81,6 +81,9 @@ export function AudioDebugScreen() {
     const offRoute = audio.onRouteChange(r => {
       setRoute(r);
       log(`route → ${r.name} (${r.kind}, ${r.key}) out ${fmt(r.outputLatencyMs)} io ${fmt(r.ioBufferMs)}`);
+      // Native cancelled everything queued; a take would end here (AUDIO-DESIGN §3.3).
+      metro.current?.stop();
+      setMetroOn(false);
     });
     const offInt = audio.onInterruption((e: AudioInterruption) => {
       log(`interruption ${e.type}${'reason' in e && e.reason ? ` (${e.reason})` : ''}${'cause' in e ? ` (${e.cause})` : ''}`);
