@@ -2,12 +2,12 @@
 // (iOS: apps/mobile/src/platform/audio.ts on the drum-audio module; web: an AudioContext adapter).
 // Owned by the orchestrator: change only through docs/mobile/BOARD.md. Design and reasons: docs/mobile/AUDIO-DESIGN.md §2.
 import type { Clock } from '../platform.ts';
-// TODO(after A1 merges): import type { PadId } from '../engine/kit.ts' and use `drum.${PadId}` below.
+import type { PadId } from '../engine/kit.ts';
 
 /** Sounds native has ready: synth clicks, drum one-shots (8 velocity layers), prepared words. */
 export type SoundId =
   | 'click.bar' | 'click.beat' | 'click.sub'
-  | `drum.${string}`
+  | `drum.${PadId}`
   | `word.${string}`;
 
 /** Every `at` is the time the sound is HEARD, in Clock ms (iOS: mach host ms; web: performance.now()). */

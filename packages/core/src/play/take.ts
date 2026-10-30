@@ -1,4 +1,8 @@
 // CONTRACT DRAFT — review with A4
+// Orchestrator note (2026-10-30): the audio side of this draft is superseded by play/audioPort.ts (the orchestrator's
+// contract, from docs/mobile/AUDIO-DESIGN.md §2.1) and the take shape by AUDIO-DESIGN §2.3 (heard times, planEvents,
+// tick, stop reason). The AudioPort below is kept only until A4 part 2 rewrites this file against play/audioPort.ts;
+// don't build on it. Open points for that rewrite: is drift() replaced by backing.anchor() (§6)? is onCue needed?
 //
 // The take engine's interface (B21): one clock-agnostic take for web and iOS, so both score the same way. Types and
 // doc comments only; A4 implements `createTake` in Phase 2 from src/play/player.ts (start / startExternal / finish /
