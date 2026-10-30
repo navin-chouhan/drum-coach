@@ -31,7 +31,7 @@ export function PracticeScreen() {
 
   const play = (row?: ChartRow) => { if (row) openPlay(row.id); };
   const hear = (row?: ChartRow) => { if (!row) return; if (!practiceEngine.ready) setNotice(practiceEngine.notReady); };
-  const warm = () => { if (m.warm) openPlay(m.warm.items[0].id, { warm: m.warm.items.map(w => w.id).join(',') }); };
+  const warm = () => { if (m.warm) openPlay(m.warm.items[0].id, { warm: m.warm.items.map(w => w.id).join(','), bpm: String(m.warm.items[0].bpm) }); };
   const step = () => setFocus(stepFocus(focus, m));
   useKitMoves({ yes: () => play(focused), next: step, listen: () => hear(focused), faster: warm });
 
