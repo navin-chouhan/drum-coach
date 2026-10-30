@@ -12,7 +12,7 @@
     "lint": "eslint . --max-warnings 0",
     "playtest": "node scripts/playtest/run.mjs",
     "deps:check": "node scripts/check-deps.mjs --all",
-    "mobile:test": "cd apps/mobile && npm ci && npm run typecheck && npm test && npm run check:versions",
+    "mobile:test": "cd apps/mobile && (npm ls --depth=0 >/dev/null 2>&1 || npm ci) && npm run typecheck && npm test && npm run check:versions",
     "typecheck": "tsc -p .",
     "test:coverage": "vitest run --coverage",
     "audit:deps": "npm audit --audit-level=low && npm audit signatures",

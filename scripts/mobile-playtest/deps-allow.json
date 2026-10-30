@@ -1,0 +1,5 @@
+{
+  "installScript": {
+    "@julusian/midi@3.8.1": "Native MIDI binding for the Mac-side fixture replay tool; ships prebuilt binaries (its script only runs pkg-prebuilds-verify, falling back to node-gyp), so it works with ignore-scripts=true"
+  }
+}

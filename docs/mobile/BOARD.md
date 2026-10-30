@@ -38,7 +38,7 @@ session. The decisions it needs are D1–D5, below.
 | A4 Audio module part 1 | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio.ts`, `src/dev/audio/**`, `app/dev/audio.tsx` | [briefs/A4.md](briefs/A4.md) | native host-time audio + AudioPort |
 | A5 Data + server client | running | `src/platform/{storage,api}.ts`, `src/data/**`, `app/dev/server.tsx`, `src/dev/server/**`, apps/mobile package.json (this round) | [briefs/A5.md](briefs/A5.md) | Storage, HomeServer, coach context builder |
 | A6 Play surfaces part 1 | running | `apps/mobile/src/play/**`, `app/dev/play.tsx` | [briefs/A6.md](briefs/A6.md) | renderer choice, highway, kit view, touch pads |
-| ACI Mobile CI + deps gate | running | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
+| ACI Mobile CI + deps gate | **done, merged** (9acf52b) | `scripts/check-deps.mjs`, `.github/**`, `.githooks/**`, root package.json scripts | [briefs/ACI.md](briefs/ACI.md) | `--project` deps checks, mobile CI job, Dependabot |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
@@ -71,6 +71,7 @@ results.
 | B23 | The probe's Swift has never been compiled; a possible start-up hang | **Cleared**: compiled first time with Xcode 27.1, no hang. A launch crash came from Expo's own package versions (fixed: expo 58.0.20) |
 | B24 | Bridge delay p95 40–59 ms in the debug build (M6 target < 20) | Open. Re-measure in a Release build; batch events per frame in A3. Scoring unaffected (host time) |
 | B25 | MIDI queued while backgrounded arrives on resume with old timestamps | Open, for A3: drop stale messages after a resume |
+| B26 | `npm audit` in apps/mobile: 9 findings (4 high), all in Expo CLI dev tooling (node-forge ≤ 1.4.0, zod < 4.6.6 nested under expo, deepmerge low); nothing ships in the app | Open. The fix node-forge 1.4.2 is < 7 days old. **On 2026-11-03:** add `overrides` (node-forge 1.4.2, zod ^4.6.7) in apps/mobile, wire `npm audit` for apps/mobile into CI, and remove the 44 `young` entries from `spikes/midi-probe/deps-allow.json` (expo 58.0.20 set, all ≥ 7 days by then) |
 | B9–B19 | see the orchestrator prompt §10 | not yet reached |
 | B20 | The server binds 127.0.0.1 and returns 403 for any Host that isn't localhost (`server/index.ts:33-38,425`) | Known (A0). A5 adds a LAN/token mode if D2 = a/c |
 | B21 | The take engine (`src/play/player.ts`) isn't in the core, so iOS scoring could drift from web scoring | Known (A0). Phase 1/2 needs a clock-agnostic `createTake` in core with an injected audio interface. Added to A1/A4 scope |
@@ -139,3 +140,10 @@ results.
   `PadId`; A1's `take.ts` draft is marked superseded by `audioPort.ts` and AUDIO-DESIGN §2.3. T0: typecheck, lint
   0, 408/408 tests (54 files), build, deps:check, `reference.ts --check`, mobile-playtest `node --test` 24/24;
   apps/mobile tsc + 55 tests. **Phase 1 code is complete apart from A3 part 2.**
+- 2026-10-30: ACI merged. `check-deps --all` checks the root and every sub-project lockfile; there's a CI `mobile` job;
+  Dependabot covers apps/mobile (no expo/react/react-native majors). Orchestrator added `.npmrc` (ignore-scripts,
+  min-release-age, no git) and `deps-allow.json` to spikes/midi-probe (44 temporary `young` entries for its verified
+  expo 58.0.20 set, until 2026-11-03), spikes/midi-probe/tools and scripts/mobile-playtest (`@julusian/midi`
+  install script: ships prebuilds). `noxcturnal` (new, in both Expo sets) checked: Expo's own package
+  (github.com/expo/noxcturnal, maintained by an Expo engineer). `mobile:test` reinstalls only when node_modules is out
+  of date. All 5 lockfiles pass; T0 green. B26 opened for the apps/mobile audit findings.

@@ -1,0 +1,57 @@
+{
+  "prerelease": {
+    "gensync@1.0.0-beta.2": "Babel's own dependency (via babel-preset-expo / Metro), the same one the web root allows; gensync's latest release, unchanged since 2020"
+  },
+  "young": {
+    "@babel/helper-string-parser@7.29.11": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "@expo/modules-macros-linux-arm64@0.24.0": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 5.4 days old on 2026-10-30, 7 days old on 2026-11-01: remove then",
+    "@expo/modules-macros-linux-x64@0.24.0": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 5.4 days old on 2026-10-30, 7 days old on 2026-11-01: remove then",
+    "@expo/modules-macros-win32-arm64@0.24.0": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 5.4 days old on 2026-10-30, 7 days old on 2026-11-01: remove then",
+    "@expo/modules-macros-win32-x64@0.24.0": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 5.4 days old on 2026-10-30, 7 days old on 2026-11-01: remove then",
+    "@expo/local-build-cache-provider@58.0.8": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "@babel/plugin-transform-block-scoping@7.29.11": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "@babel/plugin-transform-classes@7.29.11": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "@noxcturnal/noxcturnal-linux-arm64-musl@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@noxcturnal/noxcturnal-darwin-arm64@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@noxcturnal/noxcturnal-darwin-x64@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@noxcturnal/noxcturnal-linux-arm64-gnu@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@babel/types@7.29.11": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "@noxcturnal/noxcturnal-linux-x64-gnu@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@babel/parser@7.29.11": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "@noxcturnal/noxcturnal-linux-x64-musl@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@noxcturnal/noxcturnal-win32-arm64-msvc@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@expo/fingerprint@0.21.7": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.4 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "@noxcturnal/noxcturnal-win32-x64-msvc@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "expo-modules-cli@0.3.3": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.4 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "browserslist@4.29.5": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.1 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "baseline-browser-mapping@2.11.33": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 5.2 days old on 2026-10-30, 7 days old on 2026-11-01: remove then",
+    "@expo/config@58.0.8": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "expo-modules-macros@0.24.0": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 5.4 days old on 2026-10-30, 7 days old on 2026-11-01: remove then",
+    "expo-modules-jsi@58.0.20": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.4 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "@expo/prebuild-config@58.0.16": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "expo-server@58.0.6": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "@expo/router-server@58.0.18": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.4 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "expo-modules-autolinking@58.0.15": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "expo-dev-client@58.0.16": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.2 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "expo-dev-menu@58.0.12": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.4 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "expo-modules-core@58.0.27": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.2 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "expo-dev-launcher@58.0.16": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.2 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "magic-string@1.4.5": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.6 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "noxcturnal@0.1.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.2 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "node-forge@1.4.2": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.3 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "expo-font@58.0.10": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 6.9 days old on 2026-10-30, 7 days old on 2026-10-30: remove then",
+    "expo-file-system@58.0.12": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.4 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "babel-preset-expo@58.0.21": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.2 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "postcss@8.5.32": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 4.0 days old on 2026-10-30, 7 days old on 2026-11-02: remove then",
+    "@expo/metro-config@58.0.18": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.4 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "@expo/cli@58.1.16": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.2 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "expo@58.0.20": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.2 days old on 2026-10-30, 7 days old on 2026-11-03: remove then",
+    "electron-to-chromium@1.5.465": "Pulled in by expo 58.0.20 (the SDK patch the Gate 0 spike was verified on); 3.9 days old on 2026-10-30, 7 days old on 2026-11-02: remove then"
+  },
+  "zeroMajor": {
+    "react-native@0.88.0": "React Native itself has no 1.0; the exact version expo 58.0.20's bundledNativeModules.json names"
+  },
+  "installScript": {
+    "fsevents@2.3.3": "macOS-only optional file watcher (Metro/Vitest, dev only); ships a prebuilt binary and works with ignore-scripts=true"
+  }
+}
