@@ -1,29 +1,28 @@
-// Copied from src/input/settings.ts (the web store), for a later move to core or src/data: the app settings on the
-// iPad's key-value store, under the web's key (KV_KEYS.settings). No server mirror (D3: the iPad is the source of
-// truth). Shape, DEFAULTS and migrations are core's.
+// The app settings as the lesson player reads and writes them: the UI kit's store (src/ui/appSettings.ts: the web's
+// key, shape and migrations in the key-value store, one subscription for every screen), behind a small interface so
+// the controller is testable. Reads are cached until the next write anywhere in the app.
+import type { Settings } from '@drum-coach/core/input/settings';
 import type { KeyValueStore } from '@drum-coach/core/platform';
-import { DEFAULTS, migrate, type Settings } from '@drum-coach/core/input/settings';
+import { readSettings, settingsVersion, subscribeSettings, writeSettings, SETTINGS_KEY } from '../../ui/appSettings';
 
-export const SETTINGS_KEY = 'drumcoach.settings';
+export { SETTINGS_KEY };
 
 export type SettingsStore = {
   get(): Settings;
-  /** Merges a patch, stamps `updatedAt` (as the web does on a synced save) and notifies. */
+  /** Merges a patch, stamps `updatedAt` and notifies every screen. */
   set(patch: Partial<Settings>): void;
   subscribe(fn: () => void): () => void;
 };
 
 export function createSettingsStore(kv: KeyValueStore, now: () => number = Date.now): SettingsStore {
-  let settings: Settings = { ...DEFAULTS };
-  try { settings = migrate({ ...DEFAULTS, ...JSON.parse(kv.get(SETTINGS_KEY) ?? '{}') as Partial<Settings> }); } catch { /* defaults */ }
-  const listeners = new Set<() => void>();
+  let cache: { v: number; s: Settings } | undefined;
   return {
-    get: () => settings,
-    set(patch) {
-      settings = { ...settings, ...patch, updatedAt: now() };
-      kv.set(SETTINGS_KEY, JSON.stringify(settings));
-      listeners.forEach(l => l());
+    get() {
+      const v = settingsVersion();
+      if (!cache || cache.v !== v) cache = { v, s: readSettings(kv) };
+      return cache.s;
     },
-    subscribe(fn) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    set(patch) { const s = writeSettings(kv, patch, now()); cache = { v: settingsVersion(), s }; },
+    subscribe: subscribeSettings,
   };
 }

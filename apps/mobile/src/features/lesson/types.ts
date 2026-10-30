@@ -8,6 +8,7 @@ import type { Chart, ChartDrum } from '@drum-coach/core/engine/chart';
 import type { Cue } from '@drum-coach/core/engine/liveCoach';
 import type { Run, RunOptions } from '@drum-coach/core/engine/run';
 import type { Judgement, NoteResult, PlayedHit, RunStats } from '@drum-coach/core/engine/scoring';
+import type { PlayResult, Subscribe } from '../../play/events';
 
 /** What a lesson take asks for: the web's PlayOptions without the web-only parts (AudioBuffer backing, YouTube clock). */
 export type PlayOptions = RunOptions & {
@@ -74,4 +75,9 @@ export interface TakePort {
   position(now?: number): number;
   /** Called on every phase change and when a take finishes (state.finished is then set). */
   subscribe(fn: () => void): () => void;
+  /**
+   * Judged notes (index = run note index, as the take's run chart lists them), extra strokes, and misses once a note's
+   * window has passed: the stream the highway, the sheet and the kit view listen to.
+   */
+  results: Subscribe<PlayResult>;
 }

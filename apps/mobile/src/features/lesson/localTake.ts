@@ -14,6 +14,9 @@ import { computeStats, createMatcher, noteWindows, reactingToClick, toResult, wi
 import type { Hit } from '@drum-coach/core/input/hits';
 import type { AudioEvent, SoundId } from '@drum-coach/core/play/audioPort';
 import type { Clock } from '@drum-coach/core/platform';
+import { createStream, type PlayResult } from '../../play/events';
+import { laneOf, PAD_DRUM } from '../../play/chartLike';
+import { WINDOWS } from '@drum-coach/core/engine/scoring';
 import type { Finished, PlayOptions, TakePort, TakeState } from './types';
 
 export type LocalTakeDeps = {
@@ -42,6 +45,7 @@ export type LocalTake = TakePort & {
 export function createLocalTake(deps: LocalTakeDeps): LocalTake {
   const state: TakeState = { phase: 'idle', zero: 0, beatMs: 500, results: [], feedback: [], auto: [], extraBeats: [] };
   const listeners = new Set<() => void>();
+  const stream = createStream<PlayResult>();
   const notify = () => listeners.forEach(l => l());
   let cleanup: (() => void)[] = [];
   let ticker: ((now: number) => void) | undefined;
@@ -98,7 +102,7 @@ export function createLocalTake(deps: LocalTakeDeps): LocalTake {
       results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: isAuto, cue: undefined, extraBeats: [], finished: undefined,
     } satisfies Partial<TakeState>);
     const hits: PlayedHit[] = [], extras: PlayedHit[] = [], cues: Cue[] = [];
-    const laneOf = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d);
+    const fbLane = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d);
 
     if (options.wait) {
       const groups: { t: number; idx: number[] }[] = [];
@@ -118,10 +122,12 @@ export function createLocalTake(deps: LocalTakeDeps): LocalTake {
         if (idx === undefined) {
           extras.push(hit);
           state.feedback.push({ lane: h.pad?.startsWith('hh') ? 'hihat' : (h.pad ?? 'snare'), judgement: 'extra', time: h.time });
+          if (h.pad) stream.emit({ kind: 'extra', lane: PAD_DRUM[h.pad], at: h.time, pad: h.pad });
           return;
         }
         state.results[idx] = { judgement: 'good', offset: 0, velocity: h.velocity, pad: h.pad };
-        state.feedback.push({ lane: laneOf(run.notes[idx].drum), judgement: 'good', time: h.time });
+        stream.emit({ kind: 'judged', index: idx, lane: laneOf(run.notes[idx].drum), judgement: 'good', offsetMs: 0, at: h.time, pad: h.pad });
+        state.feedback.push({ lane: fbLane(run.notes[idx].drum), judgement: 'good', time: h.time });
         if (g.idx.every(i => state.results[i].judgement !== 'miss')) {
           wait.group++;
           if (wait.group >= groups.length) finish(scored, hits, extras, startedAt, cues);
@@ -144,7 +150,8 @@ export function createLocalTake(deps: LocalTakeDeps): LocalTake {
       if (m) {
         const i = scored.notes[m.index].i;
         state.results[i] = toResult(m, h.velocity, h.pad);
-        state.feedback.push({ lane: laneOf(run.notes[i].drum), judgement: m.judgement, time: h.time });
+        state.feedback.push({ lane: fbLane(run.notes[i].drum), judgement: m.judgement, time: h.time });
+        stream.emit({ kind: 'judged', index: i, lane: laneOf(run.notes[i].drum), judgement: m.judgement, offsetMs: m.offset, at: h.time, pad: h.pad });
       } else if (h.pad && auto.some(n => padMatches(n.drum, h.pad!))) {
         // playing along on a lane the app plays
       } else if (options.freeBars && inFreeBar((hit.time - zero) / beatMs, bpb, options.fromBar, secBars, options.freeBars)) {
@@ -154,6 +161,7 @@ export function createLocalTake(deps: LocalTakeDeps): LocalTake {
         state.extraBeats.push((hit.time - zero) / beatMs);
         const pad = h.pad ?? 'snare';
         state.feedback.push({ lane: pad.startsWith('hh') ? 'hihat' : pad, judgement: 'extra', time: h.time });
+        stream.emit({ kind: 'extra', lane: PAD_DRUM[pad], at: h.time, pad });
       }
       if (state.feedback.length > 64) state.feedback.splice(0, 32);
     }));
@@ -217,8 +225,17 @@ export function createLocalTake(deps: LocalTakeDeps): LocalTake {
     }
     plan(now + PLAN_AHEAD_MS * 2);
 
+    // A note nobody played: missed once its window (WINDOWS.near) has passed.
+    let missAt = 0;
+    const missed = (at: number) => {
+      for (; missAt < scored.notes.length && zero + scored.notes[missAt].t * beatMs + WINDOWS.near < at - latency; missAt++) {
+        const i = scored.notes[missAt].i, r = state.results[i];
+        if (r.judgement === 'miss' && r.off === undefined) stream.emit({ kind: 'judged', index: i, lane: laneOf(run.notes[i].drum), judgement: 'miss', at });
+      }
+    };
     ticker = at => {
       plan(at + PLAN_AHEAD_MS);
+      if (!options.demo) missed(at);
       liveCheck(position(at), at);
       if (options.seconds && at > zero + options.seconds * 1000) { endEarly?.('user'); return; }
       if (at > zero + run.beats * beatMs + 400) finish(scored, hits, extras, startedAt, cues);
@@ -244,5 +261,6 @@ export function createLocalTake(deps: LocalTakeDeps): LocalTake {
       if (state.phase !== 'idle') { state.phase = 'idle'; notify(); }
     },
     subscribe(fn) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    results: stream.subscribe,
   };
 }

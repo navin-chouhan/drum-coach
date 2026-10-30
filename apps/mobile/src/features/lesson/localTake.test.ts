@@ -115,4 +115,18 @@ describe('local take (scored as src/play/player.ts)', () => {
     playAll(r);
     expect(r.take.state.finished!.hits).toHaveLength(12);
   });
+
+  it('streams judged notes, extras and misses for the play surfaces', () => {
+    const r = rig();
+    const got: string[] = [];
+    r.take.results(e => got.push(e.kind === 'extra' ? `extra:${e.lane}` : `${e.index}:${e.judgement}`));
+    r.take.start(money.chart, opts({ repeats: 1 }));
+    const zero = r.take.state.zero;
+    r.clock.set(zero + 4 * r.take.state.beatMs); // nothing played: every note's window has passed, the take still runs
+    r.take.tick();
+    expect(got).toHaveLength(12);
+    expect(new Set(got.map(g => g.split(':')[1]))).toEqual(new Set(['miss']));
+    r.bus.emit('tom1', r.clock.now());
+    expect(got.at(-1)).toBe('extra:tom1');
+  });
 });
