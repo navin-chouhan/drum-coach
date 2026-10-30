@@ -28,12 +28,12 @@ session. The decisions it needs are D1–D5, below.
 
 | A1 Core extraction | running | `packages/core/**` (not `platform.ts`/`package.json`), shims at old paths, delegated minimal edits to root tsconfig/eslint/vitest | [briefs/A1.md](briefs/A1.md) | `@drum-coach/core` |
 | A2 Expo shell | running | `apps/mobile/**` except A3/A9/contracts paths; `scripts/check-expo-versions.mjs` | [briefs/A2.md](briefs/A2.md) | the app shell |
-| A3 MIDI module | running, part 1 (native) | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
+| A3 MIDI module | part 1 **done, reviewed** (2478544); waits for A1+A2 to merge, then part 2 | `apps/mobile/modules/drum-midi/**`, `src/platform/midi.ts`, `src/dev/**`, `app/dev/**` | [briefs/A3.md](briefs/A3.md) | production MIDI input + debug screen |
 | A9 Test harness | running | `scripts/mobile-playtest/**`, `apps/mobile/e2e/**` | [briefs/A9.md](briefs/A9.md) | T4 references, Mac replayer, Maestro skeletons |
 
 | A5s Home-server mode | running (pulled forward from Phase 2) | `server/access.ts`, `server/coachContext.ts`, the access hook, `listen` and coach-route input in `server/index.ts`, `.env.example`, `docs/mobile/HOME-SERVER.md` | [briefs/A5s.md](briefs/A5s.md) | LAN + token, `/api/health`, coach context (B20, B22) |
 | A7m iPad mockups | running (D4) | `docs/mockups/ipad/**` | [briefs/A7m.md](briefs/A7m.md) | 9 screens + PNGs + notes for the owner |
-| A4d Audio design | running (docs only; the build waits for M5) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
+| A4d Audio design | **done, merged** (4467428) | `docs/mobile/AUDIO-DESIGN.md` | [briefs/A4d.md](briefs/A4d.md) | AudioPort + native scheduling design |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
@@ -105,3 +105,9 @@ results.
   stays behind `server/guard.ts`. T0 after the rebase: typecheck clean, lint 0 problems (max-warnings 0), 358/358
   tests, coverage thresholds met, build OK, deps:check OK. The pre-rebase branch is kept locally as
   `backup/pre-rebase-1030`.
+- 2026-10-30: A3 part 1 done (native batching, select by name, resume marks; 42 TS tests; Swift uncompiled). Held
+  for the merge order. A4d merged: AUDIO-DESIGN.md recommends our own `drum-audio` Expo module (AVAudioEngine, player
+  node pools, host-time scheduling, a native 120 ms scheduling window, JS plans 2–4 s ahead). No new npm dependency:
+  `react-native-audio-api` fails the dependency rule (0.x, downloads binaries at pod install). Five owner questions
+  (listening setup, mixing with other apps, interrupted takes, call banners, offline count-in voice) are queued for
+  the Phase 2 gate.
