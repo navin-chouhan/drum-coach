@@ -56,6 +56,11 @@ session. The decisions it needs are D1–D5, below.
 
 | A4p3 Backing audio | **done, merged** (1c3b238) | `apps/mobile/modules/drum-audio/**`, `src/platform/audio*` | [briefs/A4p3.md](briefs/A4p3.md) | BackingPort |
 
+| I1 Backing in take + Songs | running | `packages/core/src/play/**`, `features/songs/**`, `src/youtube/**` | [briefs/I1.md](briefs/I1.md) | backing plays |
+| I2 Keyboard + kit consolidation | running | `modules/drum-keys/**`, `src/ui/**`, `app/_layout.tsx`, imports in setup/firstRun/pads/latency/coach/journey/progress | [briefs/I2.md](briefs/I2.md) | app-wide keys, one kit |
+| I3 Lesson + Practice integration | running | `features/{lesson,practice}/**`, `app/{lesson,practice}/**`, `features/coach/asks.ts` | [briefs/I3.md](briefs/I3.md) | backlog items |
+| A10 QA | running | `docs/mobile/QA-*.md`, `docs/mobile/FINAL-CHECKLIST.md`, `apps/mobile/e2e/**` | [briefs/A10.md](briefs/A10.md) | findings + owner checklist |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
@@ -242,3 +247,4 @@ results.
 - 2026-10-30: A8 (Songs + imports + songs migration 2), A7b (lesson player on createTake) and A4p3 (BackingPort) merged. All v1 screens + Songs exist. apps/mobile 542 tests; root 495; lint 0; all 5 lockfiles pass. Risks: YouTube error 153 in release builds (DOM components load from file://, no origin) - message shown; all new Swift still awaits the cloud iOS build.
 - Integration backlog (more): core take has no backing yet (opts.backing + drift vs anchor) and Songs/Practice don't call BackingPort; Practice `?chartId=` from the Songs library; two hidden-TextInput keyboard fallbacks (lesson, songs) to unify app-wide; aiLessons `replaces` from the server isn't applied; results sheet shows only the first page of long takes.
 - 2026-10-30: **First cloud iOS build (run 7, 8293872): the app built with Xcode 27.1 (all drum-midi + drum-audio Swift compiled) and the SwiftPM tests passed.** Only the podspec test-spec step failed (ExpoSQLite's test spec needs the unpublished ExpoModulesTestCore); test specs are now limited to our modules. A4p3's backing Swift and the newer screens compile in the next run.
+- 2026-10-30: Integration + QA wave started: I1, I2, I3, A10.
