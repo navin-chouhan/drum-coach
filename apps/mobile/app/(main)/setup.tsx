@@ -1,11 +1,4 @@
-// Setup: a placeholder in the kit's look until its screen is built (another agent replaces this file).
-import { ComingNext, Screen, TitleBar } from '../../src/ui';
+// Setup (A7c). The screen lives in src/features/setup.
+import { SetupScreen } from '../../src/features/setup/SetupScreen';
 
-export default function SetupScreen() {
-  return (
-    <Screen testID="screen-setup">
-      <TitleBar title="Setup" />
-      <ComingNext title="Setup" emoji="⚙️" what="Your kit, hit each pad, latency, sound, the coach server and what happens while you play." />
-    </Screen>
-  );
-}
+export default SetupScreen;
