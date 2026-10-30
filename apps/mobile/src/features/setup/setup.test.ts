@@ -6,7 +6,18 @@ import { validateServerConfig } from '../../data/homeServer';
 import { doneCount, kitNag, levelsShort, orderedChecks, setupChecks } from './checklist';
 import { apiKeyValue, hasApiKey, saveApiKey, saveServer, testConnection, validateApiKey, type SecretStore, type ServerClient } from './coachServer';
 import { connectedInput, firstHitLine, kitStatus, lastHitView, savedInput } from './kit';
-import { answerForKey, answerForPad, busLevels, clampLevel, nudgeLevel, throneAnswer, throneAsk } from './sound';
+import { THRONE_BEAT_MS, answerForKey, answerForPad, busLevels, clampLevel, loopEvents, nudgeLevel, throneAnswer, throneAsk } from './sound';
+
+describe('sound check loop', () => {
+  it('plans clicks and the band beat by beat, never twice', () => {
+    const a = loopEvents('click', 1000, 0, 1000 + 2 * THRONE_BEAT_MS + 1);
+    expect(a.next).toBe(3);
+    expect(a.events.map(e => e.kind === 'sound' && e.sound)).toEqual(['click.bar', 'click.beat', 'click.beat']);
+    expect(loopEvents('click', 1000, a.next, 1000 + 2 * THRONE_BEAT_MS + 1).events).toHaveLength(0);
+    const b = loopEvents('band', 0, 0, THRONE_BEAT_MS * 2 - 1);
+    expect(b.events.map(e => e.kind === 'band' && e.part)).toEqual(['bass', 'keys', 'bass']);
+  });
+});
 
 const S = (p: Partial<Settings> = {}): Settings => ({ ...DEFAULTS, ...p });
 const run = (meanOffset: number) => ({ meanOffset } as RunRow);

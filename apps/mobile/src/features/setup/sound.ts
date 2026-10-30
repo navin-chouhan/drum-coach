@@ -3,6 +3,7 @@
 // keys 1–3). Pure; the screen plays the sounds through AudioPort.
 import type { PadId } from '@drum-coach/core/engine/kit';
 import type { Settings } from '@drum-coach/core/input/settings';
+import type { AudioEvent } from '@drum-coach/core/play/audioPort';
 
 export type LevelKey = 'clickVolume' | 'bandVolume' | 'voiceVolume';
 export const LEVEL_MIN: Record<LevelKey, number> = { clickVolume: 0.2, voiceVolume: 0.2, bandVolume: 0 };
@@ -63,7 +64,25 @@ export function throneAnswer(step: number, answer: number, s: Settings): ThroneS
   return { step, patch: { [st.key]: nudgeLevel(levelOf(s, st.key), answer, st.key) }, finished: false, replay: st.key === 'voiceVolume' };
 }
 
-export const throneTitle = (step: number) => `Sound check · ${step + 1} of ${THRONE_STEPS.length}`;
+/**
+ * The sound check's loop as AudioPort events (web ThroneCheck/startClick at 90 BPM): beats k in [from, …) heard
+ * before `until`, from `zero`. The click accents beat 1; the band plays the bass on every beat and the keys every
+ * other beat. Returns the next beat to plan.
+ */
+export function loopEvents(kind: 'click' | 'band', zero: number, from: number, until: number): { events: AudioEvent[]; next: number } {
+  const events: AudioEvent[] = [];
+  let k = from;
+  for (; zero + k * THRONE_BEAT_MS < until; k++) {
+    const at = zero + k * THRONE_BEAT_MS;
+    if (kind === 'click') { events.push({ kind: 'sound', at, sound: k % 4 ? 'click.beat' : 'click.bar', gain: 1 }); continue; }
+    const root = THRONE_CHORDS[Math.floor(k / 4) % 4];
+    events.push({ kind: 'band', at, part: 'bass', midi: [root], durMs: THRONE_BEAT_MS * 0.9, vel: 95 });
+    if (k % 2 === 0) events.push({ kind: 'band', at, part: 'keys', midi: [root + 24, root + 28, root + 31], durMs: THRONE_BEAT_MS * 1.8, vel: 60 });
+  }
+  return { events, next: k };
+}
+
+export const throneTitle =(step: number) => `Sound check · ${step + 1} of ${THRONE_STEPS.length}`;
 export const throneAsk = (step: number, s: Settings) => {
   const st = THRONE_STEPS[step];
   return st ? `${st.ask} (now ${Math.round(levelOf(s, st.key) * 100)}%)` : '';
