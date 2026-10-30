@@ -15,8 +15,8 @@ checks part 1 can run now, and the §7.1 / §7.2 IDs for the rest.
 1. `cd apps/mobile && npm ci && npm run ios:device` (the usual build; `modules/**` changed, so rebuild).
 2. Compile errors stay inside `modules/drum-audio/ios`. Paste them back as they are.
 3. **T6-6, pure Swift tests:** `cd apps/mobile/modules/drum-audio/ios/Core && swift test` (Xcode's toolchain; no
-   simulator needed). It runs `HostClockTests`, `AudioPolicyTests`, `EventPackingTests`, `EventQueueTests` and
-   `SynthTests`. The vectors are the same as the Vitest ones in `modules/drum-audio/src/*.test.ts`. All must pass.
+   simulator needed). It runs `HostClockTests`, `AudioPolicyTests`, `EventPackingTests`, `EventQueueTests`,
+   `SynthTests` and `BackingMathTests`. The vectors are the same as the Vitest ones in `modules/drum-audio/src/*.test.ts`. All must pass.
 
 ## 1. Smoke (iPad, debug build, speaker, nothing else playing)
 
@@ -49,6 +49,21 @@ numbers and the "Detail" row.
 | T6-10 5-minute take with the kit | mean offset minute 1 vs minute 5 within ±3 ms |
 | T6-11 touch pads, Release build | touch → sound p95 ≤ 35 ms (slow-motion video), else the native pad view (design §1.1) |
 
+## 3b. Backing audio (A4p3, the Backing card)
+
+`AudioPort.backing` plays a local file (never YouTube audio): `AVAudioFile` → player → `AVAudioUnitTimePitch` → backing
+bus. The card's test tone is 44.1 kHz on purpose (the backing mixer converts it to 48 kHz). Metronome 120 BPM quarters
+4/4 running for every row; screen stays on.
+
+| ID | Do | Pass |
+|---|---|---|
+| B1 | **Load test tone** at 100 %, **Start on next bar** | The blips start on a bar line and sit on the click (880 Hz on bar 1 of 4, 660 Hz downbeats, 440 Hz beats). Plan: joined late 0, time-pitch 0, host-time start. |
+| B2 | Leave B1 running 2 minutes ("Readings … (done)") | Speaker: drift now and smoothed within ±1 ms of each other; \|slope\| < 0.1 ms per minute; min/max span < 2 ms. Paste the rows. A constant offset (the same number all along) is the heard-offset question (M5), not drift. |
+| B3 | 75 % and 50 %: **Load test tone** again (it is written at bpm / rate), **Start on next bar** | Same pitch as at 100 %; blips still on the click. Plan says node-time start; note the time-pitch latency. Paste the drift rows after 2 minutes: a constant offset or a jitter of a few ms here is the unverified part (the node timeline behind the time-pitch unit). |
+| B4 | During B1, connect and disconnect Bluetooth (or wired) headphones | Events show the route; Native "re-anchors" goes up; the tone keeps playing on the new output on its line (the metronome stops, as in T7-5; restart it to compare by ear). |
+| B5 | During B1: Home and back; Siri; Suspend | The tone stops with the engine ("playing false"); **Start on next bar** works again. |
+| B6 | Start with the metronome off, **Stop** after 10 s, **Start** again | Starts at once; no crash; "Native error" `–`. |
+
 ## 4. Robustness (§7.2 T7, on the debug screen now; repeat in a take after part 2)
 
 | # | Do | Pass |
@@ -65,4 +80,4 @@ numbers and the "Detail" row.
 ## What to paste back
 
 The compile errors (if any), the `swift test` summary, S1–S5 pass/fail, D1–D3 numbers (copy the Timing probe rows),
-T7 pass/fail, and anything in "Last error".
+B1–B6 (copy the Backing card rows), T7 pass/fail, and anything in "Last error".
