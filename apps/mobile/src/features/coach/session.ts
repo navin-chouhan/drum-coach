@@ -8,7 +8,7 @@
 // (the web has no queue). Hands-free listening is left out: the iPad has no speech-to-text yet (RECON: later).
 import { CoachReplySchema, type CoachReply, type SessionEvent } from '@drum-coach/core/coach/schemas';
 import type { Chart } from '@drum-coach/core/engine/chart';
-import type { TakeResult } from '@drum-coach/core/play/take';
+import type { TakeResult } from './summary';
 import type { CoachContext } from '../../data/coachContext';
 import type { HomeServer } from '../../platform/contracts';
 import { coachError, coachProblem, type CoachProblem } from './problem';
@@ -241,7 +241,7 @@ export function createCoachSession(deps: SessionDeps) {
     lastTake = { take: f, summary };
     const key = summary.exercise.id ?? f.chart.title, n = (takesPer.get(key) ?? 0) + 1;
     takesPer.set(key, n);
-    set({ thread: push({ who: 'ctx', text: takeLabel(f.chart.title, n, f.options.bpm) }) });
+    set({ thread: push({ who: 'ctx', text: takeLabel(f.chart.title, n, f.chart.bpm * f.options.speed) }) });
     const verdict = typeof o.lesson?.verdict === 'string' ? o.lesson.verdict : undefined;
     return coachEvent({ type: 'take', ...summary, ...(o.lesson && { lessonResult: o.lesson }) }, f).then(() => {
       // The coach couldn't answer this take: the app's own verdict stands in (mockup coach-offline "From the app").
