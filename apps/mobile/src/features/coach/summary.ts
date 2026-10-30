@@ -1,10 +1,13 @@
-// Copied from src/coach/summary.ts (web) for the core take result (@drum-coach/core/play/take TakeResult). Move to
+// Copied from src/coach/summary.ts (web) for the core take result (@drum-coach/core/play/take Finished). Move to
 // core with the web's copy once the web's player becomes the take adapter (one summary for both).
 //
 // A compact, model-friendly summary of a take (no raw MIDI): what the coach routes read (POST /api/coach/feedback,
 // the session's `take` event) and what a saved run keeps as summary_json.
 import { heatSlotName } from '@drum-coach/core/engine/scoring';
-import type { TakeResult } from '@drum-coach/core/play/take';
+import type { Finished } from '@drum-coach/core/play/take';
+
+/** The core take's finished result (the web player's `Finished`). */
+export type TakeResult = Finished;
 
 /** What the web's PlayOptions carried and the core take doesn't: the chart's id and the lesson metadata. */
 export type TakeExtras = { chartId?: string; lesson?: Record<string, unknown> };
@@ -13,7 +16,7 @@ export type RunSummary = ReturnType<typeof summarizeTake>;
 
 export function summarizeTake(f: Pick<TakeResult, 'stats' | 'run' | 'chart' | 'options' | 'cues'>, extra: TakeExtras = {}) {
   const s = f.stats;
-  const speed = f.chart.bpm ? f.options.bpm / f.chart.bpm : 1;
+  const speed = f.options.speed; // as the web's summary: tempo = chart bpm × speed
   const weakSpots = s.heat
     .map((c, i) => ({ position: heatSlotName(i, s.heat.length, f.run.beatsPerBar), notes: c.total, missed: c.miss, avgAbsOffsetMs: c.meanAbsOffset, badness: c.total ? c.miss / c.total + c.meanAbsOffset / 60 : 0 }))
     .filter(c => c.notes > 0).sort((a, b) => b.badness - a.badness).slice(0, 3)
@@ -21,7 +24,7 @@ export function summarizeTake(f: Pick<TakeResult, 'stats' | 'run' | 'chart' | 'o
   const id = extra.chartId ?? (f.chart as { id?: string }).id;
   return {
     exercise: { id, title: f.chart.title, kind: f.chart.kind, level: f.chart.level, timeSignature: f.chart.timeSignature.join('/') },
-    tempo: { bpm: Math.round(f.options.bpm), chartBpm: f.chart.bpm, speedPct: Math.round(speed * 100) },
+    tempo: { bpm: Math.round(f.chart.bpm * speed), chartBpm: f.chart.bpm, speedPct: Math.round(speed * 100) },
     section: { fromBar: f.options.fromBar, toBar: f.options.toBar, repeats: f.options.repeats },
     notes: s.total, accuracyPct: s.accuracy, perfect: s.perfect, good: s.good, missed: s.miss, extraHits: s.extra,
     meanOffsetMs: s.meanOffset, spreadMs: s.spread,
