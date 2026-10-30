@@ -16,5 +16,10 @@ if git diff --cached -U0 --diff-filter=ACMR | grep -E '^\+' \
 fi
 if command -v gitleaks >/dev/null 2>&1; then gitleaks git --pre-commit --staged --redact --no-banner; fi
 
-# Dependency changes must pass the stable-dependency gate (scripts/check-deps.mjs).
-if printf '%s\n' "$staged" | grep -qE '^(package(-lock)?\.json|\.npmrc)$'; then npm run -s deps:check; fi
+# Dependency changes must pass the stable-dependency gate (scripts/check-deps.mjs): the root's (with its workspaces),
+# and each sub-project's that has its own lockfile (apps/mobile, spikes/midi-probe, ...), with its deps-allow.json.
+if printf '%s\n' "$staged" | grep -qE '^(package(-lock)?\.json|\.npmrc|packages/[^/]+/package\.json)$'; then node scripts/check-deps.mjs; fi
+printf '%s\n' "$staged" | grep -E '^([^/]+/)+(package(-lock)?\.json|\.npmrc|deps-allow\.json)$' | grep -vE '(^|/)node_modules/|^packages/' \
+  | sed -E 's#/[^/]+$##' | sort -u | while IFS= read -r dir; do
+  if [ -f "$dir/package-lock.json" ]; then node scripts/check-deps.mjs --project "$dir"; fi
+done

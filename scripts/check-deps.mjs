@@ -4,7 +4,8 @@
 //
 //   node scripts/check-deps.mjs                     the web root (package.json, package-lock.json, packages/*)
 //   node scripts/check-deps.mjs --project <dir>     a sub-project with its own lockfile (e.g. apps/mobile)
-//   node scripts/check-deps.mjs --all               the root, then every sub-project that has a package-lock.json
+//   node scripts/check-deps.mjs --projects          every sub-project that has its own package-lock.json (CI's mobile job)
+//   node scripts/check-deps.mjs --all               the root, then --projects
 //   npm run deps:check                              = --all
 //
 // package.json (and each workspace's): every spec is a plain semver range on a stable release (^1.2.3, ~1.2.3 or 1.2.3; major >= 1). No
@@ -291,14 +292,16 @@ export function report({ label, problems, offline, locked, checkedOnline, allowe
 }
 
 async function main(args) {
-  const usage = 'usage: node scripts/check-deps.mjs [--project <dir>]... | --all';
+  const usage = 'usage: node scripts/check-deps.mjs [--project <dir>]... | --projects | --all';
   const targets = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--all') targets.push(undefined, ...findProjects());
+    else if (args[i] === '--projects') targets.push(...findProjects());
     else if (args[i] === '--project' && args[i + 1] && !args[i + 1].startsWith('--')) targets.push(args[++i]);
     else { console.error(usage); process.exit(2); }
   }
-  if (!targets.length) targets.push(undefined);
+  if (!args.length) targets.push(undefined); // the root
+  if (!targets.length) console.log('dependency check: no sub-project has its own package-lock.json');
   let failed = false;
   for (const project of targets) {
     const { ok, text } = report(await checkDeps({ project }));
