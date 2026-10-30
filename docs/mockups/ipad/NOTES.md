@@ -2,7 +2,7 @@
 
 The v1 screens at the kit: iPad only, landscape locked, 1194 × 834 pt, one screen per view with no scrolling. D4 was
 revised to **"web look, iPad layout"**: the Drum Coach look from the web app on the iPad layouts that worked. Mockups
-only, no app code. Open `index.html` for the grid; every PNG in `png/` is one 1194 × 834 frame (17 frames).
+only, no app code. Open `index.html` for the grid; every PNG in `png/` is one 1194 × 834 frame (19 frames).
 
 - **Example data.** A plausible student about three weeks in: Stage 3 "The money beat" (rank Limb Wrangler), step 3
   "+ snare" at 70 BPM, a 6-day streak. Lesson names, steps, tempos, pass rules and ranks come from
@@ -10,10 +10,11 @@ only, no app code. Open `index.html` for the grid; every PNG in `png/` is one 11
   The iPad starts fresh (D3), so on day one Journey shows Stage 1 instead.
 - **Re-render:** `node docs/mockups/ipad/render.mjs [name …]` (Playwright Chromium, 1×). It also reports anything that
   overflows its box or ends inside the bottom 60 pt.
-- **Variants** use the URL hash: `lesson-take.html#ready` / `#countin` / `#falling`, `lesson-results.html#share`,
+- **Variants** use the URL hash: `lesson-take.html#ready` / `#countin` / `#sheet` / `#falling`,
+  `lesson-results.html#sheet` / `#share`,
   `coach.html#offline`, `first-run.html#s1`…`#s4`.
-- **Files.** `ipad.css` holds the look; `mock.js` draws the kit (in the web kit's style), the highway (both directions)
-  and the drum colours, so every screen draws them the same way.
+- **Files.** `ipad.css` holds the look; `mock.js` draws the kit (in the web kit's style), the sheet music, the highway
+  (both directions) and the drum colours, so every screen draws them the same way.
 
 ## What changed from v1 (iPad-native)
 The owner felt the iPad-native look lost the app's character. The layouts, the content, the big type, the gesture
@@ -35,9 +36,23 @@ chips and every screen and state stay; the look comes back from the web app (`sr
 - **Drum colours are the web kit's**, moved off the result colours: hi-hat yellow, crash pink, ride sky blue, snare
   teal, tom 1 blue, tom 2 purple, floor brown, kick white (the web's red kick and green floor tom would read as
   "missed" and "on it"). Results: green on it, orange early/late, red dashed missed, red ✕ extra.
-- **The highway** sits on the web's black music panel. It still runs left to right; `lesson-take-falling.png` shows
-  the same moment on the web's falling lanes so you can compare.
+- **The highway** sits on the web's black music panel and runs left to right; `lesson-take-falling.png` shows the same
+  moment on the web's falling lanes for reference.
 - **Kept iPad-native on purpose:** the iOS share sheet (it's the system's) and the status bar.
+
+## D8: sheet music always
+Sheet music is in v1 and is the lesson player's default view, as on the web: **Sheet | Highway** sits in the top bar of
+every lesson frame with Sheet selected first. `lesson-ready` and `lesson-countin` show the sheet;
+`lesson-take-sheet.png` is the take on the sheet and `lesson-results-sheet.png` the results on the sheet's notes.
+`lesson-take.png`, `lesson-take-falling.png` and `lesson-results.png` are the highway alternative.
+- **The notation** follows the app's VexFlow sheet (`src/notation/SheetMusic.tsx`): a 5-line percussion staff, hands
+  with stems up (hi-hat x-heads above the top line, snare in the 3rd space), the kick with stems down in the bottom
+  space with quarter rests, 8ths beamed per beat, 4/4 on the first row, the count under every 8th ("&" in blue).
+- **On the cream page in the black music panel**, as on the web, two bars a page: the page turns after bar 2.
+- **During the take** a teal cursor moves through the bar, the beat ball sits on the count, and played notes take their
+  result colour (green on it, orange early/late with a "+48" sticker, red dashed MISS!, red ✕ extra).
+- **After the take** the whole take shows as two rows of two bars with the same colours and stickers, and a slim
+  timing line under it.
 
 ## Design choices (all screens)
 - **Played from the throne.** The coach line is 20–23 pt, moves 21–30 pt, the tempo 46 pt, the live tip 26 pt and the
@@ -63,9 +78,9 @@ everything fits one landscape screen without scrolling. Your own real song is le
 3. Do you want a day-one mockup too (Stage 1, empty trail, setup notice)?
 
 ## Lesson player: before, count-in, take (`lesson-take.html`)
-**Shows:** the black top bar with step pills (the current one named), the tempo with its 5-BPM ladder (start dashed,
-goal white), Highway / Sheet, Hints, Band and ⋯ More; the coach line and four moves; a note highway with R / L / K on the notes and the
-count under it ("&" in blue), a beat ball on the now line; the goal ("2 clean takes in a row and the tempo goes up to
+**Shows:** the black top bar with step pills (the current one named), Sheet | Highway, the tempo with its 5-BPM
+ladder (start dashed, goal white), Hints, Band and ⋯ More; the coach line and four moves; the sheet music with the count
+under it (or, switched, a note highway with R / L / K on the notes and a beat ball on the now line); the goal ("2 clean takes in a row and the tempo goes up to
 75. Clean = 39 of 48 notes land.") with tick boxes; a kit view whose pads light on each hit. The count-in shows the
 big number on the beat. During the take: the live tip ("Hi-hat foot down (it sounds open)", a real rule-based tip),
 judged notes behind the line, green rings where hits just landed, and Stop with crash × 4.
@@ -76,16 +91,17 @@ shows the hit result in the web kit's style (TSS! BOOM!). The side column is gon
 are later per RECON). `lesson-take-falling.png` is the same take on the web's falling lanes, in kit order, for
 comparison: it shows fewer notes ahead (about one bar at 70 BPM against two), but maps lanes to where the pads are.
 **Questions:**
-1. Highway direction: left to right (`lesson-take.png`) or falling (`lesson-take-falling.png`)?
-2. Sheet music (VexFlow, the hardest part of the port) in v1, or highway first and the sheet in a later update?
-3. Is the live tip readable at the top, or should it sit next to the now line?
+Highway: left to right, the same way as the sheet; falling lanes stay a setting.
+1. Is the live tip readable at the top, or should it sit next to the cursor?
+2. The sheet shows two bars a page. Is that big enough from the throne, or one bar a page at slow tempos?
 
-## Lesson results and Share take (`lesson-results.html`, `#share`)
+## Lesson results and Share take (`lesson-results.html`, `#sheet`, `#share`)
 **Shows:** the verdict line ("Clean! 46 of 48 landed, 21 in a row. Two clean takes: up to 75.") with "Coach is
 listening back"; moves Play at 75 / Hear your take / Stay at 70 / Skip to next; all 4 bars with every note marked
 (on it, early −62, late +52, missed, extra ✕); the timing line (on average 18 ms late); the take card (46 of 48, ★★,
 best run, extra hits); one thing to fix with "Fix bar 3 · 4× at 60"; Ask the coach. Share take opens the share sheet
 with `The money beat · take 2.mid` (AirDrop, Messages, Mail, Notes, Save to Files, Copy).
+`#sheet` shows the same results on the sheet-music notes, with stickers for the off notes and a slim timing line.
 **From the web revamp:** results stay on the notes; the side card keeps the count, stars and one tip. "Save as MIDI"
 moved out of ⋯ More to a toolbar **Share take** button (D5); it uses the iOS share sheet instead of a download.
 **Questions:**

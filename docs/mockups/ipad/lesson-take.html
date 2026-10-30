@@ -31,10 +31,13 @@
   .panel { position: absolute; left: 24px; right: 30px; top: 190px; height: 396px; background: var(--night); border: 3px solid var(--line); box-shadow: 6px 6px 0 var(--pop); overflow: hidden; }
   #ready:target ~ .panel { top: 300px; height: 286px; }
   .panel svg { display: block; }
+  .paper { position: absolute; left: 10px; right: 10px; top: 36px; }
+  .viewSeg { height: 36px; margin-left: 4px; }
+  .viewSeg span { font-size: 13.5px; padding: 0 12px; }
   .barNow { position: absolute; left: 16px; top: 10px; font: 800 14px var(--sf); color: #ccc; }
   .barNow b { color: #fff; font: 900 22px var(--display); }
 
-  .countBig { position: absolute; left: 618px; top: 262px; transform: translateX(-50%); z-index: 3; flex-direction: column; align-items: center; gap: 8px; }
+  .countBig { position: absolute; left: 124px; top: 268px; transform: translateX(-50%); z-index: 3; flex-direction: column; align-items: center; gap: 8px; }
   .countBig .n { width: 150px; height: 150px; border-radius: 50%; background: var(--pop); border: 4px solid var(--line); box-shadow: 6px 6px 0 var(--line); display: grid; place-items: center; font: 900 96px var(--display); }
   .countBig p { font: 900 16px var(--display); background: var(--panel); border: 3px solid var(--line); padding: 3px 12px; }
 
@@ -55,20 +58,20 @@
 </head>
 <body>
 <div class="ipad">
-  <i id="ready"></i><i id="countin"></i><i id="falling"></i>
+  <i id="ready"></i><i id="countin"></i><i id="falling"></i><i id="sheet"></i>
   <div class="status"><span>19:44</span><span class="date">Fri 30 Oct</span><span class="sp"></span><span class="ic i-wifi"></span><span>87%</span><span class="batt"><i style="width:84%"></i></span></div>
 
   <header class="top">
     <span class="btn round sm v-ready" style="width:40px"><span class="ic i-chevl"></span></span>
     <div class="title"><b>The money beat</b><span>Step 3 of 4 · ★ checkpoint</span></div>
     <div class="steps"><i class="done">✓</i><i class="done">✓</i><i class="cur"><em>3</em>+ snare</i><i>4</i></div>
+    <span class="seg viewSeg"><span data-v="sheet">Sheet</span><span data-v="highway">Highway</span></span>
     <span class="sp"></span>
     <div class="tempo">
       <div class="big num">70<small>BPM</small></div>
       <div class="ladder"><div class="rungs"><i class="start done" style="height:10px"></i><i class="done" style="height:13px"></i><i class="at" style="height:16px"></i><i style="height:19px"></i><i style="height:22px"></i><i style="height:25px"></i><i class="goal" style="height:28px"></i></div><span>start 60 · goal 90</span></div>
     </div>
     <div class="v-ready" style="gap:8px;align-items:center;margin-left:6px">
-      <span class="seg"><span class="on">Highway</span><span>Sheet</span></span>
       <span class="btn sm pop"><span class="em">💡</span>Hints</span>
       <span class="btn sm"><span class="em">🎸</span>Band</span>
       <span class="btn round sm" style="width:38px">⋯</span>
@@ -94,8 +97,7 @@
 
   <section class="panel" id="hwPanel">
     <div id="hw"></div>
-    <div class="barNow v-take"><b>Bar 3</b> of 4</div>
-    <div class="barNow v-ready">R right · L left · K kick</div>
+    <div class="barNow" id="barNow"></div>
   </section>
 
   <div class="countBig v-countin"><div class="n">3</div><p>SAY IT WITH THE CLICK</p></div>
@@ -121,7 +123,19 @@
 const mode = location.hash.slice(1) || 'take';
 const panelW = 1134, panelH = mode === 'ready' ? 280 : 390; // :target may not apply yet when this runs
 const judged = { hihat17: 'off', kick16: 'off' };
-document.getElementById('hw').innerHTML = mode === 'falling'
+// Sheet music is the default view (D8): before the take, the count-in and #sheet; the highway is the alternative.
+const onSheet = ['ready', 'countin', 'sheet'].includes(mode);
+document.querySelectorAll('.viewSeg span').forEach(el => el.classList.toggle('on', el.dataset.v === (onSheet ? 'sheet' : 'highway')));
+document.getElementById('barNow').innerHTML = { ready: 'YOUR 4 BARS · PAGE 1 OF 2', countin: 'COUNT-IN · PAGE 1 OF 2' }[mode] ?? '<b>Bar 3</b> of 4';
+if (onSheet) {
+  const sh = {
+    ready: { gap: 14.6, rows: [[0, 2]], pos: null, left: 10 },
+    countin: { gap: 21.6, rows: [[0, 2]], pos: null, left: 214 },
+    sheet: { gap: 21.6, rows: [[2, 2]], pos: 20, judged: { hihat17: ['off', '+48'], kick16: ['off', '+48'] }, ball: true, left: 10 },
+  }[mode];
+  const w = panelW - sh.left - 10, rowH = Math.round(sh.gap * 15.4);
+  document.getElementById('hw').innerHTML = `<div class="paper" style="left:${sh.left}px">${sheet({ W: w, rowH, gap: sh.gap, rows: sh.rows, pos: sh.pos, judged: sh.judged ?? null, ball: sh.ball })}</div>`;
+} else document.getElementById('hw').innerHTML = mode === 'falling'
   ? fallingHighway({ W: panelW, H: panelH, pos: 20, px: 46, judged, flash: ['hihat', 'kick'] })
   : highway({ W: panelW, H: panelH, ...{
       take: { pos: 20, px: 62, nowX: 470, judged, flash: ['hihat', 'kick'] },
@@ -130,7 +144,7 @@ document.getElementById('hw').innerHTML = mode === 'falling'
     }[mode === 'falling' ? 'take' : mode] });
 
 // The kit from the throne, in the web app's drawing style; the pads that just landed glow and pop a comic word.
-const hit = mode === 'take' || mode === 'falling';
+const hit = mode === 'take' || mode === 'falling' || mode === 'sheet';
 const mine = ['hihat', 'snare', 'kick'];
 const P = [
   [{ id: 'crash', x: 62, y: 54, r: 24 }], [{ id: 'hihat', x: 48, y: 112, r: 29 }], [{ id: 'tom1', x: 150, y: 52, r: 21 }], [{ id: 'tom2', x: 206, y: 52, r: 21 }],
