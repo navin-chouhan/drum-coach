@@ -6,7 +6,7 @@ import { RunInputSchema } from '../../data/runs';
 import { migrate, MIGRATIONS } from '../../data/schema';
 import { createDataStore } from '../../data/store';
 import type { ApiFailure, HomeServer } from '../../platform/contracts';
-import { chartToSave, importSummary, libraryRow, parseMidiFile } from './importModel';
+import { backingName, chartToSave, importSummary, libraryRow, parseMidiFile } from './importModel';
 import {
   addMissing, addTap, clampRange, clickDue, GRID_ADJUST, gridToSave, jamBand, jamLive, jamOffset, jamResultTiles, jamRun, keepTake, loopFrame,
   loopSpan, scoreJamTake, songPart, songTakeOptions, tapFit, tileGroove, timing, type SongPlayer,
@@ -247,6 +247,10 @@ describe('Import files', () => {
   it('library rows', () => {
     const d = libraryRow({ id: 'a', title: 'A', bpm: 90, bars: 8, timeSignature: [4, 4], notes: [], source: 'ai', hasAudio: true, syncOffsetMs: 0 });
     expect(d.detail).toBe('coach exercise · 90 BPM · 8 bars · 🔊 audio');
+  });
+  it('keeps backing audio under Documents/backing by chart id', () => {
+    expect(backingName('my-song-ab12c', 'Track 01.M4A')).toBe('backing/my-song-ab12c.m4a');
+    expect(backingName('x/../y', 'a.wav')).toBe('backing/x____y.wav');
   });
 });
 
