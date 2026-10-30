@@ -48,13 +48,13 @@ session. The decisions it needs are D1–D5, below.
 | ACI2 Cloud iOS build | **done, merged** (e00a272); first run on PR #3 | `.github/workflows/ios.yml`, `apps/mobile/scripts/ci-ios-build.sh` | [briefs/ACI2.md](briefs/ACI2.md) | Swift compiled on macOS runners |
 | A1f Core notation fix | **done, merged** (c2147ec) | `packages/core/src/engine/notation.ts` (+test) | [briefs/A1f.md](briefs/A1f.md) | triplet rests |
 
-| A7b Lesson player | running | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
+| A7b Lesson player | **done, merged** (6060548) | `app/lesson/**`, `src/features/lesson/**` | [briefs/A7b.md](briefs/A7b.md) | the lesson player |
 | A7c Setup + first run | **done, merged** (098893a) | `app/(main)/setup*`, `app/welcome/**`, `src/features/{setup,firstRun,latency,pads}/**` | [briefs/A7c.md](briefs/A7c.md) | Setup, first run |
 | A7d Practice + Progress | **done, merged** (ad9ca3d) | `app/(main)/{practice,progress}*`, `app/practice/**`, `src/features/{practice,progress}/**` | [briefs/A7d.md](briefs/A7d.md) | Practice, Progress |
 | A7e Coach panel | **done, merged** (490b4ec) | `app/(main)/coach.tsx`, `src/features/coach/**` | [briefs/A7e.md](briefs/A7e.md) | coach panel |
-| A8 Songs | running | `app/(main)/songs.tsx`, `app/song/**`, `src/features/songs/**`, `src/youtube/**` | [briefs/A8.md](briefs/A8.md) | Songs + imports |
+| A8 Songs | **done, merged** (53c8391) | `app/(main)/songs.tsx`, `app/song/**`, `src/features/songs/**`, `src/youtube/**` | [briefs/A8.md](briefs/A8.md) | Songs + imports |
 
-| A4p3 Backing audio | running | `apps/mobile/modules/drum-audio/**`, `src/platform/audio*` | [briefs/A4p3.md](briefs/A4p3.md) | BackingPort |
+| A4p3 Backing audio | **done, merged** (1c3b238) | `apps/mobile/modules/drum-audio/**`, `src/platform/audio*` | [briefs/A4p3.md](briefs/A4p3.md) | BackingPort |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
@@ -239,3 +239,5 @@ results.
 - **Integration backlog** (for the final integration pass): placement test when `drumcoach.firstRun.placement` = '1' (web TodayView onboarding); the coach's `hasFallbackKey` is sync but the Keychain read is async (the API-key coach path isn't built: keep false); promote Group/GroupRow/Stepper/ToolFrame/PadMap and the coach bubbles into the kit; one source for drum colours (`src/play/theme` ↔ `ui/tokens`); the A9 Maestro `dev-midi.yaml` taps "MIDI" only in debug builds; Metro export needs `--clear` when worktrees share the /tmp cache.
 - 2026-10-30: A7d merged (Practice tab + play screen on createTake + metronome; Progress with ?view=skills|path|month). Journey's links now point at those views. apps/mobile 443 tests.
 - Integration backlog (more): **iPad hardware-keyboard fallback** (CLAUDE.md keys) needs native key events (a small module, UIKeyCommand/pressesBegan) into the shared hit bus; Practice sheet doesn't colour results during a take; Practice's after-take coach line isn't wired to features/coach; 6/8 click patterns; promote Notice/Bars/Track/Dots to the kit; decide whether Practice reuses A7b's player.
+- 2026-10-30: A8 (Songs + imports + songs migration 2), A7b (lesson player on createTake) and A4p3 (BackingPort) merged. All v1 screens + Songs exist. apps/mobile 542 tests; root 495; lint 0; all 5 lockfiles pass. Risks: YouTube error 153 in release builds (DOM components load from file://, no origin) - message shown; all new Swift still awaits the cloud iOS build.
+- Integration backlog (more): core take has no backing yet (opts.backing + drift vs anchor) and Songs/Practice don't call BackingPort; Practice `?chartId=` from the Songs library; two hidden-TextInput keyboard fallbacks (lesson, songs) to unify app-wide; aiLessons `replaces` from the server isn't applied; results sheet shows only the first page of long takes.
