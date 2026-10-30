@@ -5,7 +5,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 
 const vitest = !!process.env.VITEST;
 if (!vitest) await import('./resolve-ts.mjs'); // plain Node: src/ imports are extensionless
-const { describe, it } = vitest ? await import('vitest') : await import('node:test');
+type Register = (name: string, fn: () => void) => void; // the part of describe/it both runners share
+const { describe, it } = (vitest ? await import('vitest') : await import('node:test')) as unknown as { describe: Register; it: Register };
 const { buildReferences, serialize, REFERENCE_DIR } = await import('./reference-lib.ts');
 
 const refs = buildReferences(); // once, in file order: the same replay times as the CLI
