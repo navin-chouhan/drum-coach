@@ -287,7 +287,8 @@ const styles = StyleSheet.create({
   meBubble: { maxWidth: 350, backgroundColor: color.blue, borderWidth: 3, borderColor: color.ink, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomLeftRadius: 18, borderBottomRightRadius: 4, paddingVertical: 9, paddingHorizontal: 13, boxShadow: hardShadow(4) },
   meText: { fontSize: 15.5, fontWeight: '700', lineHeight: 21, color: color.white },
   meSub: { fontSize: 11.5, fontWeight: '700', color: color.white, opacity: 0.85, marginTop: 3 },
-  meWaiting: { backgroundColor: color.cream, borderStyle: 'dashed' },
+  // dashed needs the same radius on every corner on iOS (else "Unsupported dashed / dotted border style")
+  meWaiting: { backgroundColor: color.cream, borderStyle: 'dashed', borderBottomRightRadius: 18 },
   meWaitingText: { color: color.ink },
   indent: { marginLeft: 44, gap: 6 },
   drill: { backgroundColor: color.cream, borderWidth: 3, borderColor: color.ink, boxShadow: hardShadow(4), paddingVertical: 10, paddingHorizontal: 12, gap: 5 },

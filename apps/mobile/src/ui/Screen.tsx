@@ -1,7 +1,7 @@
 // The hot-pink dotted ground every sidebar screen sits on, with the content area's padding and safe areas
 // (ipad.css .ipad/.main: 26 pt from the sidebar's yellow edge, 24 pt on the right, 8 pt under the status bar).
 import type { ReactNode } from 'react';
-import { ImageBackground, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color } from './tokens';
 
@@ -11,7 +11,8 @@ const DOTS = require('./assets/dots.png') as number;
 export function DottedGround({ style, children, tone = color.ground }: { style?: StyleProp<ViewStyle>; children?: ReactNode; tone?: string }) {
   return (
     <View style={[styles.fill, { backgroundColor: tone }, style]}>
-      <ImageBackground source={DOTS} resizeMode="repeat" style={StyleSheet.absoluteFill} imageStyle={styles.tile} accessible={false} />
+      {/* the dots as a repeated image behind the content (ImageBackground is deprecated) */}
+      <Image source={DOTS} resizeMode="repeat" style={StyleSheet.absoluteFill} accessible={false} accessibilityIgnoresInvertColors />
       {children}
     </View>
   );
@@ -51,6 +52,5 @@ export function Screen({ children, testID, withSidebar = true, style }: ScreenPr
 
 const styles = StyleSheet.create({
   fill: { flex: 1, overflow: 'hidden' },
-  tile: { resizeMode: 'repeat' },
   content: { flex: 1 },
 });

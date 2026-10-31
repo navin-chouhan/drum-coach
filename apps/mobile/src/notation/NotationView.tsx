@@ -46,6 +46,8 @@ export type NotationViewProps = {
   testID?: string;
 };
 
+const DOM_PROPS = { style: { flex: 1 }, scrollEnabled: false, bounces: false, overScrollMode: 'never' } as const;
+
 type PushTarget = { push?: (batch: ResultBatch) => void };
 
 export function NotationView(props: NotationViewProps) {
@@ -78,6 +80,30 @@ export function NotationView(props: NotationViewProps) {
   pagesRef.current = props.onPages;
   const onPages = useCallback(async (n: number) => { pagesRef.current?.(n); }, []);
 
+  // The same element while nothing the page shows changed: Expo's DOM wrapper re-sends every prop (the whole chart,
+  // into the WebView) on each of its renders, so a screen that re-renders often (the lesson player while you play)
+  // would flood the bridge with identical props.
+  const { scale, displayLeadMs = 0, page } = props;
+  const sheet = useMemo(() => (
+    <SheetDom
+      ref={handle}
+      chart={sheetChart}
+      bpm={bpm}
+      zero={zero}
+      latencyMs={latencyMs}
+      colors={colors}
+      hints={hints}
+      leftHanded={leftHanded}
+      scale={scale}
+      displayLeadMs={displayLeadMs}
+      clockNow={clockNow}
+      ready={ready}
+      page={page}
+      onPages={onPages}
+      dom={DOM_PROPS}
+    />
+  ), [sheetChart, bpm, zero, latencyMs, colors, hints, leftHanded, scale, displayLeadMs, clockNow, ready, page, onPages]);
+
   return (
     <View
       style={[{ flex: 1, overflow: 'hidden', backgroundColor: colors.paper }, props.style]}
@@ -86,23 +112,7 @@ export function NotationView(props: NotationViewProps) {
       accessibilityRole="image"
       accessibilityLabel={`Drum notation${chart.title ? ` for ${chart.title}` : ''}`}
     >
-      <SheetDom
-        ref={handle}
-        chart={sheetChart}
-        bpm={bpm}
-        zero={zero}
-        latencyMs={latencyMs}
-        colors={colors}
-        hints={hints}
-        leftHanded={leftHanded}
-        scale={props.scale}
-        displayLeadMs={props.displayLeadMs ?? 0}
-        clockNow={clockNow}
-        ready={ready}
-        page={props.page}
-        onPages={onPages}
-        dom={{ style: { flex: 1 }, scrollEnabled: false, bounces: false, overScrollMode: 'never' }}
-      />
+      {sheet}
     </View>
   );
 }

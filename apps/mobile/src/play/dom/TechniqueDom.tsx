@@ -128,7 +128,7 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
   const speak = useRef({ talk, canSpeak, say });
   speak.current = { talk, canSpeak, say };
   const canTalk = () => speak.current.talk && speak.current.canSpeak && !!speak.current.say;
-  useEffect(() => { if (canTalk()) void speak.current.say?.(wrong ? `The mistake: ${d.mistake}` : kickText?.what ?? d.what, true); }, [id, wrong, talk, mode]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
+  useEffect(() => { if (canTalk()) void Promise.resolve(speak.current.say?.(wrong ? `The mistake: ${d.mistake}` : kickText?.what ?? d.what, true)).catch(() => {}); }, [id, wrong, talk, mode]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
   useEffect(() => {
     if (!art && !('right' in d) && !('leg' in d)) return;
     if (art) ensureArtDefs();
@@ -164,7 +164,7 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
         word = poseAt(id, beat, wrong).word;
       }
       if (wordRef.current) wordRef.current.textContent = word ?? '';
-      if (word && word !== said && beat < 2 * d.beats && canTalk()) void speak.current.say?.(word.toLowerCase(), false);
+      if (word && word !== said && beat < 2 * d.beats && canTalk()) void Promise.resolve(speak.current.say?.(word.toLowerCase(), false)).catch(() => {});
       said = word;
       counts(countRef.current, id === 'grip' && view === 'above' && !both ? ['R', 'L', 'R', 'L'] : d.counts);
       raf = requestAnimationFrame(frame);
