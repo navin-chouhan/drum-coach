@@ -1,0 +1,383 @@
+{
+  "journey-fresh": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "journey-recap": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "journey-sore": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "journey-week": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "journey-writing": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "journey-alldone": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "practice": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "progress": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "text \"Songs\"",
+      "text \"Playing whole songs with the band\"",
+      "text \"0 of 25 lessons\"",
+      "text \"not started\"",
+      "text \"Later:\"",
+      "text \"Triplets and shuffle 0 of 28\"",
+      "text \"Loud and soft 0 of 20\"",
+      "text \"Fills and solos 0 of 15\"",
+      "text \"Feel 0 of 7\"",
+      "text \"· step 3, 70 next (started at 60)\""
+    ],
+    "errors": 0
+  },
+  "setup": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "lesson": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "lesson-more-button \"⋯\"",
+      "text \"⋯\"",
+      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
+      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
+      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
+      "text \"2 clean takes in a row\"",
+      "text \"Clean = 39 of 48 notes land.\"",
+      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
+      "text \"Touch pads (no kit connected): tap to play\"",
+      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
+      "text \"Crash\"",
+      "text \"Hi-hat\""
+    ],
+    "errors": 0
+  },
+  "songs": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "song-new": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
+      "text \"Turning the drums down and suggesting notes from t\""
+    ],
+    "errors": 0
+  },
+  "song-tempo": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
+      "text \"Turning the drums down and suggesting notes from t\""
+    ],
+    "errors": 0
+  },
+  "song-learn": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
+      "text \"Turning the drums down and suggesting notes from t\"",
+      "song-learn \"Learn by earLoop a few bars (slow them down with S\"",
+      "song-learn-use-take \"Use take (0 notes)\"",
+      "text \"Use take (0 notes)\"",
+      "text \"Clear\"",
+      "song-learn-save \"Save bars 1–2\"",
+      "text \"Save bars 1–2\"",
+      "song-learn-groove \"Ask coach for the groove\"",
+      "text \"Ask coach for the groove\"",
+      "text \"✓ You checked this part by ear on 2026-10-28. Chan\"",
+      "song-learn-verify \"Mark as not checked\""
+    ],
+    "errors": 0
+  },
+  "song-jam": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
+      "text \"Turning the drums down and suggesting notes from t\""
+    ],
+    "errors": 0
+  },
+  "song-play": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
+      "text \"Turning the drums down and suggesting notes from t\""
+    ],
+    "errors": 0
+  },
+  "song-sheet": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
+      "text \"Turning the drums down and suggesting notes from t\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\""
+    ],
+    "errors": 0
+  },
+  "coach-offline": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "coach-week": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "coach-session": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "firstrun-welcome": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "firstrun-plug": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "firstrun-pads": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "firstrun-latency": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "metronome": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "metronome-meter \"2/43/44/45/46/87/812/8\""
+    ],
+    "errors": 0
+  },
+  "technique": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "technique-kick": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "flow": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "lesson-music \"Your bar · Build it up11R+K&2R+L&3R+K\"",
+      "lesson-sheet \"11R+K&2R+L&3R+K&4R+L&\"",
+      "lesson-goal \"Just play. Nothing to pass.\"",
+      "text \"Just play.\"",
+      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
+      "text \"Touch pads (no kit connected): tap to play\"",
+      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
+      "text \"Crash\"",
+      "text \"Hi-hat\"",
+      "text \"Tom 1\"",
+      "text \"Tom 2\"",
+      "text \"Ride\""
+    ],
+    "errors": 0
+  },
+  "placement": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "lesson-quiz": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "lesson-quiz-said": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "lesson-transcribe": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "lesson-look": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "text \"Two heights before every flam: 3 cm and 30 cm.\"",
+      "text \"The hand that played loud stays down; the soft one\"",
+      "text \"Two notes, very close: \"fla-am\".\"",
+      "text \"✗ Wrong:\""
+    ],
+    "errors": 0
+  },
+  "lesson-intro-1": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "lesson-more-button \"⋯\"",
+      "text \"⋯\"",
+      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
+      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
+      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
+      "text \"2 clean takes in a row\"",
+      "text \"Clean = 39 of 48 notes land.\"",
+      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
+      "text \"Touch pads (no kit connected): tap to play\"",
+      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
+      "text \"Crash\"",
+      "text \"Hi-hat\""
+    ],
+    "errors": 0
+  },
+  "lesson-intro-2": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "lesson-more-button \"⋯\"",
+      "text \"⋯\"",
+      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
+      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
+      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
+      "text \"2 clean takes in a row\"",
+      "text \"Clean = 39 of 48 notes land.\"",
+      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
+      "text \"Touch pads (no kit connected): tap to play\"",
+      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
+      "text \"Crash\"",
+      "text \"Hi-hat\""
+    ],
+    "errors": 0
+  },
+  "lesson-intro-3": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "lesson-more-button \"⋯\"",
+      "text \"⋯\"",
+      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
+      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
+      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
+      "text \"2 clean takes in a row\"",
+      "text \"Clean = 39 of 48 notes land.\"",
+      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
+      "text \"Touch pads (no kit connected): tap to play\"",
+      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
+      "text \"Crash\"",
+      "text \"Hi-hat\""
+    ],
+    "errors": 0
+  },
+  "lesson-intro-4": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "lesson-more-button \"⋯\"",
+      "text \"⋯\"",
+      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
+      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
+      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
+      "text \"2 clean takes in a row\"",
+      "text \"Clean = 39 of 48 notes land.\"",
+      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
+      "text \"Touch pads (no kit connected): tap to play\"",
+      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
+      "text \"Crash\"",
+      "text \"Hi-hat\""
+    ],
+    "errors": 0
+  },
+  "lesson-celebration": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "errors": 0
+  },
+  "practice-details": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "practice-details \"The money beat · + snare90 BPM (100%) · bars 1–1 ×\"",
+      "practice-details-replay \"Your take on the sheet: every note marked, extra h\"",
+      "practice-details-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\""
+    ],
+    "errors": 0
+  }
+}

@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   kit: { width: 376, backgroundColor: color.ink, padding: 10, gap: 4 },
   kitTouch: { flex: 1.2, width: undefined },
   restWrap: { flex: 1, justifyContent: 'center' },
-  look: { flex: 1 },
+  look: { flex: 1, width: '60%', alignSelf: 'center' }, // the drawing and its controls fit the height; the words scroll
   bigDemo: { flex: 1, padding: 18, gap: 10 },
   demoScrim: { flex: 1, backgroundColor: 'rgba(20,20,20,0.55)', padding: 30 },
   demoHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
