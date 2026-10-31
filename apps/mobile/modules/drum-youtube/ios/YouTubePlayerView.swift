@@ -2,7 +2,9 @@ import ExpoModulesCore
 import UIKit
 import WebKit
 
-/// Routes the page's messages to the view without the content controller retaining it.
+/// Routes the page's messages to the view without the content controller retaining it. WebKit calls it on the main
+/// thread (WKScriptMessageHandler is a main-actor protocol).
+@MainActor
 private final class WeakMessageHandler: NSObject, WKScriptMessageHandler {
   weak var target: YouTubePlayerView?
 
@@ -31,11 +33,8 @@ final class YouTubePlayerView: ExpoView, WKNavigationDelegate, WKUIDelegate {
     clipsToBounds = true
   }
 
-  deinit {
-    webView?.navigationDelegate = nil
-    webView?.uiDelegate = nil
-    webView?.configuration.userContentController.removeAllScriptMessageHandlers()
-  }
+  // No deinit: the message handler holds the view weakly and WKWebView's delegates are weak, so nothing to undo (and
+  // a nonisolated deinit touching the main-actor web view is a Swift 6 warning).
 
   override func layoutSubviews() {
     super.layoutSubviews()
@@ -63,8 +62,9 @@ final class YouTubePlayerView: ExpoView, WKNavigationDelegate, WKUIDelegate {
   fileprivate func received(_ message: WKScriptMessage) {
     guard message.name == PlayerPage.handlerName else { return }
     let host = HostClock.nowMs()
-    guard let event = PlayerPage.event(fromMessage: message.body, stamp: { perf in self.offset.stamp(hostMs: host, perfMs: perf) }) else { return }
-    onPlayerEvent(["event": event])
+    guard let parsed = PlayerPage.parse(message: message.body) else { return }
+    let at = parsed.perf.map { offset.stamp(hostMs: host, perfMs: $0) }
+    onPlayerEvent(["event": PlayerPage.stamped(parsed.event, at: at)])
   }
 
   private func makeWebView() -> WKWebView {
@@ -83,7 +83,7 @@ final class YouTubePlayerView: ExpoView, WKNavigationDelegate, WKUIDelegate {
     web.scrollView.isScrollEnabled = false
     web.scrollView.bounces = false
     #if DEBUG
-    if #available(iOS 16.4, *) { web.isInspectable = true }
+    web.isInspectable = true // the pod targets iOS 16.4+
     #endif
     addSubview(web)
     webView = web

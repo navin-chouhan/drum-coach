@@ -91,17 +91,23 @@ enum PlayerPage {
     return "window.dcCommand && window.dcCommand(\(text)); true;"
   }
 
-  /// A message from the page as an event for TypeScript: its fields, with `perf` replaced by `at` (the app's Clock
-  /// ms, from `stamp`). Nil for anything that isn't a JSON object with a `type`.
-  static func event(fromMessage body: Any, stamp: (Double) -> Double) -> [String: Any]? {
+  /// A message from the page: its fields without `perf`, and `perf` (the page's performance.now(), when finite).
+  /// Nil for anything that isn't a JSON object with a `type`.
+  static func parse(message body: Any) -> (event: [String: Any], perf: Double?)? {
     guard let text = body as? String, let data = text.data(using: .utf8),
       var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
       object["type"] is String else {
       return nil
     }
-    if let perf = object.removeValue(forKey: "perf") as? Double, perf.isFinite {
-      object["at"] = stamp(perf)
-    }
-    return object
+    let perf = object.removeValue(forKey: "perf") as? Double
+    return (object, perf.flatMap { $0.isFinite ? $0 : nil })
+  }
+
+  /// The event for TypeScript: `at` = the app's Clock ms when there is one.
+  static func stamped(_ event: [String: Any], at: Double?) -> [String: Any] {
+    guard let at else { return event }
+    var e = event
+    e["at"] = at
+    return e
   }
 }

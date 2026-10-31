@@ -43,15 +43,18 @@ final class PlayerPageTests: XCTestCase {
   }
 
   func testEvents() throws {
-    let e = try XCTUnwrap(PlayerPage.event(fromMessage: "{\"type\":\"sample\",\"raw\":3.5,\"rate\":1,\"duration\":200,\"perf\":1000}", stamp: { $0 + 5000 }))
+    let sample = try XCTUnwrap(PlayerPage.parse(message: "{\"type\":\"sample\",\"raw\":3.5,\"rate\":1,\"duration\":200,\"perf\":1000}"))
+    XCTAssertEqual(sample.perf, 1000)
+    XCTAssertNil(sample.event["perf"])
+    let e = PlayerPage.stamped(sample.event, at: 6000)
     XCTAssertEqual(e["type"] as? String, "sample")
     XCTAssertEqual(e["at"] as? Double, 6000)
-    XCTAssertNil(e["perf"])
-    let err = try XCTUnwrap(PlayerPage.event(fromMessage: "{\"type\":\"error\",\"code\":153}", stamp: { $0 }))
-    XCTAssertEqual(err["code"] as? Int, 153)
-    XCTAssertNil(err["at"])
-    XCTAssertNil(PlayerPage.event(fromMessage: "not json", stamp: { $0 }))
-    XCTAssertNil(PlayerPage.event(fromMessage: 42, stamp: { $0 }))
+    let err = try XCTUnwrap(PlayerPage.parse(message: "{\"type\":\"error\",\"code\":153}"))
+    XCTAssertNil(err.perf)
+    XCTAssertEqual(err.event["code"] as? Int, 153)
+    XCTAssertNil(PlayerPage.stamped(err.event, at: nil)["at"])
+    XCTAssertNil(PlayerPage.parse(message: "not json"))
+    XCTAssertNil(PlayerPage.parse(message: 42))
   }
 }
 

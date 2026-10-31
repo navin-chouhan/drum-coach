@@ -18,9 +18,12 @@ public final class DrumYouTubeModule: Module {
         view.setVideoId(id)
       }
 
+      // Async functions run on a background queue by default; WKWebView is main-thread only.
       AsyncFunction("command") { (view: YouTubePlayerView, json: String) in
-        view.command(json)
-      }
+        MainActor.assumeIsolated {
+          view.command(json)
+        }
+      }.runOnQueue(.main)
     }
   }
 }

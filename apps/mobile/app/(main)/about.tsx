@@ -5,7 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { coreLink } from '../../src/coreLink';
 import { checkCapabilities, getCapabilities } from '../../src/platform/capabilities';
-import { Body, Card, Label, Screen, TitleBar, color } from '../../src/ui';
+import * as DrumYouTube from '../../modules/drum-youtube';
+import { getStorage } from '../../src/platform/storage';
+import { Body, Card, Label, Screen, TitleBar, Toggle, color } from '../../src/ui';
+import { readDevNative, writeDevNative } from '../../src/youtube/playerChoice';
 
 function reactNativeVersion(): string {
   const v = Platform.constants.reactNativeVersion;
@@ -30,6 +33,7 @@ export default function About() {
     return () => { live = false; };
   }, []);
   const config = Constants.expoConfig;
+  const [nativeYt, setNativeYt] = useState(() => readDevNative(getStorage().kv));
   return (
     <Screen testID="screen-about">
       <TitleBar title="Build info" />
@@ -43,6 +47,15 @@ export default function About() {
           value={core.ok ? `reachable: snare = note ${core.snareNote}` : `not linked yet (${core.reason})`} />
         <Row label="MIDI module" testID="home-midi-status" tone={caps.midi ? 'ok' : 'warn'} value={caps.midi ? 'in this build' : 'not in this build'} />
         <Row label="Coach server" testID="home-coach-status" tone={caps.coachServer === 'reachable' ? 'ok' : 'warn'} value={caps.coachServer} />
+        <Row label="YouTube module" testID="home-youtube-status" tone={DrumYouTube.available ? 'ok' : 'warn'} value={DrumYouTube.available ? 'in this build' : 'not in this build'} />
+      </Card>
+      <Card style={styles.card} testID="home-dev-toggles">
+        <Label>Dev toggles</Label>
+        <View style={styles.toggle}>
+          <Body style={styles.value}>Native YouTube player (Release default). Songs opened afterwards use it; off: the DOM player.</Body>
+          <Toggle label="Native YouTube player (Release default)" value={nativeYt} disabled={!DrumYouTube.available}
+            onChange={v => setNativeYt(writeDevNative(getStorage().kv, v))} testID="home-dev-native-youtube" />
+        </View>
       </Card>
     </Screen>
   );
@@ -53,4 +66,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 16 },
   label: { width: 140 },
   value: { flex: 1, fontVariant: ['tabular-nums'] },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 16 },
 });

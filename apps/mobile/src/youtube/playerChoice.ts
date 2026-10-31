@@ -16,3 +16,8 @@ export function choosePlayer(o: { nativeAvailable: boolean; dev: boolean; devNat
 export function readDevNative(kv: Pick<KeyValueStore, 'get'>): boolean {
   try { return kv.get(NATIVE_YT_DEV_KEY) === '1'; } catch { return false; }
 }
+
+/** The dev screen's switch (Build info). A song opened afterwards uses it. */
+export function writeDevNative(kv: Pick<KeyValueStore, 'set'>, on: boolean): boolean {
+  try { kv.set(NATIVE_YT_DEV_KEY, on ? '1' : '0'); return on; } catch { return !on; }
+}
