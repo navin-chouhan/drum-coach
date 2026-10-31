@@ -168,7 +168,8 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 
 **Songs** (home server on)
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
-      inline. Write down if you see **error 153** (known risk in Release builds).
+      inline. Write down if you see **error 153** (known risk in Release builds: likely every video, since a
+      `file://` page sends no Referer; options in [YOUTUBE-RELEASE.md](YOUTUBE-RELEASE.md)). Try it in a **Release** build too.
 - [ ] Set tempo (tap along), Learn by ear, Jam, Play, Sheet music modes; speed 75 % / 50 %; versions (drumless, cover).
 - [ ] Server off (stop `npm run server`): search says it can't reach the home server; pasting a YouTube link still adds the song.
 - [ ] Import files: a drum `.mid` (AirDrop one from the Mac) → Save to library (it shows in Practice's library); with
