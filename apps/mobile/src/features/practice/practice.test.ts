@@ -10,6 +10,7 @@ import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
   PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
   moreCard, yourTakeCard,
+  barNow,
 } from './play';
 
 describe('section chart', () => {
@@ -310,3 +311,15 @@ describe('after a take (the web PlayView side)', () => {
   });
 });
 
+
+describe('the take\'s bar for the player (D10)', () => {
+  const s = { zero: 10_000, beatMs: 500, run: { beats: 16, beatsPerBar: 4 } };
+  it('counts in, then the bar of the run', () => {
+    expect(barNow(s, 8_000)).toEqual({ bar: 1, of: 4, countIn: 4 });
+    expect(barNow(s, 9_600)).toEqual({ bar: 1, of: 4, countIn: 1 });
+    expect(barNow(s, 10_000)).toEqual({ bar: 1, of: 4 });
+    expect(barNow(s, 12_000)).toEqual({ bar: 2, of: 4 });
+    expect(barNow(s, 99_000)).toEqual({ bar: 4, of: 4 });
+    expect(barNow({ ...s, beatMs: 0 }, 12_000)).toEqual({ bar: 1, of: 4 });
+  });
+});

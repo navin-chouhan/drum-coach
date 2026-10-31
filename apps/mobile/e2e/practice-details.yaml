@@ -61,7 +61,7 @@ tags:
       id: practice-your-take
     timeout: 5000
 - tapOn:
-    id: practice-play-back
+    id: practice-back
 - extendedWaitUntil:
     visible:
       id: screen-practice

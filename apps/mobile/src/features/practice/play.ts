@@ -226,3 +226,15 @@ export const moreCard = (latencyMs: number, chart: { hasAudio?: boolean; syncOff
   latency: latencyMs !== 0 ? `Latency correction: ${latencyMs} ms` : '',
   sync: syncLine(chart),
 });
+
+/**
+ * Where a take is, for the player's top line: the bar (of the run's bars) once it plays, or the count-in's beat
+ * number counting down before beat 0 ("4, 3, 2, 1").
+ */
+export function barNow(s: { zero: number; beatMs: number; run: { beats: number; beatsPerBar: number } }, now: number): { bar: number; of: number; countIn?: number } {
+  const of = Math.max(1, Math.ceil(s.run.beats / s.run.beatsPerBar - 1e-9));
+  if (!(s.beatMs > 0) || !Number.isFinite(s.zero)) return { bar: 1, of };
+  const beat = (now - s.zero) / s.beatMs;
+  if (beat < 0) return { bar: 1, of, countIn: Math.max(1, Math.ceil(-beat - 1e-9)) };
+  return { bar: Math.min(of, Math.floor(beat / s.run.beatsPerBar + 1e-9) + 1), of };
+}
