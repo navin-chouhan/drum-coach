@@ -10,7 +10,8 @@ import { BigMove, Body, Display, DottedGround, MAX_FONT_SCALE, color, font, getA
 import type { LessonView } from './controller';
 import { HowItMoves } from './HowItMoves';
 
-type Intro = NonNullable<LessonView['intro']>;
+// `demo` is optional: Practice's slides have no 4th "how it moves" slide (the web's PlayView passes none).
+type Intro = Omit<NonNullable<LessonView['intro']>, 'demo'> & { demo?: NonNullable<LessonView['intro']>['demo'] };
 
 export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro: Intro; heelUp?: boolean; onNext: () => void; onBack: () => void; onClose: () => void }) {
   const c = introContent(intro);
@@ -66,7 +67,7 @@ export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro:
             </View>
             {intro.focus ? <Body size={24} weight="700" style={[styles.center, styles.wide]}>💡 {intro.focus}</Body> : null}
           </> : null}
-          {i === 3 ? <>
+          {i === 3 && intro.demo ? <>
             <Kicker text="HOW IT MOVES" />
             <HowItMoves id={intro.demo} bpm={intro.bpm} compact heelUp={heelUp} style={styles.demo} testID="lesson-intro-demo" />
           </> : null}

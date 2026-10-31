@@ -4,7 +4,10 @@
 import type { KeyValueStore } from '@drum-coach/core/platform';
 import type { PadCommand } from '@drum-coach/core/engine/padCommands';
 import { lateTakes, MAX_SPEED, practiceStart, suggestNext, type RunRow } from '@drum-coach/core/engine/progress';
+import type { Finished } from '@drum-coach/core/play/take';
 import { bestClean, type PracticeChart, type Read } from './catalog';
+import { syncLine } from '../songs/sync';
+import { latencyLine } from '../results/details';
 
 /** The web's localStorage key (KV_KEYS.playOptions). */
 export const PLAY_OPTIONS_KEY = 'drumcoach.playOptions';
@@ -203,3 +206,23 @@ export function flipChip(id: ChipId, o: PracticeOptions, s: { hints?: boolean; i
     case 'intro': return { settings: { intro: s.intro === false } };
   }
 }
+
+/**
+ * The side card after a take (the web's "Your take"): notes landed of the notes, in a row and comebacks, the last
+ * live tip, and the latency hint when every stroke is off by the same amount. `pass` at 90% and up.
+ */
+export function yourTakeCard(f: Pick<Finished, 'stats' | 'cues' | 'results' | 'options'>) {
+  const s = f.stats;
+  return {
+    landed: s.total - s.miss, total: s.total, pass: s.accuracy >= 90,
+    small: `${s.streak} in a row · ${s.recoveries} comebacks`,
+    tip: f.cues.at(-1)?.text,
+    latency: latencyLine(f),
+  };
+}
+
+/** ⚙ More (the web's): the latency correction when one is set, and Song sync for a chart with its own audio. */
+export const moreCard = (latencyMs: number, chart: { hasAudio?: boolean; syncOffsetMs?: number }) => ({
+  latency: latencyMs !== 0 ? `Latency correction: ${latencyMs} ms` : '',
+  sync: syncLine(chart),
+});

@@ -16,7 +16,7 @@ import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Pill, Screen, Toggle,
   color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppKey, useAppSettings, useKitMoves, writeSettings,
-  Dots, Notice, Stepper,
+  Dots, Notice, Stepper, TempoLadder, TimingLineView,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
@@ -25,18 +25,23 @@ import { SheetPager } from '../lesson/parts';
 import { replayResults, runChart, takenChart } from '../lesson/runChart';
 import { useSheetPages } from '../lesson/sheetPages';
 import { ResultsDetails } from '../results/ResultsDetails';
-import { backingFor, prepareBacking } from '../songs/backing';
+import { SYNC_NUDGES, backingFor, nudgeSync, prepareBacking } from '../songs/backing';
+import { takeMarks, timingLine } from '../lesson/results';
+import { ladderRungs } from '../lesson/lessonView';
+import { takeChart } from '@drum-coach/core/engine/transcribe';
 import { useKitConnected } from '../lesson/useLesson';
 import { kindIcon, startOf, type PracticeChart } from './catalog';
 import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
 import { interruptedNote, practiceEngine } from './engine';
+import { IntroSlides } from '../lesson/IntroSlides';
 import {
-  barPickKind, clampRepeats, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
+  barPickKind, clampRepeats, moreCard, needsIntro, yourTakeCard, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
   sectionRange, speedFor, writePlayOptions, type PracticeOptions, type Section, type WarmState,
 } from './play';
 
 const now = () => getMidiPort().clock.now();
+const YOUR_TAKE = 'your-take'; // the chart id of a take played back (Hear your take)
 
 export function PlayScreen() {
   useAudioEngine(); // the engine runs while this play screen is shown: touch pads sound before the first take (QA2 M2)
@@ -68,8 +73,11 @@ export function PlayScreen() {
   useEffect(() => () => practiceEngine.stop(), []);
 
   const chart = charts.find(c => c.id === o.chartId) ?? charts[0];
-  // The last scored take of this chart on this screen (not a demo): the moves and the line follow it.
-  const f = !playing && eng.finished && eng.chartId === chart.id ? eng.finished : undefined;
+  // The last scored take of this chart on this screen (not a demo): the moves and the line follow it. Kept here, so
+  // hearing it (or the exercise) afterwards doesn't lose it (the web's lastTake).
+  const [lastTake, setLastTake] = useState<{ f: Finished; chartId: string }>();
+  if (eng.finished && eng.chartId && !eng.finished.options.demo && eng.finished !== lastTake?.f) setLastTake({ f: eng.finished, chartId: eng.chartId });
+  const f = !playing && lastTake && lastTake.chartId === chart.id ? lastTake.f : undefined;
   const [climbedFor, setClimbedFor] = useState<Finished>();
   // What next: the coach's suggestion when it answered this take, otherwise the rule (the web's PlayView).
   const coach = useCoachSession(), session = getCoach().session;
@@ -95,6 +103,18 @@ export function PlayScreen() {
   const liveChart = useMemo(() => (live ? runChart(live) : undefined), [live?.run]); // eslint-disable-line react-hooks/exhaustive-deps -- one per take
   const done = useMemo(() => (scored && !scored.options.wait && scored.results.length ? { chart: takenChart(scored), results: replayResults(scored) } : undefined), [scored]);
   const pager = useSheetPages(done);
+  // After a take: the timing line (when the take played the chart on screen), the side card, and ⚙ More.
+  const timing = useMemo(() => { const k = takeMarks(scored, chart, playing); return k && timingLine(k.offsets, k.missed, scored?.stats.extra ?? 0); }, [scored, chart, playing]);
+  const card = scored && !playing ? yourTakeCard(scored) : undefined;
+  const [, setSyncTick] = useState(0);
+  const more = moreCard(settings.latencyMs, chart);
+  const nudge = (ms: number) => {
+    const charts = getStorage().charts;
+    const next = charts ? nudgeSync(charts, chart, ms) : null;
+    if (next === null) { setNotice('Song sync could not be saved.'); return; }
+    chart.syncOffsetMs = next; // the list is read once per visit; this chart now carries the stored offset
+    setSyncTick(t => t + 1);
+  };
   const myPads = [...new Set(chart.notes.filter(n => !n.auto).map(n => n.drum))];
   // No kit connected: touch pads under the sheet, as the lesson player swaps them in (QA M2).
   const kit = useKitConnected();
@@ -115,6 +135,11 @@ export function PlayScreen() {
     }).catch(() => {});
   }), []); // eslint-disable-line react-hooks/exhaustive-deps -- one listener
 
+  // The intro slides up (the web's PlayView intro): which one, and the take they start.
+  const [intro, setIntro] = useState<{ run: () => void; chart: PracticeChart; bpm: number; sec: Section; i: number }>();
+  const introNext = () => { if (!intro) return; if (intro.i >= 2) { setIntro(undefined); intro.run(); } else setIntro({ ...intro, i: intro.i + 1 }); };
+  const introBack = () => { if (intro) setIntro({ ...intro, i: Math.max(0, intro.i - 1) }); };
+  const introShown = useRef(new Map<string, number>());
   const start = (c: PracticeChart, bpm: number, extra: { demo?: boolean; repeats?: number } = {}, sec: Section = section) => {
     const speed = speedFor(bpm, c.bpm);
     if (c.id !== o.chartId || speed !== o.speed) set({ chartId: c.id, speed });
@@ -124,8 +149,18 @@ export function PlayScreen() {
       if (!practiceEngine.start({ chart: c, options: { ...o, chartId: c.id, speed }, section: sec, hints, band: settings.band !== false, backing, ...extra })) setNotice(practiceEngine.notReady);
     };
     // An imported chart's own audio plays under the take (the web's go()): loaded first, and without it on a failure.
-    if (!backingFor(c)) { run(); return; }
-    void prepareBacking(c).then(r => { if (r.error) setNotice(r.error); run(r.backing); });
+    const launch = () => {
+      if (!backingFor(c)) { run(); return; }
+      void prepareBacking(c).then(r => { if (r.error) setNotice(r.error); run(r.backing); });
+    };
+    // Intro slides before the first take of an exercise (or after a tempo jump of more than 10 BPM); not in the warm-up.
+    const b = c.bpm * speed;
+    if (needsIntro({ demo: extra.demo, warm: !!extra.repeats, wait: o.wait, introOn: settings.intro !== false, seenBpm: introShown.current.get(c.id), bpm: b })) {
+      introShown.current.set(c.id, b);
+      setIntro({ run: launch, chart: c, bpm: Math.round(b), sec, i: 0 });
+      return;
+    }
+    launch();
   };
   const go = (bpm = m.bpm, extra: { demo?: boolean } = {}) => start(chart, bpm, extra);
   // The warm-up: about a minute of each at its tempo today; the next starts by itself 3 s after the last one ends.
@@ -153,7 +188,14 @@ export function PlayScreen() {
     if (m.main.kind === 'play') go(m.main.bpm);
     else if (coachMove) session.runAction(coachMove);
   };
-  const listen = () => go(m.bpm, { demo: true });
+  // Hear your take (its own hits played back, the web's takeChart), or the exercise before a take.
+  const listen = () => {
+    if (!f?.hits.length) { go(m.bpm, { demo: true }); return; }
+    setNotice(''); setDetails(false);
+    const own = { ...takeChart(f.hits, { zero: f.zero, beatMs: 60000 / (f.chart.bpm * f.options.speed), beats: f.run.beats, beatsPerBar: f.run.beatsPerBar, title: 'Your take', timeSignature: f.chart.timeSignature }), id: YOUR_TAKE };
+    if (!practiceEngine.start({ chart: own, options: { ...o, chartId: own.id, speed: 1, wait: false }, section: null, hints, band: false, demo: true, repeats: 1 })) setNotice(practiceEngine.notReady);
+  };
+  const hearItRight = () => start(chart, m.bpm, { demo: true });
   const next = () => { set({ chartId: nextChartId(charts, chart.id) }); setSection(null); };
   const playAt = (bpm: number) => go(bpm);
   const stop = () => { setWarm(undefined); practiceEngine.stop(); };
@@ -161,8 +203,8 @@ export function PlayScreen() {
     yes: showDetails ? () => go() : main, listen, next, stop,
     faster: () => { const a = playGesture('faster', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
     slower: () => { const a = playGesture('slower', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
-  }, { playing });
-  useAppKey('escape', stop); // a hardware keyboard's Esc stops (the web App's Escape)
+  }, { playing, enabled: !intro }); // the intro slides have the kit's taps
+  useAppKey('escape', stop, { enabled: !intro }); // a hardware keyboard's Esc stops (the web App's Escape)
   const flip = (id: Parameters<typeof flipChip>[0]) => {
     const p = flipChip(id, o, settings);
     if (p.options) set(p.options);
@@ -175,10 +217,11 @@ export function PlayScreen() {
   }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => setCoachPlaying(false), []);
   // The coach's actions (its suggestion, a "yes" in the panel), as the web's onCoachAction on this screen.
-  const acts = useRef({ main, listen, next, playAt, go, bpm: m.bpm });
-  acts.current = { main, listen, next, playAt, go, bpm: m.bpm };
+  const acts = useRef({ main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro, introNext });
+  acts.current = { main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro, introNext };
   useEffect(() => session.onCoachAction((a: Act) => {
     const x = acts.current;
+    if (x.intro) { if (a.kind === 'main') x.introNext(); return true; } // the slides have the kit's taps: yes turns one, the rest is swallowed
     if (a.kind === 'main') { x.main(); return true; }
     if (a.kind === 'listen') { x.listen(); return true; }
     if (a.kind === 'next') { x.next(); return true; }
@@ -192,6 +235,15 @@ export function PlayScreen() {
   return (
     <Screen withSidebar={false} testID="screen-practice-play">
       <Stack.Screen options={{ headerShown: false }} />
+      {intro ? (() => {
+        // the web's practice slides: the bars you loop from beat 0, the last take's last tip, no "how it moves" slide
+        const ic = intro.chart, bpb = (ic.timeSignature[0] * 4) / ic.timeSignature[1], { from: f0 } = sectionRange(intro.sec, ic.bars);
+        return <IntroSlides onNext={introNext} onBack={introBack} onClose={() => setIntro(undefined)} intro={{
+          i: intro.i, last: 2, title: ic.title, sub: ic.title, bpm: intro.bpm, what: ic.description ?? `${ic.bars} bar${ic.bars === 1 ? '' : 's'}, ${o.repeats} times round.`,
+          notes: ic.notes.filter(n => n.t >= (f0 - 1) * bpb).map(n => ({ ...n, t: n.t - (f0 - 1) * bpb, mine: true })), beatsPerBar: bpb,
+          focus: f?.cues.at(-1)?.text, leftHanded: !!settings.leftHanded,
+        }} />;
+      })() : null}
       <View style={styles.bar}>
         <Button label="All exercises" emoji="←" size="small" onPress={back} testID="practice-play-back" />
         <View style={styles.titleBox}>
@@ -199,9 +251,9 @@ export function PlayScreen() {
           <Body size={13} color={color.pop} weight="700">{`${kindIcon(chart)} ${chart.kind ?? 'exercise'}${chart.source === 'ai' ? ' · ✍ by your coach' : ''}${warm ? ` · warm-up ${warm.i + 1} of ${warm.ids.length}` : ''}`}</Body>
         </View>
         <View style={styles.tempo} testID="practice-tempo">
-          <Step label="−" a11y="5 BPM slower" onPress={() => set({ speed: speedFor(m.bpm - 5, chart.bpm) })} testID="practice-slower" />
+          {!playing ? <Step label="−" a11y="5 BPM slower" onPress={() => set({ speed: speedFor(m.bpm - 5, chart.bpm) })} testID="practice-slower" /> : null}
           <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.bpm, tabular]} accessibilityLabel={`${m.bpm} BPM`}>{m.bpm}<Text style={styles.bpmUnit}> BPM</Text></Text>
-          <Step label="+" a11y="5 BPM faster" onPress={() => set({ speed: speedFor(m.bpm + 5, chart.bpm) })} testID="practice-faster" />
+          {!playing ? <Step label="+" a11y="5 BPM faster" onPress={() => set({ speed: speedFor(m.bpm + 5, chart.bpm) })} testID="practice-faster" /> : null}
           {m.best > 0 ? <Body size={13} color={color.white} weight="700">{`best clean here: ${m.best} BPM`}</Body> : null}
         </View>
         <Button label="Hints" emoji="💡" size="small" tone={hints ? 'pop' : 'white'} onPress={() => flip('hints')} accessibilityLabel={`Hints ${hints ? 'on' : 'off'}`} testID="practice-hints" />
@@ -221,7 +273,6 @@ export function PlayScreen() {
       <View style={styles.coachRow}>
         <CoachLine size={20} style={styles.grow} testID="practice-coach-line">{m.line}</CoachLine>
         {thinking ? <View testID="practice-coach-thinking"><Pill tone="pop">Coach is listening back…</Pill></View> : null}
-        {scored && !showDetails ? <Button label="Details" emoji="📊" size="small" onPress={() => setDetails(true)} accessibilityLabel="Details of your last take" testID="practice-details-open" /> : null}
       </View>
       <View style={styles.moves}>
         <BigMove tone="go" label={m.main.label.replace(/^\S+ /, '')} emoji={m.main.label.split(' ')[0]} gestures={gesturesFor('yes')} onPress={main} testID="practice-main" style={styles.moveGo} />
@@ -265,7 +316,8 @@ export function PlayScreen() {
           </View>
           {done && !live ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} tone="light" testID="practice-sheet-pages" /> : null}
           {done && !live ? <Body size={13} weight="800">● on it  ● early / late  ◌ missed  ✕ extra</Body> : null}
-          {hints ? <Body size={13} color={color.muted}>R right hand · L left hand · K kick · H hi-hat foot</Body> : null}
+          {hints && !playing && !done ? <Body size={13} color={color.muted}>R right hand · L left hand · K kick · H hi-hat foot</Body> : null}
+          {timing && !playing ? <TimingLineView line={timing} testID="practice-timing-line" /> : null}
           {!kit ? (
             <View style={styles.pads}>
               <TouchPads emitPad={(pad, vel, time) => getAppHitBus().emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
@@ -281,11 +333,24 @@ export function PlayScreen() {
                 <Body size={12.5} color={color.muted}>{o.climb ? 'On: it climbs by itself.' : 'Off: the tempo stays where you put it.'}</Body>
               </View>
             </View>
+            {o.climb && !playing ? <TempoLadder bpm={m.bpm} ladder={ladderRungs(m.bpm, Math.min(m.bpm, m.cap - 5), m.cap)} /> : null}
           </View>
         </Card>
 
         <ScrollView style={styles.side} contentContainerStyle={styles.sideIn}>
-          {chart.description ? <Card><CardTitle size={17}>What it is</CardTitle><Body>{chart.description}</Body></Card> : null}
+          {card ? (
+            <Card tone={card.pass ? 'cream' : 'white'} testID="practice-your-take">
+              <CardTitle size={17}>Your take</CardTitle>
+              <Body size={14}><Text style={styles.bigN}>{card.landed}</Text><Text style={styles.b}>{`/${card.total} notes landed`}</Text></Body>
+              <Body size={13} color={color.muted}>{card.small}</Body>
+              {card.tip ? <Body size={14}>{`💡 ${card.tip}`}</Body> : null}
+              {card.latency ? <Notice text={card.latency} testID="practice-latency-hint" /> : null}
+              <View style={styles.takeLinks}>
+                <Button label="Details and history" emoji="📊" size="small" onPress={() => setDetails(true)} testID="practice-details-open" />
+                <Button label="Hear it right" emoji="👂" size="small" onPress={hearItRight} testID="practice-hear-right" />
+              </View>
+            </Card>
+          ) : chart.description ? <Card><CardTitle size={17}>What it is</CardTitle><Body>{chart.description}</Body></Card> : null}
           <Card>
             <CardTitle size={17}>How it plays</CardTitle>
             <View style={styles.chips}>
@@ -303,6 +368,17 @@ export function PlayScreen() {
             {m.recent.length > 1 ? <Dots values={m.recent} width={220} label={`Notes landed in your last ${m.recent.length} takes, percent`} /> : null}
             <Body size={14}>{m.history}</Body>
           </Card>
+          {more.latency || more.sync ? <Card testID="practice-more">
+            <CardTitle size={17}>⚙ More</CardTitle>
+            {more.latency ? <Body size={13}>{more.latency}</Body> : null}
+            {more.sync ? <>
+              <Body size={13}>{more.sync}</Body>
+              <View style={styles.takeLinks}>
+                {SYNC_NUDGES.map(ms => <Button key={ms} size="small" label={`${ms > 0 ? '+' : ''}${ms}`} accessibilityLabel={`Song sync ${ms > 0 ? 'plus' : 'minus'} ${Math.abs(ms)} ms`}
+                  onPress={() => nudge(ms)} testID={`practice-sync-${ms}`} />)}
+              </View>
+            </> : null}
+          </Card> : null}
           <Card>
             <Label>Just the click</Label>
             <Button label="Metronome" emoji="🔔" size="small" onPress={() => router.push('/practice/metronome')} testID="practice-play-metronome" style={styles.metro} />
@@ -368,6 +444,8 @@ const styles = StyleSheet.create({
   chipLabel: { fontSize: 13.5, fontWeight: '800', color: color.ink },
   chipNote: { fontSize: 11.5, fontWeight: '600', color: color.muted },
   metro: { marginTop: 6 },
+  bigN: { fontSize: 30, fontWeight: '900' },
+  takeLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
   detailsScroll: { flex: 1, marginTop: 14 },
   detailsIn: { paddingBottom: 24 },
 });

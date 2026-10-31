@@ -9,6 +9,7 @@ import { clampBpm, clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readM
 import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
   PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
+  moreCard, yourTakeCard,
 } from './play';
 
 describe('section chart', () => {
@@ -264,3 +265,18 @@ describe('Practice\'s saved charts and ?chartId=', () => {
     expect(requestedChart(all, undefined)).toBeUndefined();
   });
 });
+
+describe('after a take (the web PlayView side)', () => {
+  const stats = { total: 20, miss: 2, accuracy: 90, streak: 12, recoveries: 1 } as unknown as Parameters<typeof yourTakeCard>[0]['stats'];
+  it('the Your take card', () => {
+    const c = yourTakeCard({ stats, cues: [{ text: 'Relax' }, { text: 'Steady the kick' }] as never, results: [], options: { wait: false } as never });
+    expect(c).toEqual({ landed: 18, total: 20, pass: true, small: '12 in a row · 1 comebacks', tip: 'Steady the kick', latency: undefined });
+    const late = Array.from({ length: 10 }, () => ({ judgement: 'good', offset: -55 }));
+    expect(yourTakeCard({ stats, cues: [], results: late as never, options: { wait: false } as never }).latency).toMatch(/^Almost every stroke landed about 55 ms early\./);
+  });
+  it('More: latency correction and Song sync', () => {
+    expect(moreCard(0, {})).toEqual({ latency: '', sync: '' });
+    expect(moreCard(-12, { hasAudio: true, syncOffsetMs: 40 })).toEqual({ latency: 'Latency correction: -12 ms', sync: 'Song sync: 40 ms. If the notes arrive before the music, increase it.' });
+  });
+});
+
