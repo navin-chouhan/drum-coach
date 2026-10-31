@@ -12,7 +12,7 @@ import {
   BigMove, Body, Button, Card, Display, DottedGround, Mascot, Segmented, color, font, gesturesFor, hardShadow, readSettings, slopFor, stroke, useAppSettings,
   useKitMoves, writeSettings,
 } from '../../ui';
-import { sayNow } from '../coach/voice';
+import { speakMoment } from '../coach/voice';
 import { LatencyPanel } from '../latency/LatencyPanel';
 import { PadWizardView } from '../pads/PadWizardView';
 import { firstHitLine, kitStatus } from '../setup/kit';
@@ -43,7 +43,7 @@ export function FirstRunScreen() {
     setStep('plug');
   };
   // D10 voice first: each step says its instruction once when it opens (the coach's voice setting decides).
-  useEffect(() => { if (readSettings(kv()).voice) sayNow(STEP_SPOKEN[step]); }, [step]);
+  useEffect(() => { speakMoment({ kind: 'notice', text: STEP_SPOKEN[step] }); }, [step]); // R6's voice moments: off when the voice is off
   // Hands-free on the two steps without pad answers: the "yes" gesture is Continue.
   useKitMoves({ yes: () => (step === 'welcome' ? continueWelcome() : go('plug')) }, { enabled: step === 'welcome' || step === 'plug' });
 
