@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
+import { sayNow } from '../coach/voice';
 import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
@@ -51,7 +52,7 @@ export function PlacementScreen() {
   const rung = lesson && placementStep(lesson);
 
   const take = useMemo(() => createTakePort({
-    clock, audio, onHit: bus.onHit,
+    clock, audio, onHit: bus.onHit, sayWord: w => sayNow(w), // a count-in word the engine couldn't render
     settings: () => { const s = settings.get(); return { latencyMs: s.latencyMs, liveTips: s.liveTips, chattiness: s.chattiness, countIn: s.countIn }; },
   }), [settings]); // eslint-disable-line react-hooks/exhaustive-deps -- one per screen
   const [, bump] = useReducer((n: number) => n + 1, 0);
