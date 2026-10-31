@@ -33,7 +33,7 @@ npx expo run:ios --device          # the debug build first: it has the Dev row (
 USB-C hub on the iPad: **kit USB → hub**, **hub 3.5 mm out → module AUX IN**, charger into the hub's PD port if it
 has one. Headphones on the module. Metro: on the Mac (`npx expo start --dev-client`) or on Linux
 (`cd apps/mobile && npm ci && npm start -- --lan`, then **Enter URL manually** `http://<linux-ip>:8081`). Allow **Local Network**.
-- [ ] The kit enumerates through the hub: Setup → Kit shows **e-Drum** connected (sidebar pill "kit" green). Hub model: ____
+- [ ] The kit enumerates through the hub: Setup → Kit shows **e-Drum** connected (the sidebar's kit dot green, "e-Drum · ready"). Hub model: ____
 - [ ] Click and kit sounds are in the module's headphones (iPad speaker silent). Setup → Latency shows the route
       name: ____ (expect "USB audio" or "Headphones"; it must **not** say Speaker).
 - [ ] Charging through the hub while the kit is plugged in: yes / no / hub has no PD.
@@ -42,7 +42,7 @@ has one. Headphones on the module. Metro: on the Mac (`npx expo start --dev-clie
 Follow [HOME-SERVER.md](HOME-SERVER.md): `.env` with `APP_HOST=0.0.0.0`, `APP_TOKEN` (≥ 24 chars), `ALLOWED_HOSTS`;
 firewall port 8787 on the Wi-Fi interface; `npm run server`.
 - [ ] Setup → Coach · home server: URL `http://<linux-ip>:8787`, paste the token → **Save and test** →
-      "✓ Connected · ____ ms". The token field shows 🔒 afterwards (Keychain); the sidebar's coach pill turns green.
+      "✓ Connected · ____ ms". The token field shows 🔒 afterwards (Keychain); Setup's coach status turns green.
 - [ ] A wrong token says the server refused it; a wrong URL says it didn't answer. Then fix it again.
 
 ## 4. Gate 0 leftovers on the app's MIDI debug screen (debug build) — 20 min
@@ -76,7 +76,7 @@ Sidebar → Dev row → **MIDI** (`/dev/midi`). These replace the probe's M4–M
   - [ ] `compare.mjs` prints **SAME** or **SAME within tolerance** (paste its output); median ____ max |____| ms.
   - [ ] **Back to the kit (QA2 M4):** switch **Network MIDI session** off. The app falls back to the e-Drum by itself
         within a few seconds (Devices: e-Drum · connected). If it doesn't, **Select** e-Drum under Devices (or press
-        **Auto-select e-Drum**, or Setup → MIDI input → **Use this**). Check the sidebar's kit pill is green before
+        **Auto-select e-Drum**, or Setup → MIDI input → **Use this**). Check the sidebar's kit dot is green before
         section 5: the rest of the session needs the kit.
 
 ## 5. Audio checks (`apps/mobile/modules/drum-audio/CHECKS.md`) — 25 min
@@ -107,17 +107,26 @@ Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud buil
       (no screen taps). Set tom 1 to 49 on the module (VOICE → PAGE to N…) to see the **duplicate note** stop with the
       module fix; set it back to 48 and finish.
 - [ ] **Latency:** 16 hits with the click → the delay and how steady → Save → Journey.
-- [ ] Sidebar pills afterwards: kit green, latency ____ ms, coach (green if section 3 is done).
+- [ ] Afterwards: the sidebar's kit dot is green; Setup shows latency ____ ms and the coach (green if section 3 is done).
 
 ## 7. Every screen — 70 min
 Kit gestures everywhere: hi-hat pedal × 3 or crash × 2 = yes / the big move, tom 2 × 2 = listen, floor × 2 = slower,
 tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 
+**The frame (D10)**
+- [ ] The sidebar has four sections: Journey · Practice · You · Setup. Songs opens from Practice; the coach's week plan
+      is on You.
+- [ ] Journey shows the sidebar expanded, the other sections fold it to an icon rail. **«** (or the `\` key on a
+      keyboard) folds it, **»** opens it; quit and reopen the app: your choice stayed.
+- [ ] One kit dot at the bottom: green "e-Drum · ready" with the kit, orange "not plugged in" without; a tap opens Setup.
+- [ ] Tap the coach's speech bubble on any screen (Journey, Practice, a lesson): the chat slides in on the right; ✕,
+      Esc or a tap outside closes it. Players, the first run and full-screen tools show no sidebar.
+
 **Journey**
 - [ ] Coach line, Up next with the groove preview, four moves with gesture pills, You (rank, streak, landed, minutes),
       Today's set with the minute bar, Stage song, the trail. Everything fits without scrolling.
 - [ ] **Start** by hi-hat pedal × 3 opens today's item; ride × 2 = Something else; tom 2 × 2 = Hear it.
-- [ ] Skill map and Full path open Progress on those views.
+- [ ] Skill map and Full path open **You** on those views (old /progress links land there too).
 - [ ] **Find my level:** a rung with its sheet; **Play it** (hi-hat pedal × 3) → a take; a clean one moves up a rung,
       a rough one ends the test with "Start there"; **Start at this stage** goes back to Journey on that stage.
 - [ ] **More ways to play → 🌊 Flow:** the player opens on your newest finished groove (the jam lesson if none), the
@@ -167,7 +176,7 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Metronome (🔔): change the tempo and its options; steady clicks in the module's headphones. Play a tom fill
       while it runs: the tempo must not change **(QA2 M3)**.
 
-**Progress**
+**You** (was Progress)
 - [ ] Getting better (landed per day), This week, skill map, trophies, Your time, Your lessons in plain words, with
       today's takes in them. "Practise" on a lesson row opens it; on an exercise opens Practice at best + 5;
       on a song row opens the song **(M4)**. This month's report (needs the server).
@@ -185,7 +194,7 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Import files: a drum `.mid` (AirDrop one from the Mac) → Save to library (it shows in Practice's library); with
       an MP3 backing: it plays in the take.
 
-**Coach**
+**Coach** (the chat from any coach bubble; the week plan on You, or /coach)
 - [ ] Ask "what should I work on?" → "Your coach is thinking…" → an answer; a drill card → **Play this drill** opens it
       in the player; the week plan's items open their lesson/drill/song.
 - [ ] Results → Ask the coach → feedback and a drill for that take.
@@ -205,7 +214,7 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 
 ## 8. Offline — 5 min
 Wi-Fi off (Control Center).
-- [ ] Journey, a lesson take, Practice, Progress, Setup all work; the coach pill goes grey; Coach and Songs search
+- [ ] Journey, a lesson take, Practice, Progress, Setup all work; Setup's coach status goes grey; Coach and Songs search
       show their offline states; nothing hangs.
 
 ## 9. Timing comparison with the web (Linux, Chrome, same day, same kit) — 15 min

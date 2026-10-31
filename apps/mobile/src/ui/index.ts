@@ -15,12 +15,14 @@ export { Sidebar, DevRow, type SidebarItem, type SidebarProps } from './Sidebar'
 export { TitleBar, ComingNext } from './TitleBar';
 export { gestureLabel, gestureSpoken, gesturesFor, type Gesture } from './gestures';
 export { ringAngles, ratio, trailGeometry, type TrailGeometry } from './layout';
-export { statusRows, type StatusRow, type StatusInput, type Dot } from './status';
+export { kitDot, statusRows, type KitDot, type StatusRow, type StatusInput, type Dot } from './status';
 export { readSettings, writeSettings, subscribeSettings, settingsVersion, SETTINGS_KEY } from './appSettings';
 export { createKitMoveRouter, kickAgain, type KitMove, type KitMoveHandlers, type KitMoveRouter } from './kitMoves';
 export { KIT_SOUNDS_LABEL, useKitSounds } from './useKitSounds';
-export { getAppHitBus, startAppKeyboard, useAppKey, useAppSettings, useKitMoves, useStatusRows, kitName } from './hooks';
-export { NAV, type NavKey } from './nav';
+export { getAppHitBus, startAppKeyboard, useAppKey, useAppSettings, useKitDot, useKitMoves, useSidebarPref, useStatusRows, kitName } from './hooks';
+export { NAV, parseSidebarPref, sectionOf, sidebarModeFor, toggledPref, type NavKey, type SidebarMode, type SidebarPref } from './nav';
+export { MoreButton, MoreSheet, SheetHeading, SheetItem, type MoreSheetProps } from './MoreSheet';
+export { closeCoachChat, openCoachChat, useCoachChatOpen } from './coachChat';
 // Promoted from the screens' local pieces (I2): one API each.
 export { Group, GroupHead, GroupRow, Chevron, Stepper, ToolFrame, type SymTone, type StepperProps } from './groups';
 export { Field, CheckRow, Choice, Small, Warn, Tabs, type FieldProps, type ChoiceOption, type TabItem } from './forms';
