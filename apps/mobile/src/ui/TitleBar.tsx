@@ -7,13 +7,14 @@ import { CoachLine } from './CoachLine';
 import { Body, Display } from './Text';
 import { color, hardShadow, shadow, stroke, type } from './tokens';
 
-export function TitleBar({ title, coach, right, testID }: { title: string; coach?: ReactNode; right?: ReactNode; testID?: string }) {
+/** `coachLines`: let the coach's line take up to this many lines (fitted), for a long notice; one by default. */
+export function TitleBar({ title, coach, right, testID, coachLines }: { title: string; coach?: ReactNode; right?: ReactNode; testID?: string; coachLines?: number }) {
   return (
     <View style={styles.bar} testID={testID}>
       <View style={styles.title}>
         <Display size={type.title} accessibilityRole="header" numberOfLines={1}>{title}</Display>
       </View>
-      {coach ? <CoachLine size={type.coach} singleLine style={styles.coach}>{coach}</CoachLine> : <View style={styles.coach} />}
+      {coach ? <CoachLine size={type.coach} singleLine lines={coachLines} style={styles.coach}>{coach}</CoachLine> : <View style={styles.coach} />}
       {right}
     </View>
   );

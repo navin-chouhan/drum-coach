@@ -11,6 +11,7 @@ import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekThe
 import { skillMap } from '@drum-coach/core/engine/skills';
 import { stageSong } from '@drum-coach/core/engine/stageSong';
 import type { Session, Settings } from '@drum-coach/core/input/settings';
+import { flowTile } from '../flow/flow';
 import { TOOL_LABEL } from '../lesson/lessonView';
 import { groovePreview, type GroovePreview } from './preview';
 
@@ -31,6 +32,8 @@ export type JourneyInput = {
   swap?: number;
   /** This week's lessons from the coach's plan (R6), when there is one. */
   focusIds?: string[];
+  /** Songs checked by ear with every bar ready (Progress' show-off set): the show-off tiles and badge. */
+  readySongs?: { id: string; title: string }[];
   /** This week's focus from the coach's plan, when there is one for this week. */
   weekFocus?: { focus: string; why?: string };
   /** "Ask the coach" presses: each is a new lesson request (the web's `asks`, the last part of the keys). */
@@ -85,8 +88,10 @@ export type JourneyView = {
   challengeKey: string;
   /** The coach's open challenge lesson at the last stage, if one is written. */
   challenge: { lessonId: string; title: string } | null;
-  /** Flow: the newest finished groove (else the jam), played along with no score. */
-  flow: { lessonId: string; title: string } | null;
+  /** Flow: the newest finished groove (else the jam), played along with no score (features/flow flowTile, as /flow). */
+  flow: { lessonId: string; sub: string } | null;
+  /** After the whole path: a "Show-off: <song>" tile for each ready song (none when there are none). */
+  showoff: { id: string; title: string }[];
   somethingElse: boolean;
   /** The lesson Just jam opens (no score, with the band). */
   jamLessonId: string | null;
@@ -119,9 +124,9 @@ export type JourneyView = {
   /** Today's set is done and the trail's next lesson leads: the 2-minute challenge and Beat your best join the moves. */
   afterSet: boolean;
   /** The 2-minute challenge on the newest finished drill groove (the web's arcade move and tile). */
-  arcade: { lessonId: string; title: string; sub: string } | null;
+  arcade: { lessonId: string; title: string; sub: string; goal: string } | null;
   /** Beat your best: a finished lesson played longest ago with a record left to beat (opened with role=record). */
-  record: { lessonId: string; title: string; sub: string } | null;
+  record: { lessonId: string; title: string; sub: string; goal: string } | null;
 };
 
 export const SETUP_NUDGE = 'Two minutes to check your pads and latency makes every timing score fair.';
@@ -192,7 +197,7 @@ export function trailStops(trail: Lesson[], current: Lesson | undefined, song: L
 
 const hoursOf = (d: Date) => d.getHours();
 
-export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false, asks = 0, weekFocus }: JourneyInput): JourneyView {
+export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false, asks = 0, weekFocus, readySongs }: JourneyInput): JourneyView {
   const today = dayKey(now);
   const dash = dashboard(runs, now);
   const lessonById = (id: string) => lessons.find(l => l.id === id);
@@ -254,9 +259,6 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const main: JourneyView['main'] = hero ? { label: afterSet ? 'Next lesson' : 'Start', lessonId: hero.id, item: heroItem, emoji: '▶' }
     : pathDone ? { label: 'Coach challenge', lessonId: '', item: -1, emoji: '🎯', challenge: true }
     : jam ? { label: 'Jam', lessonId: jam.id, item: -1, emoji: '🎸' } : null;
-  // Flow on the newest finished groove (the highest stage, the latest finished), not the first jam forever.
-  const flowLesson = visible.filter(l => done(l.id) && l.kind === 'groove')
-    .sort((a, b) => b.level - a.level || s.lessons[b.id].completedAt!.localeCompare(s.lessons[a.id].completedAt!))[0] ?? jam;
 
   // You: rank, streak, notes landed, minutes
   const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
@@ -278,7 +280,7 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const daysPlayed = new Set(runs.map(r => r.startedAt.slice(0, 10))).size;
   const sore = soreActive(s.soreUntil, today);
   const wk = isoWeek(now), played = dash.totalRuns > 0;
-  const newBadges = runs.length ? earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints)).filter(id => !s.badges?.includes(id)) : [];
+  const newBadges = runs.length ? earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints), undefined, (readySongs ?? []).map(x => x.id)).filter(id => !s.badges?.includes(id)) : [];
   // F2: only with playing from before this week, or "last week" means today.
   const recap = played && s.lastRecapWeek !== wk && runs.some(r => isoWeek(new Date(r.startedAt)) !== wk)
     ? weekRecap(dash, newBadges.length ? BADGES.find(b => b.id === newBadges[newBadges.length - 1])?.name : undefined) : null;
@@ -286,6 +288,7 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const lastPlayed = (l: Lesson) => dash.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
   const arcadeLesson = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill')
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  const arcadeGoal = arcadeLesson && (s.arcade?.[arcadeLesson.id] ? `beat ${s.arcade[arcadeLesson.id] + 2} clean bars` : 'how many clean bars?');
   // Beat your best (improvising tools have no record; a streak record as long as the whole take has nothing left).
   const lastStep = (l: Lesson) => l.steps[l.steps.length - 1];
   const maxedOut = (l: Lesson) => { const t = recordTarget(lastStep(l), s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
@@ -345,11 +348,12 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     week: weekLine(weekFocus, runs, now),
     afterSet, pathDone, challengeKey: challengeKey(now, asks),
     challenge: challenges[0] ? { lessonId: challenges[0].id, title: challenges[0].title } : null,
-    flow: flowLesson ? { lessonId: flowLesson.id, title: flowLesson.title } : null,
-    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}` } : null,
+    flow: flowTile(lessons, s),
+    showoff: pathDone ? readySongs ?? [] : [],
+    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}`, goal: recordGoal! } : null,
     arcade: arcadeLesson ? {
       lessonId: arcadeLesson.id, title: arcadeLesson.title,
-      sub: `${arcadeLesson.title} · ${s.arcade?.[arcadeLesson.id] ? `beat ${s.arcade[arcadeLesson.id] + 2} clean bars` : 'how many clean bars?'}`,
+      sub: `${arcadeLesson.title} · ${arcadeGoal}`, goal: arcadeGoal!,
     } : null,
   };
 }

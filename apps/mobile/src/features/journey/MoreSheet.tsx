@@ -22,7 +22,7 @@ export function MoreSheet({ v, visible, onClose, onOpen, onFlow, onAskNew, coach
         <Card style={styles.card}>
           <CardTitle size={18}>More ways to play</CardTitle>
           <View style={styles.tiles}>
-            {v.flow ? <Tile emoji="🌊" title="Flow" sub={v.flow.lessonId !== v.jamLessonId ? v.flow.title : 'play along, no score'} testID="journey-more-flow" onPress={go(onFlow)} /> : null}
+            {v.flow ? <Tile emoji="🌊" title="Flow" sub={v.flow.sub} testID="journey-more-flow" onPress={go(onFlow)} /> : null}
             <Tile emoji="🥢" title="Stick technique" sub="how it moves" testID="journey-more-technique" onPress={go(() => router.push('/technique' as never))} />
             <Tile emoji="🎵" title="Learn a new song" testID="journey-more-song" onPress={go(() => router.navigate('/songs' as never))} />
             {v.trail ? <Tile emoji="✍" title="Ask the coach" sub="for a different lesson" testID="journey-more-ask"
