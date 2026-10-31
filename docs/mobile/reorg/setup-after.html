@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1194">
+<title>Setup (after) · reorg proposal</title>
+<link rel="stylesheet" href="reorg.css">
+<style>
+  .stat3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .st { background: #fff; border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .st b { font: 900 22px var(--display); }
+  .st small { font-size: 14px; font-weight: 700; color: var(--muted); }
+  .st.warn { background: var(--orangeSoft); }
+  .rows { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rw { background: #fff; border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 12px 16px; display: flex; align-items: center; gap: 14px; min-height: 92px; }
+  .rw .em { font-size: 34px; }
+  .rw b { font: 900 20px var(--display); display: block; }
+  .rw small { font-size: 14px; font-weight: 700; color: var(--muted); }
+  .rw .chev { margin-left: auto; font-size: 22px; font-weight: 900; }
+</style></head><body>
+<div class="ipad">
+  <div data-sb="setup" data-rail></div>
+  <div class="main r">
+    <div class="navbar"><h1>Setup</h1><span class="sp"></span><span class="btn pop">🥁 Kit test</span></div>
+    <div class="stat3">
+      <div class="st"><span class="kicker">Kit</span><b><span class="dot"></span> e-Drum</b><small>last hit: snare 38 · v96</small></div>
+      <div class="st warn"><span class="kicker">Latency</span><b>Not measured</b><span class="btn sm fill" style="align-self:flex-start;margin-top:4px">Measure · 1 min</span></div>
+      <div class="st"><span class="kicker">Coach</span><b><span class="dot"></span> Home server</b><small>drum-laptop.local</small></div>
+    </div>
+    <div class="rows">
+      <div class="rw"><span class="em">🎯</span><div><b>Pads</b><small>Hit each pad · soft then loud · note map · MIDI input</small></div><span class="chev">›</span></div>
+      <div class="rw"><span class="em">🔊</span><div><b>Sound</b><small>Click 100% · band 60% · voice 100%</small></div><span class="chev">›</span></div>
+      <div class="rw"><span class="em">🗣</span><div><b>Coach’s voice</b><small>On · Normal · verdicts, tips and count spoken</small></div><span class="chev">›</span></div>
+      <div class="rw"><span class="em">🎛</span><div><b>While you play</b><small>Kit gestures on · autopilot off · right hand leads</small></div><span class="chev">›</span></div>
+      <div class="rw"><span class="em">💬</span><div><b>Coach connection</b><small>Home server · API key fallback · daily goal</small></div><span class="chev">›</span></div>
+      <div class="rw"><span class="em">ℹ️</span><div><b>About</b><small>Build · debug tools (dev builds)</small></div><span class="chev">›</span></div>
+    </div>
+  </div>
+  <div class="tagNew">AFTER · PROPOSAL</div>
+</div>
+<script src="sb.js"></script>
+</body></html>

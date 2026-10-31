@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1194">
+<title>Lesson player, before the take (after) · reorg proposal</title>
+<link rel="stylesheet" href="reorg.css"><link rel="stylesheet" href="player.css">
+</head><body>
+<div class="ipad">
+  <div class="pbar">
+    <span class="btn round">‹</span>
+    <div class="t"><b>The money beat</b><span>Step 3 of 4 · + snare</span></div>
+    <span class="sp"></span>
+    <span class="goal"><span class="boxes"><i></i><i></i></span>&nbsp; 2 clean → 75</span>
+    <div class="bpm">70<small>BPM</small></div>
+    <span class="btn round">⋯</span>
+  </div>
+  <div class="body">
+    <div class="say"><div class="avatar">🥁</div><p>All three limbs now. Snare on 2 and 4.</p><span class="spk">🔊 spoken</span></div>
+    <div class="music" id="m"></div>
+    <div class="strip">
+      <div class="move go"><b><span class="em">▶</span>Play</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span></div></div>
+      <div class="move"><b><span class="em">👂</span>Hear it</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
+      <div class="move alt"><b><span class="em">🐢</span>Slower</b><div class="gs"><span class="gest g-floor">floor × 2</span></div></div>
+      <div class="move alt"><b><span class="em">⏭</span>Next</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+    </div>
+  </div>
+  <div class="ann" style="left:40px;top:176px;max-width:560px">⋯ sheet: Sheet/Highway, Hints, Band, How it moves, the lesson's why, Share, Reset, keys</div>
+  <div class="tagNew">AFTER · PROPOSAL</div>
+</div>
+<script src="../../mockups/ipad/mock.js"></script>
+<script>
+document.getElementById('m').innerHTML = sheet({ W: 1120, rowH: Math.round(19 * 15.4), gap: 19, rows: [[0, 2]], pos: null });
+</script>
+</body></html>

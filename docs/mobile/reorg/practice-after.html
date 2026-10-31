@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1194">
+<title>Practice (after) · reorg proposal</title>
+<link rel="stylesheet" href="reorg.css">
+<style>
+  .navbar .coach { flex: 1; min-width: 0; gap: 10px; }
+  .navbar .coach p { font-size: 18px; white-space: nowrap; padding: 8px 16px; }
+  .fy { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 4px; }
+  .fc { background: var(--panel2); border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 14px; min-height: 176px; display: flex; flex-direction: column; gap: 8px; }
+  .fc.on { background: #fff; outline: 6px solid var(--pop); outline-offset: 0; }
+  .fc .e { font-size: 40px; line-height: 1; }
+  .fc h3 { font-size: 21px; line-height: 1.1; }
+  .fc small { font-size: 14px; font-weight: 700; color: var(--muted); margin-top: auto; }
+  .tag { align-self: flex-start; font-size: 12px; font-weight: 800; background: var(--night); color: #fff; border-radius: 999px; padding: 2px 9px; }
+  .moves { grid-template-columns: 2fr 1fr 1fr; margin-top: 20px; }
+  .moves .move { min-height: 100px; }
+  .moves .move.go b { font-size: 32px; }
+  .kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 22px; }
+  .kind { background: #fff; border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 12px 14px; display: flex; align-items: center; gap: 10px; font: 900 18px var(--display); }
+  .kind .em { font-size: 26px; }
+  .kind span.n { margin-left: auto; font: 800 14px var(--sf); color: var(--muted); }
+</style></head><body>
+<div class="ipad">
+  <div data-sb="practice" data-rail></div>
+  <div class="main r">
+    <div class="navbar">
+      <h1>Practice</h1>
+      <div class="coach"><div class="avatar">🥁</div><p>Warm up first? Ride × 2 moves the ring.</p></div>
+      <span class="btn">🔔 Metronome</span>
+      <span class="btn round">🔎</span>
+    </div>
+    <div class="kicker" style="font-size:13px">For you</div>
+    <div class="fy">
+      <div class="fc on"><span class="tag">warm-up · 3 min</span><div class="e">🔥</div><h3>Warm-up</h3><small>Singles · rock beat · disco</small></div>
+      <div class="fc"><span class="tag">left off here</span><div class="e">🥢</div><h3>Single strokes (16ths)</h3><small>starts at 70 · best 75</small></div>
+      <div class="fc"><span class="tag">at your level</span><div class="e">🎸</div><h3>Basic rock beat</h3><small>starts at 80 · 4 bars</small></div>
+      <div class="fc"><span class="tag">✍ by your coach</span><div class="e">🎯</div><h3>Even hi-hat 8ths</h3><small>starts at 65 · 2 bars</small></div>
+    </div>
+    <div class="moves">
+      <div class="move go"><b><span class="em">▶</span>Play Warm-up</b><div class="gs"><span class="gest on-tint lg g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint lg g-crash">crash × 2</span></div></div>
+      <div class="move"><b><span class="em">👂</span>Hear it</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
+      <div class="move alt"><b><span class="em">⏭</span>Next card</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+    </div>
+    <div class="kinds">
+      <div class="kind"><span class="em">🥁</span>Grooves<span class="n">18</span></div>
+      <div class="kind"><span class="em">🥢</span>Rudiments<span class="n">8</span></div>
+      <div class="kind"><span class="em">💥</span>Fills<span class="n">6</span></div>
+      <div class="kind"><span class="em">🎵</span>Songs<span class="n">3 + YouTube</span></div>
+    </div>
+  </div>
+  <div class="ann" style="left:104px;top:770px">Sidebar collapsed to the icon rail (» or key \ opens it). Songs = a shelf here, not a tab.</div>
+  <div class="tagNew">AFTER · PROPOSAL</div>
+</div>
+<script src="sb.js"></script>
+</body></html>
