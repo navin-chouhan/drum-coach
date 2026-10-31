@@ -25,7 +25,7 @@ import {
 } from './coachServer';
 import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit';
 import { SoundPanel } from './SoundPanel';
-import { useAudioRoute, useKitConnection, useKitData, useLastHit, useLatencyRouteSync, useRecentRuns, keychain } from './useSetup';
+import { useAudioRoute, useKitConnection, useKitData, useLastHit, useRecentRuns, keychain } from './useSetup';
 import { HAND_SUB, LIVE_TIPS, LIVE_TIPS_SUB, AUTOPILOT_SUB } from './whilePlaying';
 import type { Settings } from '@drum-coach/core/input/settings';
 
@@ -38,7 +38,6 @@ const kv = () => getStorage().kv;
 const save = (p: Partial<Settings>) => writeSettings(kv(), p);
 
 export function SetupScreen() {
-  useLatencyRouteSync();
   const s = useAppSettings();
   const conn = useKitConnection();
   const { kit, map, padCal } = useKitData();
