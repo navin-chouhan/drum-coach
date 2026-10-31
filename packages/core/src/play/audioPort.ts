@@ -32,7 +32,7 @@ export type AudioRoute = {
 export type AudioInterruption =
   | { type: 'began'; at: number; reason?: string }                 // call, Siri, alarm… (raw iOS reason when given)
   | { type: 'ended'; at: number; shouldResume: boolean }
-  | { type: 'engine-stopped'; at: number; cause: 'config-change' | 'media-reset' | 'background' };
+  | { type: 'engine-stopped'; at: number; cause: 'config-change' | 'media-reset' | 'background' | 'route-change' };
 
 /**
  * A stretch of the file on a line: file position `offsetMs` is heard at Clock time `at` (a negative offset: the file

@@ -152,6 +152,19 @@ export function sameRoute(
     Math.abs(a.outputLatencyMs - b.outputLatencyMs) < 0.5;
 }
 
+/**
+ * A route event while the engine runs ends the take (AUDIO-DESIGN §3.3/§4): native drops every queued sound and the
+ * new route's latency isn't the one the take is scored against. Native then emits `engine-stopped` / `route-change`.
+ * No previous route (the first start) or the same route (latency jitter): nothing ends.
+ */
+export function routeChangeEndsTake(
+  previous: Parameters<typeof sameRoute>[0] | null,
+  next: Parameters<typeof sameRoute>[1],
+  running: boolean,
+): boolean {
+  return running && previous !== null && !sameRoute(previous, next);
+}
+
 /** Voice ducking (the web's playVoice): click, drums, band and backing dip to 45 % while a voice-bus sound plays. */
 export const DUCK = Object.freeze({ level: 0.45, rampMs: 30 });
 
