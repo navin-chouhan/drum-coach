@@ -34,6 +34,8 @@ export default function RootLayout() {
           <Stack.Screen name="practice/play" options={{ headerShown: false }} />
           <Stack.Screen name="practice/metronome" options={{ headerShown: false }} />
           <Stack.Screen name="song/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="technique/index" options={{ headerShown: false }} />
+          <Stack.Screen name="flow/index" options={{ headerShown: false }} />
           <Stack.Screen name="welcome/index" options={{ headerShown: false, gestureEnabled: false }} />
         </Stack>
       </ThemeProvider>
