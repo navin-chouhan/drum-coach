@@ -6,6 +6,7 @@ import { audio } from '../../platform/audio';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { getAppHitBus, readSettings } from '../../ui';
+import { createResultsFeed } from '../lesson/takePort';
 import { runRecord, takeOptions, type TakeRequest } from './takeRecord';
 
 export type { TakeRequest };
@@ -17,6 +18,9 @@ const listeners = new Set<() => void>();
 const set = (s: Partial<EngineState>) => { state = { ...state, ...s }; listeners.forEach(l => l()); };
 let timer: ReturnType<typeof setInterval> | undefined;
 const onSaved = new Set<(f: Finished) => void>();
+const latencyMs = () => readSettings(getStorage().kv).latencyMs;
+// The take's results as events, for the sheet's colours (NotationView `results`, as in the lesson player).
+const feed = createResultsFeed(latencyMs);
 
 export const practiceEngine = {
   /** The take engine plays wherever the audio module is in the build. */
@@ -26,14 +30,17 @@ export const practiceEngine = {
   subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
   /** After a scored take is saved (Climb and the screen's history read the runs then). */
   onSaved(fn: (f: Finished) => void) { onSaved.add(fn); return () => { onSaved.delete(fn); }; },
+  /** Judged notes (index = the take's run note), extra strokes and misses of the take that's playing. */
+  results: feed.subscribe,
   start(req: TakeRequest): boolean {
     if (!audio.available) return false;
     practiceEngine.stop();
     const clock = getMidiPort().clock;
     const take = createTake({
-      clock, audio, onHit: fn => getAppHitBus().onHit(fn),
+      clock, audio, onHit: fn => getAppHitBus().onHit(h => { fn(h); feed.afterHit(take.state, h); }),
       settings: () => { const s = readSettings(getStorage().kv); return { latencyMs: s.latencyMs, countIn: s.countIn, liveTips: s.liveTips, chattiness: s.chattiness }; },
     }, req.chart, takeOptions(req));
+    feed.reset(take.state);
     take.onChange(() => set({ phase: take.state.phase }));
     take.onFinish(f => {
       const rec = runRecord(f, req.chart.id);
@@ -42,7 +49,7 @@ export const practiceEngine = {
     });
     take.onEnd(() => { clearInterval(timer); timer = undefined; set({ phase: 'done' }); });
     set({ phase: 'starting', demo: !!req.demo, chartId: req.chart.id, take, finished: undefined, error: undefined });
-    timer = setInterval(() => take.tick(clock.now()), 100);
+    timer = setInterval(() => { const n = clock.now(); take.tick(n); feed.misses(take.state, n); }, 100);
     take.start().catch(e => { clearInterval(timer); set({ phase: 'idle', error: `The take could not start: ${e instanceof Error ? e.message : 'audio error'}` }); });
     return true;
   },

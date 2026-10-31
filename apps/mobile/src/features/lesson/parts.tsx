@@ -7,6 +7,7 @@ import { Body, Button, Card, Display, GestureChip, Label, Stars, Strong, color, 
 import type { Celebration } from './controller';
 import type { Goal, Pill, Rung } from './lessonView';
 import type { TakeCard } from './results';
+import type { PagerView } from './sheetPages';
 import type { timingLine } from './results';
 
 /** The step (or layer) pills: ✓ for done, the number, the current one named. */
@@ -226,7 +227,21 @@ export function KeyboardKit({ emitPad, onKey }: { emitPad: (pad: PadId, velocity
 
 export { GestureChip };
 
+/** Under the results sheet of a long take: ‹ Page 2 of 3 ›. Nothing for a one-page take. */
+export function SheetPager({ v, onPrev, onNext, tone = 'dark', testID }: { v: PagerView; onPrev: () => void; onNext: () => void; tone?: 'dark' | 'light'; testID: string }) {
+  if (!v.show) return null;
+  return (
+    <View style={s.pager} testID={testID}>
+      <Button size="small" label="‹ Earlier" accessibilityLabel="Earlier page of your take" disabled={!v.canPrev} onPress={onPrev} testID={`${testID}-prev`} />
+      <Text accessibilityLiveRegion="polite" style={[s.pagerLabel, tone === 'light' && { color: color.ink }]}>{v.label}</Text>
+      <Button size="small" label="Later ›" accessibilityLabel="Later page of your take" disabled={!v.canNext} onPress={onNext} testID={`${testID}-next`} />
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 },
+  pagerLabel: { fontSize: 15, fontWeight: '800', color: color.white, minWidth: 110, textAlign: 'center' },
   pills: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, minWidth: 38, borderRadius: 19, borderWidth: 2.5, borderColor: color.ink, backgroundColor: color.white, paddingHorizontal: 3 },
   pillDone: { backgroundColor: color.good, borderColor: color.white },

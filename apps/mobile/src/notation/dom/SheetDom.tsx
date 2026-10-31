@@ -33,6 +33,10 @@ export type SheetDomProps = {
   clockNow: () => Promise<number>;
   /** Native action: everything the take has judged so far (the WebView may load after the take started). */
   ready: (take: number) => Promise<ResultBatch>;
+  /** Show this page (0-based) without the cursor or the count: a finished take paged through. Undefined: follow the Clock. */
+  page?: number;
+  /** Native action: how many pages the chart takes at this size (on every layout). */
+  onPages?: (pages: number) => Promise<void> | void;
   ref?: Ref<SheetHandle>;
   dom?: DOMProps;
 };
@@ -66,6 +70,10 @@ export default function SheetDom(props: SheetDomProps) {
   const marks = useRef<SheetMarks>(emptyMarks(zero));
   // The current page's drawing and a hook to repaint it when results arrive.
   const shown = useRef<{ eng: Engraving; fromBar: number; repaint: (notes: number[] | null, newExtras: { beat: number }[]) => void } | null>(null);
+  const fixedPage = useRef(props.page);
+  fixedPage.current = props.page;
+  const onPages = useRef(props.onPages);
+  onPages.current = props.onPages;
   const timing = useRef({ zero, beatMs: 60000 / bpm, latencyMs });
   timing.current = { zero, beatMs: 60000 / bpm, latencyMs };
 
@@ -113,6 +121,7 @@ export default function SheetDom(props: SheetDomProps) {
     const notes = chart.notes.map((n, i) => ({ ...n, i }));
     const geo = sheetGeometry(w - 2 * PAD, h - 2 * PAD, { hints, notes, bpb, scale });
     const pages = pageCount(total, geo.perPage);
+    void Promise.resolve(onPages.current?.(pages)).catch(() => {});
     let cancelled = false, raf = 0, page = -1;
     let next: { p: number; eng?: Engraving } | undefined;
 
@@ -171,6 +180,14 @@ export default function SheetDom(props: SheetDomProps) {
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const tm = timing.current, cur = cursor.current!, hi = barHi.current!, c = count.current!;
+      const fixed = fixedPage.current;
+      if (fixed !== undefined) {
+        const p = Math.max(0, Math.min(pages - 1, Math.floor(fixed)));
+        if (p !== page) draw(p);
+        cur.style.opacity = hi.style.opacity = '0';
+        if (c.textContent) { c.textContent = ''; c.style.display = 'none'; }
+        return;
+      }
       const pos = Number.isFinite(offset.current) ? positionFromPerf(performance.now(), offset.current, tm.zero, tm.beatMs, displayLeadMs) : -Infinity;
       const p = pageOf(barAt(Math.max(0, pos), bpb, total), geo.perPage);
       if (p !== page) draw(p);

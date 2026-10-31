@@ -18,8 +18,9 @@ import { CoachInspector } from '../coach';
 import type { LessonController, MoveView } from './controller';
 import { barCounter, countInAt, flowMeter, liveTip } from './live';
 import {
-  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, KeyboardKit, MoreSheet, RestCountdown, RoundButton, StepPills, TakeCardView, TempoLadder, TimingLineView,
+  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, KeyboardKit, MoreSheet, RestCountdown, RoundButton, SheetPager, StepPills, TakeCardView, TempoLadder, TimingLineView,
 } from './parts';
+import { useSheetPages } from './sheetPages';
 import { laneName } from './lessonView';
 import { idleChart, replayResults, runChart, takenChart } from './runChart';
 import { shareTake } from './shareTake';
@@ -64,6 +65,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const takeChart = v.playing ? runChart(s) : undefined;
   const idle = useMemo(() => ({ chart: idleChart(v.chart), zero: clock.now() + 1e9 }), [v.chart]); // eslint-disable-line react-hooks/exhaustive-deps
   const done = useMemo(() => (f ? { chart: takenChart(f), results: replayResults(f) } : undefined), [f]);
+  const pager = useSheetPages(f); // a long take's results sheet: every page, one at a time
   const activeDrums = useMemo(() => [...new Set(v.myPads.map(laneDrum))], [v.myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const music = (() => {
@@ -79,7 +81,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
       const bpm = f.chart.bpm * f.options.speed, frozen = () => f.zero;
       return highway
         ? <NoteHighway now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} testID="lesson-highway" />
-        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded} testID="lesson-sheet" />;
+        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded}
+          page={pager.page} onPages={pager.setPages} testID="lesson-sheet" />;
     }
     const bpm = v.frame.bpm;
     return highway
@@ -173,6 +176,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
                 {countIn !== undefined ? <CountInBadge n={countIn} /> : null}
                 <View style={styles.musicPaper}>{music}</View>
               </View>
+              {v.results && v.playView !== 'highway' ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} testID="lesson-sheet-pages" /> : null}
               {v.results?.timing ? <TimingLineView line={v.results.timing} /> : null}
             </View>
 

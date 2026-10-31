@@ -35,6 +35,13 @@ export type NotationViewProps = {
   scale?: number;
   /** How far ahead of requestAnimationFrame a frame is shown (ms). Default 0. */
   displayLeadMs?: number;
+  /**
+   * Show this page (0-based) of the chart, with no cursor: a finished take paged through (the results sheet). Leave it
+   * out to follow the take on the Clock.
+   */
+  page?: number;
+  /** How many pages the chart takes at the view's size (called on every layout). */
+  onPages?: (pages: number) => void;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -67,6 +74,9 @@ export function NotationView(props: NotationViewProps) {
   nowRef.current = now;
   const clockNow = useCallback(async () => nowRef.current(), []);
   const ready = useCallback(async (take: number) => log.since(take), [log]);
+  const pagesRef = useRef(props.onPages);
+  pagesRef.current = props.onPages;
+  const onPages = useCallback(async (n: number) => { pagesRef.current?.(n); }, []);
 
   return (
     <View
@@ -89,6 +99,8 @@ export function NotationView(props: NotationViewProps) {
         displayLeadMs={props.displayLeadMs ?? 0}
         clockNow={clockNow}
         ready={ready}
+        page={props.page}
+        onPages={onPages}
         dom={{ style: { flex: 1 }, scrollEnabled: false, bounces: false, overScrollMode: 'never' }}
       />
     </View>
