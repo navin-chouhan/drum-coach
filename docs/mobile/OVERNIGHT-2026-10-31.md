@@ -34,7 +34,8 @@ and F2's seamless backing loops (run 22, head 8d3bc07).
 Nothing was lost; the four agents of that wave were restarted.
 
 ## Needs you
-- [ ] **Decide on the `minimatch` advisory** (GHSA-g3hv-75wg-m249, moderate). It's in the web's ESLint toolchain,
+- [x] ~~**Decide on the `minimatch` advisory**~~ Done 2026-10-31: forced `minimatch@11.0.3` (plus its new dependency) with exact
+      exceptions to remove on 2026-11-04. Was: **Decide on the `minimatch` advisory** (GHSA-g3hv-75wg-m249, moderate). It's in the web's ESLint toolchain,
       dev-only, and it turns `npm audit` red everywhere, `main` included. Either force `minimatch@11.0.3` now with
       an exact "young" exception, as we did for node-forge, or wait until 2026-11-04. PR #7 merges after that.
 - [ ] **One test session at the kit:** [FINAL-CHECKLIST.md](FINAL-CHECKLIST.md). It covers the Mac install, the
