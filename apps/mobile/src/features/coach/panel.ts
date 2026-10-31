@@ -60,7 +60,7 @@ export function panelItems(s: CoachState, o: { nextStep?: Action }): PanelItem[]
 
 /** The composer's hint under the field when the coach is off or the server is down. */
 export function composerNote(o: { liveCoach: boolean; problem?: CoachProblem; queued?: string }): string | undefined {
-  if (!o.liveCoach) return '“The coach follows my practice” is off in Setup → Coach, so questions aren’t sent.';
+  if (!o.liveCoach) return '“The coach follows my practice” is off in Setup → Coach and voice, so questions aren’t sent.';
   if (o.queued) return 'Your question waits and goes out when the coach is back. A new one replaces it.';
   return undefined;
 }

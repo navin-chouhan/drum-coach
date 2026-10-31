@@ -7,7 +7,7 @@ import { createDataStore } from '../../data/store';
 import { openTestDb } from '../../data/nodeSqlite.testutil';
 import { ago, dayKey, minutesWords, shortDate, thousands } from './dates';
 import { allLessons, loadStoredData } from './data';
-import { askMonthReport, coachUnavailable, historyModel, keptReport } from './monthReport';
+import { askMonthReport, coachUnavailable, historyModel, keptReport, keptTakeChart } from './monthReport';
 import { lessonWords, practiseTarget, progressModel, starString } from './progress';
 import { skillMapModel } from './skillMap';
 
@@ -121,6 +121,18 @@ describe('your path', () => {
     expect(after[1].state).toBe('current');
     expect([progressViewOf('skills'), progressViewOf('path'), progressViewOf('month'), progressViewOf('x'), progressViewOf(undefined)]).toEqual(['skills', 'path', 'month', 'main', 'main']);
   });
+
+  it("the web's Full path actions: rebuild today's mix, goals (change), reset all lesson progress", async () => {
+    const { goalsLabel, rebuildNeedsConfirm, rebuildTodayPatch, resetAllLessonsPatch } = await import('./path');
+    expect(goalsLabel(DEFAULTS.profile)).toBe('Goals: not sure yet · 25 min/day (change)');
+    expect(goalsLabel({ ...DEFAULTS.profile, goals: ['rock', 'funk'], minutesPerDay: 30 })).toBe('Goals: rock, funk · 30 min/day (change)');
+    expect(rebuildNeedsConfirm({})).toBe(false);
+    expect(rebuildNeedsConfirm({ session: { date: '2026-10-30', items: [], done: [] } })).toBe(false);
+    expect(rebuildNeedsConfirm({ session: { date: '2026-10-30', items: [], done: [0] } })).toBe(true);
+    expect(rebuildTodayPatch()).toEqual({ session: undefined });
+    const profile = { ...DEFAULTS.profile, goals: ['jazz' as const], onboarded: true };
+    expect(resetAllLessonsPatch(profile)).toEqual({ lessons: {}, session: undefined, profile: { ...profile, onboarded: false } });
+  });
 });
 
 describe('skill map', () => {
@@ -134,6 +146,15 @@ describe('skill map', () => {
 
 describe("this month's report", () => {
   const report = { headline: 'A steadier month', better: ['Even 8ths'], next: ['The kick'], note: 'Keep it short and daily.' };
+  it('turns a kept take into a chart of your own hits at its tempo (web YouVsYou hear)', () => {
+    const take = { beatMs: 500, beats: 8, beatsPerBar: 4, timeSignature: [4, 4], hits: [[0, 'kick', 100], [500, 'snare', 120], [1000, 'bogus', 90], [750, 'hhClosed', 30], [4100, 'snare', 90]] };
+    const c = keptTakeChart(take, 7, 'You, 3 Oct');
+    expect(c).toMatchObject({ id: 'take-7', title: 'You, 3 Oct', bpm: 120, bars: 2, timeSignature: [4, 4] });
+    expect(c!.notes.map(n => [n.t, n.drum, !!n.accent, !!n.ghost])).toEqual([[0, 'kick', false, false], [1, 'snare', true, false], [1.5, 'hihat', false, true]]);
+    expect(keptTakeChart(null, 7, 'x')).toBeNull();
+    expect(keptTakeChart({ beatMs: -1 }, 7, 'x')).toBeNull();
+  });
+
   it('reads a kept report only for this month', () => {
     expect(keptReport({ month: '2026-10', report }, NOW)).toEqual(report);
     expect(keptReport({ month: '2026-09', report }, NOW)).toBeUndefined();
@@ -187,6 +208,21 @@ describe('stored data', () => {
     store.songs!.add({ originalId: 'abcdefghijk', title: 'Song (Official Video)' });
     expect((await loadStoredData(store)).songs.map(x => x.id)).toEqual(['yt-abcdefghijk']);
     expect((await loadStoredData({ ...store, songs: { list: () => { throw new Error('no table'); } } })).songs).toEqual([]);
+  });
+});
+
+describe('your fills (web ProgressView Coming up)', () => {
+  it('newest first, with the line and a one-bar chart to hear; empty says where they come from', () => {
+    expect(progressModel({ ...base, runs: [] }).fills).toEqual({ rows: [], empty: 'Fills you make up in free bars can be kept after the take. They land here.' });
+    const notes = [{ t: 0, drum: 'snare' as const }, { t: 1, drum: 'tom1' as const }];
+    const fills = [
+      { id: 'a', at: '2026-10-09T18:00:00.000Z', bpm: 80, notes },
+      { id: 'b', at: '2026-10-29T18:00:00.000Z', bpm: 92, timeSignature: [3, 4] as [number, 4], notes: [...notes, { t: 2, drum: 'kick' as const }] },
+    ];
+    const m = progressModel({ ...base, runs: [], fills });
+    expect(m.fills.rows.map(f => f.line)).toEqual(['29 Oct · 3 notes · 92 BPM', '9 Oct · 2 notes · 80 BPM']);
+    expect(m.fills.rows[1].chart).toEqual({ id: 'fill-a', title: 'Your fill', bpm: 80, timeSignature: [4, 4], bars: 1, notes });
+    expect(m.fills.rows[0].chart.timeSignature).toEqual([3, 4]);
   });
 });
 

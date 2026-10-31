@@ -2,8 +2,11 @@
 // report. The first two are worked out on the iPad and always work; the report needs the home server (POST
 // /api/coach/month with the iPad's context, D2), and the iPad keeps it (the `monthReport` setting, as the server did).
 // Ported from the web's src/ui/YouVsYou.tsx.
-import { MonthReportSchema } from '@drum-coach/core/coach/schemas';
+import { MonthReportSchema, RunRecordSchema, type RunTake } from '@drum-coach/core/coach/schemas';
 import { monthly, youVsYou } from '@drum-coach/core/engine/history';
+import { PADS, type PadId } from '@drum-coach/core/engine/kit';
+import { takeChart } from '@drum-coach/core/engine/transcribe';
+import type { PracticeChart } from '../practice/catalog';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { z } from 'zod';
 import type { ApiFailure } from '../../platform/contracts';
@@ -20,6 +23,21 @@ export const monthOf = (now: Date) => dayKey(now).slice(0, 7);
 export function keptReport(saved: unknown, now: Date): MonthReport | undefined {
   const p = KeptSchema.safeParse(saved);
   return p.success && p.data.month === monthOf(now) ? p.data.report : undefined;
+}
+
+/** A run whose hits weren't kept (older takes, or past the take cap). */
+export const NO_TAKE_KEPT = "This take's notes weren't kept, so it can't be played back.";
+
+/**
+ * A kept take as a chart to play back (the web's YouVsYou hear()): only the student's own hits, as drum sounds, at the
+ * take's own tempo. Pads the app doesn't know are dropped.
+ */
+export function keptTakeChart(raw: unknown, runId: number, title: string): PracticeChart | null {
+  const p = RunRecordSchema.shape.take.safeParse(raw);
+  const t: RunTake | undefined = p.success ? p.data : undefined;
+  if (!t) return null;
+  const hits = t.hits.filter(([, pad]) => (PADS as readonly string[]).includes(pad)).map(([time, pad, velocity]) => ({ time, pad: pad as PadId, velocity }));
+  return { id: `take-${runId}`, ...takeChart(hits, { zero: 0, beatMs: t.beatMs, beats: t.beats, beatsPerBar: t.beatsPerBar, title, timeSignature: t.timeSignature }) };
 }
 
 /** You vs you and the month-by-month table, from the runs (offline). */

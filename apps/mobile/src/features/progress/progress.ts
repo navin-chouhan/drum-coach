@@ -10,6 +10,8 @@ import { badgeProgress, barsReady, dashboard, isoWeek, landedByDay, progressLine
 import { skillGroups } from '@drum-coach/core/engine/skills';
 import { cleanSongTitle } from '@drum-coach/core/engine/youtube';
 import type { YtSong } from '@drum-coach/core/youtube/schemas';
+import type { Settings } from '@drum-coach/core/input/settings';
+import type { PracticeChart } from '../practice/catalog';
 import { songBarCount, songVerified, type ConcertSong } from '../songs/songsModel';
 import { ago, dayKey, dayName, daysBetween, minutesWords, noonOf, plural, shortDate, thousands } from './dates';
 
@@ -25,6 +27,8 @@ export type ProgressInput = {
   plan?: { week?: string; focus?: string };
   /** The saved YouTube songs (SongsRepo.list()), for the show-off set and the show-off trophy. */
   songs?: YtSong[];
+  /** Settings.fills: the fills kept from free bars (last 20), oldest first. */
+  fills?: Settings['fills'];
   now?: Date;
 };
 
@@ -144,7 +148,15 @@ export function progressModel(input: ProgressInput) {
     empty: 'Pass a stage, then play 16 bars or more of its song with every bar at 85% or better. It lands here, ready to play for a friend.',
   };
 
-  return { empty: runs.length === 0, since, better, week, skills, trophies, showoff, time, lessons: lessonRows, exercises };
+  // Your fills (the web's Coming up): newest first, each with 🎧 Hear it
+  const fills = {
+    rows: [...(input.fills ?? [])].reverse().map(f => ({
+      id: f.id, line: `${shortDate(f.at.slice(0, 10))} · ${f.notes.length} notes · ${f.bpm} BPM`, chart: fillChart(f),
+    })),
+    empty: 'Fills you make up in free bars can be kept after the take. They land here.',
+  };
+
+  return { empty: runs.length === 0, since, better, week, skills, trophies, showoff, fills, time, lessons: lessonRows, exercises };
 }
 export type ProgressModel = ReturnType<typeof progressModel>;
 
@@ -170,6 +182,11 @@ export function practiseTarget(chartId: string, best90Bpm?: number | null): Prac
   if (chartId.startsWith('lesson/')) return { kind: 'lesson', lessonId: lessonIdOf(chartId) };
   return { kind: 'practice', chartId, ...(best90Bpm ? { bpm: best90Bpm + 5 } : {}) };
 }
+
+type Fill = NonNullable<Settings['fills']>[number];
+/** A kept fill as a one-bar chart (the web's hearFill: played twice with a bar of count-in; older fills are 4/4). */
+export const fillChart = (f: Fill): PracticeChart =>
+  ({ id: `fill-${f.id}`, title: 'Your fill', bpm: f.bpm, timeSignature: f.timeSignature ?? [4, 4], bars: 1, notes: f.notes });
 
 /** One star string for 1–3 stars: "★★☆". */
 export const starString = (n: number) => `${'★'.repeat(n)}${'☆'.repeat(Math.max(0, 3 - n))}`;

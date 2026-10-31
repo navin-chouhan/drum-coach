@@ -189,7 +189,7 @@ function Empty({ liveCoach }: { liveCoach: boolean }) {
     <SpeechBubble>
       {liveCoach
         ? 'After each take I listen back and tell you one thing, with the next step. Ask me anything here, between takes or while you play.'
-        : '“The coach follows my practice” is off in Setup → Coach. Turn it on and I react to your takes.'}
+        : '“The coach follows my practice” is off in Setup → Coach and voice. Turn it on and I react to your takes.'}
     </SpeechBubble>
   );
 }

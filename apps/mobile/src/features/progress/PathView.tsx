@@ -1,11 +1,16 @@
-// Your path: every stage with its challenges and lessons (the web's "Full path"). Tapping a lesson opens it.
+// Your path: every stage with its challenges and lessons (the web's "Full path"). Tapping a lesson opens it. Under it,
+// the web's actions: rebuild today's mix, find my level, goals (change: Setup → Coach and voice), reset all progress.
 import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Lesson, LessonProgress, Profile } from '@drum-coach/core/engine/lesson';
-import { Body, Card, CardTitle, Display, MAX_FONT_SCALE, color, slopFor, stroke } from '../../ui';
+import { getStorage } from '../../platform/storage';
+import { Body, Button, Card, CardTitle, Display, MAX_FONT_SCALE, color, slopFor, stroke, useAppSettings, writeSettings } from '../../ui';
 import { lessonHref } from '../lesson/route';
-import { PATH_NOTE, pathModel, type PathChip } from './path';
+import {
+  FIND_LEVEL_LABEL, PATH_NOTE, REBUILD_CONFIRM, REBUILD_LABEL, RESET_CONFIRM, RESET_LABEL, goalsLabel, pathModel, rebuildNeedsConfirm, rebuildTodayPatch,
+  resetAllLessonsPatch, type PathChip,
+} from './path';
 
 export function PathView({ lessons, progress, profile }: { lessons: Lesson[]; progress: Record<string, LessonProgress>; profile: Profile }) {
   const stages = useMemo(() => pathModel(lessons, progress, profile), [lessons, progress, profile]);
@@ -29,8 +34,30 @@ export function PathView({ lessons, progress, profile }: { lessons: Lesson[]; pr
           </View>
         ))}
         <Body size={13} color={color.muted} style={styles.note}>{PATH_NOTE}</Body>
+        <PathActions />
       </ScrollView>
     </Card>
+  );
+}
+
+function PathActions() {
+  const s = useAppSettings();
+  const save = (p: Parameters<typeof writeSettings>[1]) => writeSettings(getStorage().kv, p);
+  const rebuild = () => {
+    if (!rebuildNeedsConfirm(s)) { save(rebuildTodayPatch()); return; }
+    Alert.alert(REBUILD_LABEL, REBUILD_CONFIRM, [{ text: 'Cancel', style: 'cancel' }, { text: 'Rebuild', onPress: () => save(rebuildTodayPatch()) }]);
+  };
+  const reset = () => Alert.alert(RESET_LABEL, RESET_CONFIRM, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Reset', style: 'destructive', onPress: () => save(resetAllLessonsPatch(s.profile)) },
+  ]);
+  return (
+    <View style={styles.actions}>
+      <Button size="small" tone="plain" label={REBUILD_LABEL} onPress={rebuild} testID="path-rebuild" />
+      <Button size="small" tone="plain" label={FIND_LEVEL_LABEL} onPress={() => router.push('/lesson/placement' as never)} testID="path-find-level" />
+      <Button size="small" tone="plain" label={goalsLabel(s.profile)} onPress={() => router.push('/setup?tool=coach' as never)} testID="path-goals" />
+      <Button size="small" tone="red" label={RESET_LABEL} onPress={reset} testID="path-reset" />
+    </View>
   );
 }
 
@@ -60,4 +87,5 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13.5, fontWeight: '700', color: color.ink },
   stars: { color: color.star },
   note: { marginTop: 10 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12, marginBottom: 6 },
 });
