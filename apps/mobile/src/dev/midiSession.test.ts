@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MidiInputInfo, NativeMidiPacket } from '../platform/contracts';
 import { createMidiPortFrom, type DrumMidiApi, type PacketBatch } from '../platform/midiCore';
-import { createMidiDebugSession, LOG_SIZE } from './midiSession';
+import { createMidiDebugSession, LOG_SIZE, REPLAY_CAP, type MidiReplay } from './midiSession';
 
 function fake(available = true) {
   let now = 10_000;
@@ -58,6 +58,29 @@ describe('createMidiDebugSession', () => {
     expect(s.snapshot().counters.batches).toBe(0);
     s.stop();
     expect(f.subscribed()).toBe(false);
+  });
+
+  it("the report's replay keeps every kit hit since Reset (host times, capped), for compare.mjs (QA m9)", () => {
+    const f = fake();
+    const s = createMidiDebugSession(createMidiPortFrom(f.api));
+    f.send([hit(10_100, 38, 100)]);
+    f.send([hit(10_110, 38, 30)]); // a bounce: filtered, not a hit
+    s.tapPad('kick'); // on-screen: in the log, not in the replay
+    f.send([hit(10_300.25, 42, 67)]);
+    const r = s.report().replay as MidiReplay;
+    expect(r).toEqual({
+      timeBase: 'host', dropped: 0,
+      hits: [{ time: 10_100, pad: 'snare', note: 38, velocity: 100 }, { time: 10_300.25, pad: 'hhClosed', note: 42, velocity: 67 }],
+      counters: { noteOn: 3, clock: 0, activeSensing: 0, hits: 2, filtered: 1 },
+    });
+    expect('replay' in s.snapshot()).toBe(false); // the screen's timer doesn't copy it
+    for (let i = 0; i < REPLAY_CAP + 7; i++) f.send([hit(20_000 + i * 200, 36, 90)]);
+    const big = s.report().replay as MidiReplay;
+    expect(big.hits).toHaveLength(REPLAY_CAP);
+    expect(big.dropped).toBe(9);
+    expect(big.hits.at(-1)?.time).toBe(20_000 + (REPLAY_CAP + 6) * 200);
+    s.reset();
+    expect(s.report().replay).toMatchObject({ hits: [], dropped: 0, counters: { hits: 0, noteOn: 0 } });
   });
 
   it('a throwing native call does not break the snapshot', () => {

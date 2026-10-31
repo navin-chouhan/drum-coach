@@ -11,6 +11,7 @@ import type { DrumId, PadId } from './chartLike';
 import { resultKind, type PlayResult, type Subscribe } from './events';
 import { KitParts, useKitHandles } from './KitParts';
 import { edgeDistance, fitLayout, hitTest, partForPad, toLayout, TOUCH_KIT, type KitLayout } from './kitLayout';
+import { withoutKitSound } from './kitSounds';
 import { IPAD_THEME, type PlayTheme } from './theme';
 import { padForPart, padSound, strokeTime, touchVelocity, velocityGain, type HiHatMode, type VelocityMode } from './touch';
 
@@ -70,7 +71,7 @@ export function TouchPads(props: TouchPadsProps) {
       const velocity = touchVelocity(c.velocity ?? 'auto', { force: t.force, edge: edgeDistance(part, x, y), fixed: c.fixedVelocity });
       const time = (c.touchTime ?? 'event') === 'event' ? strokeTime(t.timestamp, clockNow) : clockNow;
       playNow?.(padSound(pad), velocityGain(velocity)); // sound first: it's what the player waits for
-      emitPad(pad, velocity, time);
+      withoutKitSound(() => emitPad(pad, velocity, time)); // sounded just above: not again by the app's kit sounds
       const h = handles.current.get(partForPad(layout, pad));
       h?.hit(velocity, pad);
       h?.touch(x, y);

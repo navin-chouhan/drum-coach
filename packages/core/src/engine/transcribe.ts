@@ -68,3 +68,12 @@ export function gridScore(written: { t: number; drum: ChartNote['drum'] }[], ans
   const right = [...got].filter(k => want.has(k)).length, extra = got.size - right, missed = want.size - right;
   return { right, extra, missed, pct: want.size ? Math.round((right / (want.size + extra)) * 100) : 0 };
 }
+
+/** The note grids' drum rows, top to bottom (the song grid editor, the transcription step). */
+export const GRID_ROWS: ChartDrum[] = ['crash', 'ride', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'snare', 'kick'];
+/** The rows' short names. */
+export const GRID_ROW_NAME: Record<ChartDrum, string> = { crash: 'Crash', ride: 'Ride', hihat: 'Hi-hat', hhOpen: 'HH open', hhPedal: 'HH foot', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor', snare: 'Snare', kick: 'Kick' };
+/** A transcription passes at this many % (gridScore pct). */
+export const TRANSCRIBE_PASS = 80;
+/** Steps per beat for writing a chart on a grid: 8ths, 16ths or triplets, whichever fits every note (else 16ths). */
+export const gridStepsOf = (c: Pick<Chart, 'notes'>) => [2, 4, 3].find(k => c.notes.every(n => Math.abs(n.t * k - Math.round(n.t * k)) < 1e-6)) ?? 4;

@@ -8,3 +8,4 @@ export * from './src/policy';
 export { EventQueue, type InsertResult, type Queued } from './src/eventQueue';
 export { busOfSound, packEvents, PAD_ORDER, SOUND_INDEX, soundIndex, unpackEvents, wordKey, type PackedEvent } from './src/packing';
 export { matchOnsets, summarizeTiming, type TimingSummary } from './src/timingProbe';
+export * from './src/backing';

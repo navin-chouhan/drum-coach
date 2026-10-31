@@ -7,6 +7,11 @@ import type { z } from 'zod';
 import type { SqlDb } from './sql';
 
 export type { RunRow };
+/**
+ * A run as the iPad lists it: the server's row plus `interrupted` (D6: a call or the app going to the background ended
+ * the take at its last whole bar; it is kept, flagged, and never counts for Climb or the ladder). The web has no such takes.
+ */
+export type DeviceRunRow = RunRow & { interrupted?: true };
 /** What a finished take saves (the core's RunRecordSchema: the web's POST /api/runs body). */
 export const RunInputSchema = RunRecordSchema;
 export const RunTakeSchema = RunRecordSchema.shape.take.unwrap();
@@ -25,13 +30,14 @@ const ROWS_SQL = (since: boolean) => `
   SELECT * FROM (SELECT id, EXISTS(SELECT 1 FROM run_hits h WHERE h.run_id = runs.id) AS hasTake, chart_id AS chartId, chart_title AS chartTitle, level, started_at AS startedAt, duration_s AS durationS,
     bpm, speed, accuracy, mean_offset AS meanOffset, spread, json_extract(summary_json, '$.notes') AS notes,
     json_extract(summary_json, '$.section.fromBar') AS fromBar, json_extract(summary_json, '$.section.toBar') AS toBar, json_extract(summary_json, '$.tipIds') AS tips,
-    json_extract(summary_json, '$.perDrum') AS perDrum, json_extract(summary_json, '$.lesson.tool') AS tool, json_extract(summary_json, '$.lesson.bite') AS bite
+    json_extract(summary_json, '$.perDrum') AS perDrum, json_extract(summary_json, '$.lesson.tool') AS tool, json_extract(summary_json, '$.lesson.bite') AS bite,
+    json_extract(summary_json, '$.interrupted') AS interrupted
     FROM runs${since ? ' WHERE started_at >= ?' : ''} ORDER BY started_at DESC LIMIT ?) ORDER BY startedAt`;
 
 /** The SQL row the query above returns (json_extract gives JSON text for objects and arrays, null when absent). */
 export type RunSqlRow = Omit<RunRow, 'hasTake' | 'level' | 'notes' | 'fromBar' | 'toBar' | 'tips' | 'perDrum' | 'bite' | 'tool'> & {
   hasTake: number; level: number | null; notes: number | null; fromBar: number | null; toBar: number | null;
-  tips: string | null; perDrum: string | null; bite: string | null; tool: string | null;
+  tips: string | null; perDrum: string | null; bite: string | null; tool: string | null; interrupted?: number | null;
 };
 
 const json = <T>(text: string | null): T | undefined => {
@@ -40,9 +46,9 @@ const json = <T>(text: string | null): T | undefined => {
 };
 
 /** The server's runRows mapping: SQL nulls become absent fields, JSON columns are parsed. */
-export function runRowOf(r: RunSqlRow): RunRow {
+export function runRowOf({ interrupted, ...r }: RunSqlRow): DeviceRunRow {
   return {
-    ...r, hasTake: !!r.hasTake, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined,
+    ...r, ...(interrupted ? { interrupted: true as const } : {}), hasTake: !!r.hasTake, level: r.level ?? undefined, notes: r.notes ?? undefined, fromBar: r.fromBar ?? undefined,
     toBar: r.toBar ?? undefined, tips: json<string[]>(r.tips), perDrum: json<RunRow['perDrum']>(r.perDrum), tool: r.tool ?? undefined,
     bite: json<RunRow['bite']>(r.bite),
   };

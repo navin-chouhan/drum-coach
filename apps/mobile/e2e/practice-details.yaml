@@ -1,0 +1,67 @@
+# Practice without a kit: the picked exercise → its play screen → (intro slides) → a take on the touch pads →
+# "Your take" → 📊 Details and history (accuracy, timing, dynamics, Play again / Back).
+# The touch-pad taps are optional estimated points: a take with no hits still finishes and shows its card.
+# testIDs: src/features/practice/PracticeScreen.tsx, PlayScreen.tsx, src/features/results/ResultsDetails.tsx.
+appId: com.drumcoach.app
+name: Practice take and its details
+tags:
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+- tapOn:
+    id: nav-practice
+- extendedWaitUntil:
+    visible:
+      id: screen-practice
+    timeout: 10000
+- tapOn:
+    id: practice-play
+- extendedWaitUntil:
+    visible:
+      id: practice-main
+    timeout: 10000
+- assertVisible:
+    id: practice-touch-pads
+- takeScreenshot: practice-ready
+- tapOn:
+    id: practice-main
+- runFlow: subflows/through-intro.yaml
+- extendedWaitUntil:
+    visible:
+      id: practice-stop
+    timeout: 10000
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          point: "65%,90%"
+          optional: true
+          retryTapIfNoChange: false
+- extendedWaitUntil:
+    visible:
+      id: practice-your-take
+    timeout: 120000
+- takeScreenshot: practice-your-take
+- tapOn:
+    id: practice-details-open
+- extendedWaitUntil:
+    visible:
+      id: practice-details
+    timeout: 5000
+- assertVisible:
+    id: practice-details-accuracy
+- assertVisible:
+    id: practice-details-again
+- takeScreenshot: practice-details
+- tapOn:
+    id: practice-details-back
+- extendedWaitUntil:
+    visible:
+      id: practice-your-take
+    timeout: 5000
+- tapOn:
+    id: practice-play-back
+- extendedWaitUntil:
+    visible:
+      id: screen-practice
+    timeout: 10000

@@ -1,16 +1,19 @@
 import { MILESTONES } from '../content/curriculum';
-import { dayKey, startProgress, type Lesson, type LessonProgress } from '../engine/lesson';
+import { dayKey, type Lesson, type LessonProgress } from '../engine/lesson';
 import { buildSession } from '../engine/planner';
-import { getSettings, setSettings, type Session } from '../input/settings';
+import { progressIn, resetLessonIn, saveProgressIn } from '../../packages/core/src/input/lessonState.ts';
+import { getSettings, setSettings, type Session, type Settings } from '../input/settings';
 import { allLessons } from './aiLessons';
 import { thisWeeksPlan } from '../coach/weekPlan';
 import { soreActive } from '../engine/health';
 import { skillMap } from '../engine/skills';
 
 // Lesson state lives in the app settings (localStorage + SQLite). History of runs is separate and never reset here.
+// progressOf / saveProgress / resetLesson are core's (input/lessonState.ts), shared with the iPad.
+const store = { get: getSettings, set: (patch: Partial<Settings>) => setSettings(patch) };
 export const today = () => dayKey(new Date());
-export const progressOf = (l: Lesson): LessonProgress => getSettings().lessons[l.id] ?? startProgress(l);
-export const saveProgress = (id: string, p: LessonProgress) => setSettings({ lessons: { ...getSettings().lessons, [id]: p } });
+export const progressOf = (l: Lesson): LessonProgress => progressIn(store, l);
+export const saveProgress = (id: string, p: LessonProgress) => saveProgressIn(store, id, p);
 
 /** Today's stored session, or a fresh proposal (not saved until started). */
 export function currentSession(): Session {
@@ -25,10 +28,6 @@ export function markDone(idx: number) {
 }
 
 // Resets
-export function resetLesson(id: string) {
-  const lessons = { ...getSettings().lessons };
-  delete lessons[id];
-  setSettings({ lessons });
-}
+export const resetLesson = (id: string) => resetLessonIn(store, id);
 export const rebuildToday = () => setSettings({ session: undefined });
 export const resetAllLessons = () => setSettings({ lessons: {}, session: undefined, profile: { ...getSettings().profile, onboarded: false } });

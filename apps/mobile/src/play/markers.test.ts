@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { moneyBeat } from './dev/fixture';
 import { highwayLayout, LEFTWARD_DEFAULTS } from './geometry';
 import { addMarker, markerFor } from './markers';
+import { resultOnNight } from '../ui/tokens';
 import { IPAD_THEME } from './theme';
 
 describe('markers', () => {
@@ -11,11 +12,11 @@ describe('markers', () => {
 
   it('draws a late kick as an orange rounded square with its offset', () => {
     const m = markerFor({ kind: 'judged', index: 1, lane: 'kick', judgement: 'good', offsetMs: 48, at: 1048 }, ctx, 0)!;
-    expect(m).toMatchObject({ kind: 'late', fill: '#FF9500', glyph: '›', caption: '+48 ms', width: layout.noteSize * 1.3, main: 0 });
+    expect(m).toMatchObject({ kind: 'late', fill: resultOnNight.late, glyph: '›', caption: '+48 ms', width: layout.noteSize * 1.3, main: 0 });
   });
   it('covers a missed note with a dashed red outline and a red ✕', () => {
     const m = markerFor({ kind: 'judged', index: 4, lane: 'snare', judgement: 'miss', at: 1600 }, ctx, 0)!;
-    expect(m).toMatchObject({ kind: 'missed', dashed: true, border: '#FF3B30', fill: IPAD_THEME.background, glyphColor: '#FF3B30', main: 124 });
+    expect(m).toMatchObject({ kind: 'missed', dashed: true, border: resultOnNight.missed, fill: IPAD_THEME.background, glyphColor: resultOnNight.missed, main: 124 });
   });
   it('places an extra stroke where it was played, latency removed', () => {
     const m = markerFor({ kind: 'extra', lane: 'snare', at: 1000 + 20 + 250 }, ctx, 7)!;

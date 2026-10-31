@@ -1,4 +1,3 @@
-import { beatsPerBar } from '../engine/chart';
 import { useEffect, useState } from 'react';
 import type { Grid, YtResult, YtSong } from './schemas';
 
@@ -47,7 +46,6 @@ export function useYtSongs(): [YtSong[], string] {
   return [songs, error];
 }
 
-/** How many bars a saved song's notes span (0 without notes). */
-/** A show-off song needs its part checked by ear (N4): the app can't tell whether a part matches the record. */
-export const songVerified = (s: YtSong) => !!s.verifiedAt;
-export const songBarCount = (s: YtSong) => (s.notes.length ? Math.floor(s.notes[s.notes.length - 1].t / beatsPerBar(s)) + 1 : 0);
+// songVerified (a show-off song needs its part checked by ear, N4) and songBarCount (how many bars a saved song's
+// notes span): @drum-coach/core, shared with the iPad.
+export { songBarCount, songVerified } from '../../packages/core/src/youtube/song.ts';

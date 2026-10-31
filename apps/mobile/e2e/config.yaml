@@ -1,0 +1,7 @@
+# Maestro workspace config for `maestro test apps/mobile/e2e`: every top-level flow, except the debug-only ones
+# (tag `debug`: they tap the sidebar's Dev row, which only debug builds draw). Run those with
+# `maestro test --include-tags debug apps/mobile/e2e`.
+flows:
+  - "*"
+excludeTags:
+  - debug

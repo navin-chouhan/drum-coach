@@ -1,0 +1,86 @@
+# Cloud iOS build of the iPad app: expo prebuild + xcodebuild for the iOS Simulator (unsigned), plus the native modules'
+# Swift unit tests, so compile errors in apps/mobile (modules/*/ios, the generated Expo project) show up here and not
+# on the owner's Mac. The steps are in apps/mobile/scripts/ci-ios-build.sh (it runs on a Mac too).
+# macOS minutes cost 10x Linux ones on private repos: manual runs, and pull requests that change apps/mobile only.
+name: iOS
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+  workflow_dispatch:
+
+permissions: {}
+
+# A build takes 20-35 min and pushes come often: let a running build finish (its result still tells us whether the
+# Swift compiles), and keep only the newest push waiting behind it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: iOS Simulator build and Swift tests (Xcode 27.1)
+    # GitHub's Xcode 27 image (arm64, macOS 27). Its Xcode 27.1 is 27A9275, the build the owner's Mac used for Gate 0
+    # (docs/mobile/GATE0.md §9). Installed versions: images/macos/xcode-27-arm64-Readme.md in actions/runner-images.
+    runs-on: xcode-27
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      XCODE_VERSION: '27.1'
+      EXPO_NO_TELEMETRY: 1 # the script writes its logs to $RUNNER_TEMP/ios-logs (uploaded below on failure)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode (fails if the image doesn't have this version)
+        id: xcode
+        run: scripts/ci-ios-build.sh select-xcode
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm # npm's tarball cache only; npm ci still checks every tarball against the lockfile's sha512
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile/package-lock.json
+      - name: Install the root (lockfile only, no install scripts)
+        working-directory: .
+        run: npm ci
+      - name: Install apps/mobile (lockfile only, no install scripts)
+        run: npm ci
+      # CocoaPods' download cache and React Native's prebuilt-core tarballs (both checked by checksum when reused).
+      # Keyed on apps/mobile's lockfile: Podfile.lock doesn't exist yet (ios/ is generated in the next step, and
+      # --clean deletes ios/Pods). DerivedData isn't cached: npm ci gives every node_modules source a new mtime, so
+      # Xcode would rebuild everything anyway.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/Library/Caches/ReactNative
+          key: ios-pods-${{ runner.os }}-${{ hashFiles('apps/mobile/package-lock.json') }}
+          restore-keys: ios-pods-${{ runner.os }}-
+      - name: expo prebuild --platform ios --clean (and pod install)
+        id: prebuild
+        run: scripts/ci-ios-build.sh prebuild
+      - name: xcodebuild DrumCoach (Debug, iOS Simulator, no signing)
+        run: scripts/ci-ios-build.sh build
+      # The next two run even when the app build failed, so one run reports every problem.
+      - name: Swift unit tests (swift test, SwiftPM packages under modules/*/ios)
+        if: ${{ !cancelled() && steps.xcode.outcome == 'success' }}
+        run: scripts/ci-ios-build.sh swift-tests
+      - name: Swift unit tests (podspec test_specs, iPad simulator)
+        if: ${{ !cancelled() && steps.prebuild.outcome == 'success' }}
+        run: scripts/ci-ios-build.sh pod-tests
+      - name: Upload the build logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-logs
+          path: ${{ runner.temp }}/ios-logs
+          retention-days: 14
+          if-no-files-found: ignore

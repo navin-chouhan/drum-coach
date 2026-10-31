@@ -36,6 +36,15 @@ describe('runs repo', () => {
     });
   });
 
+  it('flags an interrupted take (D6), and only that one', async () => {
+    const { runs } = setup();
+    const r = runInput(1);
+    await runs.add({ ...r, summary: { ...r.summary, interrupted: true } });
+    await runs.add(runInput(2));
+    const rows = await runs.list();
+    expect(rows.map(x => 'interrupted' in x ? x.interrupted : 'absent')).toEqual([true, 'absent']);
+  });
+
   it('maps absent summary fields to undefined, like the server', async () => {
     const { runs } = setup();
     await runs.add({ ...runInput(1), level: undefined, summary: {} });
