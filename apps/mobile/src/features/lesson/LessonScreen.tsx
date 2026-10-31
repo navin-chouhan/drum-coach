@@ -29,7 +29,7 @@ import { IntroSlides } from './IntroSlides';
 import { Transcribe } from './Transcribe';
 import { idleChart, replayResults, runChart, takenChart } from './runChart';
 import { shareTake } from './shareTake';
-import { sheetScaleFor } from './sheetFit';
+import { sheetScaleFor } from '../../player/sheetFit';
 import type { CoreTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
 

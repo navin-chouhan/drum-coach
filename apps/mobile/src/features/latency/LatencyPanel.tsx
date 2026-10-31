@@ -4,13 +4,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { audio } from '../../platform/audio';
+import { speakAt } from '../../play/spokenFallback';
+import { sayNow } from '../coach/voice';
 import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getStorage } from '../../platform/storage';
 import { BigMove, Body, Button, Card, Display, Pill, StatTile, color, drumColor, font, getAppHitBus, hardShadow, stroke, useAppSettings, writeSettings } from '../../ui';
 import { busLevels } from '../setup/sound';
 import { clearRouteLatency, routeLabel, saveRouteLatency } from './latencyByRoute';
 import {
-  CLICKS, COUNT_IN, COUNT_WORDS, TAP_INTRO, addTap, outputNote, planTapTest, startTapTest, tapEstimate, tapReadout, tapTestOver, trustworthy,
+  CLICKS, COUNT_IN, COUNT_WORDS, TAP_INTRO, countInWords, addTap, outputNote, planTapTest, startTapTest, tapEstimate, tapReadout, tapTestOver, trustworthy,
   verdictText, type Estimate, type TapTest,
 } from './tapTest';
 import type { AudioRoute } from '@drum-coach/core/play/audioPort';
@@ -35,10 +37,10 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
   async function start() {
     stop.current();
     setPhase({ kind: 'starting' });
-    let r: AudioRoute;
+    let r: AudioRoute, missing: string[] = [];
     try {
       r = await audio.start();
-      await audio.prepareWords(COUNT_WORDS);
+      missing = (await audio.prepareWords(COUNT_WORDS)).missing;
     } catch {
       setPhase({ kind: 'error', text: 'Sound is off in this build: the tap test needs the Drum Coach app on the iPad (not Expo Go or the simulator).' });
       return;
@@ -47,6 +49,8 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
     audio.setLevels(busLevels(settings));
     const plan = planTapTest(audio.clock.now(), r);
     audio.schedule(plan.events);
+    // "1, 2, 3, 4" said live when the engine couldn't render the words (play/spokenFallback.ts)
+    const unsay = speakAt(countInWords(plan, missing), audio.clock.now(), w => sayNow(w), { setTimer: (fn, ms) => setTimeout(fn, ms), clearTimer: h => clearTimeout(h as ReturnType<typeof setTimeout>) });
     let t = startTapTest(plan);
     setTest(t);
     setPhase({ kind: 'running' });
@@ -55,7 +59,7 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
       setNow(audio.clock.now());
       if (tapTestOver(t, audio.clock.now())) { cleanup(); setPhase({ kind: 'done', estimate: tapEstimate(t) }); }
     }, 100);
-    function cleanup() { off(); clearInterval(timer); stop.current = () => {}; }
+    function cleanup() { off(); clearInterval(timer); unsay(); stop.current = () => {}; }
     stop.current = () => { cleanup(); audio.cancel(); };
   }
 

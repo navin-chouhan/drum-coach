@@ -1,6 +1,6 @@
 // The sheet's zoom for the paper it has: NotationView's iPad zoom (1.6) needs about 300 pt for one line with the count
 // and hand rows under it; a shorter paper zooms down (not below 1.1, NotationView's narrow zoom) so nothing is clipped.
-// Used by the lesson player and the placement test (both measure the paper with onLayout). Pure.
+// Used by the shared player's screens (lesson, placement, Practice, Songs) (both measure the paper with onLayout). Pure.
 
 /** The paper height (pt) one line of the sheet needs at NotationView's 1.6 zoom. */
 export const SHEET_H_AT_1_6 = 300;
