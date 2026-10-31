@@ -138,5 +138,5 @@ const styles = StyleSheet.create({
   moves: { flexDirection: 'row', gap: 14, alignSelf: 'stretch' },
   flex: { flex: 1 },
   gest: { flexDirection: 'row', gap: 6 },
-  setCard: { width: 360, gap: 12 },
+  setCard: { width: 432, gap: 12 }, // the 7 meters in one row (2/4 … 12/8)
 });

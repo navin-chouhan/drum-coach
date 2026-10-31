@@ -67,20 +67,7 @@
   "lesson": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "lesson-more-button \"⋯\"",
-      "text \"⋯\"",
-      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
-      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
-      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
-      "text \"2 clean takes in a row\"",
-      "text \"Clean = 39 of 48 notes land.\"",
-      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
-      "text \"Touch pads (no kit connected): tap to play\"",
-      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
-      "text \"Crash\"",
-      "text \"Hi-hat\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "songs": {
@@ -149,17 +136,7 @@
     "scrollH": 834,
     "spill": [
       "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\""
+      "text \"Turning the drums down and suggesting notes from t\""
     ],
     "errors": 0
   },
@@ -208,9 +185,7 @@
   "metronome": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "metronome-meter \"2/43/44/45/46/87/812/8\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "technique": {
@@ -228,20 +203,7 @@
   "flow": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "lesson-music \"Your bar · Build it up11R+K&2R+L&3R+K\"",
-      "lesson-sheet \"11R+K&2R+L&3R+K&4R+L&\"",
-      "lesson-goal \"Just play. Nothing to pass.\"",
-      "text \"Just play.\"",
-      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
-      "text \"Touch pads (no kit connected): tap to play\"",
-      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
-      "text \"Crash\"",
-      "text \"Hi-hat\"",
-      "text \"Tom 1\"",
-      "text \"Tom 2\"",
-      "text \"Ride\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "placement": {
@@ -282,77 +244,25 @@
   "lesson-intro-1": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "lesson-more-button \"⋯\"",
-      "text \"⋯\"",
-      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
-      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
-      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
-      "text \"2 clean takes in a row\"",
-      "text \"Clean = 39 of 48 notes land.\"",
-      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
-      "text \"Touch pads (no kit connected): tap to play\"",
-      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
-      "text \"Crash\"",
-      "text \"Hi-hat\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "lesson-intro-2": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "lesson-more-button \"⋯\"",
-      "text \"⋯\"",
-      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
-      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
-      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
-      "text \"2 clean takes in a row\"",
-      "text \"Clean = 39 of 48 notes land.\"",
-      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
-      "text \"Touch pads (no kit connected): tap to play\"",
-      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
-      "text \"Crash\"",
-      "text \"Hi-hat\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "lesson-intro-3": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "lesson-more-button \"⋯\"",
-      "text \"⋯\"",
-      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
-      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
-      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
-      "text \"2 clean takes in a row\"",
-      "text \"Clean = 39 of 48 notes land.\"",
-      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
-      "text \"Touch pads (no kit connected): tap to play\"",
-      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
-      "text \"Crash\"",
-      "text \"Hi-hat\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "lesson-intro-4": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "lesson-more-button \"⋯\"",
-      "text \"⋯\"",
-      "lesson-music \"Your bar · + snare11R+K&R2R+L&R3R\"",
-      "lesson-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
-      "lesson-goal \"2 clean takes in a row and the tempo goes up to 75\"",
-      "text \"2 clean takes in a row\"",
-      "text \"Clean = 39 of 48 notes land.\"",
-      "lesson-kit \"Touch pads (no kit connected): tap to playCrashHi-\"",
-      "text \"Touch pads (no kit connected): tap to play\"",
-      "lesson-touch-pads \"CrashHi-hatTom 1Tom 2RideSnareFloor tomKickHi-hat \"",
-      "text \"Crash\"",
-      "text \"Hi-hat\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "lesson-celebration": {
@@ -368,15 +278,15 @@
       "practice-details \"The money beat · + snare90 BPM (100%) · bars 1–1 ×\"",
       "practice-details-replay \"Your take on the sheet: every note marked, extra h\"",
       "practice-details-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
       "text \"\"",
       "text \"\"",
       "text \"\"",
-      "text \"\""
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"\"",
+      "text \"● on it  ● early / late  ◌ missed  ✕ extra\""
     ],
     "errors": 0
   }
