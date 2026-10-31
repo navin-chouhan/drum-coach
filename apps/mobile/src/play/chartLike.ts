@@ -28,7 +28,5 @@ export function laneOf(drum: ChartDrum): DrumId {
   return drum === 'hhOpen' || drum === 'hhPedal' ? 'hihat' : drum;
 }
 
-/** Lane names, as the web kit names its drums (src/ui/drums.ts; chartLike.test.ts pins them). */
-export const DRUM_NAME: Record<DrumId, string> = {
-  kick: 'Kick', snare: 'Snare', hihat: 'Hi-hat', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor tom', crash: 'Crash', ride: 'Ride',
-};
+/** Lane names, as the web kit names its drums (core content/drums.ts, the web's src/ui/drums.ts). */
+export { DRUM_NAME } from '@drum-coach/core/content/drums';

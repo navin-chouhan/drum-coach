@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react';
 import type { ChartDrum, ChartNote } from '../engine/chart';
 import { beatAt, type BeatGrid } from '../engine/tempo';
+import { GRID_ROWS as ROWS, GRID_ROW_NAME as NAMES } from '../engine/transcribe';
 import { DRUM_BY_ID } from '../ui/drums';
 import type { YtPlayer } from './yt';
 
-export const ROWS: ChartDrum[] = ['crash', 'ride', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'snare', 'kick'];
-const NAMES: Record<ChartDrum, string> = { crash: 'Crash', ride: 'Ride', hihat: 'Hi-hat', hhOpen: 'HH open', hhPedal: 'HH foot', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor', snare: 'Snare', kick: 'Kick' };
 const colorOf = (d: ChartDrum) => DRUM_BY_ID[d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d].color;
 
 /** Lanes × steps editor for bars A–B. Filled = your part, rings = last take, dashed squares = suggested by the song audio, line = playhead. Click toggles a note. */

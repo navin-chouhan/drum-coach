@@ -1,18 +1,14 @@
 // Transcription's model (web src/lesson/Transcribe.tsx, N7): hear a groove, write it on a grid (the drums the chart
 // uses × its steps), check it against the chart. 80% passes; after two checks "Show me" fills in the answer. The
-// score is core's gridScore. Pure: Transcribe.tsx draws it.
+// score, the rows, their names, the steps and the pass mark are core's (engine/transcribe.ts), shared with the web.
+// Pure: Transcribe.tsx draws it.
 import { beatsPerBar, type Chart, type ChartDrum } from '@drum-coach/core/engine/chart';
-import { gridScore } from '@drum-coach/core/engine/transcribe';
+import { GRID_ROW_NAME, GRID_ROWS as ROWS, gridScore, gridStepsOf, TRANSCRIBE_PASS } from '@drum-coach/core/engine/transcribe';
 
-export const PASS = 80;
-/** The grid's drum rows, top to bottom (web src/youtube/GridEditor.tsx ROWS). */
-const ROWS: ChartDrum[] = ['crash', 'ride', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'snare', 'kick'];
-export const LANE_NAME: Partial<Record<ChartDrum, string>> = {
-  hihat: 'Hi-hat', hhOpen: 'HH open', hhPedal: 'HH foot', ride: 'Ride', crash: 'Crash', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor', snare: 'Snare', kick: 'Kick',
-};
-
+export const PASS = TRANSCRIBE_PASS;
+export const LANE_NAME = GRID_ROW_NAME;
 /** Steps per beat: 8ths, 16ths or triplets, whichever fits every note. */
-export const stepsOf = (c: Chart) => [2, 4, 3].find(k => c.notes.every(n => Math.abs(n.t * k - Math.round(n.t * k)) < 1e-6)) ?? 4;
+export const stepsOf = gridStepsOf;
 
 export const cellKey = (d: ChartDrum, c: number) => `${d}:${c}`;
 

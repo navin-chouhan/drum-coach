@@ -7,6 +7,7 @@ import { greeting } from '@drum-coach/core/engine/greeting';
 import { dayAdvice, soreActive } from '@drum-coach/core/engine/health';
 import { addDays, dayKey, isProven, recordTarget, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
 import { buildSession, checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
+import { jamLesson } from '@drum-coach/core/engine/flow';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillMap } from '@drum-coach/core/engine/skills';
 import { stageSong } from '@drum-coach/core/engine/stageSong';
@@ -251,7 +252,7 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0] ?? challenges[0];
   const heroItem = hero && hero === fromSet ? firstUndone : -1;
   const afterSet = !!hero && heroItem < 0 && setDone && !swap;
-  const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
+  const jam = jamLesson(visible, milestone?.level); // core engine/flow.ts (the web's TodayView)
 
   let heroView: HeroView | null = null;
   if (hero) {

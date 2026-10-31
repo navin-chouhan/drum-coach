@@ -5,6 +5,7 @@ import { LESSON_BY_ID, MILESTONES } from '../content/curriculum';
 import { greeting } from '../engine/greeting';
 import { isProven, playChart, recordTarget, toolOf, type Genre, type Lesson } from '../engine/lesson';
 import { bandFor } from '../engine/band';
+import { flowLesson as pickFlowLesson, jamLesson } from '../engine/flow';
 import { player, playerVersion, start, stop, subscribePlayer } from '../play/player';
 import { Move } from '../play/AtKit';
 import { onCoachAction } from '../coach/session';
@@ -158,9 +159,8 @@ export function TodayView({ openLessonId, device }: { openLessonId?: string; dev
   const setDone = firstUndone < 0;
   const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0] ?? challenges[0];
   const heroItem = hero && hero === fromSet ? firstUndone : -1;
-  const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
-  // Flow on the newest finished groove (the highest stage, the latest finished), not the first jam forever.
-  const flowLesson = visible.filter(l => done(l.id) && l.kind === 'groove').sort((a, b) => b.level - a.level || s.lessons[b.id].completedAt!.localeCompare(s.lessons[a.id].completedAt!))[0] ?? jam;
+  const jam = jamLesson(visible, milestone?.level);
+  const flowLesson = pickFlowLesson(visible, s.lessons, jam); // the newest finished groove (core engine/flow.ts)
   const askChallenge = () => requestCoachLesson(challengeKey);
   const go = () => (heroItem >= 0 ? openItem(heroItem) : hero ? setOpen({ lessonId: hero.id }) : pathDone ? askChallenge() : jam && setOpen({ lessonId: jam.id }));
   const minutes = heroItem >= 0 ? session.items[heroItem].minutes : Math.round(s.profile.minutesPerDay / 3);

@@ -1,6 +1,5 @@
 // The Songs list and song view, as view models: the web's src/youtube/SongsPage.tsx and SongView.tsx decisions
 // (wording, which mode opens, which versions and modes are on), without React. Pure TypeScript (Vitest-tested).
-import { beatsPerBar } from '@drum-coach/core/engine/chart';
 import { parseYouTubeId } from '@drum-coach/core/engine/youtube';
 import type { YtSong } from '@drum-coach/core/youtube/schemas';
 
@@ -13,9 +12,8 @@ export const MODE_IDS = Object.keys(MODES) as Mode[];
 /** Bars a song is opened at (from the Journey, a bite lesson or a concert). */
 export type SongBars = { from: number; to: number };
 
-/** api.ts songVerified / songBarCount. */
-export const songVerified = (s: YtSong) => !!s.verifiedAt;
-export const songBarCount = (s: YtSong) => (s.notes.length ? Math.floor(s.notes[s.notes.length - 1].t / beatsPerBar(s)) + 1 : 0);
+/** songVerified / songBarCount: core's, shared with the web (its api.ts). */
+export { songBarCount, songVerified } from '@drum-coach/core/youtube/song';
 
 /** "My songs" row: the title and the web's small line (tempo · drumless ✓ · notes transcribed). */
 export function songRow(s: YtSong) {
