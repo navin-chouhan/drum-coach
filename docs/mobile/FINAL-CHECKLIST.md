@@ -84,6 +84,10 @@ Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud buil
 `cd apps/mobile/modules/drum-audio/ios/Core && swift test`.
 - [ ] `swift test`: all pass (paste the summary).
 - [ ] **S1–S5** (smoke) on the hub route instead of the speaker, then S1 once on the speaker (unplug the 3.5 mm).
+- [ ] **Coach voice:** Dev → Audio → **Prepare one…four, and**: the Words row says `ready: …` (if it says `missing: …`,
+      paste it). Then a lesson take with "Count me in out loud" on: you hear "one, two, three, four" with the count-in
+      clicks, iPad speaker and hub route, with Music playing too (it keeps playing). A lesson step passed: the coach says
+      the verdict. Setup → Coach and voice → **Test the voice** is heard. Spoken words: ____ / missing: ____
 - [ ] **D1** clocks agree: `midi − audio` within ±0.01 ms, 5 times.
 - [ ] **D2** IO buffer: ____ ms, then after Music + Suspend: ____ ms.
 - [ ] **D3** 5-minute timing probe: p99 |error| ____ ms (< 0.5), slope ____ ms/5 min (< 1), matched ____, late ____.
@@ -146,6 +150,7 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] **Look step** (Stage 3 "The flam", step 1): the animated How it moves, one move (Done = hi-hat pedal × 3).
       **Listen step** (Stage 2 "Listen: the money beat"): **▶ Find it on YouTube** opens the search, "✓ I listened: next step".
 - [ ] ⋯ More → **🤸 How it moves** opens the full-size demo for this lesson; Esc or ✕ closes it.
+- [ ] **The animation draws (owner saw it blank, fixed by R2):** in all 4 places the arm or foot moves within a second: the look step, the intro's 4th slide, ⋯ → How it moves, and 🥢 Stick technique (try The grip and Kick). If a red "How it moves couldn't draw: …" line shows instead, paste it back.
 - [ ] Hardware keyboard: H hints, B band, Esc stops a take / closes More, the coach panel and the celebration;
       Enter on the celebration is its main button.
 
