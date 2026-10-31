@@ -1,16 +1,17 @@
 # Journey's "Find my level" (the placement test, web PlacementTest): a rung with its sheet and the touch pads, Play it
-# / Stop, then "Start at this stage" back to Journey. testIDs: src/features/journey/JourneyScreen.tsx,
-# src/features/lesson/PlacementScreen.tsx.
+# / Stop, then "Start at this stage" back to Journey. Find my level is in Journey's ⋯ sheet (D10). testIDs:
+# src/features/journey/JourneyScreen.tsx, src/features/journey/more.ts, src/features/lesson/PlacementScreen.tsx.
 appId: com.drumcoach.app
 name: Find my level
 tags:
   - v1
 ---
 - runFlow: subflows/open-app.yaml
-- scrollUntilVisible:
-    element:
+- tapOn:
+    id: journey-more-open
+- extendedWaitUntil:
+    visible:
       id: journey-find-level
-    direction: DOWN
     timeout: 10000
 - tapOn:
     id: journey-find-level
