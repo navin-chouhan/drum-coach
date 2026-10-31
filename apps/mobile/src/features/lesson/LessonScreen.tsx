@@ -1,9 +1,10 @@
-// The lesson player (A7b): full screen, no sidebar. Before → count-in → take → results, as the approved mockups draw
-// them (lesson-ready, lesson-countin, lesson-take-sheet / lesson-take, lesson-results-sheet / lesson-results,
-// lesson-share). The logic is the controller's (src/lesson/LessonPlayer.tsx ported); this file only lays it out.
+// The lesson player on the shared full-screen player (D10, src/player; wireframes docs/mobile/reorg/lesson-*-after.png).
+// Ready: the bar (‹, title + "Step 3 of 4", □□ 2 clean → 75, BPM, ⋯), the coach's line, the music full width, one row
+// of moves. Take: only "Bar 3 / 4", one tip, the BPM, the music, the touch pads when no kit is plugged in, ■ Stop.
+// Results: a big 46/48 with the stars, one fix and its button, "Ask the coach ›". The rest is behind ⋯. The logic is
+// the controller's (src/lesson/LessonPlayer.tsx ported); this file only lays it out.
 import { useEffect, useMemo, useReducer, useState } from 'react';
-import { Alert, Linking, Modal, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Linking, Modal, StyleSheet, View } from 'react-native';
 import { beatsPerBar } from '@drum-coach/core/engine/chart';
 import { audio } from '../../platform/audio';
 import { useAudioEngine } from '../../platform/useAudio';
@@ -13,15 +14,16 @@ import { NotationView } from '../../notation';
 import { KitView, NoteHighway, TouchPads, type PadHit, type Subscribe } from '../../play';
 import type { DrumId } from '../../play/chartLike';
 import {
-  Body, BigMove, Button, Card, CoachLine, Display, DottedGround, Label, Pill, Segmented, Strong, color, gesturesFor, hardShadow, shadow, stroke,
-  StepPills, TempoLadder, TimingLineView, useAppKey, useAppSettings, useKitMoves, getAppHitBus, RoundButton, SheetPager, useSheetPages,
+  KeysLine, PlayToggles, PlayerFrame, PlayerScore, PlayerSheet, SheetSection, barGoal, phaseOf, sheetScaleFor, type PlayerMove,
+} from '../../player';
+import {
+  Body, Button, Card, Display, Label, Pill, Strong, Toggle, color, gesturesFor,
+  StepPills, TimingLineView, useAppKey, useAppSettings, useKitMoves, getAppHitBus, SheetPager, useSheetPages,
 } from '../../ui';
 import { CoachInspector } from '../coach';
 import type { LessonController, MoveView } from './controller';
 import { barCounter, countInAt, flowMeter, liveTip } from './live';
-import {
-  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, MoreSheet, RestCountdown, TakeCardView,
-} from './parts';
+import { CelebrationModal, GoalText, RestCountdown } from './parts';
 import { laneName, youtubeSearch } from './lessonView';
 import { EarQuiz } from './EarQuiz';
 import { HowItMoves } from './HowItMoves';
@@ -29,7 +31,6 @@ import { IntroSlides } from './IntroSlides';
 import { Transcribe } from './Transcribe';
 import { idleChart, replayResults, runChart, takenChart } from './runChart';
 import { shareTake } from './shareTake';
-import { sheetScaleFor } from '../../player/sheetFit';
 import type { CoreTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
 
@@ -45,7 +46,6 @@ function useTicker(on: boolean, ms = 100) {
 
 export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreTakePort }) {
   useAudioEngine(); // the engine runs while this play screen is shown: touch pads sound before the first take (QA2 M2)
-  const insets = useSafeAreaInsets();
   const v = ctl.view();
   const settings = useAppSettings();
   const kit = useKitConnected();
@@ -56,18 +56,18 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const [coachOpen, setCoachOpen] = useState(false);
   const [shareNote, setShareNote] = useState<string>();
   const [bigDemo, setBigDemo] = useState(false); // "How it moves" full size, over the lesson (web bigDemo)
+  const [kitDrawing, setKitDrawing] = useState(false); // D10: no kit drawing while a real kit is plugged in, unless asked in ⋯
   const bus = getAppHitBus();
   const hits: Subscribe<PadHit> = useMemo(() => fn => bus.onHit(h => { if (h.pad) fn({ pad: h.pad, velocity: h.velocity, at: h.time }); }), [bus]);
+  const overlayOpen = more || coachOpen || !!v.celebration || !!v.intro || bigDemo;
 
   // Kit gestures (engine/padCommands.ts): the moves between takes, crash × 4 stops a take.
   useKitMoves({
     yes: () => ctl.padCommand('yes'), slower: () => ctl.padCommand('slower'), faster: () => ctl.padCommand('faster'),
     next: () => ctl.padCommand('next'), listen: () => ctl.padCommand('listen'), stop: () => ctl.padCommand('stop'),
-  }, { playing: v.playing, enabled: !more && !coachOpen && !v.celebration && !v.intro && !bigDemo && !v.resting?.quiz }); // slides and quizzes take the kit's taps
-  // A hardware keyboard's Esc stops the take (the app-wide keyboard, ui/useAppKey; its drum keys go to the hit bus).
-  useAppKey('escape', () => { if (!v.playing) return false; ctl.stop(); return true; });
-  // The web's lesson keys (src/lesson/LessonPlayer.tsx): H hints, B the band on / off. (C, check yourself with the
-  // camera, has no iPad screen.) Esc closes the coach panel over the results.
+  }, { playing: v.playing, enabled: !overlayOpen && !v.resting?.quiz }); // slides and quizzes take the kit's taps
+  // The web's lesson keys (src/lesson/LessonPlayer.tsx): H hints, B the band on / off. Esc is the player's (a take
+  // stops, else ‹), the coach panel's and the demo's while they're open.
   useAppKey('h', () => ctl.toggleHints());
   useAppKey('b', () => ctl.toggleBand());
   useAppKey('escape', () => { if (!coachOpen) return false; setCoachOpen(false); return true; }, { enabled: coachOpen });
@@ -84,7 +84,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const pager = useSheetPages(f); // a long take's results sheet: every page, one at a time
   const activeDrums = useMemo(() => [...new Set(v.myPads.map(laneDrum))], [v.myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The sheet's zoom fits the paper's height (sheetFit.ts).
+  // The sheet's zoom fits the paper's height (player/sheetFit.ts). The results sheet picks its own (it steps down until
+  // two bars sit side by side), so a take shows up to 4 bars without paging when they fit (D10).
   const [paperH, setPaperH] = useState(0);
   const scale = sheetScaleFor(paperH);
   const music = (() => {
@@ -100,7 +101,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
       const bpm = f.chart.bpm * f.options.speed, frozen = () => f.zero;
       return highway
         ? <NoteHighway now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} testID="lesson-highway" />
-        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded} scale={scale}
+        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded}
           page={pager.page} onPages={pager.setPages} testID="lesson-sheet" />;
     }
     const bpm = v.frame.bpm;
@@ -116,149 +117,120 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   };
   const confirmReset = () => Alert.alert('Reset this lesson?', `Reset "${v.lesson.title}" to step 1 at the starting tempo? Your saved runs stay in Progress.`,
     [{ text: 'Cancel', style: 'cancel' }, { text: 'Reset', style: 'destructive', onPress: () => { ctl.resetLesson(); setMore(false); } }]);
+  const closeMore = (then: () => void) => () => { setMore(false); then(); };
 
   const upNext = v.outcome?.event === 'up' ? v.frame.bpm : undefined;
+  const card = v.results?.card;
+
+  // One row of moves: a rest, look or listen step has one ("done"); a quiz or transcription has its own; a break, one.
+  const moves: PlayerMove[] = v.onBreak
+    ? [{ id: 'break-done', label: 'Back to playing', emoji: '✓', onPress: () => ctl.endBreak(), testID: 'lesson-break-done' }]
+    : v.resting && (v.resting.quiz || v.resting.transcribe) ? []
+    : (v.resting ? v.moves.slice(0, 1) : v.moves).map(m => {
+      const { emoji, text } = splitEmoji(m.label);
+      return { id: m.id, label: text, emoji, gestures: gesturesFor(GESTURE[m.gesture]), note: m.id === 'main' ? 'or say "yes"' : undefined,
+        onPress: m.run, tone: m.id === 'main' ? 'go' : m.id === 'listen' ? 'white' : 'alt', testID: `lesson-${m.id === 'main' ? 'main-move' : m.id}` } as PlayerMove;
+    });
+
+  const rest = v.onBreak ? <RestCountdown seconds={120} /> : v.resting ? (
+    <View style={styles.restWrap}>
+      {v.resting.quiz ? <EarQuiz key={v.frame.stepIdx} kind={v.resting.quiz} chart={v.chart} onDone={() => ctl.finishRest()} play={(c, then) => ctl.playClip(c, 1, then)} />
+        : v.resting.transcribe ? <Transcribe key={v.frame.stepIdx} chart={v.chart} onDone={() => ctl.finishRest()} play={c => ctl.playClip(c, 2)} />
+        : v.resting.listen ? <Card tone="cream" testID="lesson-listen">
+          <Display size={24}>🎧 {v.resting.listen.song}</Display>
+          <Body size={18}>Listen for: {v.resting.listen.what}</Body>
+          <Button tone="blue" emoji="▶" label="Find it on YouTube" onPress={() => void Linking.openURL(youtubeSearch(v.resting!.listen!.song))} testID="lesson-listen-youtube" style={{ alignSelf: 'flex-start' }} />
+          <Body size={15} color={color.muted}>Listen two or three times, eyes closed, then tap along on your knee before you come back.</Body>
+        </Card>
+        : v.resting.look ? <HowItMoves id={v.demo} bpm={v.frame.bpm} heelUp={v.heelUp} playing={v.playing} style={styles.look} testID="lesson-look" />
+        : <RestCountdown key={v.frame.stepIdx} seconds={v.resting.seconds ?? 0} />}
+    </View>
+  ) : undefined;
+
+  // Under the music (ready and take): touch pads without a kit; with a kit, its drawing only when asked for in ⋯.
+  const bottom = !kit
+    ? <TouchPads emitPad={(pad, vel, time) => bus.emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
+      now={clock.now} activeDrums={activeDrums} results={take.results} style={styles.fill} testID="lesson-touch-pads" />
+    : kitDrawing ? <KitView hits={hits} results={take.results} activeDrums={activeDrums} style={styles.fill} onPadPress={pad => bus.emitPad(pad, 96)} /> : undefined;
+
+  const barTip = countIn !== undefined ? '"one, two, three, four"' : s.options?.endless ? flowMeter(s as never, pos, now) : tip ? tip.slice(3) : undefined;
 
   return (
-    <DottedGround>
-      {/* The black top bar */}
-      <View style={[styles.bar, { paddingTop: Math.max(insets.top, 20) + 6, paddingLeft: insets.left + 24, paddingRight: insets.right + 24 }]}>
-        {!v.playing ? <RoundButton label="Back to Journey" glyph="‹" onPress={() => ctl.back()} testID="lesson-back" /> : null}
-        <View style={styles.titleBox}>
-          <Display size={22} color={color.white} numberOfLines={1}>{v.header.title}</Display>
-          <Body size={13} weight="700" color="#CFCFCF" numberOfLines={1}>{v.header.stepOf} · {v.header.sub}</Body>
-        </View>
-        <StepPills pills={v.header.pills} label={v.header.stepOf} />
-        <Segmented testID="lesson-view-toggle" accessibilityLabel="Notes view" value={v.playView} onChange={x => ctl.setPlayView(x)}
-          options={[{ value: 'sheet', label: 'Sheet' }, { value: 'highway', label: 'Highway' }]} />
-        <View style={{ flex: 1 }} />
-        <TempoLadder bpm={v.header.tempo} ladder={v.results ? undefined : v.header.ladder} />
-        {v.playing ? <>
-          <View style={styles.stopChip}><Text style={styles.stopChipText}>● crash × 4</Text></View>
-          <Button tone="red" emoji="■" label="Stop" onPress={() => ctl.stop()} testID="lesson-stop" accessibilityHint="Or crash four times, or Esc" />
-        </> : v.results ? <>
-          {upNext ? <Pill tone="green">→ {upNext} next</Pill> : null}
-          {v.results.canShare ? <Button tone="pop" emoji="📤" label="Share take" onPress={() => void share()} testID="lesson-share" /> : null}
-          <RoundButton label="More" glyph="⋯" onPress={() => setMore(true)} testID="lesson-more-button" />
-        </> : <>
-          <Button size="small" tone={v.hints ? 'pop' : 'white'} emoji="💡" label="Hints" onPress={() => ctl.toggleHints()} testID="lesson-hints" accessibilityHint="Key H" />
-          {v.band.available ? <Button size="small" tone={v.band.on ? 'pop' : 'white'} emoji="🎸" label="Band" accessibilityLabel={`Band ${v.band.on ? 'on' : 'off'}`} onPress={() => ctl.toggleBand()} testID="lesson-band" accessibilityHint="Key B" /> : null}
-          <RoundButton label="More" glyph="⋯" onPress={() => setMore(true)} testID="lesson-more-button" />
-        </>}
-      </View>
-
-      <View style={[styles.body, { paddingLeft: insets.left + 24, paddingRight: insets.right + 24, paddingBottom: Math.max(insets.bottom, 12) + 14 }]}>
-        {v.playing && !v.resting ? (
-          countIn !== undefined
-            ? <Banner tone="cream" emoji="🥁" text={`Count-in: one bar, then ${barCounter(s, 0).of ?? ''} bars at ${v.frame.bpm}`} right={'"one, two, three, four"'} testID="lesson-countin" />
-            : s.options?.endless ? <Banner tone="pop" emoji="🌊" text={flowMeter(s as never, pos, now)} testID="lesson-flow" />
-            : <Banner tone={tip ? 'pop' : 'cream'} emoji={tip ? '💡' : '🥁'} text={tip ? tip.slice(3) : barCounter(s, pos).text} testID="lesson-tip" />
-        ) : <>
-          <View style={styles.coachRow}>
-            <CoachLine size={22} style={{ flex: 1 }} testID="lesson-coach-line">
-              {v.line}{v.under ? `\n${v.under}` : ''}
-            </CoachLine>
-            {v.thinking ? <Pill tone="pop" style={styles.thinking}>Coach is listening back…</Pill> : null}
-          </View>
-          {v.resting && (v.resting.quiz || v.resting.transcribe) ? null : !v.onBreak ? <View style={styles.moves}>
-            {/* A rest, look or listen step has one move, "done" (web); a quiz or transcription has its own. */}
-            {(v.resting ? v.moves.slice(0, 1) : v.moves).map(m => {
-              const { emoji, text } = splitEmoji(m.label);
-              return <BigMove key={m.id} label={text} emoji={emoji} tone={m.id === 'main' ? 'go' : m.id === 'listen' ? 'white' : 'alt'}
-                gestures={gesturesFor(GESTURE[m.gesture])} note={m.id === 'main' ? 'or say "yes"' : undefined}
-                onPress={m.run} testID={`lesson-${m.id === 'main' ? 'main-move' : m.id}`} style={m.id === 'main' ? styles.mainMove : styles.move} />;
-            })}
-          </View> : <View style={styles.moves}>
-            <BigMove label="Back to playing" emoji="✓" tone="go" onPress={() => ctl.endBreak()} testID="lesson-break-done" style={styles.mainMove} />
-          </View>}
-        </>}
-
-        {v.onBreak ? <RestCountdown seconds={120} /> : v.resting ? (
-          <View style={styles.restWrap}>
-            {v.resting.quiz ? <EarQuiz key={v.frame.stepIdx} kind={v.resting.quiz} chart={v.chart} onDone={() => ctl.finishRest()} play={(c, then) => ctl.playClip(c, 1, then)} />
-              : v.resting.transcribe ? <Transcribe key={v.frame.stepIdx} chart={v.chart} onDone={() => ctl.finishRest()} play={c => ctl.playClip(c, 2)} />
-              : v.resting.listen ? <Card tone="cream" testID="lesson-listen">
-                <Display size={24}>🎧 {v.resting.listen.song}</Display>
-                <Body size={18}>Listen for: {v.resting.listen.what}</Body>
-                <Button tone="blue" emoji="▶" label="Find it on YouTube" onPress={() => void Linking.openURL(youtubeSearch(v.resting!.listen!.song))} testID="lesson-listen-youtube" style={{ alignSelf: 'flex-start' }} />
-                <Body size={15} color={color.muted}>Listen two or three times, eyes closed, then tap along on your knee before you come back.</Body>
-              </Card>
-              : v.resting.look ? <HowItMoves id={v.demo} bpm={v.frame.bpm} heelUp={v.heelUp} playing={v.playing} style={styles.look} testID="lesson-look" />
-              : <RestCountdown key={v.frame.stepIdx} seconds={v.resting.seconds ?? 0} />}
-          </View>
-        ) : (
-          <View style={v.results ? styles.mainRow : styles.mainCol}>
-            <View style={styles.musicPanel} testID="lesson-music">
-              <View style={styles.musicHead}>
-                <Label style={styles.musicLabel}>{v.results ? 'Your take, on the notes' : v.playing ? (countIn !== undefined ? 'Count-in' : barCounter(s, pos).text) : `Your ${v.frame.step.chart.bars === 1 ? 'bar' : `${v.frame.step.chart.bars} bars`} · ${v.frame.step.title}`}</Label>
-                {v.results?.marks ? <Body size={13} weight="800" color={color.white}>● on it  ● early / late  ◌ missed  ✕ extra</Body> : null}
-              </View>
-              <View style={styles.musicRow}>
-                {countIn !== undefined ? <CountInBadge n={countIn} /> : null}
-                <View style={styles.musicPaper} onLayout={e => setPaperH(Math.round(e.nativeEvent.layout.height))}>{music}</View>
-              </View>
-              {v.results && v.playView !== 'highway' ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} testID="lesson-sheet-pages" /> : null}
-              {v.results?.timing ? <TimingLineView line={v.results.timing} /> : null}
-            </View>
-
-            {v.results ? (
-              <View style={styles.side}>
-                {v.results.card ? <TakeCardView card={v.results.card} head={`${f ? Math.round(f.chart.bpm * f.options.speed) : v.frame.bpm} BPM`} /> : null}
-                {v.results.card?.reason || v.results.latencyHint ? (
-                  <Card tone="cream" testID="lesson-fix" style={{ gap: 8 }}>
-                    <Label>One thing to fix</Label>
-                    <Body size={16} weight="700">{v.results.card?.reason ?? v.results.latencyHint}</Body>
-                    {v.results.fix ? <Button emoji="🔁" label={v.results.fix.detail} onPress={() => ctl.zoomIn(v.results!.fix!.bar)} testID="lesson-fix-bar" /> : null}
-                  </Card>
-                ) : null}
-                {v.results.fills.length ? <Card style={{ gap: 6 }}>{v.results.fills.map(x => x.kept
-                  ? <Body key={x.bar} size={14}>✓ fill {x.n} kept</Body>
-                  : <Button key={x.bar} size="small" emoji="💾" label={`Keep fill ${x.n}`} onPress={() => ctl.keepFill(x.bar)} />)}</Card> : null}
-                {shareNote ? <Body size={13} color={color.bad}>{shareNote}</Body> : null}
-                <Card tone="cream" onPress={() => setCoachOpen(true)} testID="lesson-ask-coach" accessibilityLabel="Ask the coach: feedback and a drill for this take" style={styles.askCoach}>
-                  <Display size={18}>Ask the coach</Display>
-                  <Body size={14}>Feedback and a drill for this take</Body>
-                </Card>
-              </View>
-            ) : (
-              <View style={styles.bottomRow}>
-                <View style={[styles.goal, !kit && styles.goalNarrow]} testID="lesson-goal">
-                  {v.boxes ? <Boxes n={v.boxes.n} ok={v.boxes.ok} /> : null}
-                  <GoalText goal={v.goal} size={kit ? 22 : 18} />
-                </View>
-                <View style={[styles.kit, !kit && styles.kitTouch]} testID="lesson-kit">
-                  <Body size={13} weight="800" color={color.white}>{kit ? `Your pads: ${v.myPads.map(laneName).join(', ')}` : 'Touch pads (no kit connected): tap to play'}</Body>
-                  {kit
-                    ? <KitView hits={hits} results={take.results} activeDrums={activeDrums} style={{ flex: 1 }} onPadPress={pad => bus.emitPad(pad, 96)} />
-                    : <TouchPads emitPad={(pad, vel, time) => bus.emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
-                      now={clock.now} activeDrums={activeDrums} results={take.results} style={{ flex: 1 }} testID="lesson-touch-pads" />}
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-        {v.timeUp ? <Body size={14} weight="700">That's your minutes for this one.</Body> : null}
-      </View>
-
+    <PlayerFrame
+      phase={phaseOf({ playing: v.playing && !v.resting, hasResults: !!v.results })}
+      testID="lesson"
+      title={v.header.title}
+      subtitle={`${v.header.stepOf} · ${v.header.sub}`}
+      goal={v.results ? undefined : barGoal({ boxes: v.boxes, bpm: v.frame.bpm, target: v.frame.step.bpm.target, lastStep: v.frame.lastStep })}
+      barChip={upNext ? <Pill tone="green">→ {upNext} next</Pill> : undefined}
+      bpm={v.header.tempo}
+      onBack={() => ctl.back()}
+      onMore={() => setMore(true)}
+      coach={{ line: v.line, under: [v.under, v.timeUp ? "That's your minutes for this one." : undefined].filter(Boolean).join('\n') || undefined, pill: v.thinking ? 'Coach is listening back…' : undefined }}
+      music={music}
+      onPaperHeight={setPaperH}
+      musicFoot={v.results && v.playView !== 'highway' ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} testID="lesson-sheet-pages" /> : undefined}
+      side={v.results ? (card ? (
+        <PlayerScore testID="lesson-take-card" head={`${f ? Math.round(f.chart.bpm * f.options.speed) : v.frame.bpm} BPM`} big={card.big} of={card.unit || undefined}
+          label={card.label} stars={card.stars} fix={card.reason ?? v.results.latencyHint}
+          fixMove={v.results.fix ? { label: v.results.fix.detail, onPress: () => ctl.zoomIn(v.results!.fix!.bar) } : undefined} fixTestID="lesson-fix-bar"
+          onAskCoach={() => setCoachOpen(true)} askTestID="lesson-ask-coach">
+          {card.needed ? <Body size={14} color={color.muted}>{card.needed}</Body> : null}
+          {card.chips.map(c => <Body key={c} size={14} weight="600">{c}</Body>)}
+        </PlayerScore>
+      ) : (
+        <PlayerScore testID="lesson-take-card" head="Your take" big="✓" label={v.results.latencyHint} onAskCoach={() => setCoachOpen(true)} askTestID="lesson-ask-coach" />
+      )) : undefined}
+      bottom={bottom}
+      moves={moves}
+      take={v.playing && !v.resting ? { bar: countIn !== undefined ? 'Count-in' : barCounter(s, pos).text.replace(' of ', ' / '), tip: barTip, onStop: () => ctl.stop(), countIn } : undefined}
+      overlayOpen={overlayOpen}
+      body={rest}
+    >
       {v.celebration ? <CelebrationModal c={v.celebration} onNext={() => ctl.celebrationNext()} onAgain={() => ctl.celebrationAgain()} onClose={() => ctl.closeCelebration()} /> : null}
 
-      <MoreSheet open={more} onClose={() => setMore(false)}>
-        <Label>The lesson</Label>
-        <Body size={16}>{v.lessonCard.what}</Body>
-        {v.lessonCard.hint ? <Body size={15}><Strong>💡 Hint:</Strong> {v.lessonCard.hint}</Body> : null}
-        {v.lessonCard.lines.map(l => <Body key={l} size={14}>{l}</Body>)}
-        <Label>Why and how</Label>
-        <Body size={14}>{v.lessonCard.why}</Body>
-        <Body size={14}>{v.lessonCard.how}</Body>
-        {v.needsLatency ? <Body size={14} color={color.bad}>This lesson is judged in milliseconds. Run the latency test first (⚙ Setup → Latency → Measure), or "behind the beat" may just be your speakers.</Body> : null}
-        {v.results?.latencyHint ? <Body size={14} color={color.bad}>{v.results.latencyHint}</Body> : null}
-        {v.results?.canHearRight ? <Button emoji="👂" label="Hear it right" onPress={() => { setMore(false); ctl.play(true); }} /> : null}
-        {v.results?.helpKey ? <Button emoji="🧑‍🏫" label="Ask the coach for something different" onPress={() => { setMore(false); ctl.askHelp(); }} /> : null}
-        <Button emoji="🤸" label="How it moves" onPress={() => { setMore(false); setBigDemo(true); }} testID="lesson-how-it-moves" />
-        {v.canReset ? <Button tone="plain" label="Reset this lesson" onPress={confirmReset} testID="lesson-reset" /> : null}
-        <Body size={13} color={color.muted}>Keys: H hints · B band · Esc stop. Kit: hi-hat pedal × 3 or crash × 2 = yes, tom 2 × 2 = hear, floor × 2 = slower, tom 1 × 2 = faster, ride × 2 = next, crash × 4 = stop.</Body>
-        <Button label="Close" onPress={() => setMore(false)} />
-      </MoreSheet>
+      <PlayerSheet open={more} onClose={() => setMore(false)} testID="lesson-more">
+        <PlayToggles testID="lesson" view={v.playView} onView={x => ctl.setPlayView(x)} hints={v.hints} onHints={() => ctl.toggleHints()}
+          band={v.band.available ? v.band.on : undefined} onBand={v.band.available ? () => ctl.toggleBand() : undefined} />
+        {kit ? (
+          <View style={styles.row}>
+            <Body size={16} weight="700" style={styles.fill}>🥁 Show the kit drawing</Body>
+            <Toggle value={kitDrawing} onChange={setKitDrawing} label="Show the kit drawing" testID="lesson-kit-drawing" />
+          </View>
+        ) : null}
+        <SheetSection title="This step">
+          {v.header.pills.length ? <StepPills pills={v.header.pills} label={v.header.stepOf} /> : null}
+          {v.header.ladder ? <Body size={14} weight="700">Tempo ladder: {v.header.tempo} BPM now · {v.header.ladder.caption}</Body> : null}
+          <GoalText goal={v.goal} size={18} />
+          {kit ? <Body size={14}>Your pads: {v.myPads.map(laneName).join(', ')}</Body> : null}
+        </SheetSection>
+        {v.results ? (
+          <SheetSection title="This take">
+            {v.results.marks ? <Body size={14} weight="700">● on it  ● early / late  ◌ missed  ✕ extra</Body> : null}
+            {v.results.timing ? <TimingLineView line={v.results.timing} /> : null}
+            {v.results.fills.map(x => x.kept
+              ? <Body key={x.bar} size={14}>✓ fill {x.n} kept</Body>
+              : <Button key={x.bar} size="small" emoji="💾" label={`Keep fill ${x.n}`} onPress={() => ctl.keepFill(x.bar)} />)}
+            {v.results.canShare ? <Button tone="pop" emoji="📤" label="Share take" onPress={() => void share()} testID="lesson-share" /> : null}
+            {shareNote ? <Body size={13} color={color.bad}>{shareNote}</Body> : null}
+            {v.results.canHearRight ? <Button emoji="👂" label="Hear it right" onPress={closeMore(() => ctl.play(true))} /> : null}
+            {v.results.helpKey ? <Button emoji="🧑‍🏫" label="Ask the coach for something different" onPress={closeMore(() => ctl.askHelp())} /> : null}
+            {v.results.latencyHint ? <Body size={14} color={color.bad}>{v.results.latencyHint}</Body> : null}
+          </SheetSection>
+        ) : null}
+        <SheetSection title="The lesson">
+          <Body size={16}>{v.lessonCard.what}</Body>
+          {v.lessonCard.hint ? <Body size={15}><Strong>💡 Hint:</Strong> {v.lessonCard.hint}</Body> : null}
+          {v.lessonCard.lines.map(l => <Body key={l} size={14}>{l}</Body>)}
+          <Label>Why and how</Label>
+          <Body size={14}>{v.lessonCard.why}</Body>
+          <Body size={14}>{v.lessonCard.how}</Body>
+          {v.needsLatency ? <Body size={14} color={color.bad}>This lesson is judged in milliseconds. Run the latency test first (⚙ Setup → Latency → Measure), or "behind the beat" may just be your speakers.</Body> : null}
+          <Button emoji="🤸" label="How it moves" onPress={closeMore(() => setBigDemo(true))} testID="lesson-how-it-moves" />
+          {v.canReset ? <Button tone="plain" label="Reset this lesson" onPress={confirmReset} testID="lesson-reset" /> : null}
+        </SheetSection>
+        <KeysLine />
+      </PlayerSheet>
 
       <CoachInspector visible={coachOpen && !!v.take} kitMoves={false} take={v.take} takeExtras={{ chartId: v.take?.chart.id, lesson: v.take?.options.lesson }}
         onClose={() => setCoachOpen(false)} nextLabel={v.moves.find(m => m.id === 'skip')?.label.replace(/^⏭\s*/, '') ?? 'Next ▶'} />
@@ -273,46 +245,22 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
                 <Display size={22}>How it moves</Display>
                 <Button label="✕ Close (Esc)" onPress={() => setBigDemo(false)} testID="lesson-big-demo-close" />
               </View>
-              <HowItMoves id={v.demo} bpm={v.frame.bpm} heelUp={v.heelUp} playing={v.playing} style={{ flex: 1 }} />
+              <HowItMoves id={v.demo} bpm={v.frame.bpm} heelUp={v.heelUp} playing={v.playing} style={styles.fill} />
             </Card>
           </View>
         </Modal>
       ) : null}
-    </DottedGround>
+    </PlayerFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: color.ink, paddingBottom: 10, borderBottomWidth: 4, borderBottomColor: color.pop },
-  titleBox: { maxWidth: 230, flexShrink: 1, minWidth: 90 }, // the title gives way first, so ⋯ stays on screen
-  stopChip: { backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 12, height: 34, justifyContent: 'center' },
-  stopChipText: { fontWeight: '800', fontSize: 15, color: color.ink },
-  body: { flex: 1, paddingTop: 16, gap: 14 },
-  coachRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  thinking: { position: 'absolute', right: 18 },
-  moves: { flexDirection: 'row', gap: 16 },
-  mainMove: { flex: 1.35 },
-  move: { flex: 1 },
-  // Before a take: the music fills, the goal and pads are a 168 pt row under it. Results: the music and a side column.
-  // (A wrapping row sized the music by its content, not the screen: the goal and pads fell off the bottom.)
-  mainCol: { flex: 1, gap: 16 },
-  mainRow: { flex: 1, flexDirection: 'row', gap: 16 },
-  musicPanel: { flex: 1, minHeight: 0, minWidth: 0, backgroundColor: color.ink, padding: 14, gap: 10, boxShadow: hardShadow(shadow.card, color.pop) },
-  musicHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  musicLabel: { backgroundColor: 'transparent', paddingHorizontal: 0 },
-  musicRow: { flex: 1, flexDirection: 'row', gap: 12 },
-  musicPaper: { flex: 1, backgroundColor: color.cream, overflow: 'hidden' },
+  fill: { flex: 1 },
   musicInner: { flex: 1 },
-  side: { width: 330, gap: 14 },
-  bottomRow: { height: 168, flexDirection: 'row', gap: 18 },
-  goal: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 22, backgroundColor: color.cream, borderWidth: stroke.card, borderColor: color.ink, paddingHorizontal: 22, boxShadow: hardShadow(shadow.card) },
-  goalNarrow: { flex: 0.8 },
-  kit: { width: 376, backgroundColor: color.ink, padding: 10, gap: 4 },
-  kitTouch: { flex: 1.2, width: undefined },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
   restWrap: { flex: 1, justifyContent: 'center' },
   look: { flex: 1, width: '60%', alignSelf: 'center' }, // the drawing and its controls fit the height; the words scroll
   bigDemo: { flex: 1, padding: 18, gap: 10 },
   demoScrim: { flex: 1, backgroundColor: 'rgba(20,20,20,0.55)', padding: 30 },
   demoHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  askCoach: { gap: 2 },
 });

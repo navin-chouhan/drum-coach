@@ -63,8 +63,9 @@ export type PlayerFrameProps = {
   onBack: () => void;
   /** ⋯: the screen opens its PlayerSheet. */
   onMore?: () => void;
-  /** The coach's line (ready / results), and a small pill beside it ("Coach is listening back…"). */
-  coach?: { line: string; under?: string; pill?: string };
+  /** The coach's line (ready / results), and a small pill beside it ("Coach is listening back…"). testID: default
+   * `${testID}-coach-line`. */
+  coach?: { line: string; under?: string; pill?: string; testID?: string };
   /** The music (a NotationView or NoteHighway, or a work area such as a quiz); the frame gives it the room. */
   music: ReactNode;
   /** Above the music, inside its black panel: "Your bar · + snare", the legend. */
@@ -134,7 +135,7 @@ export function PlayerFrame(p: PlayerFrameProps) {
       <View style={[styles.body, side, { paddingBottom: Math.max(insets.bottom, 12) + 10 }]}>
         {!playing && p.coach ? (
           <View style={styles.coachRow}>
-            <CoachLine size={22} style={styles.flexShrink} testID={`${p.testID}-coach-line`}>{p.coach.line}{p.coach.under ? `\n${p.coach.under}` : ''}</CoachLine>
+            <CoachLine size={22} style={styles.flexShrink} testID={p.coach.testID ?? `${p.testID}-coach-line`}>{p.coach.line}{p.coach.under ? `\n${p.coach.under}` : ''}</CoachLine>
             {p.coach.pill ? <View style={styles.pill}><Body size={13} weight="800">{p.coach.pill}</Body></View> : null}
           </View>
         ) : null}
