@@ -5,8 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
-import { BigMove, Body, Button, Card, Display, color, font, getAppHitBus, tabular } from '../../ui';
-import { Group, GroupRow } from '../setup/parts';
+import { BigMove, Body, Button, Card, Display, Group, GroupRow, color, font, getAppHitBus, tabular } from '../../ui';
 import { readPadCal, writePadCal } from './kitStore';
 import {
   VELOCITY_INTRO, VELOCITY_NO_KIT, calSummary, idleVelocity, nextPad, redoPad, startVelocity, stopVelocity, velocityNote, velocityTick,

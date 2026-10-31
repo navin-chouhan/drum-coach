@@ -3,8 +3,7 @@
 import { DEFAULT_NOTE_MAP, type NoteMap } from '@drum-coach/core/engine/kit';
 import { StyleSheet, View } from 'react-native';
 import { getStorage } from '../../platform/storage';
-import { Body, Button, Card, color } from '../../ui';
-import { Group, GroupRow, Stepper } from '../setup/parts';
+import { Body, Button, Card, Group, GroupRow, Stepper, color } from '../../ui';
 import { lastHitView } from '../setup/kit';
 import { useLastHit } from '../setup/useSetup';
 import { conflictText, noteRows, withNote, writeNoteMap } from './kitStore';
@@ -19,7 +18,7 @@ export function NoteMapPanel({ kit, map }: { kit: string; map: NoteMap }) {
     <Group style={styles.col}>
       {rs.map((r, i) => (
         <GroupRow key={r.pad} first={i === 0} title={r.name} sub={r.conflict ? 'shares a note' : r.isDefault ? 'default' : `default ${DEFAULT_NOTE_MAP[r.pad]}`}
-          right={<Stepper label={`${r.name} note`} value={String(r.note)} onStep={d => set(withNote(map, r.pad, r.note + d))} testID={`notemap-${r.pad}`} />} />
+          right={<Stepper label={`${r.name} note`} value={r.note} min={0} max={127} onChange={n => set(withNote(map, r.pad, n))} testID={`notemap-${r.pad}`} />} />
       ))}
     </Group>
   );

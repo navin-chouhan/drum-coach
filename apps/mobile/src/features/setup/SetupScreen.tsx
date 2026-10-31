@@ -11,7 +11,7 @@ import { getStorage } from '../../platform/storage';
 import { KitView, type PadHit, type Subscribe } from '../../play';
 import { TOUCH_KIT } from '../../play/kitLayout';
 import {
-  Body, Button, GestureChip, Pill, Screen, Segmented, TitleBar, Toggle, color, font, getAppHitBus, padColor, stroke, useAppSettings, useKitMoves, writeSettings,
+  Body, Button, Chevron, GestureChip, Group, GroupRow, Pill, Screen, Segmented, TitleBar, Toggle, ToolFrame, color, font, getAppHitBus, padColor, stroke, useAppSettings, useKitMoves, writeSettings,
 } from '../../ui';
 import { LatencyPanel } from '../latency/LatencyPanel';
 import { LATENCY_FOOT, latencyRow, otherRoutes, readLatencyByRoute, shortDate } from '../latency/latencyByRoute';
@@ -24,7 +24,6 @@ import {
   API_KEY_FOOT, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
 } from './coachServer';
 import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit';
-import { Chevron, Group, GroupRow, ToolFrame } from './parts';
 import { SoundPanel } from './SoundPanel';
 import { useAudioRoute, useKitConnection, useKitData, useLastHit, useLatencyRouteSync, useRecentRuns, keychain } from './useSetup';
 import { HAND_SUB, LIVE_TIPS, LIVE_TIPS_SUB, AUTOPILOT_SUB } from './whilePlaying';

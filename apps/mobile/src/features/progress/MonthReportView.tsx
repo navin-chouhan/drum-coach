@@ -5,9 +5,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { getHomeServer } from '../../platform/api';
 import { getStorage } from '../../platform/storage';
-import { Body, Button, Card, CardTitle, Strong, color, stroke, tabular } from '../../ui';
+import { Body, Button, Card, CardTitle, Notice, Strong, color, stroke, tabular } from '../../ui';
 import { practiceEngine } from '../practice/engine';
-import { Notice } from '../practice/parts';
 import { askMonthReport, historyModel, keptReport, MONTH_REPORT_KEY, type MonthReport } from './monthReport';
 
 export function MonthReportView({ runs }: { runs: RunRow[] }) {
