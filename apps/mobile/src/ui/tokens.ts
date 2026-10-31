@@ -40,8 +40,8 @@ export const color = {
 
 /**
  * One colour per drum: the web kit's colours, moved off green, orange and red (which mean on it / early-late / missed).
- * From the approved mockups (ipad.css --hihat … --kick). The play surfaces' theme (src/play/theme.ts, A6) should carry
- * the same values; until then this is the source for chips, dots and previews.
+ * From the approved mockups (ipad.css --hihat … --kick). The one source: the play surfaces' theme (src/play/theme.ts
+ * IPAD_THEME) reads them from here, as do chips, dots and previews.
  */
 export const drumColor: Record<DrumId, string> = {
   hihat: '#FFE14D', crash: '#FF5FA2', ride: '#7FD3FF', snare: '#2DE1C2',
@@ -54,6 +54,9 @@ export const padColor = (pad: PadId): string =>
 
 /** How a judged note came out (the mockups' results, on light panels). */
 export const resultColor = { onIt: '#1E9E5A', early: '#E07B00', late: '#E07B00', missed: '#E8423F', extra: '#E8423F' } as const;
+
+/** The same results bright, for the black music panel (the highway, the kit view: mockups mock.js RES). */
+export const resultOnNight = { onIt: '#4BE08A', early: '#FF9F1C', late: '#FF9F1C', missed: '#FF5A4F', extra: '#FF5A4F' } as const;
 
 /** Display type: the iOS system face at its heaviest weight (SF Pro Black) stands in for Arial Black / Archivo Black. */
 export const font = {

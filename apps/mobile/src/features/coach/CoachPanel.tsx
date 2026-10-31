@@ -9,8 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { checkCapabilities } from '../../platform/capabilities';
 import type { Capabilities } from '../../platform/contracts';
 import {
-  Body, Button, Display, DottedGround, GestureChip, Mascot, MAX_FONT_SCALE, Pill, color, font, gesturesFor, hardShadow,
-  useAppSettings, useKitMoves,
+  Body, Button, Display, DottedGround, GestureChip, KeepsWorkingCard, Mascot, MAX_FONT_SCALE, OfflineCard, Pill, SpeechBubble, color, font,
+  gesturesFor, hardShadow, useAppSettings, useKitMoves,
 } from '../../ui';
 import { drillRoute, getCoach, useCoachEntry, useCoachSession } from './coach';
 import { askFeedback, feedbackKey, feedbackView, type DrillTarget } from './feedback';
@@ -116,21 +116,12 @@ function Ctx({ text }: { text: string }) {
   return <View style={styles.ctx}><Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.ctxText}>{text}</Text></View>;
 }
 
-function Bubble({ children, grey, testID }: { children: React.ReactNode; grey?: boolean; testID?: string }) {
-  return (
-    <View style={styles.msg} testID={testID}>
-      <View style={grey ? styles.greyMascot : undefined}><Mascot size="sm" /></View>
-      <View style={styles.bubble}><Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.bubbleText}>{children}</Text></View>
-    </View>
-  );
-}
-
 function Item({ item }: { item: PanelItem }) {
   switch (item.kind) {
     case 'ctx': return <Ctx text={item.text} />;
-    case 'coach': return <Bubble testID="coach-reply">{item.text}</Bubble>;
-    case 'app': return <Bubble grey testID="coach-app-verdict"><Text style={styles.bold}>From the app: </Text>{item.text}</Bubble>;
-    case 'streaming': return <Bubble testID="coach-streaming">{item.text} …</Bubble>;
+    case 'coach': return <SpeechBubble testID="coach-reply">{item.text}</SpeechBubble>;
+    case 'app': return <SpeechBubble grey testID="coach-app-verdict"><Text style={styles.bold}>From the app: </Text>{item.text}</SpeechBubble>;
+    case 'streaming': return <SpeechBubble testID="coach-streaming">{item.text} …</SpeechBubble>;
     case 'me': return <Me text={item.text} sub={item.sub} waiting={item.waiting} />;
     case 'next': return <NextStep action={item.action} />;
     case 'thinking': return <Thinking />;
@@ -183,41 +174,23 @@ export function ProblemCard({ problem, onRetry }: { problem: CoachProblem; onRet
   const retry = onRetry ?? (() => void getCoach().session.retry());
   const settingsBtn = <Button size="small" label="Coach settings" testID="coach-settings" onPress={() => router.navigate('/setup' as never)} />;
   return (
-    <View style={styles.warn} testID="coach-problem" accessibilityLiveRegion="polite">
-      <View style={styles.warnHead}><Display size={19}>⚠️ {problem.title}</Display></View>
-      {problem.lines.map(l => <Body key={l} size={14.5}>{withHost(l, problem.host)}</Body>)}
-      <View style={styles.row}>
-        {problem.settingsFirst ? settingsBtn : null}
-        <Button size="small" tone={problem.settingsFirst ? 'white' : 'pop'} emoji="↻" label="Try again" testID="coach-retry" onPress={retry} />
-        {problem.settingsFirst ? null : settingsBtn}
-      </View>
-    </View>
+    <OfflineCard title={problem.title} lines={problem.lines} host={problem.host}>
+      {problem.settingsFirst ? settingsBtn : null}
+      <Button size="small" tone={problem.settingsFirst ? 'white' : 'pop'} emoji="↻" label="Try again" testID="coach-retry" onPress={retry} />
+      {problem.settingsFirst ? null : settingsBtn}
+    </OfflineCard>
   );
 }
 
-/** The host in mono, as drawn. Plain text otherwise (no markup parsing). */
-function withHost(line: string, host?: string) {
-  if (!host || !line.includes(host)) return line;
-  const [a, ...rest] = line.split(host);
-  return <>{a}<Text style={styles.mono}>{host}</Text>{rest.join(host)}</>;
-}
-
-function KeepsWorking() {
-  return (
-    <View style={styles.ok} testID="coach-keeps-working">
-      <Display size={15}>Everything else keeps working</Display>
-      {KEEPS_WORKING.map(k => <Body key={k} size={14} weight="700"><Text style={styles.check}>✓ </Text>{k}</Body>)}
-    </View>
-  );
-}
+const KeepsWorking = () => <KeepsWorkingCard items={KEEPS_WORKING} />;
 
 function Empty({ liveCoach }: { liveCoach: boolean }) {
   return (
-    <Bubble>
+    <SpeechBubble>
       {liveCoach
         ? 'After each take I listen back and tell you one thing, with the next step. Ask me anything here, between takes or while you play.'
         : '“The coach follows my practice” is off in Setup → Coach. Turn it on and I react to your takes.'}
-    </Bubble>
+    </SpeechBubble>
   );
 }
 
@@ -243,7 +216,7 @@ function TakeFeedback({ take, extras }: { take: SessionTake; extras?: TakeExtras
   };
   return (
     <>
-      <Bubble testID="coach-feedback">{v.feedback}</Bubble>
+      <SpeechBubble testID="coach-feedback">{v.feedback}</SpeechBubble>
       <View style={[styles.indent, styles.drill]} testID="coach-drill">
         <Text style={styles.kicker}>{v.kicker}</Text>
         <Display size={17}>{v.drill.title}</Display>
@@ -310,9 +283,6 @@ const styles = StyleSheet.create({
   ctx: { alignSelf: 'center', backgroundColor: color.panel, borderWidth: 2, borderColor: color.ink, paddingVertical: 2, paddingHorizontal: 10, borderRadius: 999 },
   ctxText: { fontSize: 12.5, fontWeight: '800', color: color.ink },
   msg: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
-  greyMascot: { opacity: 0.5 },
-  bubble: { flexShrink: 1, maxWidth: 344, backgroundColor: color.panel, borderWidth: 3, borderColor: color.ink, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomRightRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 9, paddingHorizontal: 13, boxShadow: hardShadow(4) },
-  bubbleText: { fontSize: 15.5, fontWeight: '600', lineHeight: 21, color: color.ink },
   me: { justifyContent: 'flex-end' },
   meBubble: { maxWidth: 350, backgroundColor: color.blue, borderWidth: 3, borderColor: color.ink, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomLeftRadius: 18, borderBottomRightRadius: 4, paddingVertical: 9, paddingHorizontal: 13, boxShadow: hardShadow(4) },
   meText: { fontSize: 15.5, fontWeight: '700', lineHeight: 21, color: color.white },
@@ -326,11 +296,6 @@ const styles = StyleSheet.create({
   gestures: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   gestureOr: { fontSize: 13, fontWeight: '700', color: color.white },
   think: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: color.cream, borderWidth: 3, borderStyle: 'dashed', borderColor: color.ink, paddingVertical: 9, paddingHorizontal: 12 },
-  warn: { gap: 7, backgroundColor: color.panel, borderWidth: 3, borderColor: color.ink, boxShadow: hardShadow(5), paddingVertical: 12, paddingHorizontal: 14 },
-  warnHead: { alignSelf: 'flex-start', backgroundColor: color.pop, borderWidth: 2, borderColor: color.ink, paddingVertical: 4, paddingHorizontal: 8 },
-  mono: { fontFamily: 'Menlo', fontSize: 13, fontWeight: '700', backgroundColor: color.cream },
-  ok: { gap: 5, backgroundColor: color.goodSoft, borderWidth: 3, borderColor: color.ink, boxShadow: hardShadow(4), paddingVertical: 10, paddingHorizontal: 14 },
-  check: { color: color.good, fontWeight: '900' },
   comp: { paddingTop: 12, paddingHorizontal: 14, gap: 8, backgroundColor: color.night, borderTopWidth: 3, borderColor: color.ink },
   compNote: { fontSize: 13, fontWeight: '600', color: color.pop },
   field: { flex: 1, height: 46, borderRadius: 999, borderWidth: 3, borderColor: color.ink, backgroundColor: color.panel, paddingHorizontal: 16, fontSize: 16, fontWeight: '600', color: color.ink },

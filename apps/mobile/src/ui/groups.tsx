@@ -1,10 +1,14 @@
-// Setup's local pieces (mockup setup.html: .groupHead/.group/.li/.sym/.groupFoot), a − / + stepper for levels and
-// notes (React Native has no slider), and the full-screen tool frame (the black bar on top, as the first run and the
-// lesson player use). Candidates for the kit: Group/GroupRow, Stepper, ToolFrame.
+// Grouped lists (mockup setup.html: .groupHead/.group/.li/.sym/.groupFoot), the − / + Stepper (React Native has no
+// slider) and the full-screen ToolFrame (the black bar on top, as the first run and the lesson player use).
+// Promoted from features/setup/parts.tsx (A7c) and features/songs/bits.tsx (A8) by I2.
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Body, Button, DottedGround, Display, MAX_FONT_SCALE, color, font, hardShadow, shadow, slopFor, stroke, tabular } from '../../ui';
+import { Button, slopFor } from './controls';
+import { stepBounds, stepValue } from './kitMath';
+import { DottedGround } from './Screen';
+import { Body, Display, MAX_FONT_SCALE, tabular } from './Text';
+import { color, font, hardShadow, shadow, stroke } from './tokens';
 
 export function GroupHead({ children }: { children: string }) {
   return (
@@ -12,6 +16,7 @@ export function GroupHead({ children }: { children: string }) {
   );
 }
 
+/** A white group of rows with an optional black-and-yellow head and a small foot line. */
 export function Group({ title, foot, children, testID, style }: { title?: string; foot?: string; children: ReactNode; testID?: string; style?: StyleProp<ViewStyle> }) {
   return (
     <View style={style} testID={testID}>
@@ -55,26 +60,50 @@ export function GroupRow({ emoji, sym = 'cream', title, sub, right, first, onPre
 
 export const Chevron = () => <Text style={styles.chev}>›</Text>;
 
-/** − value + (each press one step), for levels and MIDI notes. */
-export function Stepper({ value, label, onStep, testID, width = 64 }: { value: string; label: string; onStep: (dir: -1 | 1) => void; testID?: string; width?: number }) {
-  const btn = (dir: -1 | 1) => (
-    <Pressable testID={testID ? `${testID}-${dir < 0 ? 'down' : 'up'}` : undefined} onPress={() => onStep(dir)} hitSlop={slopFor(36)}
-      accessibilityRole="button" accessibilityLabel={`${label} ${dir < 0 ? 'down' : 'up'}`} style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}>
-      <Text style={styles.stepSign}>{dir < 0 ? '−' : '+'}</Text>
-    </Pressable>
-  );
+export type StepperProps = {
+  /** What it sets, for VoiceOver ("Click level"); drawn before the buttons with `showLabel`. */
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  /** How the value is written ("80%"); the number by default. */
+  format?: (v: number) => string;
+  showLabel?: boolean;
+  /** Width of the value, pt. */
+  width?: number;
+  /** `${testID}-down` and `${testID}-up` on the buttons. */
+  testID?: string;
+};
+
+/** − value + (each press one `step`, kept inside min…max; a button at its end is dimmed), for levels, notes and bars. */
+export function Stepper({ label, value, onChange, min, max, step = 1, format = String, showLabel, width = 64, testID }: StepperProps) {
+  const can = stepBounds(value, min, max);
+  const text = format(value);
+  const btn = (dir: -1 | 1) => {
+    const off = dir < 0 ? !can.down : !can.up;
+    return (
+      <Pressable testID={testID ? `${testID}-${dir < 0 ? 'down' : 'up'}` : undefined} onPress={() => onChange(stepValue(value, dir, { min, max, step }))} disabled={off}
+        hitSlop={slopFor(36)} accessibilityRole="button" accessibilityLabel={`${label} ${dir < 0 ? 'down' : 'up'}`} accessibilityState={{ disabled: off }}
+        style={({ pressed }) => [styles.stepBtn, off && styles.dim, pressed && styles.pressed]}>
+        <Text style={styles.stepSign}>{dir < 0 ? '−' : '+'}</Text>
+      </Pressable>
+    );
+  };
   return (
-    <View style={styles.stepper} accessible={false}>
+    <View style={styles.stepper} accessible={false} testID={testID}>
+      {showLabel ? <Body weight="700">{label}</Body> : null}
       {btn(-1)}
-      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityLabel={`${label}: ${value}`} style={[styles.stepVal, tabular, { width }]}>{value}</Text>
+      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityLabel={`${label}: ${text}`} style={[styles.stepVal, tabular, { width }]}>{text}</Text>
       {btn(1)}
     </View>
   );
 }
 
 /**
- * A full-screen tool over Setup (the pad wizard, soft then loud, latency, sound check, note map, kit test): the black
- * bar with the title and Close, on the dotted ground, without the sidebar.
+ * A full-screen tool (the pad wizard, soft then loud, latency, sound check, note map, kit test): the black bar with
+ * the title and Close, on the dotted ground, without the sidebar.
  */
 export function ToolFrame({ visible, title, onClose, children, testID, right }: { visible: boolean; title: string; onClose: () => void; children: ReactNode; testID?: string; right?: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -102,6 +131,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 46, paddingVertical: 4, paddingHorizontal: 14 },
   sep: { borderTopWidth: stroke.thin, borderTopColor: color.separator },
   pressed: { backgroundColor: 'rgba(20,20,20,0.06)' },
+  dim: { opacity: 0.4 },
   sym: { width: 34, height: 34, borderWidth: stroke.thin, borderColor: color.ink, alignItems: 'center', justifyContent: 'center' },
   symText: { fontSize: 18 },
   grow: { flex: 1, minWidth: 0 },
