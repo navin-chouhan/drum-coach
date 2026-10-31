@@ -36,7 +36,7 @@ tags:
 
 # 2 · A lesson with a playable step, through Journey → Full path
 - tapOn:
-    text: "Full path"
+    id: journey-full-path # the stage strip's button (D10)
 - extendedWaitUntil:
     visible:
       id: progress-path

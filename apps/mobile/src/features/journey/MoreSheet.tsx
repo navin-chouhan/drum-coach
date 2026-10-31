@@ -1,58 +1,31 @@
-// Journey's fold-out (the web's "More ways to play" row and the "Your coach" card under "Full path, coach lessons…"):
-// the one-screen Journey has no room for them, so "⋯ More" opens them in the kit's full-screen ToolFrame.
-// Flow opens the lesson in flow mode (as the web's tile); Stick technique is G3's /technique route.
-import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
-import { Body, Button, Card, CardTitle, ToolFrame, color } from '../../ui';
+// Journey's ⋯ sheet (D10, docs/mobile/reorg/journey-after.png): what the one-job Journey no longer shows: more ways
+// to play (Just jam, Flow, the after-set moves, the stage song, a new song, show-off songs), your coach (ask for a
+// different lesson, this week's focus, lessons written for you, the challenge) and where you are (Find my level,
+// Skill map, Full path, Check my kit, Stick technique). The entries are moreSections (more.ts, tested); the sheet is
+// the shell's ⋯ pattern (src/ui/MoreSheet.tsx).
+import { Body, MoreSheet, SheetHeading, SheetItem, color } from '../../ui';
 import type { JourneyView } from './model';
-import { Tile } from './Tiles';
+import { moreSections, type MoreEntry } from './more';
 
 export const COACH_WRITING = 'Your coach is writing a lesson from your recent playing… this can take a minute. You can keep playing; the answer will wait here.';
-export const COACH_ABOUT = 'The coach looks at your recent takes and writes the next lesson for this stage: a jam, an echo game, a challenge or a drill.';
 
-export function MoreSheet({ v, visible, onClose, onOpen, onFlow, onAskNew, coach }: {
+export function JourneyMoreSheet({ v, visible, onClose, onRun, coach }: {
   v: JourneyView; visible: boolean; onClose: () => void;
-  onOpen: (lessonId: string) => void; onFlow: () => void; onAskNew: () => void;
+  /** Runs an entry's action (Journey knows how to open lessons, routes and coach asks). */
+  onRun: (e: MoreEntry) => void;
   coach: { thinking: boolean; error?: string };
 }) {
-  const go = (fn: () => void) => () => { onClose(); fn(); };
   return (
-    <ToolFrame visible={visible} title="More" onClose={onClose} testID="journey-more">
-      <View style={styles.body}>
-        <Card style={styles.card}>
-          <CardTitle size={18}>More ways to play</CardTitle>
-          <View style={styles.tiles}>
-            {v.flow ? <Tile emoji="🌊" title="Flow" sub={v.flow.sub} testID="journey-more-flow" onPress={go(onFlow)} /> : null}
-            <Tile emoji="🥢" title="Stick technique" sub="how it moves" testID="journey-more-technique" onPress={go(() => router.push('/technique' as never))} />
-            <Tile emoji="🎵" title="Learn a new song" testID="journey-more-song" onPress={go(() => router.navigate('/songs' as never))} />
-            {v.trail ? <Tile emoji="✍" title="Ask the coach" sub="for a different lesson" testID="journey-more-ask"
-              onPress={coach.thinking ? undefined : go(onAskNew)} /> : null}
-          </View>
-        </Card>
-        {v.trail ? (
-          <Card style={styles.card} testID="journey-more-coach">
-            <CardTitle size={18}>Your coach</CardTitle>
-            {coach.thinking ? <Body size={15} weight="700" accessibilityLiveRegion="polite">{`✍ ${COACH_WRITING}`}</Body> : <>
-              {coach.error ? <Body size={14} weight="700" color={color.bad}>{coach.error}</Body> : null}
-              {v.coachLessons.length ? (
-                <View style={styles.chips}>
-                  <Body size={15}>Lessons written for you:</Body>
-                  {v.coachLessons.map(l => <Button key={l.lessonId} size="small" tone="pop" label={l.title} onPress={go(() => onOpen(l.lessonId))} />)}
-                </View>
-              ) : <Body size={14} color={color.muted}>{COACH_ABOUT}</Body>}
-              <View style={styles.row}><Button label="Ask the coach for a new lesson" emoji="✍" testID="journey-more-ask-new" onPress={onAskNew} /></View>
-            </>}
-          </Card>
-        ) : null}
-      </View>
-    </ToolFrame>
+    <MoreSheet open={visible} onClose={onClose} title="More" testID="journey-more">
+      {moreSections(v, coach).map(s => [
+        <SheetHeading key={`h-${s.key}`}>{s.title}</SheetHeading>,
+        s.key === 'coach' && coach.thinking ? <Body key="thinking" size={14} weight="700" accessibilityLiveRegion="polite">{`✍ ${COACH_WRITING}`}</Body> : null,
+        s.key === 'coach' && coach.error ? <Body key="error" size={14} weight="700" color={color.bad}>{coach.error}</Body> : null,
+        ...s.entries.map(e => (
+          <SheetItem key={e.key} emoji={e.emoji} label={e.title} sub={e.sub} testID={e.testID} disabled={e.disabled}
+            onPress={() => { onClose(); onRun(e); }} />
+        )),
+      ])}
+    </MoreSheet>
   );
 }
-
-const styles = StyleSheet.create({
-  body: { gap: 18, paddingTop: 18 },
-  card: { gap: 10 },
-  tiles: { flexDirection: 'row', gap: 12 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  row: { flexDirection: 'row' },
-});
