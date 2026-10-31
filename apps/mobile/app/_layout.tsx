@@ -22,6 +22,12 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="(main)" options={{ headerShown: false }} />
+          {/* Full-screen frames (QA M1): the lesson player, Practice's play screen and metronome, a song, first run. */}
+          <Stack.Screen name="lesson" options={{ headerShown: false }} />
+          <Stack.Screen name="practice/play" options={{ headerShown: false }} />
+          <Stack.Screen name="practice/metronome" options={{ headerShown: false }} />
+          <Stack.Screen name="song/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="welcome/index" options={{ headerShown: false, gestureEnabled: false }} />
         </Stack>
       </ThemeProvider>
     </SafeAreaProvider>

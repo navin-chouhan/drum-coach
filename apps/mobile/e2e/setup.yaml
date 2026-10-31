@@ -1,0 +1,86 @@
+# Setup on a simulator: the groups are there, and each tool opens full screen and closes (note map, kit test,
+# latency, the MIDI input picker). testIDs: src/features/setup/SetupScreen.tsx (ToolFrame: `setup-tool-<tool>` and
+# `setup-tool-<tool>-close`), src/features/pads/NoteMapPanel.tsx, src/features/latency/LatencyPanel.tsx.
+appId: com.drumcoach.app
+name: Setup groups and tools
+tags:
+  - smoke
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+- tapOn:
+    id: nav-setup
+- extendedWaitUntil:
+    visible:
+      id: screen-setup
+    timeout: 10000
+- assertVisible:
+    id: setup-kit
+- assertVisible:
+    id: setup-kit-name
+- assertVisible:
+    id: setup-pads
+- assertVisible:
+    id: setup-latency-measure
+- assertVisible:
+    id: setup-server
+- assertVisible:
+    id: setup-api-key
+- assertVisible:
+    id: setup-gestures
+- takeScreenshot: setup
+
+# Note map: the in-app remap (CLAUDE.md: always let the user remap notes)
+- tapOn:
+    id: setup-notemap
+- extendedWaitUntil:
+    visible:
+      id: setup-tool-notemap
+    timeout: 5000
+- assertVisible:
+    id: notemap-snare
+- tapOn:
+    id: setup-tool-notemap-close
+
+# Kit test
+- tapOn:
+    id: setup-kit-test
+- extendedWaitUntil:
+    visible:
+      id: setup-tool-kittest
+    timeout: 5000
+- tapOn:
+    id: setup-tool-kittest-close
+
+# Latency: the tap test panel (no kit: nothing to measure; just open and close)
+- tapOn:
+    id: setup-latency-measure
+- extendedWaitUntil:
+    visible:
+      id: latency-start
+    timeout: 5000
+- tapOn:
+    id: setup-tool-latency-close
+
+# MIDI input picker
+- tapOn:
+    id: setup-midi-input
+- extendedWaitUntil:
+    visible:
+      id: setup-tool-input
+    timeout: 5000
+- tapOn:
+    id: setup-tool-input-close
+
+# Coach server: Test connection with nothing configured stays disabled; Save and test with a bad URL says why
+- tapOn:
+    id: setup-server-url
+- inputText: "not a url"
+- hideKeyboard
+- tapOn:
+    id: setup-server-test
+- extendedWaitUntil:
+    visible:
+      id: setup-server-result
+    timeout: 10000
+- takeScreenshot: setup-server-bad-url

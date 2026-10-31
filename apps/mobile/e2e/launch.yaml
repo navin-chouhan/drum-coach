@@ -1,7 +1,8 @@
-# T3 smoke: the app launches and the home shows "Drum Coach".
-# Needs testID "home-title" on the home's title (apps/mobile/app/index.tsx, A2).
+# T3 smoke: the app launches (finishing the first run on a fresh install) and Journey shows beside the sidebar.
+# testIDs: home-title (src/ui/Sidebar.tsx brand, set in app/(main)/_layout.tsx), screen-journey, journey-next,
+# journey-set (src/features/journey/JourneyScreen.tsx), nav-* (src/ui/nav.ts).
 appId: com.drumcoach.app
-name: Launch shows the home
+name: Launch shows Journey
 tags:
   - smoke
 ---
@@ -9,4 +10,18 @@ tags:
 - assertVisible:
     id: home-title
     text: Drum Coach
-- takeScreenshot: launch-home
+- assertVisible:
+    id: journey-next
+- assertVisible:
+    id: journey-set
+- assertVisible:
+    id: nav-songs
+- assertVisible:
+    id: nav-practice
+- assertVisible:
+    id: nav-progress
+- assertVisible:
+    id: nav-coach
+- assertVisible:
+    id: nav-setup
+- takeScreenshot: launch-journey

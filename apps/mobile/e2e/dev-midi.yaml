@@ -1,14 +1,15 @@
-# T3 smoke: the home's link opens /dev/midi and its Devices section is there (empty on the simulator: no MIDI
-# sources). Needs testID "dev-midi-devices" on that section (apps/mobile/app/dev/midi.tsx, A3), rendered even with no
-# devices. The link is found by its text (anything with "MIDI" in it).
+# Debug builds only (tag `debug`, excluded by config.yaml): the sidebar's Dev row opens /dev/midi and its Devices
+# section is there (empty on the simulator: no MIDI sources). The Dev row is drawn only when __DEV__
+# (app/(main)/_layout.tsx), so a Release build can't run this flow.
+# Run: maestro test --include-tags debug -e DEV_CLIENT_URL=... apps/mobile/e2e/dev-midi.yaml
 appId: com.drumcoach.app
 name: Dev MIDI screen shows Devices
 tags:
-  - smoke
+  - debug
 ---
 - runFlow: subflows/open-app.yaml
 - tapOn:
-    text: .*MIDI.*
+    id: home-dev-midi-link
 - extendedWaitUntil:
     visible:
       id: dev-midi-devices
