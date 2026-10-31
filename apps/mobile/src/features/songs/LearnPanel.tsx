@@ -8,9 +8,9 @@ import { beatAt } from '@drum-coach/core/engine/tempo';
 import { quantizeTake, replaceRange, toggleNote } from '@drum-coach/core/engine/transcribe';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Body, Button, Card, CardTitle, Panel, color, type, useKitMoves } from '../../ui';
+import { Body, Button, Card, CardTitle, CheckRow, Choice, Panel, Small, Stepper, Warn, color, type, useAppKey, useKitMoves } from '../../ui';
 import { getHomeServer } from '../../platform/api';
-import { CheckRow, Choice, Row, Small, Stepper, Warn } from './bits';
+import { Row } from './bits';
 import { askGroove, coachEntry, COACH_CANT_HEAR, onCoachEntries, type Groove } from './coachAsk';
 import { GridEditor } from './GridEditor';
 import {
@@ -79,6 +79,8 @@ export function LearnPanel({ song, videoId, yt, rate, bus, latencyMs, sound }: M
   }, [looping, yt, grid, fromBeat, toBeat, bpb, steps, sound]);
 
   useKitMoves({ yes: () => setLooping(l => !l), stop: () => setLooping(false) }, { playing: looping });
+  useAppKey('enter', () => (looping ? false : setLooping(true)));
+  useAppKey('escape', () => (looping ? setLooping(false) : false));
   // a call or the app leaving the foreground stops the loop; the unfinished pass is dropped (nothing is saved per pass)
   useInterruptions(looping, () => setLooping(false));
 
@@ -98,8 +100,8 @@ export function LearnPanel({ song, videoId, yt, rate, bus, latencyMs, sound }: M
       <CardTitle>Learn by ear</CardTitle>
       <Small style={styles.gap}>{LEARN_HELP}</Small>
       <Row style={styles.gap}>
-        <Stepper label="Bars from" value={range.from} onChange={v => setBars(v, Math.max(range.to, v))} testID="song-learn-from" />
-        <Stepper label="to" value={range.to} min={range.from} onChange={v => setBars(range.from, v)} testID="song-learn-to" />
+        <Stepper label="Bars from" showLabel value={range.from} min={1} max={9999} onChange={v => setBars(v, Math.max(range.to, v))} testID="song-learn-from" />
+        <Stepper label="to" showLabel value={range.to} min={range.from} max={9999} onChange={v => setBars(range.from, v)} testID="song-learn-to" />
         <Choice label="Grid" value={steps} options={LEARN_STEPS} onChange={v => setSteps(v)} testID="song-learn-grid" />
       </Row>
       <Row style={styles.gap}>

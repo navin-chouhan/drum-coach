@@ -5,11 +5,11 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BigMove, Body, Card, CardTitle, Display, StatTile, color, gesturesFor, readSettings, useKitMoves } from '../../ui';
+import { BigMove, Body, Card, CardTitle, CheckRow, Display, Small, StatTile, Stepper, color, gesturesFor, readSettings, useAppKey, useKitMoves } from '../../ui';
 import { audio } from '../../platform/audio';
 import { NoteHighway } from '../../play';
 import { getStorage } from '../../platform/storage';
-import { CheckRow, Row, Small, Stepper } from './bits';
+import { Row } from './bits';
 import { PLAY_EMPTY, STAGE_LABEL, playHelp, songPart, songTakeOptions } from './modes';
 import type { ModeProps } from './modeProps';
 import { concert, songHref } from './songsModel';
@@ -48,6 +48,9 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
   // D6: a call or the app leaving the foreground ends the take; ≥ 2 whole bars are kept, flagged (onFinish saves it)
   useInterruptions(playing, at => { take?.interrupt(at); setTake(null); });
   useKitMoves({ yes: () => (playing ? undefined : go()), stop: () => (playing ? stop() : undefined) }, { playing });
+  // a hardware keyboard: Enter starts, Esc stops (the web's Escape)
+  useAppKey('enter', () => (playing ? false : go()));
+  useAppKey('escape', () => (playing ? stop() : false));
 
   // The highway runs on the song: its clock is the take's run ms, beat 0 at 0.
   const runNow = useMemo(() => (take ? () => take.runMs(now()) : now), [take, now]);
@@ -91,8 +94,8 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
         <View style={styles.stack}>
           <Small>{playHelp(videoId === song.drumlessId)}</Small>
           <Row>
-            <Stepper label="Bars from" value={range.from} max={part.lastBar} onChange={v => setRange(r => ({ from: v, to: Math.max(v, r.to) }))} testID="song-play-from" />
-            <Stepper label="to" value={range.to} min={range.from} max={part.lastBar} onChange={v => setRange(r => ({ ...r, to: v }))} testID="song-play-to" />
+            <Stepper label="Bars from" showLabel value={range.from} min={1} max={part.lastBar} onChange={v => setRange(r => ({ from: v, to: Math.max(v, r.to) }))} testID="song-play-from" />
+            <Stepper label="to" showLabel value={range.to} min={range.from} max={part.lastBar} onChange={v => setRange(r => ({ ...r, to: v }))} testID="song-play-to" />
           </Row>
           <CheckRow label={STAGE_LABEL} value={stage} onChange={setStage} testID="song-play-stage" />
         </View>

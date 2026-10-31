@@ -8,12 +8,12 @@ import type { YtResult } from '@drum-coach/core/youtube/schemas';
 import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { Body, Button, Card, CardTitle, Display, Screen, Strong, color, getAppHitBus, type, useAppSettings } from '../../ui';
+import { Body, Button, Card, CardTitle, Choice, Display, Field, Screen, Small, Strong, Tabs, Warn, color, getAppHitBus, type, useAppSettings } from '../../ui';
 import { getHomeServer } from '../../platform/api';
 import { audio } from '../../platform/audio';
 import { getMidiPort } from '../../platform/midi';
 import { YouTubeView, useYt, type YtController } from '../../youtube';
-import { Choice, Field, KeyboardPads, Row, Small, Tabs, Warn } from './bits';
+import { Row } from './bits';
 import { JamPanel } from './JamPanel';
 import { LearnPanel } from './LearnPanel';
 import type { ModeProps } from './modeProps';
@@ -90,7 +90,6 @@ function SongView({ songId, bars, onBack }: { songId: string; bars?: SongBars; o
       <Row style={styles.head}>
         <Button label="← Songs" onPress={onBack} testID="song-back" />
         <Display size={type.title} numberOfLines={1} style={styles.grow} accessibilityRole="header">{song.title}</Display>
-        <KeyboardPads emitPad={(pad, v) => bus.emitPad(pad, v)} />
       </Row>
       <View style={styles.cols}>
         <ScrollView style={stage ? styles.leftStage : styles.left} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled">
