@@ -46,6 +46,8 @@ export type LessonDeps = {
   coach?: Pick<CoachSession, 'get' | 'subscribe' | 'coachTake' | 'coachOpen' | 'onCoachAction' | 'dropCoachAction'>;
   /** Speak a verdict (settings.voice is checked by the judge). */
   say?: (text: string) => void;
+  /** Voice first (D10): the score and verdict after every take (voice.ts speakMoment 'take'). */
+  speakTake?: (t: { landed?: number; total?: number; verdict: string }) => void;
   /** A drum flourish through the speakers (a lesson done, a record). */
   flourish?: (big: boolean) => void;
   /** Ask the coach to write a lesson (after a finished lesson, or "something different" for a struggle). */
@@ -171,7 +173,10 @@ export class LessonController {
     if (out.stickyBar !== undefined || out.accuracy !== undefined) { this.stickyBar = out.stickyBar; this.lastAccuracy = out.accuracy; }
     if (out.flourish) this.d.flourish?.(out.flourish.big);
     if (out.coachLesson) this.d.requestCoachLesson?.(out.coachLesson);
-    if (out.speak) this.d.say?.(out.speak);
+    // Voice first (D10): every take says its score and verdict (was: only when a step or lesson was done)
+    const o = out.outcome;
+    if (this.d.speakTake && !f.options.demo) this.d.speakTake({ ...(o.nums && { landed: o.nums.landed, total: o.nums.total }), verdict: o.say ?? o.text });
+    else if (out.speak) this.d.say?.(out.speak);
     if (out.coachTake) void this.d.coach?.coachTake(f, { chartId: f.chart.id, lesson: out.coachTake });
     if (out.itemDone) this.d.onItemDone?.();
     if (out.save && shouldSave(f) && !this.saved.has(f)) {

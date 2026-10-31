@@ -5,7 +5,8 @@ import { createTake, type Finished, type Take } from '@drum-coach/core/play/take
 import { AppState } from 'react-native';
 import { audio } from '../../platform/audio';
 import { startWithSpokenFallback } from '../../play/spokenFallback';
-import { sayNow } from '../coach/voice';
+import { sayNow, speakMoment } from '../coach/voice';
+import { scoreMoment } from '../coach/moments';
 import { watchInterruptions } from '../../platform/audioLifecycle';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
@@ -55,7 +56,9 @@ export const practiceEngine = {
     }, req.chart, takeOptions(req));
     feed.reset(take.state);
     take.onChange(() => set({ phase: take.state.phase }));
+    take.onCue(c => speakMoment({ kind: 'tip', text: c.spoken })); // spoken by default (D10)
     take.onFinish(f => {
+      if (!req.demo) speakMoment(scoreMoment(f.stats)); // voice first: the score after every take (D10)
       const rec = runRecord(f, req.chart.id);
       set({ finished: f });
       if (rec) void getStorage().runs.add(rec).then(() => onSaved.forEach(l => l(f))).catch(() => set({ error: 'This take could not be saved.' }));

@@ -3,205 +3,189 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "journey-recap": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "journey-sore": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "journey-week": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "journey-writing": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "journey-alldone": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "practice": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "progress": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "text \"Songs\"",
-      "text \"Playing whole songs with the band\"",
-      "text \"0 of 25 lessons\"",
-      "text \"not started\"",
-      "text \"Later:\"",
-      "text \"Triplets and shuffle 0 of 28\"",
-      "text \"Loud and soft 0 of 20\"",
-      "text \"Fills and solos 0 of 15\"",
-      "text \"Feel 0 of 7\"",
-      "text \"· step 3, 70 next (started at 60)\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "setup": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "lesson": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "songs": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-new": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-tempo": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-learn": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\"",
-      "song-learn \"Learn by earLoop a few bars (slow them down with S\"",
-      "song-learn-use-take \"Use take (0 notes)\"",
-      "text \"Use take (0 notes)\"",
-      "text \"Clear\"",
-      "song-learn-save \"Save bars 1–2\"",
-      "text \"Save bars 1–2\"",
-      "song-learn-groove \"Ask coach for the groove\"",
-      "text \"Ask coach for the groove\"",
-      "text \"✓ You checked this part by ear on 2026-10-28. Chan\"",
-      "song-learn-verify \"Mark as not checked\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-jam": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-play": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-sheet": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "coach-offline": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "coach-week": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "coach-session": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "firstrun-welcome": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "firstrun-plug": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "firstrun-pads": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "firstrun-latency": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "metronome": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "technique": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "technique-kick": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [
-      "text \"The beater comes back off the pad by itself.\"",
-      "text \"✗ Wrong:\""
-    ],
+    "cut": [],
     "errors": 0
   },
   "flow": {
@@ -239,13 +223,7 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [
-      "text \"One stick low (3 cm), one high (30 cm). Both drop \"",
-      "text \"Two heights before every flam: 3 cm and 30 cm.\"",
-      "text \"The hand that played loud stays down; the soft one\"",
-      "text \"Two notes, very close: \"fla-am\".\"",
-      "text \"✗ Wrong:\""
-    ],
+    "cut": [],
     "errors": 0
   },
   "lesson-intro-1": {
@@ -270,6 +248,7 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "lesson-celebration": {
@@ -288,39 +267,15 @@
   "progress-lessons": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "progress-lessons-row-15 \"Where's the kick? · Where's the kick?★★★shaky: wor\"",
-      "text \"shaky: worth one more go\"",
-      "progress-lessons-row-16 \"Your first beat · Build it upstep 1, 64 next (star\"",
-      "text \"Your first beat · Build it up\"",
-      "text \"step 1, 64 next (started at 60)\"",
-      "text \"12 Oct\"",
-      "text \"Practise\"",
-      "progress-lessons-row-17 \"The money beat · Hi-hat only★★★due for a review11 \"",
-      "text \"The money beat · Hi-hat only\"",
-      "text \"due for a review\"",
-      "text \"11 Oct\"",
-      "text \"Practise\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "progress-path": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "text \"Sight-reading 2\"",
-      "text \"5. 16ths and dynamics\"",
-      "text \"Challenges:\"",
-      "text \"The paradiddle\"",
-      "text \"16th-note hi-hat\"",
-      "text \"Ghost notes\"",
-      "text \"Ride groove with hi-hat foot\"",
-      "text \"Lessons:\"",
-      "text \"Flam taps\"",
-      "text \"The drag\"",
-      "text \"Kick on the \"a\" of 2\"",
-      "text \"Open hi-hat on every &\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "lesson-complete": {
@@ -373,6 +328,160 @@
     "errors": 0
   },
   "journey-more": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "journey-rail": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "coach-chat-sheet": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "you": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "progress-fresh": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "progress-busy": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "progress-coming": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "progress-teacher": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "progress-skills": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "progress-month": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-busy": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-coach": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-kittest": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-notemap": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-sound": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-latency": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-input": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "setup-apikey": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-grooves": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-songs": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-search": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "lesson-take": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "placement-take": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],

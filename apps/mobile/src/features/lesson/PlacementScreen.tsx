@@ -1,4 +1,4 @@
-// "Find your level" (/lesson/placement): the web's PlacementView (src/ui/SkillMapView.tsx), which the first run opens
+// "Find your level" (/lesson/placement), on the shared player (src/player): the web's PlacementView (src/ui/SkillMapView.tsx), which the first run opens
 // for someone who has played before (drumcoach.firstRun.placement = '1', as the web's Onboarding → kit steps →
 // placement), or Journey's "Find my level" any time later. One take of each stage's first challenge at its target tempo; the first one that doesn't pass is where
 // you start. The rules are placement.ts; the take runs on the lesson player's TakePort (core take engine).
@@ -14,14 +14,16 @@ import { getStorage } from '../../platform/storage';
 import { NotationView } from '../../notation';
 import { TouchPads } from '../../play';
 import type { DrumId } from '../../play/chartLike';
-import { BigMove, Body, Button, Card, Display, Screen, color, gesturesFor, getAppHitBus, useAppKey, useAppSettings, useKitMoves } from '../../ui';
+import { PlayerFrame, phaseOf, type PlayerMove } from '../../player';
+import { gesturesFor, getAppHitBus, useAppKey, useAppSettings, useKitMoves } from '../../ui';
 import { PLACEMENT_KEY } from '../firstRun/firstRun';
 import { allLessons } from '../journey/source';
 import { judgePlacement, ladderOf, placeAt, placementStep, rungLine } from './placement';
 import { todayKey } from './progress';
+import { barCounter } from './live';
 import { idleChart, runChart } from './runChart';
 import { createSettingsStore } from './settings';
-import { sheetScaleFor } from './sheetFit';
+import { sheetScaleFor } from '../../player/sheetFit';
 import { createTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
 
@@ -95,9 +97,8 @@ export function PlacementScreen() {
     take.stop('interrupted', at);
     if (take.state.phase !== 'done') setNotice(INTERRUPTED_NOTE);
   });
-  // A hardware keyboard: Enter plays (or starts there), Esc stops the take.
+  // A hardware keyboard: Enter plays (or starts there); Esc is the player's (stops a take, else leaves).
   useAppKey('enter', () => { if (playing) return false; if (result) leave(); else play(); return true; });
-  useAppKey('escape', () => { if (!playing) return false; take.stop(); return true; });
 
   const s = take.state;
   const live = playing ? runChart(s) : undefined;
@@ -105,42 +106,40 @@ export function PlacementScreen() {
   const bpm = rung ? rung.step.bpm.target : 0;
   const activeDrums = rung ? [...new Set((rung.step.activeLanes ?? rung.step.chart.notes.map(n => n.drum)).map(laneDrum))] : [];
 
+  const moves: PlayerMove[] = result
+    ? [{ id: 'start-there', label: 'Start there', emoji: '▶', gestures: gesturesFor('yes'), onPress: leave, testID: 'placement-start-there' }]
+    : item && lesson && rung ? [
+      { id: 'play', label: 'Play it', emoji: '▶', gestures: gesturesFor('yes'), onPress: play, testID: 'placement-play' },
+      { id: 'here', label: 'Start at this stage', emoji: '⏹', onPress: () => finish(item.level), disabled: playing, tone: 'white', testID: 'placement-here' },
+      { id: 'leave', label: 'From the beginning', emoji: '↩', note: 'stop the test', onPress: leave, testID: 'placement-leave' },
+    ] : [{ id: 'back', label: 'Back', emoji: '‹', onPress: leave, testID: 'placement-back' }];
+  const pos = playing ? take.position(clock.now()) : 0;
+
   return (
-    <Screen withSidebar={false} testID="screen-placement">
-      <Card style={styles.card}>
-        <Display size={30}>Find your level</Display>
-        {result ? <>
-          <Display size={24} testID="placement-result">{result}</Display>
-          {last ? <Body color={color.muted}>{last}</Body> : null}
-          <BigMove tone="go" emoji="▶" label="Start there" gestures={gesturesFor('yes')} onPress={leave} testID="placement-start-there" style={styles.big} />
-        </> : item && lesson && rung ? <>
-          <Body size={18} testID="placement-rung">{rungLine(i, ladder.length, lesson)}</Body>
-          {last ? <Body size={15} color={color.muted}>{`✓ ${last}`}</Body> : null}
-          <View style={styles.sheet} onLayout={e => setPaperH(Math.round(e.nativeEvent.layout.height))}>
-            {live && s.options
-              ? <NotationView chart={live} bpm={live.bpm * s.options.speed} zero={s.zero} now={clock.now} latencyMs={app.latencyMs} results={take.results} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" />
-              : idle ? <NotationView chart={idle.chart} bpm={bpm} zero={idle.zero} now={clock.now} latencyMs={0} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" /> : null}
-          </View>
-          {!kit ? <TouchPads emitPad={(pad, vel, time) => bus.emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
-            now={clock.now} activeDrums={activeDrums} results={take.results} style={styles.pads} testID="placement-touch-pads" /> : null}
-          {notice ? <Body color={color.bad} testID="placement-notice">{notice}</Body> : null}
-          <View style={styles.row}>
-            {playing
-              ? <BigMove tone="night" emoji="⏹" label="Stop" gestures={gesturesFor('stop')} onPress={() => take.stop()} testID="placement-stop" style={styles.big} />
-              : <BigMove tone="go" emoji="▶" label="Play it" gestures={gesturesFor('yes')} onPress={play} testID="placement-play" style={styles.big} />}
-            <Button label="Start at this stage" onPress={() => finish(item.level)} disabled={playing} testID="placement-here" />
-            <Button tone="plain" label="Stop: start from the beginning" onPress={leave} testID="placement-leave" />
-          </View>
-        </> : <Button label="Back" onPress={leave} testID="placement-back" />}
-      </Card>
-    </Screen>
+    <PlayerFrame
+      phase={phaseOf({ playing, hasResults: false })}
+      testID="placement"
+      title="Find your level"
+      subtitle={item && lesson ? `Stage ${i + 1} of ${ladder.length} · ${lesson.title}` : undefined}
+      bpm={rung ? bpm : undefined}
+      onBack={leave}
+      coach={result
+        ? { line: result, under: last, testID: 'placement-result' }
+        : item && lesson && rung ? { line: rungLine(i, ladder.length, lesson), under: [last ? `✓ ${last}` : '', notice].filter(Boolean).join('\n') || undefined, testID: 'placement-rung' }
+        : { line: 'No stages to place you in yet.' }}
+      music={rung ? (live && s.options
+        ? <NotationView chart={live} bpm={live.bpm * s.options.speed} zero={s.zero} now={clock.now} latencyMs={app.latencyMs} results={take.results} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" />
+        : idle ? <NotationView chart={idle.chart} bpm={bpm} zero={idle.zero} now={clock.now} latencyMs={0} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" /> : null) : null}
+      onPaperHeight={setPaperH}
+      bottom={rung && !result && !kit ? <TouchPads emitPad={(pad, vel, time) => bus.emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
+        now={clock.now} activeDrums={activeDrums} results={take.results} style={styles.fill} testID="placement-touch-pads" /> : undefined}
+      body={result ? <View style={styles.fill} /> : undefined}
+      moves={moves}
+      take={playing ? { bar: barCounter(s, pos).text.replace(' of ', ' / '), onStop: () => take.stop() } : undefined}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  card: { flex: 1, gap: 12 },
-  sheet: { flex: 1, minHeight: 200, backgroundColor: '#FFFDF6' },
-  pads: { height: 170 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  big: { minWidth: 260, minHeight: 80 },
+  fill: { flex: 1 },
 });

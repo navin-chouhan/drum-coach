@@ -10,8 +10,10 @@ import { getStorage } from '../platform/storage';
 import { readNoteMap, readPadCal, subscribeKitStore } from '../features/pads/kitStore';
 import { readSettings, settingsVersion, subscribeSettings } from './appSettings';
 import { createKitCache } from './kitCache';
+import { sayItAgain } from '../features/coach/voice';
 import { createKitMoveRouter, type KitMoveHandlers } from './kitMoves';
-import { statusRows, type StatusRow } from './status';
+import { kitDot, statusRows, type KitDot, type StatusRow } from './status';
+import { parseSidebarPref, type SidebarPref } from './nav';
 
 /** The kit's name as the note map and pad calibration are keyed: the connected input's, else the MPS-150's iOS name. */
 export function kitName(): string {
@@ -84,13 +86,16 @@ export function useKitMoves(handlers: KitMoveHandlers, opts: { enabled?: boolean
   const { padCommands } = useAppSettings();
   const on = (opts.enabled ?? true) && focused && padCommands !== false;
   const router = useRef(createKitMoveRouter()).current;
-  router.set(handlers);
+  // Voice first (D10): kick × 2 between takes says the coach's last line again, on every screen with kit moves.
+  router.set({ again: sayItAgain, ...handlers });
   const playing = useRef(false);
   playing.current = !!opts.playing;
   useEffect(() => {
     if (!on) return;
     return getAppHitBus().onHit(h => { router.hit(h, playing.current); });
   }, [on, router]);
+  // …and key G (R is a tom: a pad key)
+  useAppKey('g', () => { sayItAgain(); return true; }, { enabled: (opts.enabled ?? true) && !opts.playing });
 }
 
 /** The sidebar's status pills: kit (live), latency (settings) and the coach server (checked now and every minute). */
@@ -108,6 +113,25 @@ export function useStatusRows(): StatusRow[] {
     return () => { live = false; clearInterval(t); };
   }, []);
   return statusRows({ midi: port.available, kit, latencyMs: settings.latencyChecked || settings.latencyMs ? settings.latencyMs : null, coach });
+}
+
+/** The sidebar's kit dot (D10), live. */
+export function useKitDot(): KitDot {
+  const port = getMidiPort();
+  const [kit, setKit] = useState<string | null>(() => connectedKit());
+  useEffect(() => port.onInputsChanged(() => setKit(connectedKit())), [port]);
+  return kitDot({ midi: port.available, kit });
+}
+
+const SIDEBAR_KEY = 'drumcoach.sidebar';
+let sidebarVersion = 0;
+const sidebarListeners = new Set<() => void>();
+/** The sidebar's remembered mode (« / » or `\`): 'auto' until the owner picks one, kept in the key-value store. */
+export function useSidebarPref(): [SidebarPref, (p: SidebarPref) => void] {
+  const v = useSyncExternalStore(fn => { sidebarListeners.add(fn); return () => { sidebarListeners.delete(fn); }; }, () => sidebarVersion);
+  const pref = useMemo(() => parseSidebarPref(getStorage().kv.get(SIDEBAR_KEY)), [v]); // eslint-disable-line react-hooks/exhaustive-deps
+  const set = (p: SidebarPref) => { getStorage().kv.set(SIDEBAR_KEY, p); sidebarVersion++; sidebarListeners.forEach(l => l()); };
+  return [pref, set];
 }
 
 function connectedKit(): string | null {

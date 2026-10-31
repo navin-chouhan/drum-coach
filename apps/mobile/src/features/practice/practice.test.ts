@@ -4,12 +4,13 @@ import { DEFAULTS } from '@drum-coach/core/input/settings';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { describe, expect, it } from 'vitest';
 import { bestClean, chartRow, listFor, practiceCharts, requestedChart, savedCharts, segments, startOf, type PracticeChart } from './catalog';
-import { CHOOSER_GESTURES, chooserModel, focusedRow, initialFocus, playLabel, stepFocus, warmRepeats } from './chooser';
+import { CHOOSER_GESTURES, chooserModel, focusedRow, forYouCards, initialFocus, kindTiles, nextCard, playCardLabel, playLabel, practiceLine, stepFocus, warmRepeats } from './chooser';
 import { clampBpm, clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readMetronome, tapTempo, writeMetronome } from './metronome';
 import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
   PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
   moreCard, yourTakeCard,
+  barNow,
 } from './play';
 
 describe('section chart', () => {
@@ -94,6 +95,36 @@ describe('chooser', () => {
     for (let i = 0; i < 4; i++) seen.push(stepFocus(seen.at(-1)!, m));
     expect(seen).toEqual([-1, 0, 1, 2, -1]);
     expect(focusedRow(1, m)?.id).toBe(m.cards[1].id);
+  });
+  it('the reorganised For you (D10): warm-up first, left off here, then the picks, 4 at most', () => {
+    const runs = [run('disco', 92, 100, 27), run('singles', 95, 80, 28), run('singles', 80, 85, 29)];
+    const m = chooserModel({ ...base, runs });
+    const cards = forYouCards(m);
+    expect(cards.length).toBe(4);
+    expect(cards[0]).toMatchObject({ key: 'warm', icon: '🔥', title: 'Warm-up', tag: `warm-up · ${m.warm!.items.length} min` });
+    expect(cards[0].line).toBe(m.warm!.items.map(w => w.title).join(' · '));
+    expect(cards[0].row).toBeUndefined();
+    expect(cards[1]).toMatchObject({ key: 'singles', tag: 'left off here', title: 'Single strokes (16ths)', line: 'starts at 85 · best 80' });
+    expect(cards[2]).toMatchObject({ key: 'disco', tag: 'played lately' });
+    expect(playCardLabel(cards[0])).toBe('Play Warm-up');
+    expect(practiceLine(cards)).toBe('Warm up first? Ride × 2 moves the ring.');
+    expect([0, 1, 2, 3].map(i => nextCard(i, cards.length))).toEqual([1, 2, 3, 0]);
+    expect(nextCard(0, 0)).toBe(0);
+    // no warm-up yet (one pick or none)
+    const none = forYouCards({ cards: [], resume: undefined, warm: undefined });
+    expect(none).toEqual([]);
+    expect(practiceLine(none)).toBe('Pick a kind below to see every exercise.');
+    expect(playCardLabel(undefined)).toBe('Play');
+  });
+  it('the coach\'s pick is tagged', () => {
+    const ai = { ...chartRow(chart('singles'), [], { pace: 'steady' }), ai: true, why: 'for you' };
+    expect(forYouCards({ cards: [ai], resume: undefined, warm: undefined })[0]).toMatchObject({ tag: '✍ by your coach', ai: true, line: 'starts at 70 · 2 bars' });
+  });
+  it('the 4 kind tiles, Songs with your songs + YouTube', () => {
+    const t = kindTiles(charts, 2);
+    expect(t.map(x => x.id)).toEqual(['groove', 'rudiment', 'fill', 'song']);
+    expect(t[0].count).toBe(String(charts.filter(c => c.kind === 'groove').length));
+    expect(t[3].count).toBe(`${charts.filter(c => c.kind === 'song').length + 2} + YouTube`);
   });
   it('maps the kit gestures as the web chooser does', () => {
     expect(CHOOSER_GESTURES).toEqual({ yes: 'play', next: 'step', listen: 'hear', faster: 'warm' });
@@ -280,3 +311,15 @@ describe('after a take (the web PlayView side)', () => {
   });
 });
 
+
+describe('the take\'s bar for the player (D10)', () => {
+  const s = { zero: 10_000, beatMs: 500, run: { beats: 16, beatsPerBar: 4 } };
+  it('counts in, then the bar of the run', () => {
+    expect(barNow(s, 8_000)).toEqual({ bar: 1, of: 4, countIn: 4 });
+    expect(barNow(s, 9_600)).toEqual({ bar: 1, of: 4, countIn: 1 });
+    expect(barNow(s, 10_000)).toEqual({ bar: 1, of: 4 });
+    expect(barNow(s, 12_000)).toEqual({ bar: 2, of: 4 });
+    expect(barNow(s, 99_000)).toEqual({ bar: 4, of: 4 });
+    expect(barNow({ ...s, beatMs: 0 }, 12_000)).toEqual({ bar: 1, of: 4 });
+  });
+});

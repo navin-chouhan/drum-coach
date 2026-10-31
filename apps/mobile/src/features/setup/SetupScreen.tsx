@@ -1,10 +1,11 @@
-// Setup (mockup setup.png; web Setup → Your kit, Kit test, Coach and voice): two columns of grouped lists. Kit (the
-// e-Drum, the last hit, the MIDI input), Pads (hit each pad, soft then loud, note map), Latency (per output, with the
-// web's "do this first"), Sound and you, Coach · home server, Coach · fallback and While you play. Each tool opens
-// full screen over Setup. Kit gestures: the "yes" gesture starts what to do first.
+// Setup (D10 reorganisation, docs/mobile/reorg/setup-after.png): one job, is everything working. Three status cards
+// (Kit, Latency, Coach, each with its one fix) and six rows that open their pages full screen: Pads (hit each pad, soft
+// then loud, note map, MIDI input), Sound, Coach's voice, While you play (kit gestures, autopilot, which hand leads),
+// Coach connection (home server, API key, Claude and your plan) and About (build, debug screens). Kit test is in the
+// title bar. `/setup?tool=<page or tool>` opens one. Kit gestures: the "yes" gesture starts what to do first.
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getHomeServer, validateServerConfig } from '../../platform/api';
 import { audio } from '../../platform/audio';
 import { useAudioEngine } from '../../platform/useAudio';
@@ -14,37 +15,34 @@ import { KitView, type PadHit, type Subscribe } from '../../play';
 import { TOUCH_KIT } from '../../play/kitLayout';
 import { withoutKitSound } from '../../play/kitSounds';
 import {
-  Body, Button, Chevron, GestureChip, Group, GroupRow, Pill, Screen, Segmented, TitleBar, Toggle, ToolFrame, color, font, getAppHitBus, padColor, stroke, useAppSettings, useKitMoves, writeSettings,
+  Body, Button, Card, Chevron, GestureChip, Group, GroupRow, Label, Pill, Screen, Segmented, TitleBar, Toggle, ToolFrame, color, font, getAppHitBus, hardShadow, padColor, stroke,
+  useAppSettings, useKitMoves, useStatusRows, writeSettings,
 } from '../../ui';
 import { LatencyPanel } from '../latency/LatencyPanel';
-import { LATENCY_FOOT, latencyRow, otherRoutes, readLatencyByRoute, shortDate } from '../latency/latencyByRoute';
+import { latencyRow, otherRoutes, readLatencyByRoute, shortDate } from '../latency/latencyByRoute';
+import { hostOf } from '../coach/problem';
 import { NoteMapPanel } from '../pads/NoteMapPanel';
 import { PadWizardView } from '../pads/PadWizardView';
 import { VelocityPanel } from '../pads/VelocityPanel';
 import { conflictText, noteMapSummary } from '../pads/kitStore';
-import { levelsShort, setupChecks } from './checklist';
+import { setupChecks } from './checklist';
 import {
   API_KEY_FOOT, COACH_MODEL_KEY, DEFAULT_FALLBACK_MODEL, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, cleanCoachModel, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
 } from './coachServer';
 import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit';
-import { CoachVoicePanel } from './CoachVoicePanel';
-import { coachVoiceSummary } from './coachVoice';
+import { CoachPlanGroup, VoicePanel } from './CoachVoicePanel';
+import { PARENT, VIEW_TITLE, coachCard, lastHitLine, rowLines, setupViewOf, type SetupPage, type SetupView } from './setupHome';
 import { SoundPanel } from './SoundPanel';
 import { TimelineView } from './TimelineView';
 import { useAudioRoute, useKitConnection, useKitData, useLastHit, useRecentRuns, keychain } from './useSetup';
-import { HAND_SUB, LIVE_TIPS, LIVE_TIPS_SUB, AUTOPILOT_SUB } from './whilePlaying';
+import { AUTOPILOT_SUB, GESTURE_LIST, HAND_SUB } from './whilePlaying';
 import type { Settings } from '@drum-coach/core/input/settings';
 
-type Tool = 'pads' | 'velocity' | 'notemap' | 'latency' | 'sound' | 'kittest' | 'input' | 'apikey' | 'coach';
-const TOOLS: Tool[] = ['pads', 'velocity', 'notemap', 'latency', 'sound', 'kittest', 'input', 'apikey', 'coach'];
-/** `/setup?tool=coach` opens a tool at once (Progress → Your path → Goals … (change)). */
-export const toolOf = (v: unknown): Tool | null => (TOOLS as unknown[]).includes(v) ? v as Tool : null;
-const TOOL_TITLE: Record<Tool, string> = {
-  pads: 'Hit each pad once', velocity: 'Soft, then loud', notemap: 'Note map', latency: 'Latency', sound: 'Sound levels', kittest: 'Kit test',
-  input: 'MIDI input', apikey: 'Coach · fallback API key', coach: 'Coach and voice',
-};
 const kv = () => getStorage().kv;
 const save = (p: Partial<Settings>) => writeSettings(kv(), p);
+
+/** The web's gesture list (CoachSettings "Sticks in hand"), shown on While you play. */
+const GESTURE_CHIPS = [{ pad: 'hhPedal', times: 3 }, { pad: 'ride', times: 2 }, { pad: 'tom2', times: 2 }, { pad: 'floor', times: 2 }, { pad: 'tom1', times: 2 }, { pad: 'crash', times: 4 }] as const; // = GESTURE_LIST's order
 
 export function SetupScreen() {
   const s = useAppSettings();
@@ -52,102 +50,196 @@ export function SetupScreen() {
   const { kit, map, padCal } = useKitData();
   const route = useAudioRoute();
   const runs = useRecentRuns();
+  const statusRows = useStatusRows();
   const params = useLocalSearchParams<{ tool?: string }>();
-  const [tool, setTool] = useState<Tool | null>(() => toolOf(params.tool));
-  useEffect(() => { const t = toolOf(params.tool); if (t) setTool(t); }, [params.tool]);
+  const [view, setView] = useState<SetupView | null>(() => setupViewOf(params.tool));
+  useEffect(() => { const t = setupViewOf(params.tool); if (t) setView(t); }, [params.tool]);
+  const [hasKey, setHasKey] = useState(false);
+  useEffect(() => { let live = true; void hasApiKey(keychain).then(v => { if (live) setHasKey(v); }, () => {}); return () => { live = false; }; }, [view]);
   const status = kitStatus(conn.midi, conn.connected);
   const checks = setupChecks({ settings: s, padCal, runs, device: conn.connected?.name ?? null });
   const latency = checks.find(c => c.id === 'latency')!;
   const pads = checks.find(c => c.id === 'pads')!;
   // QA2 m7: the per-route latencies are re-read only when settings change (every save writes settings too), and the
-  // last hit re-renders only its own LastHit view, never the whole screen.
+  // last hit re-renders only its own view, never the whole screen.
   const byRoute = useMemo(() => readLatencyByRoute(kv()), [s]); // eslint-disable-line react-hooks/exhaustive-deps
   const lat = latencyRow(byRoute, route, s);
   const others = otherRoutes(byRoute, route?.key ?? null);
   const clash = conflictText(map);
-  const close = () => { setTool(null); if (params.tool) router.setParams({ tool: undefined }); };
+  const server = getHomeServer().configured();
+  const coach = coachCard(coachStatusOf(statusRows), hostOf(server?.url), hasKey);
+  const lines = rowLines(s, { clash: !!clash, serverSet: !!server, hasKey });
+  // Close goes back to the page a tool was opened from (Pads → Note map → Close → Pads), else to Setup.
+  const close = () => { setView(v => (v ? PARENT[v] ?? null : null)); if (params.tool) router.setParams({ tool: undefined }); };
 
   // Hands-free: the "yes" gesture starts the check to do first (latency), else hit each pad.
-  useKitMoves({ yes: () => setTool(latency.first ? 'latency' : 'pads') }, { enabled: tool === null });
+  useKitMoves({ yes: () => setView(latency.first ? 'latency' : 'pads') }, { enabled: view === null });
+
+  const row = (page: SetupPage, emoji: string, title: string) => (
+    <Pressable key={page} onPress={() => setView(page)} accessibilityRole="button" accessibilityLabel={`${title}: ${lines[page]}`} testID={`setup-row-${page}`}
+      style={({ pressed }) => [styles.bigRow, pressed && styles.pressed]}>
+      <Text style={styles.bigEmoji}>{emoji}</Text>
+      <View style={styles.grow}>
+        <Text style={styles.bigTitle} numberOfLines={1}>{title}</Text>
+        <Text style={styles.bigSub} numberOfLines={1}>{lines[page]}</Text>
+      </View>
+      <Chevron />
+    </Pressable>
+  );
 
   return (
     <Screen testID="screen-setup">
-      <TitleBar title="Setup" right={<Button label="Kit test" emoji="🥁" size="small" onPress={() => setTool('kittest')} testID="setup-kit-test" />} />
-      <View style={styles.cols}>
-        <View style={styles.col}>
-          <Group title="Kit" foot={KIT_FOOT} testID="setup-kit">
-            <View style={styles.hero}>
-              <View style={[styles.heroSym, { backgroundColor: status.connected ? color.good : color.toggleOff }]}><Text style={styles.heroEmoji}>🥁</Text></View>
-              <View style={styles.grow}>
-                <Text style={styles.heroTitle} testID="setup-kit-name">{status.title}</Text>
-                <Text style={styles.heroSub} numberOfLines={2}>{status.sub}</Text>
-              </View>
-              <LastHit />
-            </View>
-            <GroupRow emoji="🔌" sym="gray" title="MIDI input" right={<><Text style={styles.val}>{conn.connected?.name ?? (conn.inputs.length ? 'none' : 'no inputs')}</Text><Chevron /></>}
-              onPress={() => setTool('input')} testID="setup-midi-input" accessibilityLabel={`MIDI input: ${conn.connected?.name ?? 'none'}`} />
-          </Group>
-
-          <Group title="Pads">
-            <GroupRow first emoji="🎯" sym="indigo" title="Hit each pad once"
-              sub={clash ? 'two pads share a note: hit each pad again' : s.padsCheckedAt ? `checked ${shortDate(s.padsCheckedAt)}` : pads.done ? 'done in the first run' : 'so a hit on tom 1 counts as tom 1 · 30 s'}
-              right={<Button size="small" tone={pads.done ? 'white' : 'blue'} label={pads.done ? 'Again' : 'Start ▶'} onPress={() => setTool('pads')} testID="setup-pads" />} />
-            <GroupRow emoji="🎧" sym="teal" title="Soft, then loud" sub="accents and ghost notes judged fairly"
-              right={<>{Object.keys(padCal).length ? <Pill tone="green">✓ done</Pill> : <Text style={styles.val}>2 min</Text>}<Chevron /></>}
-              onPress={() => setTool('velocity')} testID="setup-velocity" />
-            <GroupRow emoji="🎸" sym="gray" title="Note map" right={<><Text style={styles.val} numberOfLines={1}>{noteMapSummary(map)}</Text><Chevron /></>}
-              onPress={() => setTool('notemap')} testID="setup-notemap" />
-          </Group>
-
-          <Group title="Latency" foot={latency.why ?? (others.length ? `${LATENCY_FOOT} Also measured: ${others.join(', ')}.` : LATENCY_FOOT)}>
-            <GroupRow first emoji="⏱" sym="orange" title={lat.title} sub={lat.sub} testID="setup-latency"
-              right={<>{latency.first ? <View style={styles.first}><Text style={styles.firstText}>DO THIS FIRST</Text></View> : null}
-                <Button size="small" tone="blue" label="Measure" onPress={() => setTool('latency')} testID="setup-latency-measure" /></>} />
-          </Group>
-
-          <Group title="Sound and you">
-            <GroupRow first emoji="🔊" sym="blue" title="Sound levels" sub={levelsShort(s)} right={<Chevron />} onPress={() => setTool('sound')} testID="setup-sound" />
-            <GroupRow emoji="👆" sym="gray" title="Which hand leads" sub={HAND_SUB}
-              right={<Segmented accessibilityLabel="Which hand leads" value={s.leftHanded ? 'left' : 'right'} onChange={v => save({ leftHanded: v === 'left' })}
-                options={[{ value: 'right', label: 'Right' }, { value: 'left', label: 'Left' }]} testID="setup-hand" />} />
-          </Group>
-        </View>
-
-        <View style={styles.col}>
-          <ServerGroup />
-          <ApiKeyGroup onOpen={() => setTool('apikey')} editing={tool === 'apikey'} />
-          <Group title="While you play">
-            <GroupRow first emoji="🗣" sym="blue" title="Coach and voice" sub={coachVoiceSummary(s)} right={<Chevron />} onPress={() => setTool('coach')} testID="setup-coach-voice" />
-            <GroupRow title="Live tips" sub={LIVE_TIPS_SUB}
-              right={<Segmented accessibilityLabel="Live tips" value={s.liveTips} onChange={liveTips => save({ liveTips })}
-                options={LIVE_TIPS.map(([value, label]) => ({ value, label }))} testID="setup-live-tips" />} />
-            <GroupRow right={<Toggle label="Kit gestures" value={s.padCommands !== false} onChange={padCommands => save({ padCommands })} testID="setup-gestures" />}>
-              <View style={styles.grow}>
-                <Text style={styles.rowTitle}>Kit gestures</Text>
-                <View style={styles.gs}>
-                <GestureChip gesture={{ pad: 'hhPedal', times: 3 }} />
-                <GestureChip gesture={{ pad: 'tom2', times: 2 }} />
-                <GestureChip gesture={{ pad: 'ride', times: 2 }} />
-                </View>
-              </View>
-            </GroupRow>
-            <GroupRow title="Autopilot" sub={AUTOPILOT_SUB} right={<Toggle label="Autopilot" value={!!s.autopilot} onChange={autopilot => save({ autopilot })} testID="setup-autopilot" />} />
-          </Group>
-        </View>
+      <TitleBar title="Setup" right={<Button label="Kit test" emoji="🥁" tone="pop" size="small" onPress={() => setView('kittest')} testID="setup-kit-test" />} />
+      <View style={styles.cards}>
+        <Card style={styles.card} testID="setup-kit">
+          <Label>Kit</Label>
+          <View style={styles.cardTitleRow}>
+            <View style={[styles.dot8, { backgroundColor: status.connected ? color.good : color.toggleOff }]} />
+            <Text style={styles.cardTitle} numberOfLines={1} testID="setup-kit-name">{status.title}</Text>
+          </View>
+          {status.connected ? <LastHitLine /> : <Text style={styles.cardSub} numberOfLines={2}>{status.sub}</Text>}
+          {!status.connected && conn.inputs.some(i => i.online)
+            ? <Button size="small" tone="blue" label="Pick the MIDI input" onPress={() => setView('input')} testID="setup-midi-input" /> : null}
+        </Card>
+        <Card style={[styles.card, latency.first && styles.cardTodo]} testID="setup-latency">
+          <Label>Latency</Label>
+          <Text style={styles.cardTitle} numberOfLines={1}>{lat.title}</Text>
+          {lat.measured ? <Text style={styles.cardSub} numberOfLines={2}>{others.length ? `${lat.sub} · also ${others.join(', ')}` : lat.sub}</Text> : null}
+          <Button size="small" tone={latency.first || !lat.measured ? 'blue' : 'white'} label={lat.measured ? 'Measure again' : 'Measure · 1 min'}
+            onPress={() => setView('latency')} testID="setup-latency-measure" />
+          {latency.why ? <Text style={styles.cardSub} numberOfLines={2}>{latency.why}</Text> : null}
+        </Card>
+        <Card style={styles.card} testID="setup-coach">
+          <Label>Coach</Label>
+          <View style={styles.cardTitleRow}>
+            <View style={[styles.dot8, { backgroundColor: coach.dot === 'on' ? color.good : coach.dot === 'bad' ? color.bad : color.toggleOff }]} />
+            <Text style={styles.cardTitle} numberOfLines={1}>{coach.title}</Text>
+          </View>
+          <Text style={styles.cardSub} numberOfLines={2}>{coach.sub}</Text>
+          {coach.fix ? <Button size="small" tone="blue" label={coach.fix} onPress={() => setView('connection')} testID="setup-coach-fix" /> : null}
+        </Card>
+      </View>
+      <View style={styles.rows}>
+        {row('kitpads', '🎯', 'Pads')}
+        {row('sound', '🔊', 'Sound')}
+        {row('voice', '🗣', 'Coach’s voice')}
+        {row('play', '🎛', 'While you play')}
+        {row('connection', '💬', 'Coach connection')}
+        {row('about', 'ℹ️', 'About')}
       </View>
 
-      <ToolFrame visible={tool !== null} title={tool ? TOOL_TITLE[tool] : ''} onClose={close} testID={`setup-tool-${tool ?? 'none'}`}>
-        {tool === 'pads' ? <PadWizardView kit={kit} map={map} onSaved={close} onStop={close} /> : null}
-        {tool === 'velocity' ? <VelocityPanel kit={kit} map={map} padCal={padCal} kitConnected={!!conn.connected} /> : null}
-        {tool === 'notemap' ? <NoteMapPanel kit={kit} map={map} /> : null}
-        {tool === 'latency' ? <LatencyPanel onSaved={close} /> : null}
-        {tool === 'sound' ? <SoundPanel /> : null}
-        {tool === 'kittest' ? <KitTest /> : null}
-        {tool === 'input' ? <InputPicker conn={conn} onPicked={close} /> : null}
-        {tool === 'apikey' ? <ApiKeyPanel onDone={close} /> : null}
-        {tool === 'coach' ? <CoachVoicePanel /> : null}
+      <ToolFrame visible={view !== null} title={view ? VIEW_TITLE[view] : ''} onClose={close} testID={`setup-tool-${view ?? 'none'}`}>
+        {view === 'kitpads' ? (
+          <View style={styles.cols}>
+            <View style={styles.col}>
+              <Group title="Kit" foot={KIT_FOOT}>
+                <View style={styles.hero}>
+                  <View style={[styles.heroSym, { backgroundColor: status.connected ? color.good : color.toggleOff }]}><Text style={styles.heroEmoji}>🥁</Text></View>
+                  <View style={styles.grow}>
+                    <Text style={styles.heroTitle}>{status.title}</Text>
+                    <Text style={styles.heroSub} numberOfLines={2}>{status.sub}</Text>
+                  </View>
+                  <LastHit />
+                </View>
+                <GroupRow emoji="🔌" sym="gray" title="MIDI input" right={<><Text style={styles.val}>{conn.connected?.name ?? (conn.inputs.length ? 'none' : 'no inputs')}</Text><Chevron /></>}
+                  onPress={() => setView('input')} testID="setup-midi-input-row" accessibilityLabel={`MIDI input: ${conn.connected?.name ?? 'none'}`} />
+              </Group>
+            </View>
+            <View style={styles.col}>
+              <Group title="Pads">
+                <GroupRow first emoji="🎯" sym="indigo" title="Hit each pad once"
+                  sub={clash ? 'two pads share a note: hit each pad again' : s.padsCheckedAt ? `checked ${shortDate(s.padsCheckedAt)}` : pads.done ? 'done in the first run' : 'so a hit on tom 1 counts as tom 1 · 30 s'}
+                  right={<Button size="small" tone={pads.done ? 'white' : 'blue'} label={pads.done ? 'Again' : 'Start ▶'} onPress={() => setView('pads')} testID="setup-pads" />} />
+                <GroupRow emoji="🎧" sym="teal" title="Soft, then loud" sub="accents and ghost notes judged fairly"
+                  right={<>{Object.keys(padCal).length ? <Pill tone="green">✓ done</Pill> : <Text style={styles.val}>2 min</Text>}<Chevron /></>}
+                  onPress={() => setView('velocity')} testID="setup-velocity" />
+                <GroupRow emoji="🎸" sym="gray" title="Note map" right={<><Text style={styles.val} numberOfLines={1}>{noteMapSummary(map)}</Text><Chevron /></>}
+                  onPress={() => setView('notemap')} testID="setup-notemap" />
+              </Group>
+            </View>
+          </View>
+        ) : null}
+        {view === 'pads' ? <PadWizardView kit={kit} map={map} onSaved={close} onStop={close} /> : null}
+        {view === 'velocity' ? <VelocityPanel kit={kit} map={map} padCal={padCal} kitConnected={!!conn.connected} /> : null}
+        {view === 'notemap' ? <NoteMapPanel kit={kit} map={map} /> : null}
+        {view === 'input' ? <InputPicker conn={conn} onPicked={close} /> : null}
+        {view === 'latency' ? <LatencyPanel onSaved={close} /> : null}
+        {view === 'sound' ? <SoundPanel /> : null}
+        {view === 'kittest' ? <KitTest /> : null}
+        {view === 'voice' ? <VoicePanel /> : null}
+        {view === 'play' ? (
+          <View style={styles.cols}>
+            <View style={styles.col}>
+              <Group title="While you play" testID="setup-play">
+                <GroupRow first right={<Toggle label="Kit gestures" value={s.padCommands !== false} onChange={padCommands => save({ padCommands })} testID="setup-gestures" />}>
+                  <View style={styles.grow}>
+                    <Text style={styles.rowTitle}>Kit gestures</Text>
+                    <Text style={styles.heroSub}>Answer the screen from the kit, between takes.</Text>
+                  </View>
+                </GroupRow>
+                <GroupRow title="Autopilot" sub={AUTOPILOT_SUB} right={<Toggle label="Autopilot" value={!!s.autopilot} onChange={autopilot => save({ autopilot })} testID="setup-autopilot" />} />
+                <GroupRow title="Which hand leads" sub={HAND_SUB}
+                  right={<Segmented accessibilityLabel="Which hand leads" value={s.leftHanded ? 'left' : 'right'} onChange={v => save({ leftHanded: v === 'left' })}
+                    options={[{ value: 'right', label: 'Right' }, { value: 'left', label: 'Left' }]} testID="setup-hand" />} />
+              </Group>
+            </View>
+            <View style={styles.col}>
+              <Group title="Kit gestures">
+                {GESTURE_CHIPS.map((g, i) => (
+                  <GroupRow key={`${g.pad}${g.times}`} first={i === 0} right={<Text style={styles.val}>{GESTURE_LIST[i][1]}</Text>}>
+                    <GestureChip gesture={g} />
+                  </GroupRow>
+                ))}
+              </Group>
+            </View>
+          </View>
+        ) : null}
+        {view === 'connection' ? (
+          <ScrollView contentContainerStyle={styles.cols}>
+            <View style={styles.col}>
+              <ServerGroup />
+              <ApiKeyGroup onOpen={() => setView('apikey')} editing={false} />
+            </View>
+            <View style={styles.col}><CoachPlanGroup /></View>
+          </ScrollView>
+        ) : null}
+        {view === 'apikey' ? <ApiKeyPanel onDone={close} /> : null}
+        {view === 'about' ? <AboutPanel /> : null}
       </ToolFrame>
     </Screen>
+  );
+}
+
+/** The coach's status from the sidebar's rows (the coach dot): reachable, offline, not set up, or still checking. */
+function coachStatusOf(rows: ReturnType<typeof useStatusRows>): 'reachable' | 'unreachable' | 'not-configured' | 'unknown' {
+  const c = rows.find(r => r.key === 'coach');
+  return c?.dot === 'on' ? 'reachable' : c?.dot === 'bad' ? 'unreachable' : c?.value === 'not set up' ? 'not-configured' : 'unknown';
+}
+
+/** The Kit card's last hit: its own component, so a hit re-renders only this (QA2 m7). */
+function LastHitLine() {
+  const h = useLastHit();
+  const v = lastHitView(h);
+  return <Text style={styles.cardSub} accessibilityLiveRegion="polite" testID="setup-last-hit">{lastHitLine(h && { note: h.note, velocity: h.velocity, name: v.name })}</Text>;
+}
+
+/** Setup → About: the build, and the debug screens in debug builds (they were the sidebar's Dev row). */
+function AboutPanel() {
+  const links = [
+    { label: 'Build info', href: '/about', id: 'about' },
+    ...(__DEV__ ? [
+      { label: 'MIDI debug', href: '/dev/midi', id: 'midi' }, { label: 'Home server', href: '/dev/server', id: 'server' },
+      { label: 'Audio checks', href: '/dev/audio', id: 'audio' }, { label: 'Player', href: '/dev/play', id: 'play' },
+    ] : []),
+  ];
+  return (
+    <View style={styles.panel} testID="setup-about">
+      <Group title="About" foot={__DEV__ ? 'Debug build: the debug screens are listed here.' : 'The debug screens are in debug builds only.'}>
+        {links.map((l, i) => (
+          <GroupRow key={l.id} first={i === 0} title={l.label} right={<Chevron />} onPress={() => router.push(l.href as never)} testID={`setup-about-${l.id}`} />
+        ))}
+      </Group>
+    </View>
   );
 }
 
@@ -302,6 +394,20 @@ function KitTest() {
 export default SetupScreen;
 
 const styles = StyleSheet.create({
+  cards: { flexDirection: 'row', gap: 18 },
+  card: { flex: 1, minWidth: 0, gap: 6, minHeight: 128 },
+  cardTodo: { backgroundColor: '#FFE9C7' },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTitle: { ...font.display, fontSize: 21, color: color.ink, flexShrink: 1 },
+  cardSub: { fontSize: 14, fontWeight: '600', color: color.muted },
+  dot8: { width: 11, height: 11, borderRadius: 6 },
+  rows: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, marginTop: 22 },
+  bigRow: { flexBasis: '45%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 88, paddingHorizontal: 18, backgroundColor: color.panel,
+    borderWidth: stroke.card, borderColor: color.ink, boxShadow: hardShadow(5) },
+  bigEmoji: { fontSize: 34 },
+  bigTitle: { ...font.display, fontSize: 20, color: color.ink },
+  bigSub: { fontSize: 14, fontWeight: '600', color: color.muted },
+  pressed: { opacity: 0.75 },
   cols: { flex: 1, flexDirection: 'row', gap: 22, alignItems: 'flex-start' },
   col: { flex: 1, gap: 14, minWidth: 0 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 16 },

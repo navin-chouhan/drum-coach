@@ -14,7 +14,7 @@ export function TitleBar({ title, coach, right, testID, coachLines }: { title: s
       <View style={styles.title}>
         <Display size={type.title} accessibilityRole="header" numberOfLines={1}>{title}</Display>
       </View>
-      {coach ? <CoachLine size={type.coach} singleLine lines={coachLines} style={styles.coach}>{coach}</CoachLine> : <View style={styles.coach} />}
+      {coach ? <CoachLine size={type.coach} singleLine lines={coachLines} style={styles.coach} testID="title-coach">{coach}</CoachLine> : <View style={styles.coach} />}
       {right}
     </View>
   );
