@@ -14,7 +14,7 @@ import {
 import { getStorage } from '../../platform/storage';
 import { isoWeek } from '@drum-coach/core/engine/progress';
 import { getCoach, useCoachEntry, useWeekPlan } from '../coach/coach';
-import { speakMoment } from './voiceShim'; // R6: speakMoment from '../coach/voice' once merged
+import { speakMoment } from '../coach/voice';
 import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
 import { playFlourish } from '../../play/flourish';
@@ -31,7 +31,7 @@ import { journeyNotice, sorePatch, type JourneyView } from './model';
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
   const [asks, setAsks] = useState(0); // each "Ask the coach" is a new request (the web's asks)
-  const { view: v, reload } = useJourney(swap, asks);
+  const { view: v, reload, loaded } = useJourney(swap, asks);
   // "Coach automatically": once a day, a lesson for this stage when none is waiting (the web's TodayView). Never blocks
   // playing; a server that can't be reached is skipped silently here (the asks entry keeps the error, as the web).
   useEffect(() => { if (v.coachAsk) getCoach().requestLesson(v.coachAsk, undefined, reload); }, [v.coachAsk, reload]);
@@ -64,7 +64,7 @@ export function JourneyScreen() {
   useEffect(() => {
     const kv = getStorage().kv, wk = isoWeek(new Date());
     if (!recap || readSettings(kv).lastRecapWeek === wk) return;
-    writeSettings(kv, { lastRecapWeek: wk });
+    writeSettings(kv, { lastRecapWeek: wk }); // said out loud as this visit's notice (below)
   }, [recap]);
   // A badge earned since last time is announced once on Journey, then kept in settings.
   const [badges, setBadges] = useState<string[]>([]);
@@ -85,21 +85,22 @@ export function JourneyScreen() {
   useFocusEffect(useCallback(() => () => { setRecap(undefined); setBadges([]); setNewStages(false); said.current.clear(); }, []));
   // D9: one notice at a time (the web's slim strip; the weekly recap first, then the setup nudge, the wrists check-in,
   // a badge / new stages / the health line), said whole in the title bar's coach line; its buttons before ⋯.
-  // (Speaking it is R6's voice moments.)
+  // (Said out loud below.)
   const { kind, text: coachText } = journeyNotice({ coachLine: v.coachLine, recap, setupNudge: v.setupNudge, askSore: v.askSore, badges, newStages, healthLine: v.healthLine });
-  // Voice first (D10): the notice, then Up next, each once per visit (the voice setting gates it inside speakMoment).
+  // Voice first (D10): the notice, then Up next, each once per visit, once the stored data is read (so the first,
+  // unloaded view isn't said). The only place Journey speaks; speakMoment gates on the settings and cleans the emoji.
   const isFocused = useIsFocused();
   const moments = journeyMoments({ kind, text: coachText }, v.hero);
   const momentsKey = moments.map(momentKey).join('¦');
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused || !loaded) return;
     for (const m of moments) {
       const k = momentKey(m);
       if (said.current.has(k)) continue;
       said.current.add(k);
       speakMoment(m);
     }
-  }, [isFocused, momentsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- the key stands for the moments
+  }, [isFocused, loaded, momentsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- the key stands for the moments
   const set = (patch: Parameters<typeof writeSettings>[1]) => writeSettings(getStorage().kv, patch);
   const titleRight = (
     <View style={styles.noticeBtns}>

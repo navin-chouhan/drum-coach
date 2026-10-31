@@ -21,8 +21,9 @@ export function gestureSpoken(g: Gesture): string {
 }
 
 /** Every gesture that gives this command, in the order the chips show them (the pedal first for "yes"). */
-export function gesturesFor(command: PadCommand): Gesture[] {
+export function gesturesFor(command: PadCommand | 'again'): Gesture[] {
   if (command === 'stop') return [{ pad: 'crash', times: STOP_HITS }];
+  if (command === 'again') return [{ pad: 'kick', times: 2 }]; // say it again (D10; iPad only: ui/kitMoves.ts)
   const doubles = (Object.entries(PAD_COMMANDS) as [PadId, PadCommand][]).filter(([, c]) => c === command).map(([pad]) => ({ pad, times: 2 }));
   return command === 'yes' ? [{ pad: 'hhPedal', times: PEDAL_PRESSES }, ...doubles] : doubles;
 }
