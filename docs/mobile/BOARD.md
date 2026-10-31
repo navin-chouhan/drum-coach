@@ -59,7 +59,7 @@ session. The decisions it needs are D1–D5, below.
 | I1 Backing in take + Songs | running | `packages/core/src/play/**`, `features/songs/**`, `src/youtube/**` | [briefs/I1.md](briefs/I1.md) | backing plays |
 | I2 Keyboard + kit consolidation | running | `modules/drum-keys/**`, `src/ui/**`, `app/_layout.tsx`, imports in setup/firstRun/pads/latency/coach/journey/progress | [briefs/I2.md](briefs/I2.md) | app-wide keys, one kit |
 | I3 Lesson + Practice integration | running | `features/{lesson,practice}/**`, `app/{lesson,practice}/**`, `features/coach/asks.ts` | [briefs/I3.md](briefs/I3.md) | backlog items |
-| A10 QA | running | `docs/mobile/QA-*.md`, `docs/mobile/FINAL-CHECKLIST.md`, `apps/mobile/e2e/**` | [briefs/A10.md](briefs/A10.md) | findings + owner checklist |
+| A10 QA | **done, merged** (6ed44da) | `docs/mobile/QA-*.md`, `docs/mobile/FINAL-CHECKLIST.md`, `apps/mobile/e2e/**` | [briefs/A10.md](briefs/A10.md) | findings + owner checklist |
 
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
@@ -248,3 +248,4 @@ results.
 - Integration backlog (more): core take has no backing yet (opts.backing + drift vs anchor) and Songs/Practice don't call BackingPort; Practice `?chartId=` from the Songs library; two hidden-TextInput keyboard fallbacks (lesson, songs) to unify app-wide; aiLessons `replaces` from the server isn't applied; results sheet shows only the first page of long takes.
 - 2026-10-30: **First cloud iOS build (run 7, 8293872): the app built with Xcode 27.1 (all drum-midi + drum-audio Swift compiled) and the SwiftPM tests passed.** Only the podspec test-spec step failed (ExpoSQLite's test spec needs the unpublished ExpoModulesTestCore); test specs are now limited to our modules. A4p3's backing Swift and the newer screens compile in the next run.
 - 2026-10-30: Integration + QA wave started: I1, I2, I3, A10.
+- 2026-10-31: Session paused ~23:20–10:10 UTC (account usage limit + worker restart); I1/I2/I3/A10 resumed. Cloud iOS run 12 (f37a531): **app build passed with all Swift incl. backing audio**, SwiftPM tests passed; podspec test bundle failed to link libc++ → fixed in DrumMidi.podspec (1625b5b). New advisory GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, moderate, root ESLint toolchain) turns `npm audit` red everywhere incl. main; fix is < 7 days old and a major bump → **owner to decide** (force with a young exception, or wait to 2026-11-04). A10 merged: 0 blockers, 4 major, 9 minor; FINAL-CHECKLIST.md; Maestro flows for the real app. Fixed M1 (no header on full-screen routes). M2/M3/M4/m2 → I3; m5/m8 → I1; m1/m3 → I2; m9 (debug export) later.
