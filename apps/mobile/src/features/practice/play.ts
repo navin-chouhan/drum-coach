@@ -5,8 +5,6 @@ import type { KeyValueStore } from '@drum-coach/core/platform';
 import type { PadCommand } from '@drum-coach/core/engine/padCommands';
 import { lateTakes, MAX_SPEED, practiceStart, suggestNext, type RunRow } from '@drum-coach/core/engine/progress';
 import type { Finished } from '@drum-coach/core/play/take';
-import type { ChartNote } from '@drum-coach/core/engine/chart';
-import { limbPlan, noteHints } from '@drum-coach/core/engine/notation';
 import { bestClean, type PracticeChart, type Read } from './catalog';
 import { syncLine } from '../songs/sync';
 import { latencyLine } from '../results/details';
@@ -228,12 +226,3 @@ export const moreCard = (latencyMs: number, chart: { hasAudio?: boolean; syncOff
   latency: latencyMs !== 0 ? `Latency correction: ${latencyMs} ms` : '',
   sync: syncLine(chart),
 });
-
-/** What the slides show (the web's IntroSlides): the limbs' plan, the first bar's count, and the pedal note. */
-export function introSlides(notes: (ChartNote & { mine?: boolean })[], beatsPerBar: number, leftHanded: boolean) {
-  const plan = limbPlan(notes, beatsPerBar, leftHanded);
-  const firstBar = noteHints(notes.filter(n => n.t < beatsPerBar - 1e-6), beatsPerBar, leftHanded).slice(0, 16);
-  const pedalDown = notes.some(n => n.drum === 'hihat') && !plan.some(p => p.limb === 'H');
-  return { plan, firstBar, pedalDown };
-}
-

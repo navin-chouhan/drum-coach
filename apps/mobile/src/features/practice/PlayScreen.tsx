@@ -34,7 +34,7 @@ import { kindIcon, startOf, type PracticeChart } from './catalog';
 import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
 import { interruptedNote, practiceEngine } from './engine';
-import { IntroSlides } from './IntroSlides';
+import { IntroSlides } from '../lesson/IntroSlides';
 import {
   barPickKind, clampRepeats, moreCard, needsIntro, yourTakeCard, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
   sectionRange, speedFor, writePlayOptions, type PracticeOptions, type Section, type WarmState,
@@ -135,7 +135,10 @@ export function PlayScreen() {
     }).catch(() => {});
   }), []); // eslint-disable-line react-hooks/exhaustive-deps -- one listener
 
-  const [intro, setIntro] = useState<{ run: () => void; chart: PracticeChart; bpm: number; sec: Section }>();
+  // The intro slides up (the web's PlayView intro): which one, and the take they start.
+  const [intro, setIntro] = useState<{ run: () => void; chart: PracticeChart; bpm: number; sec: Section; i: number }>();
+  const introNext = () => { if (!intro) return; if (intro.i >= 2) { setIntro(undefined); intro.run(); } else setIntro({ ...intro, i: intro.i + 1 }); };
+  const introBack = () => { if (intro) setIntro({ ...intro, i: Math.max(0, intro.i - 1) }); };
   const introShown = useRef(new Map<string, number>());
   const start = (c: PracticeChart, bpm: number, extra: { demo?: boolean; repeats?: number } = {}, sec: Section = section) => {
     const speed = speedFor(bpm, c.bpm);
@@ -154,7 +157,7 @@ export function PlayScreen() {
     const b = c.bpm * speed;
     if (needsIntro({ demo: extra.demo, warm: !!extra.repeats, wait: o.wait, introOn: settings.intro !== false, seenBpm: introShown.current.get(c.id), bpm: b })) {
       introShown.current.set(c.id, b);
-      setIntro({ run: launch, chart: c, bpm: Math.round(b), sec });
+      setIntro({ run: launch, chart: c, bpm: Math.round(b), sec, i: 0 });
       return;
     }
     launch();
@@ -214,11 +217,11 @@ export function PlayScreen() {
   }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => setCoachPlaying(false), []);
   // The coach's actions (its suggestion, a "yes" in the panel), as the web's onCoachAction on this screen.
-  const acts = useRef({ main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro });
-  acts.current = { main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro };
+  const acts = useRef({ main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro, introNext });
+  acts.current = { main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro, introNext };
   useEffect(() => session.onCoachAction((a: Act) => {
     const x = acts.current;
-    if (x.intro) return false; // the intro slides have the kit's taps
+    if (x.intro) { if (a.kind === 'main') x.introNext(); return true; } // the slides have the kit's taps: yes turns one, the rest is swallowed
     if (a.kind === 'main') { x.main(); return true; }
     if (a.kind === 'listen') { x.listen(); return true; }
     if (a.kind === 'next') { x.next(); return true; }
@@ -233,10 +236,13 @@ export function PlayScreen() {
     <Screen withSidebar={false} testID="screen-practice-play">
       <Stack.Screen options={{ headerShown: false }} />
       {intro ? (() => {
+        // the web's practice slides: the bars you loop from beat 0, the last take's last tip, no "how it moves" slide
         const ic = intro.chart, bpb = (ic.timeSignature[0] * 4) / ic.timeSignature[1], { from: f0 } = sectionRange(intro.sec, ic.bars);
-        return <IntroSlides title={ic.title} bpm={intro.bpm} what={ic.description ?? `${ic.bars} bar${ic.bars === 1 ? '' : 's'}, ${o.repeats} times round.`}
-          notes={ic.notes.filter(n => n.t >= (f0 - 1) * bpb).map(n => ({ ...n, t: n.t - (f0 - 1) * bpb }))} beatsPerBar={bpb} focus={f?.cues.at(-1)?.text}
-          onDone={() => { const r = intro.run; setIntro(undefined); r(); }} onClose={() => setIntro(undefined)} />;
+        return <IntroSlides onNext={introNext} onBack={introBack} onClose={() => setIntro(undefined)} intro={{
+          i: intro.i, last: 2, title: ic.title, sub: ic.title, bpm: intro.bpm, what: ic.description ?? `${ic.bars} bar${ic.bars === 1 ? '' : 's'}, ${o.repeats} times round.`,
+          notes: ic.notes.filter(n => n.t >= (f0 - 1) * bpb).map(n => ({ ...n, t: n.t - (f0 - 1) * bpb, mine: true })), beatsPerBar: bpb,
+          focus: f?.cues.at(-1)?.text, leftHanded: !!settings.leftHanded,
+        }} />;
       })() : null}
       <View style={styles.bar}>
         <Button label="All exercises" emoji="←" size="small" onPress={back} testID="practice-play-back" />

@@ -10,7 +10,6 @@ import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
   PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
   moreCard, yourTakeCard,
-  introSlides,
 } from './play';
 
 describe('section chart', () => {
@@ -281,14 +280,3 @@ describe('after a take (the web PlayView side)', () => {
   });
 });
 
-describe('intro slides (the web IntroSlides)', () => {
-  it('who plays what and the count of the first bar', () => {
-    const notes = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map(t => ({ t, drum: 'hihat' as const }))
-      .concat([{ t: 0, drum: 'kick' as never }, { t: 1, drum: 'snare' as never }, { t: 2, drum: 'kick' as never }, { t: 3, drum: 'snare' as never }, { t: 4, drum: 'kick' as never }]);
-    const v = introSlides(notes, 4, false);
-    expect(v.plan.map(p => p.limb)).toEqual(['R', 'L', 'K']);
-    expect(v.firstBar.map(h => h.count)).toEqual(['1', '&', '2', '&', '3', '&', '4', '&']);
-    expect(v.pedalDown).toBe(true);
-    expect(introSlides(notes, 4, true).plan[0].limb).toBe('R');
-  });
-});
