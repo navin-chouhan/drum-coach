@@ -198,6 +198,10 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [
+      "text \"The beater comes back off the pad by itself.\"",
+      "text \"✗ Wrong:\""
+    ],
     "errors": 0
   },
   "flow": {
@@ -210,6 +214,7 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "lesson-quiz": {
@@ -233,7 +238,9 @@
   "lesson-look": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
+    "spill": [],
+    "cut": [
+      "text \"One stick low (3 cm), one high (30 cm). Both drop \"",
       "text \"Two heights before every flam: 3 cm and 30 cm.\"",
       "text \"The hand that played loud stays down; the soft one\"",
       "text \"Two notes, very close: \"fla-am\".\"",
@@ -274,20 +281,8 @@
   "practice-details": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "practice-details \"The money beat · + snare90 BPM (100%) · bars 1–1 ×\"",
-      "practice-details-replay \"Your take on the sheet: every note marked, extra h\"",
-      "practice-details-sheet \"11R+K&R2R+L&R3R+K&R4R+L&R\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"\"",
-      "text \"● on it  ● early / late  ◌ missed  ✕ extra\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "progress-lessons": {
@@ -326,6 +321,62 @@
       "text \"Kick on the \"a\" of 2\"",
       "text \"Open hi-hat on every &\""
     ],
+    "errors": 0
+  },
+  "lesson-complete": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "lesson-results": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "lesson-results-more": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "lesson-results-coach": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "lesson-more": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-your-take": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-details-take": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "journey-more": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
     "errors": 0
   }
 }
