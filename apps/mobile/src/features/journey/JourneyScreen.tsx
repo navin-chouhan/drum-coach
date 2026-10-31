@@ -16,6 +16,7 @@ import { sayNow } from '../coach/voice';
 import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
 import { playFlourish } from '../lesson/useLesson';
+import { songHref } from '../songs/songsModel';
 import { audio } from '../../platform/audio';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
@@ -150,11 +151,12 @@ export function JourneyScreen() {
             <Tile tone="pop" emoji="🎯" title="Coach challenge" testID="journey-tile-challenge"
               sub={v.challenge ? v.challenge.title : challengeEntry?.status === 'thinking' ? 'your coach is writing it…' : challengeEntry?.status === 'error' ? challengeEntry.error : 'a review or stretch lesson aimed at your weakest spot'}
               onPress={challengeEntry?.status === 'thinking' ? undefined : () => (v.challenge ? open(v.challenge.lessonId) : askChallenge())} />
-            {v.flow ? <Tile emoji="🌊" title="Flow" sub={v.flow.title} testID="journey-tile-flow" onPress={() => open(v.flow!.lessonId, -1, 'flow')} /> : null}
+            {v.flow ? <Tile emoji="🌊" title="Flow" sub={v.flow.sub} testID="journey-tile-flow" onPress={() => open(v.flow!.lessonId, -1, 'flow')} /> : null}
             {v.arcade ? <Tile emoji="⏱" title="2-minute challenge" testID="journey-tile-arcade" sub={v.arcade.sub} onPress={() => open(v.arcade!.lessonId, -1, 'arcade')} /> : null}
             {v.record ? <Tile emoji="🏆" title="Beat your best" testID="journey-tile-record" sub={v.record.title} onPress={() => open(v.record!.lessonId, -1, 'play', 'record')} /> : null}
             <Tile emoji="🎵" title="Learn a new song" sub="from YouTube, a few bars at a time" testID="journey-tile-song" onPress={() => router.navigate('/songs' as never)} />
-            <Tile emoji="🎤" title="Show-off set" sub="your ready songs, on Progress" testID="journey-tile-showoff" onPress={() => router.navigate('/progress' as never)} />
+            {v.showoff.map(x => <Tile key={x.id} emoji="🎤" title={`Show-off: ${x.title}`} sub="Stage mode is under Play" testID={`journey-tile-showoff-${x.id}`}
+              onPress={() => router.push(songHref(x.id) as never)} />)}
           </View>
         </Card>
       ) : null}

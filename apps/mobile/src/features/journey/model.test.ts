@@ -4,6 +4,7 @@ import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import { currentMilestone } from '@drum-coach/core/engine/planner';
 import { describe, expect, it } from 'vitest';
+import { flowTile } from '../flow/flow';
 import { badgeNames, buildJourney, challengeKey, currentSession, HEARING_TIP, sorePatch } from './model';
 import { countWords, groovePreview, slotsPerBeat } from './preview';
 
@@ -263,8 +264,12 @@ describe('after the whole path (web TodayView: All stages done)', () => {
     expect(v.main).toMatchObject({ label: 'Coach challenge', challenge: true });
     expect(v.challengeKey).toBe(challengeKey(NOW));
     expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW, asks: 2 }).challengeKey).toBe(`challenge-${NOW.toDateString()}-2`);
-    expect(v.flow).not.toBeNull();
+    expect(v.flow).toEqual(flowTile(CURRICULUM, settings)); // the same lesson and line as /flow
     expect(v.trail).toBeNull();
+    expect(v.showoff).toEqual([]); // no ready songs: no show-off tiles (web)
+    const ready = [{ id: 'yt-abc', title: 'Seven Nation Army' }];
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW, readySongs: ready }).showoff).toEqual(ready);
+    expect(buildJourney({ settings: threeWeeksIn().settings, lessons: CURRICULUM, runs, now: NOW, readySongs: ready }).showoff).toEqual([]);
   });
   it("the coach's open challenge at the last stage leads", () => {
     const last = Math.max(...MILESTONES.filter(m => m.checkpoints.length).map(m => m.level));
