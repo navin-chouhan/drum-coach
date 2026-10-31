@@ -83,6 +83,9 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const pager = useSheetPages(f); // a long take's results sheet: every page, one at a time
   const activeDrums = useMemo(() => [...new Set(v.myPads.map(laneDrum))], [v.myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The sheet's zoom fits the paper's height (NotationView's 1.6 needs ~290 pt with the count and hand rows under it).
+  const [paperH, setPaperH] = useState(0);
+  const scale = paperH ? Math.max(1.1, Math.min(1.6, (1.6 * paperH) / SHEET_H_AT_1_6)) : undefined;
   const music = (() => {
     const highway = v.playView === 'highway';
     const common = { now: clock.now, style: styles.musicInner } as const;
@@ -90,19 +93,19 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
       const bpm = takeChart.bpm * s.options.speed;
       return highway
         ? <NoteHighway {...common} chart={takeChart} bpm={bpm} zero={s.zero} latencyMs={settings.latencyMs} results={take.results} testID="lesson-highway" />
-        : <NotationView {...common} chart={takeChart} bpm={bpm} zero={s.zero} latencyMs={settings.latencyMs} results={take.results} hints={v.hints} leftHanded={!!settings.leftHanded} testID="lesson-sheet" />;
+        : <NotationView {...common} chart={takeChart} bpm={bpm} zero={s.zero} latencyMs={settings.latencyMs} results={take.results} hints={v.hints} leftHanded={!!settings.leftHanded} scale={scale} testID="lesson-sheet" />;
     }
     if (f && done) {
       const bpm = f.chart.bpm * f.options.speed, frozen = () => f.zero;
       return highway
         ? <NoteHighway now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} testID="lesson-highway" />
-        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded}
+        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded} scale={scale}
           page={pager.page} onPages={pager.setPages} testID="lesson-sheet" />;
     }
     const bpm = v.frame.bpm;
     return highway
       ? <NoteHighway {...common} chart={idle.chart} bpm={bpm} zero={idle.zero} latencyMs={0} testID="lesson-highway" />
-      : <NotationView {...common} chart={idle.chart} bpm={bpm} zero={idle.zero} latencyMs={0} hints={v.hints} leftHanded={!!settings.leftHanded} testID="lesson-sheet" />;
+      : <NotationView {...common} chart={idle.chart} bpm={bpm} zero={idle.zero} latencyMs={0} hints={v.hints} leftHanded={!!settings.leftHanded} scale={scale} testID="lesson-sheet" />;
   })();
 
   const share = async () => {
@@ -138,7 +141,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
           <RoundButton label="More" glyph="⋯" onPress={() => setMore(true)} testID="lesson-more-button" />
         </> : <>
           <Button size="small" tone={v.hints ? 'pop' : 'white'} emoji="💡" label="Hints" onPress={() => ctl.toggleHints()} testID="lesson-hints" accessibilityHint="Key H" />
-          {v.band.available ? <Button size="small" tone={v.band.on ? 'pop' : 'white'} emoji="🎸" label={`Band ${v.band.on ? 'on' : 'off'}`} onPress={() => ctl.toggleBand()} testID="lesson-band" accessibilityHint="Key B" /> : null}
+          {v.band.available ? <Button size="small" tone={v.band.on ? 'pop' : 'white'} emoji="🎸" label="Band" accessibilityLabel={`Band ${v.band.on ? 'on' : 'off'}`} onPress={() => ctl.toggleBand()} testID="lesson-band" accessibilityHint="Key B" /> : null}
           <RoundButton label="More" glyph="⋯" onPress={() => setMore(true)} testID="lesson-more-button" />
         </>}
       </View>
@@ -183,15 +186,15 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
               : <RestCountdown key={v.frame.stepIdx} seconds={v.resting.seconds ?? 0} />}
           </View>
         ) : (
-          <View style={styles.main}>
-            <View style={[styles.musicPanel, v.results && { flex: 1 }]} testID="lesson-music">
+          <View style={v.results ? styles.mainRow : styles.mainCol}>
+            <View style={styles.musicPanel} testID="lesson-music">
               <View style={styles.musicHead}>
                 <Label style={styles.musicLabel}>{v.results ? 'Your take, on the notes' : v.playing ? (countIn !== undefined ? 'Count-in' : barCounter(s, pos).text) : `Your ${v.frame.step.chart.bars === 1 ? 'bar' : `${v.frame.step.chart.bars} bars`} · ${v.frame.step.title}`}</Label>
                 {v.results?.marks ? <Body size={13} weight="800" color={color.white}>● on it  ● early / late  ◌ missed  ✕ extra</Body> : null}
               </View>
               <View style={styles.musicRow}>
                 {countIn !== undefined ? <CountInBadge n={countIn} /> : null}
-                <View style={styles.musicPaper}>{music}</View>
+                <View style={styles.musicPaper} onLayout={e => setPaperH(Math.round(e.nativeEvent.layout.height))}>{music}</View>
               </View>
               {v.results && v.playView !== 'highway' ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} testID="lesson-sheet-pages" /> : null}
               {v.results?.timing ? <TimingLineView line={v.results.timing} /> : null}
@@ -278,9 +281,12 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   );
 }
 
+/** The paper height the sheet needs at NotationView's iPad zoom of 1.6 (one line with the count and hand rows). */
+const SHEET_H_AT_1_6 = 300;
+
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: color.ink, paddingBottom: 10, borderBottomWidth: 4, borderBottomColor: color.pop },
-  titleBox: { maxWidth: 230 },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: color.ink, paddingBottom: 10, borderBottomWidth: 4, borderBottomColor: color.pop },
+  titleBox: { maxWidth: 230, flexShrink: 1, minWidth: 90 }, // the title gives way first, so ⋯ stays on screen
   stopChip: { backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 12, height: 34, justifyContent: 'center' },
   stopChipText: { fontWeight: '800', fontSize: 15, color: color.ink },
   body: { flex: 1, paddingTop: 16, gap: 14 },
@@ -289,15 +295,18 @@ const styles = StyleSheet.create({
   moves: { flexDirection: 'row', gap: 16 },
   mainMove: { flex: 1.35 },
   move: { flex: 1 },
-  main: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  musicPanel: { width: '100%', flexGrow: 1, flexBasis: 300, backgroundColor: color.ink, padding: 14, gap: 10, boxShadow: hardShadow(shadow.card, color.pop) },
+  // Before a take: the music fills, the goal and pads are a 168 pt row under it. Results: the music and a side column.
+  // (A wrapping row sized the music by its content, not the screen: the goal and pads fell off the bottom.)
+  mainCol: { flex: 1, gap: 16 },
+  mainRow: { flex: 1, flexDirection: 'row', gap: 16 },
+  musicPanel: { flex: 1, minHeight: 0, minWidth: 0, backgroundColor: color.ink, padding: 14, gap: 10, boxShadow: hardShadow(shadow.card, color.pop) },
   musicHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   musicLabel: { backgroundColor: 'transparent', paddingHorizontal: 0 },
   musicRow: { flex: 1, flexDirection: 'row', gap: 12 },
   musicPaper: { flex: 1, backgroundColor: color.cream, overflow: 'hidden' },
   musicInner: { flex: 1 },
   side: { width: 330, gap: 14 },
-  bottomRow: { width: '100%', height: 168, flexDirection: 'row', gap: 18 },
+  bottomRow: { height: 168, flexDirection: 'row', gap: 18 },
   goal: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 22, backgroundColor: color.cream, borderWidth: stroke.card, borderColor: color.ink, paddingHorizontal: 22, boxShadow: hardShadow(shadow.card) },
   goalNarrow: { flex: 0.8 },
   kit: { width: 376, backgroundColor: color.ink, padding: 10, gap: 4 },

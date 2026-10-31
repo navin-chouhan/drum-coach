@@ -248,13 +248,13 @@ function You({ v, habit, onHabit, explain }: { v: JourneyView; habit?: string; o
         </View>
       </View>
       <View style={styles.three}>
-        <StatTile value={String(y.streak)} label="day streak" />
-        <StatTile value={y.landedPct === null ? '–' : `${y.landedPct}%`} label="landed" />
-        <StatTile value={String(y.minutesToday)} unit={`/${y.minutesGoal}`} label="min today" />
+        <StatTile value={String(y.streak)} label="day streak" style={styles.tile} />
+        <StatTile value={y.landedPct === null ? '–' : `${y.landedPct}%`} label="landed" style={styles.tile} />
+        <StatTile value={String(y.minutesToday)} unit={`/${y.minutesGoal}`} label="min today" style={styles.tile} />
       </View>
       {v.week ? (
         <View style={styles.week} testID="journey-week">
-          <Body size={13} numberOfLines={1} style={styles.flexShrink}>🎯 This week: <Text style={styles.b}>{v.week.words}</Text></Body>
+          <Body size={13} numberOfLines={2} style={styles.flexShrink}>🎯 This week: <Text style={styles.b}>{v.week.words}</Text></Body>
           {v.week.why ? <LinkText label="why?" accessibilityLabel="Why this week's focus" onPress={() => explain('This week', v.week!.why)} /> : null}
           {v.week.habit ? (habit === 'thinking' ? <Body size={12} color={color.muted} numberOfLines={1}>your coach is on it…</Body>
             : habit === 'done' ? <Body size={12} color={color.muted} numberOfLines={1}>lesson ready on your trail</Body>
@@ -341,7 +341,8 @@ const styles = StyleSheet.create({
   move: { flex: 1, minWidth: 0 },
   rowB: { flexDirection: 'row', gap: 16, marginTop: 13 },
   colYou: { width: 292 },
-  colSet: { width: 300 },
+  tile: { paddingHorizontal: 5 }, // "day streak" fits on one line in a third of the card
+  colSet: { width: 316 }, // a little wider than the mockup's 300: "Double strokes · warm-up" fits beside its minutes
   colSong: { flex: 1, minWidth: 0 },
   you: { gap: 10 },
   youTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },

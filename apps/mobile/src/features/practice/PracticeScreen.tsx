@@ -101,7 +101,7 @@ export function PracticeScreen() {
         </Card>
 
         <Card tone="night" style={styles.warm} testID="practice-warmup">
-          <Label style={styles.warmLabel}>{`🔥 ${m.warm?.title ?? 'Warm-up'}`}</Label>
+          <Label tone="pop">{`🔥 ${m.warm?.title ?? 'Warm-up'}`}</Label>
           {m.warm ? <>
             <Body size={13.5} color="#ddd">A few short exercises, one after the other, at the tempos For you picks. Just loosen up.</Body>
             <View>
@@ -177,7 +177,6 @@ const styles = StyleSheet.create({
   moveGo: { flex: 2.1, minHeight: 92 },
   move: { flex: 1, minHeight: 92 },
   warm: { width: 286, gap: 8, paddingVertical: 12, paddingHorizontal: 14 },
-  warmLabel: { backgroundColor: color.pop },
   warmRow: { flexDirection: 'row', alignItems: 'center', minHeight: 31, gap: 8 },
   warmSep: { borderTopWidth: 1, borderTopColor: '#ffffff2a' },
   grow: { flex: 1, minWidth: 0 },
