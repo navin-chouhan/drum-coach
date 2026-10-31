@@ -1,15 +1,15 @@
 // You (D10 reorganisation, docs/mobile/reorg/you-after.png): Progress plus the coach's week plan. Getting better (the
 // coach's line over notes landed per day) and This week (days played, streak, minutes, the focus), then six doors:
 // Path & skills, Trophies, Your lessons, Coach's week plan, Show-off & fills, Reports (this month's report, for your
-// teacher). Each opens in place as /progress?view=path|skills|trophies|lessons|plan|coming|reports|month|teacher
-// (Journey's Skill map and Full path land on them). "Your time" is cut (D10). The numbers are in progress.ts, the
+// teacher). Each opens in place as /you?view=path|skills|trophies|lessons|plan|coming|reports|month|teacher
+// (/progress?view=… redirects here; Journey's Skill map and Full path land on them). "Your time" is cut (D10). The numbers are in progress.ts, the
 // doors' words in you.ts.
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Bars, Body, Button, Card, Chevron, CoachLine, Label, ListRow, Screen, Segmented, Stars, StatTile, Strong, TitleBar, Track,
-  color, font, hardShadow, stroke, tabular, useAppSettings,
+  color, font, hardShadow, openCoachChat, stroke, tabular, useAppSettings,
 } from '../../ui';
 import { PlanCard } from '../coach/PlanCard';
 import { useWeekPlan } from '../coach/coach';
@@ -72,7 +72,7 @@ export function ProgressScreen() {
     <TitleBar title="You" right={<View style={styles.right}>
       <View style={styles.since}><Body size={14} weight="800" numberOfLines={1}>{w.rankShort}</Body></View>
       <View style={styles.grow} />
-      <Button label="Talk to the coach" emoji="💬" onPress={() => router.push('/coach' as never)} testID="you-talk" />
+      <Button label="Talk to the coach" emoji="💬" onPress={openCoachChat} testID="you-talk" />
     </View>} />
   ) : (
     <TitleBar title={TITLES[view] ?? 'You'} right={<View style={styles.right}>
