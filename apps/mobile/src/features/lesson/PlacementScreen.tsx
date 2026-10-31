@@ -21,7 +21,7 @@ import { judgePlacement, ladderOf, placeAt, placementStep, rungLine } from './pl
 import { todayKey } from './progress';
 import { idleChart, runChart } from './runChart';
 import { createSettingsStore } from './settings';
-import { sheetScaleFor } from './sheetFit';
+import { sheetScaleFor } from '../../player/sheetFit';
 import { createTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
 
