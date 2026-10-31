@@ -27,7 +27,8 @@ Under the screens:
 
 **The cloud iOS build compiles the whole app.** It runs on GitHub's macOS runner with Xcode 27.1, the same version
 as your Mac, and covers the MIDI and audio modules, backing audio and all the screens. The SwiftPM unit tests pass.
-One native test target needed a libc++ link fix (pushed). The newest module, the keyboard, compiles in the next run.
+The native unit tests pass too, after a libc++ link fix. Runs 20–22 are green with everything, including the keyboard module
+and F2's seamless backing loops (run 22, head 8d3bc07).
 
 **The session paused from about 23:20 to 10:10 UTC**: the account hit its usage limit and the worker restarted.
 Nothing was lost; the four agents of that wave were restarted.
@@ -54,7 +55,7 @@ Nothing was lost; the four agents of that wave were restarted.
 
 All agents have landed: I3 (lesson/Practice gaps), F1 (minor QA fixes: coach exercises now in the charts table, MIDI
 debug replay export) and F2 (backing tracks now loop with no gap; listen for the seam with **Loop 1 bar** on the audio
-debug screen, CHECKS.md B7). F2's Swift compiles for the first time in the next cloud iOS build.
+debug screen, CHECKS.md B7). F2's Swift compiles and its native tests pass in cloud iOS run 22.
 
 ## Where things are
 - Board, with every decision (D0–D9) and blocker: [BOARD.md](BOARD.md).
