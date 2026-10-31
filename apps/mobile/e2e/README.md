@@ -1,15 +1,25 @@
 # Maestro flows (T3)
 
 UI smoke tests for the iPad app on the **iOS Simulator on the Mac**. They can't run on Linux, and they were written
-without Maestro or a simulator, so treat them as unverified until their first run on the Mac.
+without Maestro or a simulator (A9, then updated by A10 for the real app), so treat them as unverified until their
+first run on the Mac. Every flow starts from a clean install, so each one goes through the first run first.
 
-| Flow | Checks | Needs |
+| Flow | Checks | Build |
 |---|---|---|
-| `launch.yaml` | the app launches and the home shows "Drum Coach" | testID `home-title` on the home's title (A2) |
-| `dev-midi.yaml` | the home's MIDI link opens `/dev/midi` and its Devices section shows | testID `dev-midi-devices` on that section (A3), rendered even with no devices; a link on the home with "MIDI" in its text |
-| `subflows/open-app.yaml` | shared start: clean launch, optional dev-client URL, waits for `home-title` | (not run on its own) |
+| `launch.yaml` | the app launches, the first run finishes (kit steps skipped), Journey shows with all six sidebar tabs | any |
+| `lesson-to-progress.yaml` | Journey's big move opens the full-screen player; Full path → "Sit, hold, strike" → Play with the touch pads → results → the lesson shows on Progress | any |
+| `setup.yaml` | Setup's groups; note map, kit test, latency and MIDI input open full screen and close; the server test explains a bad URL | any |
+| `songs-offline.yaml` | with no home server: Songs search says it needs the server, file import is there, the coach tab opens | any |
+| `dev-midi.yaml` | the sidebar's Dev row opens `/dev/midi` and its Devices section shows | **debug only** (tag `debug`) |
+| `subflows/open-app.yaml` | shared start: clean launch, optional dev-client URL, finishes the first run if it shows, waits for Journey | (not run on its own) |
+| `subflows/finish-first-run.yaml` | Welcome (Rock, 25 min, new to drums) → Plug in → Pads are fine → Latency → Skip | (not run on its own) |
 
-`maestro test <folder>` runs only the folder's top-level flows, so `subflows/` isn't run by itself.
+`config.yaml` runs every top-level flow except the `debug` ones: the sidebar's Dev row exists only in debug builds
+(`__DEV__`), so a Release build would fail `dev-midi.yaml`. `subflows/` isn't run by itself.
+
+testIDs the flows rely on: `home-title`, `nav-*`, `screen-*`, `firstrun-*`, `journey-*`, `lesson-*`, `progress-*`,
+`setup-*` (tools: `setup-tool-<tool>` and `-close`), `notemap-<pad>`, `latency-*`, `songs-*`, `coach-*`. If a screen
+renames one, update the flow in the same commit.
 
 ## Run them on the Mac
 
@@ -23,18 +33,30 @@ without Maestro or a simulator, so treat them as unverified until their first ru
      ```
    - **Dev-client build:** it opens on the Expo dev launcher, so give the flows Metro's URL. Start Metro on the Mac
      (`npx expo start --dev-client`), then pass the URL in step 3.
-3. From the repo root:
+3. Simulator: **I/O → Keyboard → Connect Hardware Keyboard** on (the lesson's hidden keyboard field then never raises
+   the on-screen keyboard over the touch pads), and the simulator in landscape.
+4. From the repo root:
    ```sh
-   maestro test apps/mobile/e2e                       # Release build
+   maestro test apps/mobile/e2e                                             # Release build, every v1 flow
    maestro test -e DEV_CLIENT_URL="exp+drum-coach://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" apps/mobile/e2e
-   maestro test apps/mobile/e2e/launch.yaml           # one flow
+   maestro test --include-tags debug -e DEV_CLIENT_URL="…" apps/mobile/e2e  # adds dev-midi.yaml (debug build)
+   maestro test apps/mobile/e2e/lesson-to-progress.yaml                     # one flow
    ```
-   The screenshots (`launch-home.png`, `dev-midi-devices.png`) land in the current folder. `maestro studio` helps
-   find selectors.
+   Screenshots (`launch-journey.png`, `lesson-ready.png`, `lesson-take.png`, `lesson-results.png`,
+   `progress-after-take.png`, `setup.png`, `songs-offline.png`, `coach-offline.png`, …) land in the current folder.
+   `maestro studio` helps find selectors.
+
+## Known soft spots (fix the flow, not the app, if they're the only failure)
+- `lesson-to-progress.yaml` taps the touch pads at estimated screen points (65 %, 90 %) and (71 %, 92 %). They're
+  optional: a take with no hits still ends with results and is saved. If they hit nothing, adjust the points with
+  `maestro studio`.
+- The first Journey item on day one is the two-minute stretch (a resting step). If the planner picks something else,
+  the flow still only checks that the player opened and closes it.
+- `id:` and `text:` are regexes (`firstrun-welcome|home-title`); text matches the accessibility label on iOS.
 
 ## Adding a flow
 
 Use `testID` props (Maestro's `id:`) rather than text where the text may change, start with
-`- runFlow: subflows/open-app.yaml`, and list the new testIDs in the table above. Real MIDI isn't available in the
-simulator: drive play screens through the touch pads or the in-app fixture replay, and compare the take with
-`scripts/mobile-playtest/compare.mjs` (exact mode).
+`- runFlow: subflows/open-app.yaml`, and list the flow above. Real MIDI isn't available in the simulator: drive play
+screens through the touch pads or Network MIDI (the Mac's `scripts/mobile-playtest/replay-to-ipad.mjs`), and compare
+the take with `scripts/mobile-playtest/compare.mjs` (exact mode).

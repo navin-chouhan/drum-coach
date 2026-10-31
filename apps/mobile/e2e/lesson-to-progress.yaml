@@ -1,0 +1,119 @@
+# The v1 path on a simulator (no kit, so the lesson shows the touch pads): first run → Journey → the lesson player →
+# a take → results → the take shows on Progress. Release-safe: no Dev row, no deep link.
+# 1. Journey's big move opens today's first item (day one: the two-minute stretch, a resting step) in the player.
+# 2. Journey → Full path → "Sit, hold, strike" (Stage 0, one step: snare quarters, 2 bars at 60 BPM, ~12 s with the
+#    count-in) → Play → a few taps on the touch pads → results → back → Progress lists the lesson.
+# The touch-pad taps are screen points estimated from the lesson's layout (bottom-right kit box, TOUCH_KIT drawn
+# 1194×436, scaled to fit) and are optional: a take with no hits still finishes, scores 0 and is saved
+# (runRecord.ts shouldSave: notes were due). If a tap misses a pad nothing happens.
+# testIDs: src/features/journey/JourneyScreen.tsx, src/features/lesson/LessonScreen.tsx, src/features/progress/*.
+appId: com.drumcoach.app
+name: First run, Journey, lesson with touch pads, results, Progress
+tags:
+  - smoke
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+
+# 1 · Journey's main move opens the player
+- assertVisible:
+    id: journey-start
+- tapOn:
+    id: journey-start
+- extendedWaitUntil:
+    visible:
+      id: "lesson-back|lesson-missing"
+    timeout: 10000
+- assertNotVisible:
+    id: home-title # full screen: no sidebar
+- takeScreenshot: lesson-from-journey
+- tapOn:
+    id: lesson-back
+- extendedWaitUntil:
+    visible:
+      id: screen-journey
+    timeout: 10000
+
+# 2 · A lesson with a playable step, through Journey → Full path
+- tapOn:
+    text: "Full path"
+- extendedWaitUntil:
+    visible:
+      id: progress-path
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Sit, hold, strike.*"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "Sit, hold, strike.*"
+- extendedWaitUntil:
+    visible:
+      id: lesson-main-move
+    timeout: 10000
+- assertVisible:
+    id: lesson-touch-pads # no kit connected → touch pads, not the kit view
+- assertVisible:
+    id: lesson-sheet # D8: sheet music is the default view
+- takeScreenshot: lesson-ready
+- tapOn:
+    id: lesson-main-move
+- extendedWaitUntil:
+    visible:
+      id: lesson-stop
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: lesson-countin
+    timeout: 5000
+    optional: true
+# the count-in is one bar (4 s at 60 BPM); then tap the snare (≈65%,90%) and the kick (≈71%,92%) a few times
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          point: "65%,90%"
+          optional: true
+          retryTapIfNoChange: false
+      - tapOn:
+          point: "71%,92%"
+          optional: true
+          retryTapIfNoChange: false
+- takeScreenshot: lesson-take
+# results: the side column's "Ask the coach" card shows only with results
+- extendedWaitUntil:
+    visible:
+      id: lesson-ask-coach
+    timeout: 60000
+- assertVisible:
+    id: lesson-coach-line
+- assertNotVisible:
+    id: lesson-stop
+- takeScreenshot: lesson-results
+- tapOn:
+    id: lesson-back
+
+# 3 · Progress lists the take (runs → Your lessons)
+- tapOn:
+    id: nav-progress
+- extendedWaitUntil:
+    visible:
+      id: screen-progress
+    timeout: 10000
+- tapOn:
+    id: progress-back # Progress opened on the path view (view=path); back to the main view
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: progress-lesson-0
+    timeout: 10000
+- assertVisible:
+    text: ".*Sit, hold, strike.*"
+- takeScreenshot: progress-after-take
+
+# 4 · Journey still opens and shows today's set
+- tapOn:
+    id: nav-journey
+- assertVisible:
+    id: journey-set
