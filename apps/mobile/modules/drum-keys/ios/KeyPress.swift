@@ -45,4 +45,11 @@ enum KeyPress {
     if pressTimestamp <= 0 || ageMs < 0 || ageMs > 1000 { return nowMs }
     return nowMs - ageMs
   }
+
+  /// Whether a text field that began editing still counts as being edited (QA2 m9): it must still exist, be in a
+  /// window and be first responder. A field torn down without `textDidEndEditing` (a Modal closing with the keyboard
+  /// up) no longer counts, so the catcher can take the keys back.
+  static func stillEditing(alive: Bool, inWindow: Bool, firstResponder: Bool) -> Bool {
+    return alive && inWindow && firstResponder
+  }
 }

@@ -232,6 +232,9 @@ export function lessonCardOf(setup: LessonSetup, f: Frame, free: number[], s: Se
   if (step.gapBars) lines.push(`The click goes silent every ${step.gapBars === 2 ? 'other' : `${step.gapBars}th`} bar.`);
   return { what: lesson.what, lines, hint: hints ? howHint(lesson) : undefined, why: lesson.why, how: lesson.how };
 }
+/** A listening step's "▶ Find it on YouTube": the search page (web LessonPlayer; nothing is played or kept here). */
+export const youtubeSearch = (song: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(song)}`;
+
 /** The lesson's first "how" sentence: the 💡 hint. */
 export const howHint = (l: Lesson) => l.how.split(/(?<=\.)\s/)[0];
 

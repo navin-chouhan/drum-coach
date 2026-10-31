@@ -1,10 +1,10 @@
 import { CURRICULUM, LESSON_BY_ID, MILESTONES } from '@drum-coach/core/content/curriculum';
 import { startProgress, type LessonProgress } from '@drum-coach/core/engine/lesson';
-import type { RunRow } from '@drum-coach/core/engine/progress';
+import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import { currentMilestone } from '@drum-coach/core/engine/planner';
 import { describe, expect, it } from 'vitest';
-import { buildJourney, currentSession } from './model';
+import { badgeNames, buildJourney, currentSession, HEARING_TIP } from './model';
 import { countWords, groovePreview, slotsPerBeat } from './preview';
 
 const NOW = new Date(2026, 9, 30, 19, 42); // Fri 30 Oct, evening
@@ -181,5 +181,50 @@ describe("the coach's once-a-day lesson (web TodayView, \"coach automatically\")
   it('a new day is a new key', () => {
     const tomorrow = new Date(NOW); tomorrow.setDate(NOW.getDate() + 1);
     expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: tomorrow, aiLoaded: true }).coachKey).not.toBe(key);
+  });
+});
+
+describe('the rest of the web TodayView: week plan, ear tip, recap, badges, 2-minute challenge', () => {
+  const { settings, runs } = threeWeeksIn();
+  const wk = isoWeek(NOW);
+  it('wants the week plan once you have played, with the coach on and the first run done', () => {
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).weekPlanDue).toBe(true);
+    expect(buildJourney({ settings: { ...settings, liveCoach: false }, lessons: CURRICULUM, runs, now: NOW }).weekPlanDue).toBe(false);
+    expect(buildJourney({ settings: fresh(), lessons: CURRICULUM, runs: [], now: NOW }).weekPlanDue).toBe(false);
+  });
+  it('the ear tip shows once a week after some playing; the sore line names the doctor', () => {
+    const v = buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW });
+    expect(v.healthLine).toBe(HEARING_TIP);
+    expect(v.hearingTipDue).toBe(true);
+    const seen = buildJourney({ settings: { ...settings, hearingTipWeek: wk }, lessons: CURRICULUM, runs, now: NOW });
+    expect(seen.healthLine).toBeNull();
+    expect(seen.hearingTipDue).toBe(false);
+    expect(buildJourney({ settings: { ...settings, soreUntil: '2026-11-02' }, lessons: CURRICULUM, runs, now: NOW }).healthLine)
+      .toBe('Easy days until 2026-11-02: shorter sets, lighter playing. If something hurts, stop; if it lasts, see a doctor.');
+  });
+  it('the Monday recap: with playing from before this week, once a week', () => {
+    const v = buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW });
+    expect(v.recap).toMatch(/^Last week you played \d+ minutes\./);
+    expect(buildJourney({ settings: { ...settings, lastRecapWeek: wk }, lessons: CURRICULUM, runs, now: NOW }).recap).toBeNull();
+    const thisWeekOnly = runs.filter(r => isoWeek(new Date(r.startedAt)) === wk);
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs: thisWeekOnly, now: NOW }).recap).toBeNull();
+  });
+  it('new badges are the earned ones not announced yet', () => {
+    const v = buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW });
+    expect(v.newBadges).toContain('first-3star');
+    expect(badgeNames(['first-3star'])).toBe('First ★★★');
+    expect(buildJourney({ settings: { ...settings, badges: v.newBadges }, lessons: CURRICULUM, runs, now: NOW }).newBadges).toEqual([]);
+  });
+  it('the 2-minute challenge only after the set, on a finished drill groove', () => {
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).arcade).toBeNull();
+    const today = currentSession(settings, CURRICULUM, '2026-10-30');
+    const doneSet = { ...settings, session: { ...today, done: today.items.map((_, i) => i) } };
+    const v = buildJourney({ settings: doneSet, lessons: CURRICULUM, runs, now: NOW });
+    expect(v.hero).not.toBeNull();
+    {
+      expect(v.arcade?.sub).toMatch(/ · how many clean bars\?$/);
+      const best = { ...doneSet, arcade: { [v.arcade!.lessonId]: 6 } };
+      expect(buildJourney({ settings: best, lessons: CURRICULUM, runs, now: NOW }).arcade?.sub).toMatch(/beat 8 clean bars$/);
+    }
   });
 });

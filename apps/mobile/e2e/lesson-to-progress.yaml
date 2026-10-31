@@ -28,7 +28,7 @@ tags:
     id: home-title # full screen: no sidebar
 - takeScreenshot: lesson-from-journey
 - tapOn:
-    id: lesson-back
+    id: lesson-back # the player's back, or the "lesson no longer exists" card's "Back to Journey" (same testID)
 - extendedWaitUntil:
     visible:
       id: screen-journey

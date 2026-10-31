@@ -113,10 +113,10 @@ export function createTakePort(deps: TakePortDeps): CoreTakePort {
       void t.start();
       notify();
     },
-    stop(reason = 'user') {
+    stop(reason = 'user', at) {
       const t = take;
       if (!t) return;
-      t.stop(reason);
+      t.stop(reason, at);
       // a dropped take leaves nothing on screen; a finished one stays (phase done)
       if (t.state.phase === 'idle') notify();
     },

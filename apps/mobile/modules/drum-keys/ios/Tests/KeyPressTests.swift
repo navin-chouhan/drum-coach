@@ -52,6 +52,25 @@ final class KeyPressTests: XCTestCase {
     XCTAssertEqual(KeyPress.hostMs(pressTimestamp: 90, uptimeNow: 100, nowMs: 5000), 5000) // stale
   }
 
+  func testStillEditing() {
+    XCTAssertTrue(KeyPress.stillEditing(alive: true, inWindow: true, firstResponder: true))
+    XCTAssertFalse(KeyPress.stillEditing(alive: false, inWindow: false, firstResponder: false)) // deallocated
+    XCTAssertFalse(KeyPress.stillEditing(alive: true, inWindow: false, firstResponder: true)) // its Modal closed
+    XCTAssertFalse(KeyPress.stillEditing(alive: true, inWindow: true, firstResponder: false)) // no end notification
+  }
+
+  func testDebugCountersAcrossThreads() {
+    let c = DebugCounters()
+    XCTAssertEqual(c.snapshot(), DebugCounters.Snapshot())
+    DispatchQueue.concurrentPerform(iterations: 1000) { i in
+      if i % 2 == 0 { c.keySent() } else { c.focusCall(focused: true) }
+      _ = c.snapshot()
+    }
+    XCTAssertEqual(c.snapshot(), DebugCounters.Snapshot(keysSent: 500, focusCalls: 500, focused: true))
+    c.focusCall(focused: false)
+    XCTAssertFalse(c.snapshot().focused)
+  }
+
   func testHostClockMatchesDrumMidi() {
     // Same conversions as DrumMidi's HostClock (Apple silicon timebase 125/3).
     XCTAssertEqual(HostClock.ticksToMs(24_000_000, numer: 125, denom: 3), 1000, accuracy: 1e-9)

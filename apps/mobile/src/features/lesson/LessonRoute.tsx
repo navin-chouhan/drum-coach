@@ -16,7 +16,7 @@ export function LessonRoute({ params, drill }: { params: LessonParams; drill?: {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Card style={{ gap: 14, width: 460 }} testID="lesson-missing">
             <Body size={18} weight="700">{drill ? 'This drill no longer exists.' : 'This lesson no longer exists.'}</Body>
-            <Button label="Back to Journey" onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as never))} />
+            <Button label="Back to Journey" testID="lesson-back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as never))} />
           </Card>
         </View>
       </DottedGround>

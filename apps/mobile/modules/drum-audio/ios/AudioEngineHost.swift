@@ -795,14 +795,17 @@ final class AudioEngineHost {
     }
   }
 
-  /// A route change (headphones, Bluetooth, USB audio…): cancel, re-read latency and buffer, tell JS (§3.3). The take
-  /// ends in core; the app looks up this route's measured latency. If the format changed, the engine-config handler
+  /// A route change (headphones, Bluetooth, USB audio…): cancel, re-read latency and buffer, tell JS (§3.3), and end a
+  /// running take with `engine-stopped` / `route-change` (core keeps ≥ 2 whole bars, flagged); the app looks up this
+  /// route's measured latency. If the format changed, the engine-config handler
   /// restarts the engine as well.
   private func handleRouteChange(reason: UInt) {
     dispatchPrecondition(condition: .onQueue(loopQueue))
     let (info, newFacts) = Self.readRoute(AVAudioSession.sharedInstance())
     lock.lock()
     let changed = facts.map { !AudioPolicy.sameRoute($0, newFacts) } ?? false
+    // Every queued sound goes below: a running take can't go on (AUDIO-DESIGN §3.3/§4), so JS ends it as interrupted.
+    let endsTake = AudioPolicy.routeChangeEndsTake(previous: facts, next: newFacts, running: running)
     let oldHeard = heardOffsetMs
     // The backing's line before the heard offset changes: what core has been correcting against.
     let line = changed && running ? backing.reanchorLine() : nil
@@ -819,6 +822,7 @@ final class AudioEngineHost {
     // stopped; the config-change handler restarts it and the backing then).
     if let l = line, abs(timing.heardOffsetMs - oldHeard) >= 0.5 { backing.restart(on: l, timing: timing) }
     if changed { emitRoute?(Self.body(info)) }
+    if endsTake { emitInterruption?(["type": "engine-stopped", "at": HostClock.nowMs(), "cause": "route-change"]) }
   }
 
   /// The engine stopped and uninitialised itself (channel count or rate change). Restart it in the foreground.

@@ -4,10 +4,10 @@
 // Pure: settings, lessons, runs and the time come in.
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
 import { greeting } from '@drum-coach/core/engine/greeting';
-import { soreActive } from '@drum-coach/core/engine/health';
+import { dayAdvice, soreActive } from '@drum-coach/core/engine/health';
 import { dayKey, isProven, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
 import { buildSession, checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
-import { barsReady, dashboard, type RunRow } from '@drum-coach/core/engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillMap } from '@drum-coach/core/engine/skills';
 import { stageSong } from '@drum-coach/core/engine/stageSong';
 import type { Session, Settings } from '@drum-coach/core/input/settings';
@@ -80,7 +80,20 @@ export type JourneyView = {
   coachKey: string;
   /** Ask the coach for a lesson now (once a day per stage: the key); null when not. */
   coachAsk: string | null;
+  /** Make sure there's a plan for this week (the web's ensureWeekPlan: played, coach on, onboarded). */
+  weekPlanDue: boolean;
+  /** The ear tip is showing this week: the screen marks it seen after a minute (the web's hearingTipWeek). */
+  hearingTipDue: boolean;
+  /** The Monday recap (first visit of a week, with playing from before it), or null; the screen keeps and says it once. */
+  recap: string | null;
+  /** Badges earned and not announced yet (Settings.badges keeps the announced ones). */
+  newBadges: string[];
+  /** After today's set: the 2-minute challenge on the newest finished drill groove (the web's arcade move). */
+  arcade: { lessonId: string; title: string; sub: string } | null;
 };
+
+export const HEARING_TIP = 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.';
+export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id === id)?.name ?? id).join(', ');
 
 /**
  * The web's TodayView: with "coach automatically" on, once you've played something, ask once a day for a lesson when
@@ -211,6 +224,15 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const minutesDone = setItems.filter(x => session.done.includes(x.i)).reduce((a, x) => a + x.it.minutes, 0);
   const daysPlayed = new Set(runs.map(r => r.startedAt.slice(0, 10))).size;
   const sore = soreActive(s.soreUntil, today);
+  const wk = isoWeek(now), played = dash.totalRuns > 0;
+  const newBadges = runs.length ? earnedBadges(runs, s.lessons, MILESTONES.map(m => m.checkpoints)).filter(id => !s.badges?.includes(id)) : [];
+  // F2: only with playing from before this week, or "last week" means today.
+  const recap = played && s.lastRecapWeek !== wk && runs.some(r => isoWeek(new Date(r.startedAt)) !== wk)
+    ? weekRecap(dash, newBadges.length ? BADGES.find(b => b.id === newBadges[newBadges.length - 1])?.name : undefined) : null;
+  // The 2-minute challenge: the highest stage first, then the one played longest ago.
+  const lastPlayed = (l: Lesson) => dash.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
+  const arcadeLesson = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill')
+    .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   const coachKey = coachLessonKey(now, milestone?.level);
   const coachAsk = s.liveCoach && s.profile.onboarded && dash.totalRuns > 0 && milestone && aiLoaded && !coachOpen.length
     && studentRead(s.lessons, runs).pace !== 'flying' ? coachKey : null;
@@ -222,9 +244,8 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
       next: hero && { tool: toolOf(hero.steps[0]) }, setDone: afterSet, minutesToday: dash.minutesToday, pathDone: !milestone && path.length > 0 && !hero,
     }),
     setupDue: !s.setupDone,
-    healthLine: sore ? `Easy days until ${s.soreUntil}: shorter sets, lighter playing.`
-      : daysPlayed <= 7 && dash.minutesToday >= 40 ? "That's plenty for your first week: short and daily beats long."
-      : dash.minutesToday >= 60 ? 'Over an hour today. Stop while it still feels good.' : null,
+    healthLine: sore ? `Easy days until ${s.soreUntil}: shorter sets, lighter playing. If something hurts, stop; if it lasts, see a doctor.`
+      : dayAdvice(Math.round(dash.minutesToday), daysPlayed) ?? (played && s.hearingTipWeek !== wk ? HEARING_TIP : null),
     hero: heroView, main, somethingElse: others.length > 0 && !!hero, jamLessonId: jam && jam !== hero ? jam.id : null,
     you: {
       rank: passed.length ? passed[passed.length - 1].rank : 'New drummer', proven: rankNow?.state === 'proven',
@@ -254,5 +275,12 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
       stops: trailStops(trail, hero, builtinSong, s, isCheckpoint),
     } : null,
     coachKey, coachAsk,
+    weekPlanDue: played && s.liveCoach && s.profile.onboarded,
+    hearingTipDue: played && s.hearingTipWeek !== wk,
+    recap, newBadges,
+    arcade: afterSet && arcadeLesson ? {
+      lessonId: arcadeLesson.id, title: arcadeLesson.title,
+      sub: `${arcadeLesson.title} · ${s.arcade?.[arcadeLesson.id] ? `beat ${s.arcade[arcadeLesson.id] + 2} clean bars` : 'how many clean bars?'}`,
+    } : null,
   };
 }

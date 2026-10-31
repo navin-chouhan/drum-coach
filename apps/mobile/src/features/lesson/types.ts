@@ -40,7 +40,7 @@ export interface TakePort {
   /** Starts a take (dropping any running one). Count-in, clicks, app-played notes and the band are the engine's. */
   start(chart: Chart, options: PlayOptions): void;
   /** Stop: an endless take keeps its whole bars; 'interrupted' ends any take at its last whole bar (D6). */
-  stop(reason?: 'user' | 'interrupted'): void;
+  stop(reason?: 'user' | 'interrupted', at?: number): void;
   /** Run position in beats at Clock time `now` (negative in the count-in). */
   position(now?: number): number;
   /** Called on every phase change and when a take finishes (state.finished is then set). */

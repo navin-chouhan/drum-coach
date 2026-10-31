@@ -124,6 +124,14 @@ enum AudioPolicy {
       && abs(a.outputLatencyMs - b.outputLatencyMs) < 0.5
   }
 
+  /// A route event while the engine runs ends the take (AUDIO-DESIGN §3.3/§4): every queued sound is dropped and the
+  /// new route's latency isn't the take's. The host then emits `engine-stopped` / `route-change`. No previous route
+  /// (the first start) or the same route (latency jitter): nothing ends. Mirror of src/policy.ts routeChangeEndsTake.
+  static func routeChangeEndsTake(previous: RouteFacts?, next: RouteFacts, running: Bool) -> Bool {
+    guard running, let p = previous else { return false }
+    return !sameRoute(p, next)
+  }
+
   /// Voice ducking: click, drums, band and backing dip to 45 % while a voice-bus sound plays, over 30 ms.
   static let duckLevel: Double = 0.45
   static let duckRampMs: Double = 30

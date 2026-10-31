@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   defaultLoopPolicy, duckStep, gainStep, HEARD_OFFSET_BRANCH, heardOffsetMs, isDue, isLate, minLeadMs, pickVoice, POOLS,
-  routeKey, routeKind, sameRoute, scheduleTimeMs, stepGain,
+  routeChangeEndsTake, routeKey, routeKind, sameRoute, scheduleTimeMs, stepGain,
 } from './policy';
 
 // ios/Core/Tests/DrumAudioCoreTests/AudioPolicyTests.swift runs the same vectors against the Swift mirror.
@@ -121,6 +121,14 @@ describe('routes', () => {
     expect(sameRoute(a, { ...a, sampleRate: 44100 })).toBe(false);
     expect(sameRoute(a, { ...a, ioBufferMs: 5.33 })).toBe(false);
     expect(sameRoute(a, { ...a, key: 'Headphones:x' })).toBe(false);
+  });
+  it('routeChangeEndsTake: a new route while running ends the take; jitter, a stopped engine or the first start do not', () => {
+    const a = { key: 'Speaker', sampleRate: 48000, ioBufferMs: 21.33, outputLatencyMs: 5.7 };
+    expect(routeChangeEndsTake(a, { ...a, key: 'USBAudio:hub' }, true)).toBe(true);
+    expect(routeChangeEndsTake(a, { ...a, outputLatencyMs: 40 }, true)).toBe(true);
+    expect(routeChangeEndsTake(a, { ...a, outputLatencyMs: 5.9 }, true)).toBe(false);
+    expect(routeChangeEndsTake(a, { ...a, key: 'USBAudio:hub' }, false)).toBe(false);
+    expect(routeChangeEndsTake(null, a, true)).toBe(false);
   });
 });
 

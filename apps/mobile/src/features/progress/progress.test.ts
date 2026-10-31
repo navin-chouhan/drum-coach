@@ -1,6 +1,7 @@
 import { CURRICULUM, MILESTONES } from '@drum-coach/core/content/curriculum';
 import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS } from '@drum-coach/core/input/settings';
+import type { YtSong } from '@drum-coach/core/youtube/schemas';
 import { describe, expect, it, vi } from 'vitest';
 import { createDataStore } from '../../data/store';
 import { openTestDb } from '../../data/nodeSqlite.testutil';
@@ -172,7 +173,7 @@ describe("this month's report", () => {
 describe('stored data', () => {
   it('reads runs, coach lessons and the plan from storage; a fresh iPad is empty', async () => {
     const store = createDataStore(() => openTestDb(), () => {});
-    expect(await loadStoredData(store)).toEqual({ runs: [], lessons: CURRICULUM, plan: undefined });
+    expect(await loadStoredData(store)).toEqual({ runs: [], lessons: CURRICULUM, plan: undefined, songs: [] });
     await store.runs.add({ chartId: 'singles', chartTitle: 'Single strokes (16ths)', startedAt: at(30), durationS: 60, bpm: 70, speed: 1, accuracy: 90, meanOffset: 2, spread: 12, summary: { notes: 32 } });
     const lesson = { ...CURRICULUM[1], id: 'coach-x', source: 'ai' };
     store.aiLessons!.put(lesson);
@@ -183,5 +184,42 @@ describe('stored data', () => {
     expect(d.lessons.at(-1)?.id).toBe('coach-x');
     expect(d.plan).toEqual({ week: '2026-W44', focus: 'even 8ths' });
     expect(allLessons([{ id: 'broken' }, { ...CURRICULUM[0] }])).toHaveLength(CURRICULUM.length); // junk and duplicates are dropped
+    store.songs!.add({ originalId: 'abcdefghijk', title: 'Song (Official Video)' });
+    expect((await loadStoredData(store)).songs.map(x => x.id)).toEqual(['yt-abcdefghijk']);
+    expect((await loadStoredData({ ...store, songs: { list: () => { throw new Error('no table'); } } })).songs).toEqual([]);
+  });
+});
+
+describe('show-off set (web ProgressView: showoff, bestSongBars)', () => {
+  // 4/4, 20 bars: the last note on beat 76 (bar 20)
+  const song = (id: string, over: Partial<YtSong> = {}): YtSong => ({
+    id, title: `${id} (Official Video)`, originalId: id.slice(3), drumlessId: null, coverId: null, timeSignature: [4, 4],
+    notes: [{ t: 0, drum: 'kick' }, { t: 76, drum: 'snare' }], grids: {}, verifiedAt: '2026-10-20', ...over,
+  });
+  const songRun = (id: string, accuracy: number, fromBar: number, toBar: number) => run(id, accuracy, 29, { fromBar, toBar });
+
+  it('no songs: the show-off trophy reads 0 / 16 bars and the set explains how to fill it', () => {
+    const m = progressModel({ ...base, runs: [] });
+    expect(m.trophies.later).toContain('Show-off song');
+    expect(m.showoff.songs).toEqual([]);
+    expect(m.showoff.empty).toMatch(/^Pass a stage, then play 16 bars/);
+  });
+
+  it('a song checked by ear with every bar at 85% lands in the set and earns the trophy; two make a concert', () => {
+    const runs = [songRun('yt-a', 90, 1, 12), songRun('yt-a', 88, 13, 20), songRun('yt-b', 95, 1, 20), songRun('yt-c', 95, 1, 20)];
+    const m = progressModel({ ...base, runs, songs: [song('yt-a'), song('yt-b'), song('yt-c', { verifiedAt: null })] });
+    expect(m.showoff.songs).toEqual([{ id: 'yt-a', title: 'yt-a' }, { id: 'yt-b', title: 'yt-b' }]); // yt-c isn't checked by ear (N4)
+    expect(m.showoff.concert).toEqual([{ id: 'yt-a', bars: { from: 1, to: 20 } }, { id: 'yt-b', bars: { from: 1, to: 20 } }]);
+    expect(m.trophies.badges.map(b => b.id)).toContain('showoff');
+  });
+
+  it('bars ready count toward the trophy before a song is ready; one song makes no concert', () => {
+    const m = progressModel({ ...base, runs: [songRun('yt-a', 90, 1, 6), songRun('yt-a', 70, 7, 20)], songs: [song('yt-a')] });
+    expect(m.showoff.songs).toEqual([]);
+    expect(m.trophies.badges.map(b => b.id)).not.toContain('showoff');
+    expect(m.trophies.closest.find(b => b.id === 'showoff')?.words).toBe('6 / 16 bars');
+    const one = progressModel({ ...base, runs: [songRun('yt-a', 90, 1, 20)], songs: [song('yt-a')] });
+    expect(one.showoff.songs).toHaveLength(1);
+    expect(one.showoff.concert).toBeUndefined();
   });
 });
