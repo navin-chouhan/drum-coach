@@ -2,7 +2,7 @@
 // e-Drum, the last hit, the MIDI input), Pads (hit each pad, soft then loud, note map), Latency (per output, with the
 // web's "do this first"), Sound and you, Coach · home server, Coach · fallback and While you play. Each tool opens
 // full screen over Setup. Kit gestures: the "yes" gesture starts what to do first.
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { getHomeServer, validateServerConfig } from '../../platform/api';
 import { audio } from '../../platform/audio';
@@ -41,7 +41,6 @@ export function SetupScreen() {
   const s = useAppSettings();
   const conn = useKitConnection();
   const { kit, map, padCal } = useKitData();
-  const last = useLastHit();
   const route = useAudioRoute();
   const runs = useRecentRuns();
   const [tool, setTool] = useState<Tool | null>(null);
@@ -49,10 +48,11 @@ export function SetupScreen() {
   const checks = setupChecks({ settings: s, padCal, runs, device: conn.connected?.name ?? null });
   const latency = checks.find(c => c.id === 'latency')!;
   const pads = checks.find(c => c.id === 'pads')!;
-  const byRoute = readLatencyByRoute(kv());
+  // QA2 m7: the per-route latencies are re-read only when settings change (every save writes settings too), and the
+  // last hit re-renders only its own LastHit view, never the whole screen.
+  const byRoute = useMemo(() => readLatencyByRoute(kv()), [s]); // eslint-disable-line react-hooks/exhaustive-deps
   const lat = latencyRow(byRoute, route, s);
   const others = otherRoutes(byRoute, route?.key ?? null);
-  const hit = lastHitView(last);
   const clash = conflictText(map);
   const close = () => setTool(null);
 
@@ -71,10 +71,7 @@ export function SetupScreen() {
                 <Text style={styles.heroTitle} testID="setup-kit-name">{status.title}</Text>
                 <Text style={styles.heroSub} numberOfLines={2}>{status.sub}</Text>
               </View>
-              <View style={styles.hit} accessibilityLiveRegion="polite" testID="setup-last-hit">
-                <Text style={[styles.hitName, hit.pad && { color: color.ink }]}>{hit.name}</Text>
-                <Text style={styles.heroSub}>{hit.sub}</Text>
-              </View>
+              <LastHit />
             </View>
             <GroupRow emoji="🔌" sym="gray" title="MIDI input" right={<><Text style={styles.val}>{conn.connected?.name ?? (conn.inputs.length ? 'none' : 'no inputs')}</Text><Chevron /></>}
               onPress={() => setTool('input')} testID="setup-midi-input" accessibilityLabel={`MIDI input: ${conn.connected?.name ?? 'none'}`} />
@@ -138,6 +135,17 @@ export function SetupScreen() {
         {tool === 'apikey' ? <ApiKeyPanel onDone={close} /> : null}
       </ToolFrame>
     </Screen>
+  );
+}
+
+/** The Kit group's last hit: its own component, so a hit re-renders only this (QA2 m7). */
+function LastHit() {
+  const hit = lastHitView(useLastHit());
+  return (
+    <View style={styles.hit} accessibilityLiveRegion="polite" testID="setup-last-hit">
+      <Text style={[styles.hitName, hit.pad && { color: color.ink }]}>{hit.name}</Text>
+      <Text style={styles.heroSub}>{hit.sub}</Text>
+    </View>
   );
 }
 
@@ -248,7 +256,7 @@ function KitTest() {
         <Group title="Last hit">
           <GroupRow first title={hit.name} sub={hit.sub} right={hit.pad ? <View style={[styles.dot, { backgroundColor: padColor(hit.pad) }]} /> : undefined} testID="kittest-last" />
         </Group>
-        <Body size={14} weight="700">{KEYS_LINE.replace('No kit? Keys:', 'No kit? Tap a drum. A hardware keyboard needs a later build:')}</Body>
+        <Body size={14} weight="700">{KEYS_LINE}</Body>
       </View>
     </View>
   );
