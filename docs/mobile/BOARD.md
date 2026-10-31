@@ -58,7 +58,7 @@ session. The decisions it needs are D1–D5, below.
 
 | I1 Backing in take + Songs | **done, merged** (57b2e5f) | `packages/core/src/play/**`, `features/songs/**`, `src/youtube/**` | [briefs/I1.md](briefs/I1.md) | backing plays |
 | I2 Keyboard + kit consolidation | **done, merged** (e6ddbf9) | `modules/drum-keys/**`, `src/ui/**`, `app/_layout.tsx`, imports in setup/firstRun/pads/latency/coach/journey/progress | [briefs/I2.md](briefs/I2.md) | app-wide keys, one kit |
-| I3 Lesson + Practice integration | running | `features/{lesson,practice}/**`, `app/{lesson,practice}/**`, `features/coach/asks.ts` | [briefs/I3.md](briefs/I3.md) | backlog items |
+| I3 Lesson + Practice integration | **done, merged** | `features/{lesson,practice}/**`, `app/{lesson,practice}/**`, `features/coach/asks.ts` | [briefs/I3.md](briefs/I3.md) | backlog items |
 | A10 QA | **done, merged** (6ed44da) | `docs/mobile/QA-*.md`, `docs/mobile/FINAL-CHECKLIST.md`, `apps/mobile/e2e/**` | [briefs/A10.md](briefs/A10.md) | findings + owner checklist |
 
 | F1 Minor QA fixes | running | per brief (setup, not-found, journey/progress/coach route imports, coach charts → table, debug replay export) | [briefs/F1.md](briefs/F1.md) | m4, m6, m7, m8, m9 |
@@ -253,3 +253,4 @@ results.
 - 2026-10-30: Integration + QA wave started: I1, I2, I3, A10.
 - 2026-10-31: Session paused ~23:20–10:10 UTC (account usage limit + worker restart); I1/I2/I3/A10 resumed. Cloud iOS run 12 (f37a531): **app build passed with all Swift incl. backing audio**, SwiftPM tests passed; podspec test bundle failed to link libc++ → fixed in DrumMidi.podspec (1625b5b). New advisory GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, moderate, root ESLint toolchain) turns `npm audit` red everywhere incl. main; fix is < 7 days old and a major bump → **owner to decide** (force with a young exception, or wait to 2026-11-04). A10 merged: 0 blockers, 4 major, 9 minor; FINAL-CHECKLIST.md; Maestro flows for the real app. Fixed M1 (no header on full-screen routes). M2/M3/M4/m2 → I3; m5/m8 → I1; m1/m3 → I2; m9 (debug export) later.
 - 2026-10-31: I1 + I2 merged. Backlog: BackingPort loop seam gap ~100-150 ms (contract needs a duration/queued segment for seamless loops); move coach charts into the charts table (QA m8 full fix).
+- 2026-10-31: I3 merged (items 1-8, QA M2/M3/M4/m2). Backlog: a 'Find my level' entry if placement is skipped; lesson H/B keys need the keyboard module to pass more keys; Metro export needs a per-worktree TMPDIR when agents run in parallel.
