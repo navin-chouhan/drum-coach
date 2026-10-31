@@ -289,5 +289,43 @@
       "text \"● on it  ● early / late  ◌ missed  ✕ extra\""
     ],
     "errors": 0
+  },
+  "progress-lessons": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "progress-lessons-row-15 \"Where's the kick? · Where's the kick?★★★shaky: wor\"",
+      "text \"shaky: worth one more go\"",
+      "progress-lessons-row-16 \"Your first beat · Build it upstep 1, 64 next (star\"",
+      "text \"Your first beat · Build it up\"",
+      "text \"step 1, 64 next (started at 60)\"",
+      "text \"12 Oct\"",
+      "text \"Practise\"",
+      "progress-lessons-row-17 \"The money beat · Hi-hat only★★★due for a review11 \"",
+      "text \"The money beat · Hi-hat only\"",
+      "text \"due for a review\"",
+      "text \"11 Oct\"",
+      "text \"Practise\""
+    ],
+    "errors": 0
+  },
+  "progress-path": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [
+      "text \"Sight-reading 2\"",
+      "text \"5. 16ths and dynamics\"",
+      "text \"Challenges:\"",
+      "text \"The paradiddle\"",
+      "text \"16th-note hi-hat\"",
+      "text \"Ghost notes\"",
+      "text \"Ride groove with hi-hat foot\"",
+      "text \"Lessons:\"",
+      "text \"Flam taps\"",
+      "text \"The drag\"",
+      "text \"Kick on the \"a\" of 2\"",
+      "text \"Open hi-hat on every &\""
+    ],
+    "errors": 0
   }
 }
