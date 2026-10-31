@@ -224,6 +224,7 @@ describe('the rest of the web TodayView: week plan, ear tip, recap, badges, 2-mi
     expect(v.hero).not.toBeNull();
     {
       expect(v.arcade?.sub).toMatch(/ · how many clean bars\?$/);
+      expect(v.arcade?.goal).toBe('how many clean bars?'); // the move's short note (the tile keeps the title)
       const best = { ...doneSet, arcade: { [v.arcade!.lessonId]: 6 } };
       expect(buildJourney({ settings: best, lessons: CURRICULUM, runs, now: NOW }).arcade?.sub).toMatch(/beat 8 clean bars$/);
       expect(v.afterSet).toBe(true);

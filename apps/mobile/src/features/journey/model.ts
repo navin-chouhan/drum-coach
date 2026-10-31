@@ -124,9 +124,9 @@ export type JourneyView = {
   /** Today's set is done and the trail's next lesson leads: the 2-minute challenge and Beat your best join the moves. */
   afterSet: boolean;
   /** The 2-minute challenge on the newest finished drill groove (the web's arcade move and tile). */
-  arcade: { lessonId: string; title: string; sub: string } | null;
+  arcade: { lessonId: string; title: string; sub: string; goal: string } | null;
   /** Beat your best: a finished lesson played longest ago with a record left to beat (opened with role=record). */
-  record: { lessonId: string; title: string; sub: string } | null;
+  record: { lessonId: string; title: string; sub: string; goal: string } | null;
 };
 
 export const SETUP_NUDGE = 'Two minutes to check your pads and latency makes every timing score fair.';
@@ -288,6 +288,7 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const lastPlayed = (l: Lesson) => dash.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
   const arcadeLesson = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill')
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  const arcadeGoal = arcadeLesson && (s.arcade?.[arcadeLesson.id] ? `beat ${s.arcade[arcadeLesson.id] + 2} clean bars` : 'how many clean bars?');
   // Beat your best (improvising tools have no record; a streak record as long as the whole take has nothing left).
   const lastStep = (l: Lesson) => l.steps[l.steps.length - 1];
   const maxedOut = (l: Lesson) => { const t = recordTarget(lastStep(l), s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
@@ -349,10 +350,10 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     challenge: challenges[0] ? { lessonId: challenges[0].id, title: challenges[0].title } : null,
     flow: flowTile(lessons, s),
     showoff: pathDone ? readySongs ?? [] : [],
-    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}` } : null,
+    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}`, goal: recordGoal! } : null,
     arcade: arcadeLesson ? {
       lessonId: arcadeLesson.id, title: arcadeLesson.title,
-      sub: `${arcadeLesson.title} · ${s.arcade?.[arcadeLesson.id] ? `beat ${s.arcade[arcadeLesson.id] + 2} clean bars` : 'how many clean bars?'}`,
+      sub: `${arcadeLesson.title} · ${arcadeGoal}`, goal: arcadeGoal!,
     } : null,
   };
 }
