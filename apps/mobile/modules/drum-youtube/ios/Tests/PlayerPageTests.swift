@@ -78,3 +78,39 @@ final class ClockOffsetTests: XCTestCase {
     XCTAssertNil(c.value)
   }
 }
+
+final class PagePolicyTests: XCTestCase {
+  private let page = URL(string: "https://com.drumcoach.app")!
+  private let embed = URL(string: "https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1")!
+  private let watch = URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ")!
+
+  func testMessagesOnlyFromOurMainFrame() {
+    XCTAssertTrue(PagePolicy.acceptsMessage(isMainFrame: true, scheme: "https", host: "com.drumcoach.app"))
+    XCTAssertFalse(PagePolicy.acceptsMessage(isMainFrame: false, scheme: "https", host: "com.drumcoach.app"))
+    XCTAssertFalse(PagePolicy.acceptsMessage(isMainFrame: true, scheme: "https", host: "www.youtube.com"))
+    XCTAssertFalse(PagePolicy.acceptsMessage(isMainFrame: true, scheme: "http", host: "com.drumcoach.app"))
+  }
+
+  func testMainFrameOnlyForOurPage() {
+    XCTAssertEqual(PagePolicy.navigation(url: page, isMainFrame: true, expectingPage: true), .allow)
+    XCTAssertEqual(PagePolicy.navigation(url: page, isMainFrame: true, expectingPage: false), .cancel) // a script reloading it
+    XCTAssertEqual(PagePolicy.navigation(url: URL(string: "https://example.com/")!, isMainFrame: true, expectingPage: true), .cancel)
+    XCTAssertEqual(PagePolicy.navigation(url: watch, isMainFrame: true, expectingPage: false), .openOutside(watch))
+    XCTAssertEqual(PagePolicy.navigation(url: URL(string: "https://youtu.be/dQw4w9WgXcQ")!, isMainFrame: true, expectingPage: true),
+                   .openOutside(URL(string: "https://youtu.be/dQw4w9WgXcQ")!))
+    XCTAssertEqual(PagePolicy.navigation(url: nil, isMainFrame: true, expectingPage: true), .cancel)
+  }
+
+  func testSubframesStayFree() {
+    XCTAssertEqual(PagePolicy.navigation(url: embed, isMainFrame: false, expectingPage: false), .allow)
+    XCTAssertEqual(PagePolicy.navigation(url: URL(string: "https://example.com/")!, isMainFrame: false, expectingPage: false), .allow)
+  }
+
+  func testNewWindowsOnlyToYouTube() {
+    XCTAssertEqual(PagePolicy.newWindow(url: watch), watch)
+    XCTAssertNil(PagePolicy.newWindow(url: URL(string: "https://example.com/")!))
+    XCTAssertNil(PagePolicy.newWindow(url: nil))
+    XCTAssertFalse(PagePolicy.isYouTube(URL(string: "https://notyoutube.com/")!))
+    XCTAssertFalse(PagePolicy.isYouTube(URL(string: "javascript:alert(1)")!))
+  }
+}

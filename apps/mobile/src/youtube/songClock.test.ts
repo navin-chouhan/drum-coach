@@ -135,11 +135,12 @@ describe('YouTube controller', () => {
     expect(ytErrorText({ code: 101 })).toBe(ytErrorText({ code: 150 }));
   });
 
-  it('a refused video (101, 150, 152, 153): the web wording, its code, and the watch URL for "Open in YouTube"', () => {
+  it('a refused video (101, 150, 152 as the web; 153 = the player wasn\'t accepted): its code and the watch URL for "Open in YouTube"', () => {
     const { yt } = make();
     yt.handle({ type: 'ready', raw: 0, rate: 1, duration: 1, title: '', rates: [1] });
     yt.handle({ type: 'error', code: 153 });
-    expect(yt.error).toBe("The owner doesn't allow this video to be embedded. Try another upload of the song.");
+    expect(yt.error).toBe("YouTube didn't accept this player here. Open it in YouTube instead.");
+    expect(ytErrorText({ code: 150 })).toBe("The owner doesn't allow this video to be embedded. Try another upload of the song."); // as the web
     expect(yt.errorCode).toBe(153);
     expect([101, 150, 152, 153].every(isRefused)).toBe(true);
     expect(isRefused(100) || isRefused(undefined)).toBe(false);

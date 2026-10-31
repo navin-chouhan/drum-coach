@@ -38,7 +38,7 @@ export const YT_ERRORS: Record<number, string> = {
   101: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
   150: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
   152: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
-  153: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
+  153: "YouTube didn't accept this player here. Open it in YouTube instead.", // the player, not the upload (QA4 m8)
 };
 /** The codes where YouTube refuses to play the video in this player: the screen offers "Open in YouTube". */
 export const REFUSED_CODES: readonly number[] = [101, 150, 152, 153];
