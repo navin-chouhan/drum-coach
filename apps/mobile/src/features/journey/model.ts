@@ -1,11 +1,12 @@
 // Journey's view model: everything the screen shows, from the core's rules and the student's data, as plain values.
 // The logic is the web's (src/lesson/TodayView.tsx, src/lesson/state.ts) without what v1 leaves out on the iPad (Songs
-// and real songs: D5; the coach writing lessons: later). Pure: settings, lessons, runs and the time come in.
+// and real songs: D5). With "coach automatically" on, it names the once-a-day coach lesson to ask for (`coachAsk`).
+// Pure: settings, lessons, runs and the time come in.
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
 import { greeting } from '@drum-coach/core/engine/greeting';
 import { soreActive } from '@drum-coach/core/engine/health';
 import { dayKey, isProven, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
-import { buildSession, checkpointsOf, currentMilestone, rankState, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
+import { buildSession, checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
 import { barsReady, dashboard, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillMap } from '@drum-coach/core/engine/skills';
 import { stageSong } from '@drum-coach/core/engine/stageSong';
@@ -29,6 +30,8 @@ export type JourneyInput = {
   swap?: number;
   /** This week's lessons from the coach's plan (R6), when there is one. */
   focusIds?: string[];
+  /** The coach's lessons are read from storage (until then, "no coach lesson" isn't known: the web's aiLessonsLoaded). */
+  aiLoaded?: boolean;
 };
 
 export type HeroView = {
@@ -73,7 +76,18 @@ export type JourneyView = {
   set: { items: SetItemView[]; minutesDone: number; minutesTotal: number; done: boolean };
   song: { lessonId: string; title: string; bars: number; ready: number; text: string } | null;
   trail: { title: string; summary: string; stops: TrailStopView[] } | null;
+  /** The coach lesson's key for today and this stage (the screen shows "your coach is writing…" while it's asked). */
+  coachKey: string;
+  /** Ask the coach for a lesson now (once a day per stage: the key); null when not. */
+  coachAsk: string | null;
 };
+
+/**
+ * The web's TodayView: with "coach automatically" on, once you've played something, ask once a day for a lesson when
+ * there's none waiting for this stage (with no takes yet, the built-in first lessons are the right start), unless the
+ * student is flying through. The key is the web's (`lesson-<day>-<stage>-<asks>`; the iPad has no "ask again" here).
+ */
+export const coachLessonKey = (now: Date, level: number | undefined) => `lesson-${now.toDateString()}-${level}-0`;
 
 const stepOf = (l: Lesson, s: Settings) => l.steps[Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1)];
 const stepIndex = (l: Lesson, s: Settings) => Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1);
@@ -120,7 +134,7 @@ export function trailStops(trail: Lesson[], current: Lesson | undefined, song: L
 
 const hoursOf = (d: Date) => d.getHours();
 
-export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds }: JourneyInput): JourneyView {
+export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false }: JourneyInput): JourneyView {
   const today = dayKey(now);
   const dash = dashboard(runs, now);
   const lessonById = (id: string) => lessons.find(l => l.id === id);
@@ -139,7 +153,9 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   // The stage and its trail
   const builtinSong = milestone && stageSong(milestone.level, visible);
   const isCheckpoint = (l: Lesson) => !!milestone?.checkpoints.includes(l.checkpoint ?? l.id);
-  const trail = milestone ? visible.filter(l => l.level === milestone.level && l !== builtinSong && (l.source !== 'ai' || l.id in s.lessons))
+  // The coach's unstarted lessons for this stage; the newest one is on the trail (as the web).
+  const coachOpen = lessons.filter(l => l.source === 'ai' && l.level === milestone?.level && !s.lessons[l.id]?.completedAt);
+  const trail = milestone ? visible.filter(l => l.level === milestone.level && l !== builtinSong && (l.source !== 'ai' || l.id in s.lessons || l === coachOpen[coachOpen.length - 1]))
     .sort((a, b) => Number(isCheckpoint(a)) - Number(isCheckpoint(b)) || Number(a.source === 'ai') - Number(b.source === 'ai')) : [];
 
   // The hero: today's first open item; "Something else" steps through the stage's other open lessons.
@@ -195,6 +211,9 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const minutesDone = setItems.filter(x => session.done.includes(x.i)).reduce((a, x) => a + x.it.minutes, 0);
   const daysPlayed = new Set(runs.map(r => r.startedAt.slice(0, 10))).size;
   const sore = soreActive(s.soreUntil, today);
+  const coachKey = coachLessonKey(now, milestone?.level);
+  const coachAsk = s.liveCoach && s.profile.onboarded && dash.totalRuns > 0 && milestone && aiLoaded && !coachOpen.length
+    && studentRead(s.lessons, runs).pace !== 'flying' ? coachKey : null;
 
   return {
     today, session,
@@ -234,5 +253,6 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
       summary: `${trailDone} of ${trail.length} lessons · ${checks.length - checksOpen} of ${checks.length} ★ checkpoints`,
       stops: trailStops(trail, hero, builtinSong, s, isCheckpoint),
     } : null,
+    coachKey, coachAsk,
   };
 }

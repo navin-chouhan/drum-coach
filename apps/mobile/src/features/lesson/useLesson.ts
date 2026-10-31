@@ -15,7 +15,6 @@ import { getCoach, setCoachPlaying } from '../coach';
 import { sayNow } from '../coach/voice';
 import { allLessons } from '../journey/source';
 import { LessonController, type LessonDeps } from './controller';
-import { saveCoachLesson } from './coachLesson';
 import { findStoredChart } from '../songs/findChart';
 import { drillLesson, findDrillChart } from './drill';
 import { todayKey } from './progress';
@@ -81,11 +80,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
         const at = audio.clock.now() + (audio.route()?.minLeadMs ?? 100) + 50;
         audio.schedule((big ? BIG_FILL : FILL).map(([pad, dt]) => ({ kind: 'sound' as const, at: at + dt * 1000, sound: `drum.${pad}` as const, gain: 110 / 127 })));
       },
-      requestCoachLesson: (key, struggle) => {
-        void coach.asks.ask(key, 'lesson', { struggle }, (l: unknown, meta) => {
-          if (saveCoachLesson(storage.aiLessons, l, meta, id => !!settings.get().lessons[id])) coach.refreshLessons();
-        });
-      },
+      requestCoachLesson: (key, struggle) => coach.requestLesson(key, struggle),
       drillExists: id => coach.exists(id),
       openDrill: a => coach.session.runAction(a),
       onBack: () => { if (router.canGoBack()) router.back(); else router.replace('/' as never); },
