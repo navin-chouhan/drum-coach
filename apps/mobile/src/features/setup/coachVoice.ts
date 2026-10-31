@@ -4,6 +4,7 @@
 // Not on the iPad: "Talk back hands-free" (the iPad has no speech-to-text yet) and the Piper line under "Test the voice".
 import type { Genre, Profile } from '@drum-coach/core/engine/lesson';
 import type { Settings } from '@drum-coach/core/input/settings';
+import type { TestResult } from './coachServer';
 
 export type Line = { title: string; sub: string };
 export const COACH_VOICE_LINES = {
@@ -27,6 +28,18 @@ export const profilePatch = (profile: Profile, p: Partial<Profile>): Partial<Set
 export const toggleGoalPatch = (profile: Profile, id: Genre): Partial<Settings> =>
   profilePatch(profile, { goals: profile.goals.includes(id) ? profile.goals.filter(x => x !== id) : [...profile.goals, id] });
 export const minutesPatch = (profile: Profile, minutesPerDay: number): Partial<Settings> => profilePatch(profile, { minutesPerDay });
+
+/**
+ * The status line over "Claude and your plan" (web: GET /api/coach/status, "✓ …" when ready, else what's wrong), from
+ * Test connection's result. Not configured: where to add the server.
+ */
+export function coachStatusLine(r: TestResult | 'checking' | 'none'): { ready: boolean; text: string } {
+  if (r === 'checking') return { ready: false, text: 'Checking…' };
+  if (r === 'none') return { ready: false, text: 'No home server yet: add it under Coach · home server. Everything else works without it.' };
+  if (!r.ok) return { ready: false, text: `${r.title}. ${r.hint}` };
+  const ready = r.lines[0]?.startsWith('Coach ready') ?? false;
+  return { ready, text: `${ready ? '✓ ' : ''}${r.lines[0] ?? r.text}` };
+}
 
 /** The Setup row's summary: what's on, in a few words. */
 export function coachVoiceSummary(s: Pick<Settings, 'voice' | 'liveCoach' | 'profile'>): string {
