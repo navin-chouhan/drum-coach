@@ -1,7 +1,8 @@
-import { CURRICULUM, LESSON_BY_ID } from '@drum-coach/core/content/curriculum';
+import { CURRICULUM, LESSON_BY_ID, MILESTONES } from '@drum-coach/core/content/curriculum';
 import { startProgress, type LessonProgress } from '@drum-coach/core/engine/lesson';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
+import { currentMilestone } from '@drum-coach/core/engine/planner';
 import { describe, expect, it } from 'vitest';
 import { buildJourney, currentSession } from './model';
 import { countWords, groovePreview, slotsPerBeat } from './preview';
@@ -150,5 +151,35 @@ describe('groovePreview', () => {
   });
   it('no preview for a rest or a stretch', () => {
     expect(groovePreview(LESSON_BY_ID['stretch'].steps[0])).toBeNull();
+  });
+});
+
+describe("the coach's once-a-day lesson (web TodayView, \"coach automatically\")", () => {
+  const { settings, runs } = threeWeeksIn();
+  const level = currentMilestone(MILESTONES, CURRICULUM, settings.lessons, settings.profile)!.level;
+  const key = `lesson-${NOW.toDateString()}-${level}-0`;
+  it('asks once you have played, when no coach lesson waits for this stage and the lessons are loaded', () => {
+    const v = buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW, aiLoaded: true });
+    expect(v.coachKey).toBe(key);
+    expect(v.coachAsk).toBe(key);
+  });
+  it("doesn't ask before the lessons are read, with no takes yet, when off, or before the first run", () => {
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).coachAsk).toBeNull();
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs: [], now: NOW, aiLoaded: true }).coachAsk).toBeNull();
+    expect(buildJourney({ settings: { ...settings, liveCoach: false }, lessons: CURRICULUM, runs, now: NOW, aiLoaded: true }).coachAsk).toBeNull();
+    expect(buildJourney({ settings: { ...settings, profile: { ...settings.profile, onboarded: false } }, lessons: CURRICULUM, runs, now: NOW, aiLoaded: true }).coachAsk).toBeNull();
+  });
+  it('a waiting coach lesson for this stage: no ask, and the newest one is on the trail', () => {
+    const base = CURRICULUM.find(l => l.level === level && l.steps.length === 1) ?? CURRICULUM.find(l => l.level === level)!;
+    const ai = [{ ...base, id: 'ai-one', title: 'Coach one', source: 'ai' as const }, { ...base, id: 'ai-two', title: 'Coach two', source: 'ai' as const }];
+    const v = buildJourney({ settings, lessons: [...CURRICULUM, ...ai], runs, now: NOW, aiLoaded: true });
+    expect(v.coachAsk).toBeNull();
+    const ids = v.trail!.stops.map(s => s.lessonId);
+    expect(ids).toContain('ai-two');
+    expect(ids).not.toContain('ai-one');
+  });
+  it('a new day is a new key', () => {
+    const tomorrow = new Date(NOW); tomorrow.setDate(NOW.getDate() + 1);
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: tomorrow, aiLoaded: true }).coachKey).not.toBe(key);
   });
 });

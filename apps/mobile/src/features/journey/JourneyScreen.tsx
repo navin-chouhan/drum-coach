@@ -3,13 +3,14 @@
 // Hear it); You, Today's set and the stage song in one row; the stage trail, with "Find my level" (the web's placement
 // link under the path, there whether or not the first run's test was taken) and Full path. One screen, no scrolling.
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, CoachLine, Display, Label, ListRow, Panel, Ring, Screen, Stars, StatTile, Tick, TitleBar, Trail,
   color, gesturesFor, ratio, readSettings, tabular, type, useKitMoves, writeSettings,
 } from '../../ui';
 import { getStorage } from '../../platform/storage';
+import { getCoach, useCoachEntry } from '../coach/coach';
 import { lessonHref } from '../lesson/route';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
@@ -18,7 +19,11 @@ import type { JourneyView } from './model';
 
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
-  const { view: v } = useJourney(swap);
+  const { view: v, reload } = useJourney(swap);
+  // "Coach automatically": once a day, a lesson for this stage when none is waiting (the web's TodayView). Never blocks
+  // playing; a server that can't be reached is skipped silently here (the asks entry keeps the error, as the web).
+  useEffect(() => { if (v.coachAsk) getCoach().requestLesson(v.coachAsk, undefined, reload); }, [v.coachAsk, reload]);
+  const writing = useCoachEntry(v.coachKey)?.status === 'thinking';
 
   const open = (lessonId: string, item = -1, mode: 'play' | 'hear' | 'jam' = 'play') => {
     if (item >= 0 && mode === 'play' && v.session.date !== readSessionDate()) writeSettings(getStorage().kv, startSessionPatch(v.session));
@@ -40,7 +45,7 @@ export function JourneyScreen() {
       />
 
       <Card elevation={6} style={styles.next} testID="journey-next">
-        {v.hero ? <Hero v={v} /> : <Panel tone="pop" style={styles.nextTop}><Display size={type.hero}>🎉 Every stage done</Display></Panel>}
+        {v.hero ? <Hero v={v} writing={writing} /> : <Panel tone="pop" style={styles.nextTop}><Display size={type.hero}>🎉 Every stage done</Display></Panel>}
         <View style={styles.moves}>
           {v.main ? (
             <BigMove testID="journey-start" tone="go" emoji={v.main.emoji} label={v.main.label} gestures={gesturesFor('yes')} onPress={start} style={styles.moveMain} />
@@ -78,7 +83,7 @@ export function JourneyScreen() {
 // The stored session's date, read at tap time (the view may be a render old).
 const readSessionDate = () => readSettings(getStorage().kv).session?.date;
 
-function Hero({ v }: { v: JourneyView }) {
+function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
   const h = v.hero!;
   return (
     <Panel tone="pop" style={styles.nextTop}>
@@ -87,7 +92,10 @@ function Hero({ v }: { v: JourneyView }) {
         <Label>{h.kicker}{h.coachWrote ? ' · ✍ your coach wrote it' : ''}</Label>
         <Display size={type.hero} style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} accessibilityRole="header">{h.title}</Display>
         <Text style={styles.step} numberOfLines={1}>{h.step} <Text style={styles.stepMeta}>· {h.meta}</Text></Text>
-        <Body size={15} numberOfLines={2} style={styles.what}>{h.what}</Body>
+        <Body size={15} numberOfLines={writing ? 1 : 2} style={styles.what}>{h.what}</Body>
+        {/* the web's <Thinking>, in the what's second line so the card keeps its height */}
+        {writing ? <Body size={13} weight="700" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} testID="journey-coach-writing" accessibilityLiveRegion="polite">
+          {'✍ Your coach is writing your next lesson… this can take a minute. You can keep playing; the answer will wait here.'}</Body> : null}
       </View>
       {h.preview ? <GroovePreview preview={h.preview} /> : <View style={styles.previewSpace} />}
     </Panel>

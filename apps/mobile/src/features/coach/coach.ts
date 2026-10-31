@@ -13,6 +13,7 @@ import { useSyncExternalStore } from 'react';
 import { getHomeServer } from '../../platform/api';
 import { getStorage } from '../../platform/storage';
 import { readSettings } from '../../ui';
+import { saveCoachLesson } from '../lesson/coachLesson';
 import { lessonHref } from '../lesson/route';
 import { hasApiKey } from '../setup/coachServer';
 import { keychain } from '../setup/useSetup';
@@ -69,7 +70,16 @@ function build() {
   const weekPlan = createWeekPlan({ plans: storage.plans, asks });
   void weekPlan.refresh();
   const speakOnce = createSpeakOnce(text => { if (!playing) sayNow(text); }, voiceOn);
-  return { server, asks, session, tips, weekPlan, charts, exists, speakOnce, refreshLessons };
+  /**
+   * Asks the coach to write the next lesson for this stage (optionally about a failed take): the web's
+   * requestCoachLesson. Once per key; saved with the server's `replaces`; `onSaved` reloads whoever lists lessons.
+   */
+  const requestLesson = (key: string, struggle?: Record<string, unknown>, onSaved?: () => void) => {
+    void asks.ask(key, 'lesson', { struggle }, (l: unknown, meta) => {
+      if (saveCoachLesson(storage.aiLessons, l, meta, id => !!settings().lessons[id])) { refreshLessons(); onSaved?.(); }
+    });
+  };
+  return { server, asks, session, tips, weekPlan, charts, exists, speakOnce, refreshLessons, requestLesson };
 }
 
 type Coach = ReturnType<typeof build>;
