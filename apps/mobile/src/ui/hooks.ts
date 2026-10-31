@@ -1,15 +1,15 @@
 // The kit's hooks over the platform: the app's one hit bus (the kit's MIDI → note map → hits), kit gestures for a
 // screen's moves, the app settings, and the sidebar's status.
-import { DEFAULT_NOTE_MAP, type NoteMap } from '@drum-coach/core/engine/kit';
-import type { KitCalibration } from '@drum-coach/core/engine/padCal';
 import { createHitBus, type HitBus } from '@drum-coach/core/input/hits';
 import { useIsFocused } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { checkCapabilities, getCapabilities } from '../platform/capabilities';
 import { onAppKey, startKeyboard, type AppKey } from '../platform/keyboard';
 import { connectMidiToHitBus, getMidiPort } from '../platform/midi';
-import { getStorage, KV_KEYS } from '../platform/storage';
+import { getStorage } from '../platform/storage';
+import { readNoteMap, readPadCal, subscribeKitStore } from '../features/pads/kitStore';
 import { readSettings, settingsVersion, subscribeSettings } from './appSettings';
+import { createKitCache } from './kitCache';
 import { createKitMoveRouter, type KitMoveHandlers } from './kitMoves';
 import { statusRows, type StatusRow } from './status';
 
@@ -19,25 +19,27 @@ export function kitName(): string {
   return sel?.selectedName || sel?.connectedId && getMidiPort().listInputs().find(i => i.id === sel.connectedId)?.name || 'e-Drum';
 }
 
-function readJson<T>(key: string): T | undefined {
-  try { const t = getStorage().kv.get(key); return t ? JSON.parse(t) as T : undefined; } catch { return undefined; }
-}
-
 type G = { __drumAppHitBus?: HitBus };
 const g = globalThis as G;
 
 /**
- * The app's one hit bus, on the MIDI port's clock, linked to the kit once. The note map and pad calibration are read
- * per hit from the key-value store (the in-app remap and the "hit each pad" screen write them there).
+ * The app's one hit bus, on the MIDI port's clock, linked to the kit once. The note map and pad calibration come from
+ * the key-value store (the in-app remap and the "hit each pad" screen write them there through kitStore), kept in
+ * memory and read again after a save or an inputs change (QA m1: no storage reads or native calls per hit).
  */
 export function getAppHitBus(): HitBus {
   if (g.__drumAppHitBus) return g.__drumAppHitBus;
   const port = getMidiPort();
-  const bus = createHitBus({
-    now: () => port.clock.now(),
-    getNoteMap: () => ({ ...DEFAULT_NOTE_MAP, ...readJson<Partial<NoteMap>>(KV_KEYS.noteMap(kitName())) }),
-    getPadCal: () => readJson<KitCalibration>(KV_KEYS.padCal(kitName())) ?? {},
+  const kit = createKitCache({
+    kitName,
+    readNoteMap: k => readNoteMap(getStorage().kv, k),
+    readPadCal: k => readPadCal(getStorage().kv, k),
+    subscribeSaves: subscribeKitStore,
+    subscribeInputs: fn => port.onInputsChanged(fn),
+    nameMaxAgeMs: 2000,
+    now: Date.now,
   });
+  const bus = createHitBus({ now: () => port.clock.now(), getNoteMap: kit.noteMap, getPadCal: kit.padCal });
   connectMidiToHitBus(port, bus);
   g.__drumAppHitBus = bus;
   return bus;
