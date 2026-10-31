@@ -15,7 +15,7 @@ import { getCoach, useCoachEntry, useWeekPlan } from '../coach/coach';
 import { sayNow } from '../coach/voice';
 import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
-import { playFlourish } from '../lesson/useLesson';
+import { playFlourish } from '../../play/flourish';
 import { audio } from '../../platform/audio';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
@@ -68,7 +68,7 @@ export function JourneyScreen() {
     if (!add.length) return;
     writeSettings(kv, { badges: [...kept, ...add] });
     // the web's flourish(false); Journey isn't a play screen, so the engine may be suspended: start it first
-    if (audio.available) audio.start().then(() => playFlourish(false), () => {});
+    if (audio.available) audio.start().then(() => playFlourish(audio, false), () => {});
   }, [badges]);
   // New stages open (R3): said on this visit, then remembered.
   const [newStages] = useState(() => v.newStages);
