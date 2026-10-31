@@ -107,14 +107,14 @@ describe('createHomeServer', () => {
 
   it('says unreachable when the network fails, and bad-response for non-JSON', async () => {
     const down = await setup(() => Promise.reject(new TypeError('Network request failed')));
-    expect(await down.server.health()).toMatchObject({ ok: false, reason: 'unreachable', detail: expect.stringContaining('Network request failed') });
+    expect(await down.server.health()).toMatchObject({ ok: false, reason: 'unreachable', stage: 'connect', detail: expect.stringContaining('Network request failed') });
     const html = await setup(() => reply(200, '<html>'));
     expect(await html.server.call('GET', '/api/plan')).toMatchObject({ ok: false, reason: 'bad-response' });
     const empty = await setup(() => reply(200, ''));
     expect(await empty.server.call('DELETE', '/api/lessons/x')).toEqual({ ok: true, data: null });
   });
 
-  it('times out: 30 s by default, 120 s for coach routes, or what the caller asks', async () => {
+  it('times out: 30 s by default, 200 s for coach routes (above the server\'s 180 s), or what the caller asks', async () => {
     vi.useFakeTimers();
     const hang: FetchLike = (_u, init) => new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(new Error('Aborted'))));
     const { server } = await setup(hang);
@@ -131,7 +131,7 @@ describe('createHomeServer', () => {
     expect(plain.result).toMatchObject({ ok: false, reason: 'unreachable', detail: expect.stringMatching(/within 30 s/) });
     const coach = await settle(server.call('POST', '/api/coach/plan', {}), COACH_TIMEOUT_MS);
     expect(coach.early).toBe(false);
-    expect(coach.result).toMatchObject({ reason: 'unreachable', detail: expect.stringMatching(/within 120 s/) });
+    expect(coach.result).toMatchObject({ reason: 'unreachable', stage: 'answer', detail: expect.stringMatching(/within 200 s/) });
     const custom = await settle(server.call('GET', '/api/runs', undefined, { timeoutMs: 1000 }), 1000);
     expect(custom.early).toBe(false);
     expect(custom.result).toMatchObject({ reason: 'unreachable' });

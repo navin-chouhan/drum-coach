@@ -76,7 +76,7 @@ export type MonthDeps = {
   /** settings.put('monthReport', …) */
   keep: (value: { month: string; report: MonthReport }) => void;
 };
-export const COACH_TIMEOUT_MS = 120_000;
+export const COACH_TIMEOUT_MS = 200_000; // above the server's 180 s (QA4 M1)
 
 /** Asks the coach for this month's report (`again` writes a new one) and keeps it. Never throws. */
 export async function askMonthReport(deps: MonthDeps, again: boolean, now = new Date()): Promise<{ ok: true; report: MonthReport } | { ok: false; message: string }> {

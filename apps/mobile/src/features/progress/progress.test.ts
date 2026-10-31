@@ -165,7 +165,7 @@ describe("this month's report", () => {
     const keep = vi.fn();
     const r = await askMonthReport({ call, context: async () => ({ runs: [] }), keep }, true, NOW);
     expect(r).toEqual({ ok: true, report });
-    expect(call).toHaveBeenCalledWith('POST', '/api/coach/month', { again: true, context: { runs: [] } }, { timeoutMs: 120_000 });
+    expect(call).toHaveBeenCalledWith('POST', '/api/coach/month', { again: true, context: { runs: [] } }, { timeoutMs: 200_000 });
     expect(keep).toHaveBeenCalledWith({ month: '2026-10', report });
   });
   it('the unreachable state, and an answer it cannot read', async () => {

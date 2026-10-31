@@ -93,7 +93,7 @@ describe('HomeServer.stream', () => {
     expect(broken.events).toHaveLength(1); // what arrived before the break was delivered
   });
 
-  it('times out the whole stream (120 s for coach routes, or what the caller asks)', async () => {
+  it('times out the whole stream (200 s for coach routes, or what the caller asks)', async () => {
     vi.useFakeTimers();
     const { server, events, onEvent } = await setup((_u, init) => Promise.resolve(streamed(init, [bytes('event: say\ndata: "hi"\n\n')], { hang: true })));
     const p = server.stream('/api/coach/session', {}, onEvent);
@@ -103,7 +103,7 @@ describe('HomeServer.stream', () => {
     expect(done).toBe(false);
     expect(events).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);
-    expect(await p).toMatchObject({ ok: false, reason: 'unreachable', detail: expect.stringMatching(/stopped after 120 s/) });
+    expect(await p).toMatchObject({ ok: false, reason: 'unreachable', stage: 'answer', detail: expect.stringMatching(/stopped after 200 s/) });
     const short = server.stream('/api/coach/session', {}, onEvent, { timeoutMs: 2000 });
     await vi.advanceTimersByTimeAsync(2000);
     expect(await short).toMatchObject({ ok: false, reason: 'unreachable' });
