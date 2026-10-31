@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { AppState } from 'react-native';
 import { audio } from '../../platform/audio';
+import { watchInterruptions } from '../../platform/audioLifecycle';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { getAppHitBus } from '../../ui/hooks';
@@ -100,9 +101,9 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     void coach.tips.load(f.step.chart, f.step.text);
     if (params.mode === 'hear') ctl.play(true);
     // D6: a call, Siri, an alarm or the app going to the background ends the take at its last whole bar.
-    const offAudio = audio.onInterruption(e => { if (e.type === 'began' || e.type === 'engine-stopped') ctl.interrupt(); });
-    const offApp = AppState.addEventListener('change', s => { if (s !== 'active') ctl.interrupt(); });
-    return () => { off(); offAudio(); offApp.remove(); ctl.dispose(); setCoachPlaying(false); };
+    // A route change ends it too (AUDIO-DESIGN §3.3); it ends where native says it began (QA2 m6).
+    const offInt = watchInterruptions(audio, AppState, at => ctl.interrupt(at));
+    return () => { off(); offInt(); ctl.dispose(); setCoachPlaying(false); };
   }, [ctl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The coach never talks over a take, and a question mid-take means what's playing.

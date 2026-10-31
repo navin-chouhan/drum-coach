@@ -6,6 +6,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { beatsPerBar } from '@drum-coach/core/engine/chart';
 import { audio } from '../../platform/audio';
+import { useAudioEngine } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
 import { NotationView } from '../../notation';
 import { KitView, NoteHighway, TouchPads, type PadHit, type Subscribe } from '../../play';
@@ -38,6 +39,7 @@ function useTicker(on: boolean, ms = 100) {
 }
 
 export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreTakePort }) {
+  useAudioEngine(); // the engine runs while this play screen is shown: touch pads sound before the first take (QA2 M2)
   const insets = useSafeAreaInsets();
   const v = ctl.view();
   const settings = useAppSettings();

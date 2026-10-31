@@ -4,6 +4,7 @@
 import { createTake, type Finished, type Take } from '@drum-coach/core/play/take';
 import { AppState } from 'react-native';
 import { audio } from '../../platform/audio';
+import { watchInterruptions } from '../../platform/audioLifecycle';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { getAppHitBus, readSettings } from '../../ui';
@@ -58,16 +59,16 @@ export const practiceEngine = {
       if (rec) void getStorage().runs.add(rec).then(() => onSaved.forEach(l => l(f))).catch(() => set({ error: 'This take could not be saved.' }));
     });
     // D6: a call, Siri, an alarm or the app going to the background ends the take at its last whole bar.
-    const interrupt = () => { if (take.state.phase === 'playing' || take.state.phase === 'starting') take.stop('interrupted'); };
-    const offAudio = audio.onInterruption(e => { if (e.type === 'began' || e.type === 'engine-stopped') interrupt(); });
-    const offApp = AppState.addEventListener('change', st => { if (st !== 'active') interrupt(); });
+    // A route change ends it too (AUDIO-DESIGN §3.3); it ends where native says it began (QA2 m6).
+    const interrupt = (at?: number) => { if (take.state.phase === 'playing' || take.state.phase === 'starting') take.stop('interrupted', at); };
+    const offInt = watchInterruptions(audio, AppState, interrupt);
     take.onEnd(e => {
-      clearInterval(timer); timer = undefined; offAudio(); offApp.remove();
+      clearInterval(timer); timer = undefined; offInt();
       set({ phase: 'done', ...(e.reason === 'interrupted' && !req.demo && { interrupted: e.finished ? 'kept' as const : 'dropped' as const }) });
     });
     set({ phase: 'starting', demo: !!req.demo, chartId: req.chart.id, take, finished: undefined, error: undefined, interrupted: undefined });
     timer = setInterval(() => { const n = clock.now(); take.tick(n); feed.misses(take.state, n); }, 100);
-    take.start().catch(e => { clearInterval(timer); offAudio(); offApp.remove(); set({ phase: 'idle', error: `The take could not start: ${e instanceof Error ? e.message : 'audio error'}` }); });
+    take.start().catch(e => { clearInterval(timer); offInt(); set({ phase: 'idle', error: `The take could not start: ${e instanceof Error ? e.message : 'audio error'}` }); });
     return true;
   },
   stop() {

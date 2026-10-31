@@ -73,7 +73,7 @@ bus. The card's test tone is 44.1 kHz on purpose (the backing mixer converts it 
 | T7-2 | Siri mid-metronome; then a Clock alarm | Events: `interruption began`, later `ended`. Clicks stop; **Start metronome** works at once. |
 | T7-3 | Incoming FaceTime call, banner style, declined; then full-screen style | Banner: clicks continue. Full screen: as T7-2. |
 | T7-4 | Lock and unlock mid-metronome | Events: `engine-stopped (background)`. Next start is clean. |
-| T7-5 | Connect Bluetooth headphones idle, then mid-metronome; a USB-C audio adapter through a hub | Events: `route → …` with the new key and latency; the route card updates; the metronome stops (native cancels everything queued). Bluetooth latency is large (100–250 ms). |
+| T7-5 | Connect Bluetooth headphones idle, then mid-metronome; a USB-C audio adapter through a hub | Events: `route → …` with the new key and latency; the route card updates; the metronome stops (native cancels everything queued); while the engine runs, also `engine-stopped / route-change` (QA2 M1: a lesson or Practice take ends as interrupted, ≥ 2 whole bars kept and flagged). Bluetooth latency is large (100–250 ms). |
 | T7-6 | Settings → Developer → Reset Media Services while idle | Events: `engine-stopped (media-reset)`. **Start engine** works (the graph is rebuilt). |
 | T7-7 | Music playing, then start the metronome | Both audible (`mixWithOthers`); Music doesn't stop. |
 | T7-8 | 10-minute metronome soak | late 0, dropped 0; "Pending" stays small; memory flat in Xcode's gauge. |

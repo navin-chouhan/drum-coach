@@ -117,6 +117,17 @@ describe('lesson controller (LessonPlayer without React)', () => {
     expect(ctl.view().line).toMatch(/too short to keep/);
   });
 
+  it('an interruption ends at the time native gives (QA2 m6): 3 bars heard late, 1 bar kept → dropped', async () => {
+    const { r, ctl, runs } = setupCtl(money, { step: 2, bpm: 70 });
+    ctl.moves()[0].run();
+    await flush();
+    const s = r.take.state;
+    await playAll(r, () => 0, s.zero + 13 * s.beatMs);
+    ctl.interrupt(s.zero + 5 * s.beatMs);
+    expect(runs).toHaveLength(0);
+    expect(ctl.view().line).toMatch(/too short to keep/);
+  });
+
   it('finishing the lesson celebrates and ticks the item', async () => {
     const lesson = LESSON_BY_ID['count-quarters'];
     const { r, ctl, deps } = setupCtl(lesson, { bpm: 80 });

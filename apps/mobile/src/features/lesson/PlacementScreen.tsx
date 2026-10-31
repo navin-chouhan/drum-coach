@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
+import { useAudioEngine } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { NotationView } from '../../notation';
@@ -25,6 +26,7 @@ import { useKitConnected } from './useLesson';
 const laneDrum = (d: string): DrumId => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
 
 export function PlacementScreen() {
+  useAudioEngine(); // the engine runs while this play screen is shown: touch pads sound before the first take (QA2 M2)
   const storage = getStorage();
   const settings = useMemo(() => createSettingsStore(storage.kv), [storage]);
   const app = useAppSettings();

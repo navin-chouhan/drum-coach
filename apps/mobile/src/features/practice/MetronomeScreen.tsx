@@ -1,11 +1,14 @@
 // Practice's metronome-only mode: just the click, no take and no score. − / + tempo (tom 1 / floor × 2 from the kit),
-// clicks per bar, quarters / 8ths / 16ths, tap tempo, and Start / Stop (hi-hat pedal × 3). The clicks are planned on
-// the AudioPort's clock ahead of time by the take engine's planner (core createMetronome: ≥ 2 s handed over).
+// clicks per bar, quarters / 8ths / 16ths, tap tempo, and Start (hi-hat pedal × 3). While the click runs you're
+// playing, so only crash × 4 counts from the kit (it stops), as during a take (QA2 M3): a tom fill never changes the
+// tempo. A call, the app leaving the foreground or a new audio output stops the click (QA2 m1). The clicks are planned
+// on the AudioPort's clock ahead of time by the take engine's planner (core createMetronome: ≥ 2 s handed over).
 import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { createMetronome, type Metronome } from '@drum-coach/core/play/metronome';
 import { audio } from '../../platform/audio';
+import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, Display, MAX_FONT_SCALE, Screen, Segmented,
@@ -14,7 +17,11 @@ import {
 } from '../../ui';
 import { clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readMetronome, SUBDIVISIONS, tapTempo, writeMetronome, type MetronomeSettings } from './metronome';
 
+/** What the screen says when an interruption stopped the click. */
+export const STOPPED_NOTE = 'The click stopped (a call, the app in the background or a new audio output). Press Start when you are ready.';
+
 export function MetronomeScreen() {
+  useAudioEngine(); // ready to click at once, and again after the app comes back (QA2 M2)
   const kv = getStorage().kv;
   const settings = useAppSettings();
   const [s, setS] = useState<MetronomeSettings>(() => readMetronome(kv));
@@ -63,7 +70,10 @@ export function MetronomeScreen() {
   }, [running, s]);
   useEffect(() => () => { metro.current?.stop(); }, []);
   const clicks = clicksPerBar(s.timeSignature);
-  useKitMoves({ yes: toggle, faster: () => change({ bpm: nudgeBpm(s.bpm, 5) }), slower: () => change({ bpm: nudgeBpm(s.bpm, -5) }) });
+  // Playing along: only crash × 4 (stop) counts, as in a take; stopped, the pedal starts it and the toms set the tempo.
+  useKitMoves({ yes: toggle, stop, faster: () => change({ bpm: nudgeBpm(s.bpm, 5) }), slower: () => change({ bpm: nudgeBpm(s.bpm, -5) }) }, { playing: running });
+  // The engine stopped or the app left (its clicks are gone): stop and say so. Never restarts by itself (§4).
+  useAudioInterruptions(running, () => { stop(); setError(STOPPED_NOTE); });
 
   return (
     <Screen withSidebar={false} testID="screen-practice-metronome">
@@ -90,12 +100,12 @@ export function MetronomeScreen() {
             ))}
           </View>
           <View style={styles.moves}>
-            <BigMove tone="go" emoji={running ? '⏹' : '▶'} label={running ? 'Stop' : 'Start'} gestures={gesturesFor('yes')} onPress={toggle} testID="metronome-toggle" style={styles.flex} />
+            <BigMove tone="go" emoji={running ? '⏹' : '▶'} label={running ? 'Stop' : 'Start'} gestures={gesturesFor(running ? 'stop' : 'yes')} onPress={toggle} testID="metronome-toggle" style={styles.flex} />
             <BigMove tone="alt" emoji="👆" label="Tap" note="tap the beat 3 times or more" onPress={tap} testID="metronome-tap" style={styles.flex} />
           </View>
           <View style={styles.gest}>
             <Body size={13} weight="700">From the kit:</Body>
-            <Body size={13}>{`tom 1 × 2 faster · floor × 2 slower`}</Body>
+            <Body size={13}>{running ? 'crash × 4 stops' : 'tom 1 × 2 faster · floor × 2 slower'}</Body>
           </View>
           {error ? <Notice text={error} onClose={() => setError('')} testID="metronome-error" /> : null}
         </Card>

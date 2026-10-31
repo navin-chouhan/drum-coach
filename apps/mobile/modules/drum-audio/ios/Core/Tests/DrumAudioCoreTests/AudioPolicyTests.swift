@@ -102,6 +102,21 @@ final class AudioPolicyTests: XCTestCase {
     XCTAssertFalse(AudioPolicy.sameRoute(a, b))
   }
 
+  func testRouteChangeEndsTake() {
+    let a = RouteFacts(key: "Speaker", sampleRate: 48000, ioBufferMs: 21.33, outputLatencyMs: 5.7)
+    var hub = a
+    hub.key = "USBAudio:hub"
+    var late = a
+    late.outputLatencyMs = 40
+    var jitter = a
+    jitter.outputLatencyMs = 5.9
+    XCTAssertTrue(AudioPolicy.routeChangeEndsTake(previous: a, next: hub, running: true))
+    XCTAssertTrue(AudioPolicy.routeChangeEndsTake(previous: a, next: late, running: true))
+    XCTAssertFalse(AudioPolicy.routeChangeEndsTake(previous: a, next: jitter, running: true))
+    XCTAssertFalse(AudioPolicy.routeChangeEndsTake(previous: a, next: hub, running: false))
+    XCTAssertFalse(AudioPolicy.routeChangeEndsTake(previous: nil, next: a, running: true))
+  }
+
   func testDuckStep() {
     var v = 1.0
     var seen: [Double] = []

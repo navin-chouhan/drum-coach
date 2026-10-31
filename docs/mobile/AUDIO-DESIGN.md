@@ -215,7 +215,7 @@ export type AudioRoute = {
 export type AudioInterruption =
   | { type: 'began'; at: number; reason?: string }                 // call, Siri, alarm… (raw iOS reason when given)
   | { type: 'ended'; at: number; shouldResume: boolean }
-  | { type: 'engine-stopped'; at: number; cause: 'config-change' | 'media-reset' | 'background' };
+  | { type: 'engine-stopped'; at: number; cause: 'config-change' | 'media-reset' | 'background' | 'route-change' };
 
 export interface BackingPort {
   load(uri: string): Promise<{ durationMs: number; sampleRate: number }>;

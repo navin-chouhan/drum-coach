@@ -2,7 +2,7 @@
 // hub into the module's AUX IN, Bluetooth …) keeps its own measured latency. The core keeps reading one number,
 // settings.latencyMs; this file sets it from the current route's measurement on every route event. Stored under its
 // own key (the web has one value and no such key). Pure: takes the store.
-import type { Settings } from '@drum-coach/core/input/settings';
+import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import type { KeyValueStore } from '@drum-coach/core/platform';
 import type { AudioRoute } from '@drum-coach/core/play/audioPort';
 
@@ -37,13 +37,15 @@ export function clearRouteLatency(kv: KeyValueStore, routeKey: string): Pick<Set
 
 /**
  * On a route event: the settings patch that makes latencyMs this route's, or null when nothing changes. An output never
- * measured reads as not checked (Setup's "do this first" and the sidebar say so); its old number stays until measured.
+ * measured reads as not checked (Setup's "do this first" and the sidebar say so) with the web's default correction, 0
+ * (core DEFAULTS.latencyMs), until it's measured (QA2 m4): another output's number is wrong for it, and the output's
+ * own reported delay is already allowed for (native schedules every sound by its heard offset).
  */
 export function syncToRoute(all: LatencyByRoute, route: Pick<AudioRoute, 'key'> | null, s: Pick<Settings, 'latencyMs' | 'latencyChecked'>): Partial<Settings> | null {
   if (!route) return null;
   const r = all[route.key];
   if (r) return r.ms === s.latencyMs && s.latencyChecked ? null : { latencyMs: r.ms, latencyChecked: true };
-  return s.latencyChecked ? { latencyChecked: false } : null;
+  return s.latencyChecked || s.latencyMs !== DEFAULTS.latencyMs ? { latencyMs: DEFAULTS.latencyMs, latencyChecked: false } : null;
 }
 
 /** "iPad speakers", "USB audio (USB)", "AirPods (Bluetooth)". */

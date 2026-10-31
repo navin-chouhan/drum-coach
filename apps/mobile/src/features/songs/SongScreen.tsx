@@ -11,6 +11,7 @@ import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { Body, Button, Card, CardTitle, Choice, Display, Field, Screen, Small, Strong, Tabs, Warn, color, getAppHitBus, type, useAppSettings } from '../../ui';
 import { getHomeServer } from '../../platform/api';
 import { audio } from '../../platform/audio';
+import { useAudioEngine } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
 import { YouTubeView, useYt, type YtController } from '../../youtube';
 import { Row } from './bits';
@@ -57,7 +58,7 @@ function SongView({ songId, bars, onBack }: { songId: string; bars?: SongBars; o
   const now = useMemo(() => () => port.clock.now(), [port]);
   const bus = getAppHitBus();
   const sound = useCallback((sid: string, gain: number) => { audio.playNow(sid as SoundId, gain); }, []);
-  useEffect(() => { void audio.start().catch(() => {}); }, []);
+  useAudioEngine(); // the drum sounds and the click while the song is open, again after the app comes back (QA2 M2)
 
   // A song added from a pasted link takes the video's real title once the player knows it.
   const latest = useRef({ videoId, rate, song });
