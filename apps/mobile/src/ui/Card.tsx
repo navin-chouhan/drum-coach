@@ -42,10 +42,11 @@ export function Panel({ children, tone = 'white', style, testID }: Omit<CardProp
 }
 
 /** The section tag: black with yellow capitals. */
-export function Label({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+/** A section label: yellow on black; `tone="pop"` is black on yellow, for a label on a black card (the warm-up). */
+export function Label({ children, style, tone = 'ink' }: { children: ReactNode; style?: StyleProp<ViewStyle>; tone?: 'ink' | 'pop' }) {
   return (
-    <View style={[styles.label, style]}>
-      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.labelText} accessibilityRole="header">{children}</Text>
+    <View style={[styles.label, tone === 'pop' && styles.labelPop, style]}>
+      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.labelText, tone === 'pop' && styles.labelTextPop]} accessibilityRole="header">{children}</Text>
     </View>
   );
 }
@@ -55,4 +56,6 @@ const styles = StyleSheet.create({
   panel: { borderWidth: stroke.card, borderColor: color.ink },
   label: { alignSelf: 'flex-start', backgroundColor: color.ink, paddingHorizontal: 8, paddingTop: 3, paddingBottom: 2 },
   labelText: { ...font.display, fontSize: type.label, letterSpacing: 0.7, textTransform: 'uppercase', color: color.pop },
+  labelPop: { backgroundColor: color.pop },
+  labelTextPop: { color: color.ink },
 });
