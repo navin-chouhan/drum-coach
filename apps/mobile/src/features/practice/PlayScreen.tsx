@@ -16,7 +16,8 @@ import {
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
 import { getCoach } from '../coach';
-import { kindIcon, practiceCharts, startOf, type PracticeChart } from './catalog';
+import { kindIcon, startOf, type PracticeChart } from './catalog';
+import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
 import { practiceEngine } from './engine';
 import { Dots, Notice } from './parts';
@@ -32,7 +33,7 @@ export function PlayScreen() {
   const kv = getStorage().kv;
   const settings = useAppSettings();
   const { data, reload } = useStoredData();
-  const charts = useMemo(() => practiceCharts(getCoach().charts.list()), []);
+  const charts = useMemo(() => loadPracticeCharts(), []);
   const [o, setO] = useState<PracticeOptions>(() => readPlayOptions(kv));
   const set = (patch: Partial<PracticeOptions>) => setO(prev => writePlayOptions(kv, prev, patch));
   const [section, setSection] = useState<Section>(null);

@@ -10,8 +10,8 @@ export type PracticeChart = Chart & { id: string; source?: 'builtin' | 'import' 
 export type Read = { pace: string; comfortableBpm?: number };
 
 /**
- * Every exercise Practice offers: the built-ins, then saved charts (coach-written or imported). The iPad stores no
- * saved charts yet (songs and coach exercises come later, D5), so `saved` is empty for now.
+ * Every exercise Practice offers: the built-ins, then saved charts (coach-written or imported, the web's listCharts).
+ * See savedCharts for where the iPad keeps them.
  */
 export const practiceCharts = (saved: PracticeChart[] = []): PracticeChart[] =>
   [...LIBRARY.map(c => ({ ...c, source: 'builtin' as const })), ...saved];
@@ -70,3 +70,22 @@ export function chartRow(c: PracticeChart, runs: RunRow[], read: Read): ChartRow
     bestWords: best ? `best clean ${best}` : played ? 'not clean yet' : 'not played',
   };
 }
+
+/**
+ * The saved charts, oldest first as the web's GET /api/charts lists them: Storage's charts table (imported songs from
+ * the Songs library, and coach exercises saved there), then the coach's drills kept in the key-value store
+ * (features/coach/charts.ts, newest first there) that the table doesn't already hold. A chart that fails to read is
+ * left out, never fatal.
+ */
+export function savedCharts(src: { stored?: () => PracticeChart[]; coach?: () => PracticeChart[] }): PracticeChart[] {
+  const safe = (f?: () => PracticeChart[]) => { try { return f?.() ?? []; } catch { return []; } };
+  const stored = safe(src.stored);
+  const ids = new Set(stored.map(c => c.id));
+  return [...stored, ...safe(src.coach).slice().reverse().filter(c => !ids.has(c.id))];
+}
+
+/** The chart a `?chartId=` asks for (Songs' Play, the coach, Progress), if Practice has it. */
+export const requestedChart = (charts: PracticeChart[], chartId: string | string[] | undefined) => {
+  const id = Array.isArray(chartId) ? chartId[0] : chartId;
+  return id ? charts.find(c => c.id === id) : undefined;
+};

@@ -3,7 +3,7 @@ import { CURRICULUM } from '@drum-coach/core/content/curriculum';
 import { DEFAULTS } from '@drum-coach/core/input/settings';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { describe, expect, it } from 'vitest';
-import { bestClean, chartRow, listFor, practiceCharts, segments, startOf, type PracticeChart } from './catalog';
+import { bestClean, chartRow, listFor, practiceCharts, requestedChart, savedCharts, segments, startOf, type PracticeChart } from './catalog';
 import { CHOOSER_GESTURES, chooserModel, focusedRow, initialFocus, playLabel, stepFocus, warmRepeats } from './chooser';
 import { clampBpm, clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readMetronome, tapTempo, writeMetronome } from './metronome';
 import {
@@ -243,5 +243,21 @@ describe('the metronome\'s meters (the web\'s TempoMode list)', () => {
     expect(clickInBar([6, 8], 3.2)).toBe(0);
     expect(clickInBar([7, 8], 1.5)).toBe(3);
     expect(clickInBar([7, 8], 3.5)).toBe(0);
+  });
+});
+
+describe('Practice\'s saved charts and ?chartId=', () => {
+  const ch = (id: string, source: 'import' | 'ai' = 'import'): PracticeChart => ({ ...LIBRARY[0], id, title: id, source });
+  it('lists Storage\'s charts oldest first, then the coach\'s kv drills (newest first there) it lacks', () => {
+    const saved = savedCharts({ stored: () => [ch('song-a'), ch('drill-x', 'ai')], coach: () => [ch('drill-new', 'ai'), ch('drill-x', 'ai'), ch('drill-old', 'ai')] });
+    expect(saved.map(c => c.id)).toEqual(['song-a', 'drill-x', 'drill-old', 'drill-new']);
+    expect(savedCharts({ stored: () => { throw new Error('db'); }, coach: () => [ch('d', 'ai')] }).map(c => c.id)).toEqual(['d']);
+  });
+  it('finds an imported song by the id Songs\' Play pushes', () => {
+    const all = practiceCharts(savedCharts({ stored: () => [ch('my-song-abcde')] }));
+    expect(requestedChart(all, 'my-song-abcde')?.source).toBe('import');
+    expect(requestedChart(all, ['my-song-abcde'])?.id).toBe('my-song-abcde');
+    expect(requestedChart(all, 'gone')).toBeUndefined();
+    expect(requestedChart(all, undefined)).toBeUndefined();
   });
 });
