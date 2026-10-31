@@ -15,7 +15,7 @@ import { getStorage } from '../../platform/storage';
 import { readSettings } from '../../ui';
 import { saveCoachLesson } from '../lesson/coachLesson';
 import { lessonHref } from '../lesson/route';
-import { hasApiKey } from '../setup/coachServer';
+import { hasApiKey, readApiKey, readCoachModel } from '../setup/coachServer';
 import { keychain } from '../setup/useSetup';
 import { createCoachAsks, type Entry } from './asks';
 import { createCoachCharts, targetExists } from './charts';
@@ -24,6 +24,9 @@ import { createSpeakOnce } from './feedback';
 import { createCoachSession } from './session';
 import { createTipsCache } from './tips';
 import { hush, sayNext, sayNow, setVoiceVolume } from './voice';
+import { createAnthropicClient } from './direct/anthropic';
+import { createDirectCoach } from './direct/direct';
+import { withDirectFallback } from './direct/fallback';
 import { createWeekPlan } from './weekPlan';
 
 /**
@@ -45,9 +48,12 @@ export function setCoachPlaying(on: boolean, what?: { exercise?: string; bpm?: n
 let nowPlaying: { exercise?: string; bpm?: number; lesson?: string } | undefined;
 
 function build() {
-  const server = getHomeServer();
   const storage = getStorage();
   const kv = storage.kv;
+  // D2: the home server first; with a key in the Keychain, the iPad asks the Anthropic API when the server is away.
+  const model = () => readCoachModel(kv);
+  const direct = createDirectCoach({ kv, model, client: createAnthropicClient({ fetch: (url, init) => fetch(url, init), key: () => readApiKey(keychain), model }) });
+  const server = withDirectFallback(getHomeServer(), direct, () => hasApiKey(keychain));
   const settings = () => readSettings(kv);
   const charts = createCoachCharts(storage);
   let aiLessonIds = new Set<string>();

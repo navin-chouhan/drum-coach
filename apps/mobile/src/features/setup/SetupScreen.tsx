@@ -12,6 +12,7 @@ import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { KitView, type PadHit, type Subscribe } from '../../play';
 import { TOUCH_KIT } from '../../play/kitLayout';
+import { withoutKitSound } from '../../play/kitSounds';
 import {
   Body, Button, Chevron, GestureChip, Group, GroupRow, Pill, Screen, Segmented, TitleBar, Toggle, ToolFrame, color, font, getAppHitBus, padColor, stroke, useAppSettings, useKitMoves, writeSettings,
 } from '../../ui';
@@ -23,12 +24,13 @@ import { VelocityPanel } from '../pads/VelocityPanel';
 import { conflictText, noteMapSummary } from '../pads/kitStore';
 import { levelsShort, setupChecks } from './checklist';
 import {
-  API_KEY_FOOT, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
+  API_KEY_FOOT, COACH_MODEL_KEY, DEFAULT_FALLBACK_MODEL, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, cleanCoachModel, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
 } from './coachServer';
 import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit';
 import { CoachVoicePanel } from './CoachVoicePanel';
 import { coachVoiceSummary } from './coachVoice';
 import { SoundPanel } from './SoundPanel';
+import { TimelineView } from './TimelineView';
 import { useAudioRoute, useKitConnection, useKitData, useLastHit, useRecentRuns, keychain } from './useSetup';
 import { HAND_SUB, LIVE_TIPS, LIVE_TIPS_SUB, AUTOPILOT_SUB } from './whilePlaying';
 import type { Settings } from '@drum-coach/core/input/settings';
@@ -234,6 +236,27 @@ function ApiKeyPanel({ onDone }: { onDone: () => void }) {
         <Button tone="blue" label="Save in the Keychain" onPress={() => void saveApiKey(keychain, key).then(r => (r.ok ? onDone() : setError(r.error)), () => setError('The Keychain refused it.'))} testID="apikey-save" />
         {set ? <Button tone="red" label="Remove" onPress={() => void removeApiKey(keychain).then(onDone, onDone)} testID="apikey-remove" /> : null}
       </View>
+      <ModelField />
+    </View>
+  );
+}
+
+/** The fallback's model (CLAUDE.md: CLAUDE_MODEL, default claude-sonnet-5-5). Saved as typed; empty goes back to the default. */
+function ModelField() {
+  const [model, setModel] = useState(() => kv().get(COACH_MODEL_KEY) ?? '');
+  const [error, setError] = useState('');
+  const save = () => {
+    const m = cleanCoachModel(model);
+    if (m === null) { setError('A model id is letters, digits, dots and dashes, e.g. claude-sonnet-5-5'); return; }
+    setError('');
+    if (m) kv().set(COACH_MODEL_KEY, m); else kv().remove(COACH_MODEL_KEY);
+  };
+  return (
+    <View style={styles.row}>
+      <Text style={styles.lbl}>Model</Text>
+      <TextInput testID="apikey-model" style={[styles.field, styles.mono]} value={model} onChangeText={setModel} onEndEditing={save} placeholder={DEFAULT_FALLBACK_MODEL}
+        autoCapitalize="none" autoCorrect={false} spellCheck={false} accessibilityLabel="Model for the API-key fallback" />
+      {error ? <Body size={14} color={color.bad} weight="700">{error}</Body> : null}
     </View>
   );
 }
@@ -252,16 +275,17 @@ function InputPicker({ conn, onPicked }: { conn: ReturnType<typeof useKitConnect
   );
 }
 
-/** Kit test (web Setup → Kit test): the kit lights on every hit; tap a drum to play it. */
+/** Kit test (web Setup → Kit test): the kit lights on every hit; tap a drum to play it; the hit timeline under it. */
 function KitTest() {
   const last = useLastHit();
   const hit = lastHitView(last);
   const [hits] = useState<Subscribe<PadHit>>(() => (fn: (h: PadHit) => void) => getAppHitBus().onHit(h => { if (h.pad) fn({ pad: h.pad, velocity: h.velocity, at: h.time }); }));
   useAudioEngine(); // tapped drums sound at once, and again after the app comes back (QA2 M2)
   return (
+    <View style={styles.kitTestCol}>
     <View style={styles.kitTest}>
       <View style={styles.kitArea}>
-        <KitView hits={hits} layout={TOUCH_KIT} labelSize={22} onPadPress={pad => { getAppHitBus().emitPad(pad, 100); audio.playNow(`drum.${pad}`, 1); }} testID="kittest-kit" />
+        <KitView hits={hits} layout={TOUCH_KIT} labelSize={22} onPadPress={pad => { audio.playNow(`drum.${pad}`, 1); withoutKitSound(() => getAppHitBus().emitPad(pad, 100)); /* sounded just above: not again by the kit sounds (QA3 m1) */ }} testID="kittest-kit" />
       </View>
       <View style={styles.kitSide}>
         <Group title="Last hit">
@@ -269,6 +293,8 @@ function KitTest() {
         </Group>
         <Body size={14} weight="700">{KEYS_LINE}</Body>
       </View>
+    </View>
+    <TimelineView />
     </View>
   );
 }
@@ -299,6 +325,7 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16, fontWeight: '600', color: color.ink },
   panel: { flex: 1, gap: 16, maxWidth: 820 },
   row: { flexDirection: 'row', gap: 14, alignItems: 'center' },
+  kitTestCol: { flex: 1, gap: 14 },
   kitTest: { flex: 1, flexDirection: 'row', gap: 22 },
   kitArea: { flex: 2.4 },
   kitSide: { flex: 1, gap: 14 },

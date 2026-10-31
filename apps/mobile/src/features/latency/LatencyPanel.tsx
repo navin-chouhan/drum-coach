@@ -74,7 +74,7 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
   const onSnare = counting ? String(beat + 1) : running ? `${Math.min(CLICKS, Math.max(1, beat - COUNT_IN + 1))}` : '';
   const verdict = phase.kind === 'done' ? verdictText(phase.estimate) : null;
   const canSave = phase.kind === 'done' && trustworthy(phase.estimate);
-  const note = phase.kind === 'done' ? outputNote(route, false) : null;
+  const note = phase.kind === 'done' ? outputNote(route, !!settings.browserSounds) : null; // the web: turn the app's drum sounds off
 
   return (
     <View style={styles.wrap} testID={testID} accessibilityLiveRegion="polite">
@@ -95,6 +95,7 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
         </View>
         {verdict ? <Body size={16} weight="700" color={verdict.warn ? color.bad : color.ink} style={styles.center} testID={`${testID}-verdict`}>{verdict.text}</Body> : null}
         {note ? <Body size={14} style={styles.center}>{note}</Body> : null}
+        {note && settings.browserSounds ? <Button size="small" label="Turn off the app's drum sounds" onPress={() => writeSettings(getStorage().kv, { browserSounds: false })} testID={`${testID}-sounds-off`} /> : null}
         {phase.kind === 'error' ? <Body size={16} weight="700" color={color.bad} style={styles.center}>{phase.text}</Body> : null}
         {!running && phase.kind !== 'done' ? <Body size={14} color={color.muted} style={styles.center}>{firstRun ? "I'm measuring how late the sound reaches you, not how well you play. Then on time is on time." : `Current correction: ${settings.latencyMs} ms.`}</Body> : null}
       </Card>

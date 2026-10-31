@@ -1,8 +1,10 @@
 // Setup → Coach · home server (D2) and Coach · fallback (the Anthropic API key). The server URL lives in the key-value
 // store and its token in the Keychain (src/platform/api.ts does both); Test connection asks GET /api/health and says
-// how long it took. The API key is kept in the Keychain for later: the iPad's API-key coach isn't built yet.
+// how long it took. The API key is kept in the Keychain; the coach uses it only when the server can't be reached
+// (features/coach/direct).
 // Pure: takes the client, the secret store and a clock; never sees or logs the token beyond passing it on.
 import type { ApiFailure, HomeServer, ServerHealth } from '../../platform/contracts';
+import { DEFAULT_COACH_MODEL } from '../coach/direct/anthropic';
 import { coachProblem } from '../coach/problem';
 
 export type ServerClient = Pick<HomeServer, 'configure' | 'configured' | 'health'> & { hasToken(): Promise<boolean> };
@@ -56,7 +58,7 @@ export const SERVER_PLACEHOLDER = 'http://drum-laptop.local:8787';
 // ---- Coach · fallback: the Anthropic API key ----
 
 export type SecretStore = { get(key: string): Promise<string | null>; set(key: string, value: string): Promise<void>; remove(key: string): Promise<void> };
-/** The Keychain key (a later API-key coach reads it from here). */
+/** The Keychain key (the API-key fallback reads it from here, per call). */
 export const API_KEY_SECRET = 'drumcoach.anthropic.apiKey';
 
 /** An Anthropic key: "sk-ant-…", no spaces. Returns the cleaned key or what's wrong. */
@@ -77,9 +79,18 @@ export async function saveApiKey(secrets: SecretStore, input: string): Promise<{
 
 export const removeApiKey = (secrets: SecretStore) => secrets.remove(API_KEY_SECRET);
 export const hasApiKey = async (secrets: SecretStore) => !!(await secrets.get(API_KEY_SECRET));
+/** The key itself, for the one place that sends it (direct/anthropic.ts, the x-api-key header). */
+export const readApiKey = (secrets: SecretStore) => secrets.get(API_KEY_SECRET);
+
+/** The fallback's model (CLAUDE.md: CLAUDE_MODEL, default claude-sonnet-5-5), kept in the key-value store. */
+export const COACH_MODEL_KEY = 'drumcoach.coachModel';
+export const DEFAULT_FALLBACK_MODEL = DEFAULT_COACH_MODEL;
+export const readCoachModel = (kv: { get(k: string): string | null }) => kv.get(COACH_MODEL_KEY)?.trim() || DEFAULT_FALLBACK_MODEL;
+/** A model id as typed: letters, digits, dots and dashes (empty: back to the default). */
+export const cleanCoachModel = (v: string) => { const t = v.trim(); return !t || /^[a-z0-9][a-z0-9.-]{2,63}$/.test(t) ? t : null; };
 
 /** The row's value: "Not set" / "Set · used later". */
-export const apiKeyValue = (set: boolean) => (set ? 'Set · used later' : 'Not set');
-/** The web's way of saying a path isn't built yet: plain, under the row. */
-export const API_KEY_FOOT = 'Used only when the server can’t be reached. Each question sends a short summary of your takes, never audio or raw MIDI. '
-  + 'Coming later: the iPad doesn’t call the API yet, so for now the coach needs your home server. The key waits in the Keychain until then.';
+export const apiKeyValue = (set: boolean) => (set ? 'Set · used when the server is away' : 'Not set');
+/** Under the row: when the key is used, and what it sends. */
+export const API_KEY_FOOT = 'Used only when the server can’t be reached: the iPad then asks the Anthropic API itself, with the same prompts. '
+  + 'Each question sends a short summary of your takes, never audio or raw MIDI, and counts toward your API bill. The key stays in the Keychain.';

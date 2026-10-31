@@ -199,7 +199,7 @@ describe('offline (mockup coach-offline)', () => {
     const { s, f } = setup({ hasFallbackKey: async () => true });
     f.answerStreams(() => ({ events: [], result: unreachable }));
     await s.coachTake(fakeTake(), {});
-    expect(s.get().problem?.lines[1]).toBe("The API-key fallback isn't built yet, so there's no fallback.");
+    expect(s.get().problem?.lines[1]).toBe('The API-key fallback couldn’t reach Anthropic either. Is the iPad online?');
     const none = setup({ hasFallbackKey: async () => { throw new Error('locked'); } });
     none.f.answerStreams(() => ({ events: [], result: unreachable }));
     await none.s.coachTake(fakeTake(), {});

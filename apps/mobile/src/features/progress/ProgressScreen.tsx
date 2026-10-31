@@ -21,6 +21,7 @@ import { progressViewOf, type ProgressViewId } from './path';
 import { PathView } from './PathView';
 import { progressModel, type PractiseTarget } from './progress';
 import { SkillMapView } from './SkillMapView';
+import { TeacherView } from './TeacherView';
 import { useStoredData } from './useStoredData';
 
 /** Back to where a row was played: a lesson, an exercise on Practice (a bit above your best clean tempo), or a song. */
@@ -55,10 +56,14 @@ export function ProgressScreen() {
       {m.since ? <View style={styles.since}><Body size={14} weight="800" numberOfLines={1}>{m.since}</Body></View> : null}
       <View style={styles.grow} />
       {view === 'main'
-        ? <Button label="This month's report" emoji="📝" onPress={() => setView('month')} testID="progress-month" />
+        ? <View style={styles.headButtons}>
+          <Button label="This month's report" emoji="📝" onPress={() => setView('month')} testID="progress-month" />
+          <Button label="For your teacher" emoji="🧑‍🏫" onPress={() => setView('teacher')} testID="progress-teacher-open" />
+        </View>
         : <Button label="Progress" emoji="←" onPress={() => setView('main')} testID="progress-back" />}
     </View>} />
   );
+  if (view === 'teacher') return <Screen testID="screen-progress">{head}<TeacherView runs={data?.runs ?? []} lessons={data?.lessons ?? []} /></Screen>;
   if (view === 'month') return <Screen testID="screen-progress">{head}<MonthReportView runs={data?.runs ?? []} /></Screen>;
   if (view === 'path') return <Screen testID="screen-progress">{head}<PathView lessons={data?.lessons ?? []} progress={settings.lessons} profile={settings.profile} /></Screen>;
   if (view === 'skills') return <Screen testID="screen-progress">{head}<SkillMapView lessons={data?.lessons ?? []} progress={settings.lessons} /></Screen>;
@@ -226,6 +231,7 @@ const styles = StyleSheet.create({
   right: { flex: 6, flexDirection: 'row', alignItems: 'center', gap: 12 }, // the title bar's spacer (flex 1) gives way to the since line
   since: { flexShrink: 1, backgroundColor: color.cream, borderWidth: stroke.card, borderColor: color.ink, paddingHorizontal: 10, paddingVertical: 3 },
   grow: { flex: 1, minWidth: 0 },
+  headButtons: { flexDirection: 'row', gap: 10 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   row1: { flexDirection: 'row', gap: 18, height: 232 },
   row2: { flexDirection: 'row', gap: 18, height: 258, marginTop: 18 },

@@ -2,7 +2,7 @@
 // one entry per key, asked once (again only on request, never while one is on its way), kept outside React so an
 // answer still arrives if you switch screens or start playing meanwhile.
 //
-// The iPad never runs Claude: every question goes to the home server (HomeServer.call). Routes that read the student
+// Every question goes to the home server first (HomeServer.call; coach.ts wraps it with the API-key fallback, direct/). Routes that read the student
 // carry the iPad's own `context` (D2, D3); it is always sent for them, empty if storage can't be read, so the server
 // never answers from its own database instead.
 import type { ApiFailure, HomeServer } from '../../platform/contracts';

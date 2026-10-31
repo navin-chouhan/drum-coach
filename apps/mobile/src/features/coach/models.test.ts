@@ -74,7 +74,7 @@ describe('one-off coach questions', () => {
     expect(asks.entry('a')?.problem?.lines[1]).toBe("No API key is set, so there's no fallback.");
     key = true; // saved in Setup meanwhile: the next failure knows
     await asks.ask('b', 'plan', {});
-    expect(asks.entry('b')?.problem?.lines[1]).toBe("The API-key fallback isn't built yet, so there's no fallback.");
+    expect(asks.entry('b')?.problem?.lines[1]).toBe('The API-key fallback couldn’t reach Anthropic either. Is the iPad online?');
   });
   it('an unreadable storage still sends an empty context (never the server\'s own data); a failure is an error entry', async () => {
     const f = fakeServer();
