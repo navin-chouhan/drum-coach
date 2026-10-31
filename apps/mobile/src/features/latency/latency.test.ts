@@ -60,7 +60,10 @@ describe('latency per route', () => {
     const all = readLatencyByRoute(kv);
     expect(all.Speaker).toMatchObject({ ms: 31, kind: 'speaker' });
     expect(syncToRoute(all, speaker, { latencyMs: 31, latencyChecked: true })).toBeNull();
-    expect(syncToRoute(all, hub, { latencyMs: 31, latencyChecked: true })).toEqual({ latencyChecked: false });
+    // a new output: not measured, with the web's default correction (0), not the speaker's 31 (QA2 m4)
+    expect(syncToRoute(all, hub, { latencyMs: 31, latencyChecked: true })).toEqual({ latencyMs: 0, latencyChecked: false });
+    expect(syncToRoute(all, hub, { latencyMs: 31, latencyChecked: false })).toEqual({ latencyMs: 0, latencyChecked: false });
+    expect(syncToRoute(all, hub, { latencyMs: 0, latencyChecked: false })).toBeNull();
     saveRouteLatency(kv, hub, 12);
     expect(syncToRoute(readLatencyByRoute(kv), speaker, { latencyMs: 12, latencyChecked: true })).toEqual({ latencyMs: 31, latencyChecked: true });
     expect(syncToRoute(all, null, { latencyMs: 0, latencyChecked: false })).toBeNull();
