@@ -1,7 +1,43 @@
 # YouTube in a Release build (error 153)
 
-**Status: open, no code change yet.** The installed packages offer no sound fix, so this note lists the options and
-what each costs. The owner picks one. Written 2026-10-31 by W3 (investigation timebox about 2 h).
+**Status: D and A built, awaiting a Release build on the iPad.** Decided 2026-10-31 by the orchestrator while the
+owner was away ("keep going", reversible): **D now, then A**. The investigation and the options follow below.
+
+## What was built
+- **D (fallback):** on a refused video (codes 101, 150, 152, 153) Songs shows the web's wording ("The owner doesn't
+  allow this video to be embedded. Try another upload of the song.") and an **Open in YouTube** button. The button
+  opens `https://www.youtube.com/watch?v=<id>` in the YouTube app or Safari. Watching works there; scoring doesn't,
+  because there is no song clock. (`src/youtube/ytController.ts` `isRefused` / `watchUrl`, `SongScreen.tsx`.)
+- **A (the fix):** `apps/mobile/modules/drum-youtube`, a local Expo module with a native view, `YouTubePlayerView`.
+  - It is a WKWebView that loads the player page with `loadHTMLString(page, baseURL: https://com.drumcoach.app)`, so
+    the page's origin, and the Referer YouTube sees, names the app.
+  - Inline playback; no user-action requirement (the page only cues, and the app's Play starts the video).
+  - A non-persistent website data store, so nothing is kept on disk. No capture of any kind.
+  - Links the player opens (the YouTube logo, "Watch on YouTube") go to YouTube outside the app.
+  - The page (`ios/PlayerPage.swift`) runs the IFrame API as `YouTubeDom.tsx` does and sends the same YtEvents. Each
+    message carries the page's `performance.now()`; native turns it into the host clock with `ClockOffset` (the
+    smallest delivery delay over the last ~10 s).
+  - Commands are YtCommand JSON, re-encoded by JSONSerialization before they reach the page. The video id is checked
+    before it goes into the page.
+  - `ytController`, the song clock and their tests are unchanged.
+  - **When it's used:** in Release builds whenever the module is in the build. Dev builds keep the DOM player unless
+    the dev toggle `drumcoach.dev.nativeYouTube` = `'1'` is set (`src/youtube/playerChoice.ts`). Without the module,
+    the DOM player is the fallback.
+  - **Tests:**
+    - Swift (`ios/Tests/PlayerPageTests.swift`): ids, the page, commands, events, ClockOffset. Run by the cloud iOS
+      build's pod-tests.
+    - TypeScript: `modules/drum-youtube/src/events.test.ts` and `src/youtube/playerChoice.test.ts`, plus the
+      controller's 153 test.
+  - Written in a Linux container: the Swift has not been compiled yet.
+
+## What to verify (Release build on the iPad)
+1. Open a song → the video shows, ▶ Play plays it inline, and Pause, speed 75 % / 50 % and versions work.
+2. There is no error 153. (If it still shows: the Open in YouTube button appears; note the video and report it.)
+3. Set tempo by tapping along, then Jam: the timing in the jam results looks like the dev build's for the same song.
+   That checks the host-clock stamping.
+4. Tap the YouTube logo in the player → it opens YouTube, and the app stays on the song.
+
+The investigation as written before the decision:
 
 ## The problem
 
@@ -71,5 +107,4 @@ release.
 
 ## For the owner to check in a Release build
 
-FINAL-CHECKLIST → Songs, first line: open any song in a **Release** build (not the dev client). If the player shows
-error 153 for every video, this note applies. Pick option A, B or C, and say whether you want D now.
+FINAL-CHECKLIST → section 10 (Release build): the four checks under "What to verify" above.

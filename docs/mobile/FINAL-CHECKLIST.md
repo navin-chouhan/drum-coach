@@ -168,8 +168,8 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 
 **Songs** (home server on)
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
-      inline. Write down if you see **error 153** (known risk in Release builds: likely every video, since a
-      `file://` page sends no Referer; options in [YOUTUBE-RELEASE.md](YOUTUBE-RELEASE.md)). Try it in a **Release** build too.
+      inline (the dev build uses the DOM player). On a refused video: the web's wording and **Open in YouTube**.
+      Release builds use the native player; section 10 checks it ([YOUTUBE-RELEASE.md](YOUTUBE-RELEASE.md)).
 - [ ] Set tempo (tap along), Learn by ear, Jam, Play, Sheet music modes; speed 75 % / 50 %; versions (drumless, cover).
 - [ ] Server off (stop `npm run server`): search says it can't reach the home server; pasting a YouTube link still adds the song.
 - [ ] Import files: a drum `.mid` (AirDrop one from the Mac) → Save to library (it shows in Practice's library); with
@@ -217,7 +217,9 @@ cd apps/mobile && npx expo run:ios --device --configuration Release
 - [ ] Opens without Metro; no Dev row in the sidebar; everything in section 7 that you spot-check still works.
 - [ ] Repeat M6 if it failed in debug: open Setup → Kit test and play 2 min: the pads light with no visible lag.
 - [ ] **T6-11** touch pads: slow-motion video of a finger tap → sound, p95 ≤ 35 ms: ____ ms.
-- [ ] Songs: does the YouTube player show **error 153**? yes / no.
+- [ ] Songs on the native player (modules/drum-youtube, Release only; [YOUTUBE-RELEASE.md](YOUTUBE-RELEASE.md)): a song
+      plays inline with no **error 153**: yes / no. Pause, 75 % / 50 %, versions work. Jam timing looks like the dev
+      build's. The YouTube logo opens YouTube and the app stays. If 153 still shows: **Open in YouTube** appears.
 
 ## 11. Maestro on the simulator (optional, Mac) — 10 min
 `maestro test apps/mobile/e2e` against a Release simulator build (apps/mobile/e2e/README.md).

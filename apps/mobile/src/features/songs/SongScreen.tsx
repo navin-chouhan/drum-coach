@@ -7,13 +7,13 @@ import { parseYouTubeId } from '@drum-coach/core/engine/youtube';
 import type { YtResult } from '@drum-coach/core/youtube/schemas';
 import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { Body, Button, Card, CardTitle, Choice, Display, Field, Screen, Small, Strong, Tabs, Warn, color, getAppHitBus, type, useAppSettings } from '../../ui';
 import { getHomeServer } from '../../platform/api';
 import { audio } from '../../platform/audio';
 import { useAudioEngine } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
-import { YouTubeView, useYt, type YtController } from '../../youtube';
+import { YouTubeView, isRefused, useYt, watchUrl, type YtController } from '../../youtube';
 import { Row } from './bits';
 import { JamPanel } from './JamPanel';
 import { LearnPanel } from './LearnPanel';
@@ -98,6 +98,11 @@ function SongView({ songId, bars, onBack }: { songId: string; bars?: SongBars; o
             <YouTubeView videoId={videoId} now={now} onPlayer={onPlayer} style={StyleSheet.absoluteFill} testID="song-video" />
           </View>
           {yt?.error ? <Warn testID="song-video-error">{yt.error}</Warn> : null}
+          {yt?.error && isRefused(yt.errorCode) ? (
+            // YouTube won't play it in this player: watch it there instead (no song clock, so no scoring).
+            <Button testID="song-open-youtube" emoji="▶" label="Open in YouTube" accessibilityLabel="Open this video in YouTube"
+              onPress={() => { void Linking.openURL(watchUrl(videoId)).catch(() => {}); }} />
+          ) : null}
           <Card>
             <Row>
               <Button testID="song-play-pause" tone="blue" label={yt?.playing ? 'Pause' : 'Play'} emoji={yt?.playing ? '⏸' : '▶'} disabled={!yt?.isReady}

@@ -29,7 +29,8 @@ export type YtEvent =
   | { type: 'sample'; raw: number; rate: number; at?: number; duration: number }
   | { type: 'error'; code?: number; message?: string };
 
-/** The web's messages (yt.ts ERRORS), plus 152/153, which YouTube added for players it won't serve. */
+/** The web's messages (yt.ts ERRORS), plus 152/153, which YouTube added for players it won't serve (153: the
+ * player didn't say where it's embedded, as a Release build's file:// page can't: docs/mobile/YOUTUBE-RELEASE.md). */
 export const YT_ERRORS: Record<number, string> = {
   2: 'Invalid video id.',
   5: "This video can't play in the browser player.",
@@ -37,8 +38,13 @@ export const YT_ERRORS: Record<number, string> = {
   101: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
   150: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
   152: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
-  153: "YouTube didn't accept this app's player (error 153). Try again; if it keeps happening, play the song from the dev server build.",
+  153: "The owner doesn't allow this video to be embedded. Try another upload of the song.",
 };
+/** The codes where YouTube refuses to play the video in this player: the screen offers "Open in YouTube". */
+export const REFUSED_CODES: readonly number[] = [101, 150, 152, 153];
+export const isRefused = (code: number | undefined) => code !== undefined && REFUSED_CODES.includes(code);
+/** The video on YouTube itself (the YouTube app or Safari): watching only, no song clock there. */
+export const watchUrl = (videoId: string) => `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 export const LOAD_ERROR = 'Could not load YouTube. Are you online?';
 export const ytErrorText = (e: { code?: number; message?: string }) =>
   e.message ?? (e.code !== undefined ? YT_ERRORS[e.code] ?? `YouTube error ${e.code}` : 'YouTube error');
@@ -69,6 +75,8 @@ export type YtController = {
   readonly isReady: boolean;
   /** The current error text ('' = none). */
   readonly error: string;
+  /** YouTube's error code with it, when it sent one. */
+  readonly errorCode: number | undefined;
   readonly state: number;
   readonly playing: boolean;
   readonly rate: number;
@@ -93,7 +101,7 @@ export type YtController = {
 export function createYtController(deps: { now: () => number; send: (cmd: YtCommand) => void }): YtController {
   const clock = createSongClock();
   const listeners = new Set<() => void>();
-  let isReady = false, error = '', duration = 0, title = '', rates: number[] = [], destroyed = false;
+  let isReady = false, error = '', errorCode: number | undefined, duration = 0, title = '', rates: number[] = [], destroyed = false;
   let resolveReady!: () => void;
   const ready = new Promise<void>(r => { resolveReady = r; });
   const emit = () => listeners.forEach(l => { try { l(); } catch { /* one listener can't stop the rest */ } });
@@ -104,6 +112,7 @@ export function createYtController(deps: { now: () => number; send: (cmd: YtComm
     ready,
     get isReady() { return isReady; },
     get error() { return error; },
+    get errorCode() { return errorCode; },
     get state() { return clock.state; },
     get playing() { return clock.playing; },
     get rate() { return clock.rate; },
@@ -122,7 +131,7 @@ export function createYtController(deps: { now: () => number; send: (cmd: YtComm
       return best;
     },
     load(videoId, startSeconds = 0) {
-      error = '';
+      error = ''; errorCode = undefined;
       send({ type: 'load', videoId, startSeconds });
       clock.reanchor(startSeconds, clock.rate, deps.now());
       emit();
@@ -154,7 +163,7 @@ export function createYtController(deps: { now: () => number; send: (cmd: YtComm
           clock.sample(e.raw, e.rate, at(e));
           return;
         case 'error':
-          error = ytErrorText(e);
+          error = ytErrorText(e); errorCode = e.code;
           emit();
       }
     },
