@@ -12,6 +12,7 @@ import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { KitView, type PadHit, type Subscribe } from '../../play';
 import { TOUCH_KIT } from '../../play/kitLayout';
+import { withoutKitSound } from '../../play/kitSounds';
 import {
   Body, Button, Chevron, GestureChip, Group, GroupRow, Pill, Screen, Segmented, TitleBar, Toggle, ToolFrame, color, font, getAppHitBus, padColor, stroke, useAppSettings, useKitMoves, writeSettings,
 } from '../../ui';
@@ -284,7 +285,7 @@ function KitTest() {
     <View style={styles.kitTestCol}>
     <View style={styles.kitTest}>
       <View style={styles.kitArea}>
-        <KitView hits={hits} layout={TOUCH_KIT} labelSize={22} onPadPress={pad => { getAppHitBus().emitPad(pad, 100); audio.playNow(`drum.${pad}`, 1); }} testID="kittest-kit" />
+        <KitView hits={hits} layout={TOUCH_KIT} labelSize={22} onPadPress={pad => { audio.playNow(`drum.${pad}`, 1); withoutKitSound(() => getAppHitBus().emitPad(pad, 100)); /* sounded just above: not again by the kit sounds (QA3 m1) */ }} testID="kittest-kit" />
       </View>
       <View style={styles.kitSide}>
         <Group title="Last hit">
