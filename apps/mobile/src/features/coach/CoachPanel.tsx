@@ -195,7 +195,7 @@ function Empty({ liveCoach }: { liveCoach: boolean }) {
 }
 
 /** The take's detailed feedback and a drill (src/coach/CoachFeedback.tsx). */
-function TakeFeedback({ take, extras }: { take: SessionTake; extras?: TakeExtras }) {
+export function TakeFeedback({ take, extras }: { take: SessionTake; extras?: TakeExtras }) {
   const coach = getCoach();
   const key = feedbackKey(take.startedAt);
   const e = useCoachEntry<Feedback>(key);
