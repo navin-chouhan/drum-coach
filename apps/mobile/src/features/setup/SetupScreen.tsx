@@ -2,6 +2,7 @@
 // e-Drum, the last hit, the MIDI input), Pads (hit each pad, soft then loud, note map), Latency (per output, with the
 // web's "do this first"), Sound and you, Coach · home server, Coach · fallback and While you play. Each tool opens
 // full screen over Setup. Kit gestures: the "yes" gesture starts what to do first.
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { getHomeServer, validateServerConfig } from '../../platform/api';
@@ -24,15 +25,20 @@ import {
   API_KEY_FOOT, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
 } from './coachServer';
 import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit';
+import { CoachVoicePanel } from './CoachVoicePanel';
+import { coachVoiceSummary } from './coachVoice';
 import { SoundPanel } from './SoundPanel';
 import { useAudioRoute, useKitConnection, useKitData, useLastHit, useRecentRuns, keychain } from './useSetup';
 import { HAND_SUB, LIVE_TIPS, LIVE_TIPS_SUB, AUTOPILOT_SUB } from './whilePlaying';
 import type { Settings } from '@drum-coach/core/input/settings';
 
-type Tool = 'pads' | 'velocity' | 'notemap' | 'latency' | 'sound' | 'kittest' | 'input' | 'apikey';
+type Tool = 'pads' | 'velocity' | 'notemap' | 'latency' | 'sound' | 'kittest' | 'input' | 'apikey' | 'coach';
+const TOOLS: Tool[] = ['pads', 'velocity', 'notemap', 'latency', 'sound', 'kittest', 'input', 'apikey', 'coach'];
+/** `/setup?tool=coach` opens a tool at once (Progress → Your path → Goals … (change)). */
+export const toolOf = (v: unknown): Tool | null => (TOOLS as unknown[]).includes(v) ? v as Tool : null;
 const TOOL_TITLE: Record<Tool, string> = {
   pads: 'Hit each pad once', velocity: 'Soft, then loud', notemap: 'Note map', latency: 'Latency', sound: 'Sound levels', kittest: 'Kit test',
-  input: 'MIDI input', apikey: 'Coach · fallback API key',
+  input: 'MIDI input', apikey: 'Coach · fallback API key', coach: 'Coach and voice',
 };
 const kv = () => getStorage().kv;
 const save = (p: Partial<Settings>) => writeSettings(kv(), p);
@@ -43,7 +49,9 @@ export function SetupScreen() {
   const { kit, map, padCal } = useKitData();
   const route = useAudioRoute();
   const runs = useRecentRuns();
-  const [tool, setTool] = useState<Tool | null>(null);
+  const params = useLocalSearchParams<{ tool?: string }>();
+  const [tool, setTool] = useState<Tool | null>(() => toolOf(params.tool));
+  useEffect(() => { const t = toolOf(params.tool); if (t) setTool(t); }, [params.tool]);
   const status = kitStatus(conn.midi, conn.connected);
   const checks = setupChecks({ settings: s, padCal, runs, device: conn.connected?.name ?? null });
   const latency = checks.find(c => c.id === 'latency')!;
@@ -54,7 +62,7 @@ export function SetupScreen() {
   const lat = latencyRow(byRoute, route, s);
   const others = otherRoutes(byRoute, route?.key ?? null);
   const clash = conflictText(map);
-  const close = () => setTool(null);
+  const close = () => { setTool(null); if (params.tool) router.setParams({ tool: undefined }); };
 
   // Hands-free: the "yes" gesture starts the check to do first (latency), else hit each pad.
   useKitMoves({ yes: () => setTool(latency.first ? 'latency' : 'pads') }, { enabled: tool === null });
@@ -106,7 +114,8 @@ export function SetupScreen() {
           <ServerGroup />
           <ApiKeyGroup onOpen={() => setTool('apikey')} editing={tool === 'apikey'} />
           <Group title="While you play">
-            <GroupRow first title="Live tips" sub={LIVE_TIPS_SUB}
+            <GroupRow first emoji="🗣" sym="blue" title="Coach and voice" sub={coachVoiceSummary(s)} right={<Chevron />} onPress={() => setTool('coach')} testID="setup-coach-voice" />
+            <GroupRow title="Live tips" sub={LIVE_TIPS_SUB}
               right={<Segmented accessibilityLabel="Live tips" value={s.liveTips} onChange={liveTips => save({ liveTips })}
                 options={LIVE_TIPS.map(([value, label]) => ({ value, label }))} testID="setup-live-tips" />} />
             <GroupRow right={<Toggle label="Kit gestures" value={s.padCommands !== false} onChange={padCommands => save({ padCommands })} testID="setup-gestures" />}>
@@ -133,6 +142,7 @@ export function SetupScreen() {
         {tool === 'kittest' ? <KitTest /> : null}
         {tool === 'input' ? <InputPicker conn={conn} onPicked={close} /> : null}
         {tool === 'apikey' ? <ApiKeyPanel onDone={close} /> : null}
+        {tool === 'coach' ? <CoachVoicePanel /> : null}
       </ToolFrame>
     </Screen>
   );
