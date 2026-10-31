@@ -1,6 +1,8 @@
-// Practice's play screen (full screen, the web's PlayView): the exercise, − / + tempo with your best clean tempo, the
-// coach line and the moves with their kit gestures, the sheet music of the bars you loop, times round, Climb, How it
-// plays, and your takes here. Takes run on the core take engine (engine.ts); a finished one is saved and Climb applies.
+// Practice's play screen (the web's PlayView) on the shared player (D10, src/player): the bar (‹, title, Climb chip,
+// − BPM +, ⋯), the coach line, the sheet music as large as it fits, the score card after a take, and the moves
+// (Again / Hear / Slower / Faster / Next, with their kit gestures). Loop bars, times round, How it plays, Climb, kit
+// sounds, song sync, Your takes here and the Metronome are in ⋯. Takes run on the core take engine (engine.ts); a
+// finished one is saved and Climb applies.
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Finished, TakeBacking } from '@drum-coach/core/play/take';
@@ -14,9 +16,8 @@ import { getMidiPort } from '../../platform/midi';
 import type { RunsRepo } from '../../data/runs';
 import { getStorage } from '../../platform/storage';
 import {
-  BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Pill, Screen, Toggle,
-  color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppKey, useAppSettings, useKitMoves, writeSettings,
-  CheckRow, Dots, KIT_SOUNDS_LABEL, Notice, RoundButton, SheetPager, Stepper, useSheetPages, TempoLadder, TimingLineView,
+  Body, Button, MAX_FONT_SCALE, Screen, Toggle, color, getAppHitBus, gesturesFor, slopFor, stroke, useAppSettings, useKitMoves, writeSettings,
+  CheckRow, Dots, KIT_SOUNDS_LABEL, Notice, SheetPager, Stepper, useSheetPages, TempoLadder, TimingLineView,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
@@ -33,8 +34,10 @@ import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
 import { interruptedNote, practiceEngine } from './engine';
 import { IntroSlides } from '../lesson/IntroSlides';
+import { speakMoment } from '../coach/voice';
+import { KeysLine, PlayerFrame, PlayerScore, PlayerSheet, SheetSection, phaseOf, sheetScaleFor, takeBarText, type PlayerMove } from '../../player';
 import {
-  barPickKind, clampRepeats, moreCard, needsIntro, yourTakeCard, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
+  barNow, barPickKind, clampRepeats, moreCard, needsIntro, yourTakeCard, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
   sectionRange, speedFor, writePlayOptions, type PracticeOptions, type Section, type WarmState,
 } from './play';
 
@@ -202,7 +205,6 @@ export function PlayScreen() {
     faster: () => { const a = playGesture('faster', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
     slower: () => { const a = playGesture('slower', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
   }, { playing, enabled: !intro }); // the intro slides have the kit's taps
-  useAppKey('escape', stop, { enabled: !intro }); // a hardware keyboard's Esc stops (the web App's Escape)
   const flip = (id: Parameters<typeof flipChip>[0]) => {
     const p = flipChip(id, o, settings);
     if (p.options) set(p.options);
@@ -210,6 +212,8 @@ export function PlayScreen() {
   };
   // The coach learns what "this" is; it never talks over a take.
   useEffect(() => { session.coachOpen(chart, m.bpm); }, [chart.id, m.bpm]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Voice first (D10): the exercise is said when it opens (not in the warm-up, which runs by itself).
+  useEffect(() => { if (!warm) speakMoment({ kind: 'stepIntro', title: chart.title, what: chart.description ?? `${chart.bars} bar${chart.bars === 1 ? '' : 's'}, ${o.repeats} times round.`, bpm: m.bpm }); }, [chart.id]); // eslint-disable-line react-hooks/exhaustive-deps -- once per exercise
   useEffect(() => {
     setCoachPlaying(playing, playing ? { exercise: chart.title, bpm: m.bpm } : undefined);
   }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -230,127 +234,113 @@ export function PlayScreen() {
   const back = () => { stop(); if (router.canGoBack()) router.back(); else router.replace('/practice'); };
   const cue = playing ? eng.take?.state.cue?.cue.text : undefined;
 
-  return (
-    <Screen withSidebar={false} testID="screen-practice-play">
-      <Stack.Screen options={{ headerShown: false }} />
-      {intro ? (() => {
-        // the web's practice slides: the bars you loop from beat 0, the last take's last tip, no "how it moves" slide
-        const ic = intro.chart, bpb = (ic.timeSignature[0] * 4) / ic.timeSignature[1], { from: f0 } = sectionRange(intro.sec, ic.bars);
-        return <IntroSlides onNext={introNext} onBack={introBack} onClose={() => setIntro(undefined)} intro={{
-          i: intro.i, last: 2, title: ic.title, sub: ic.title, bpm: intro.bpm, what: ic.description ?? `${ic.bars} bar${ic.bars === 1 ? '' : 's'}, ${o.repeats} times round.`,
-          notes: ic.notes.filter(n => n.t >= (f0 - 1) * bpb).map(n => ({ ...n, t: n.t - (f0 - 1) * bpb, mine: true })), beatsPerBar: bpb,
-          focus: f?.cues.at(-1)?.text, leftHanded: !!settings.leftHanded,
-        }} />;
-      })() : null}
-      <View style={styles.bar}>
-        <Button label="All exercises" emoji="←" size="small" onPress={back} testID="practice-play-back" />
-        <View style={styles.titleBox}>
-          <Display size={24} color={color.white} numberOfLines={1}>{chart.title}</Display>
-          <Body size={13} color={color.pop} weight="700">{`${kindIcon(chart)} ${chart.kind ?? 'exercise'}${chart.source === 'ai' ? ' · ✍ by your coach' : ''}${warm ? ` · warm-up ${warm.i + 1} of ${warm.ids.length}` : ''}`}</Body>
-        </View>
-        <View style={styles.tempo} testID="practice-tempo">
-          {!playing ? <RoundButton size="medium" glyph="−" label="5 BPM slower" onPress={() => set({ speed: speedFor(m.bpm - 5, chart.bpm) })} testID="practice-slower" /> : null}
-          <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.bpm, tabular]} accessibilityLabel={`${m.bpm} BPM`}>{m.bpm}<Text style={styles.bpmUnit}> BPM</Text></Text>
-          {!playing ? <RoundButton size="medium" glyph="+" label="5 BPM faster" onPress={() => set({ speed: speedFor(m.bpm + 5, chart.bpm) })} testID="practice-faster" /> : null}
-          {m.best > 0 ? <Body size={13} color={color.white} weight="700">{`best clean here: ${m.best} BPM`}</Body> : null}
-        </View>
-        <Button label="Hints" emoji="💡" size="small" tone={hints ? 'pop' : 'white'} onPress={() => flip('hints')} accessibilityLabel={`Hints ${hints ? 'on' : 'off'}`} testID="practice-hints" />
-      </View>
+  // The take's bar and count-in, ticking while it plays (the frame's "Bar 3 / 4").
+  const [tick, setTick] = useState(0);
+  useEffect(() => { if (!playing) return; const t = setInterval(() => setTick(x => x + 1), 200); return () => clearInterval(t); }, [playing]);
+  const takeBar = live ? barNow(live, now()) : undefined; void tick;
+  const [paperH, setPaperH] = useState(0);
+  const scale = sheetScaleFor(paperH);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const toPlayerMove = (mv: { id: string; label: string }, onPress: () => void, gestures: ReturnType<typeof gesturesFor>, testID: string): PlayerMove =>
+    ({ id: mv.id, label: mv.label.replace(/^\S+ /, ''), emoji: mv.label.split(' ')[0], gestures, onPress, testID });
+  const moves: PlayerMove[] = [
+    toPlayerMove({ id: 'main', label: m.main.label }, main, gesturesFor('yes'), 'practice-main'),
+    ...m.moves.map(mv => toPlayerMove(mv, mv.id === 'listen' ? listen : mv.id === 'next' ? next : () => playAt(mv.bpm ?? m.bpm),
+      mv.id === 'listen' ? gesturesFor('listen') : mv.id === 'faster' ? gesturesFor('faster') : mv.id === 'slower' ? gesturesFor('slower') : mv.id === 'next' ? gesturesFor('next') : [],
+      `practice-move-${mv.id}`)),
+  ];
+  const music = live && liveChart
+    ? <NotationView chart={liveChart} bpm={m.bpm} zero={live.zero} now={now} latencyMs={settings.latencyMs} results={practiceEngine.results} hints={hints} leftHanded={!!settings.leftHanded} scale={scale} testID="practice-sheet" />
+    : done && scored
+      ? <NotationView chart={done.chart} bpm={scored.chart.bpm * scored.options.speed} zero={scored.zero} now={() => scored.zero} latencyMs={0} results={done.results} hints={hints}
+        leftHanded={!!settings.leftHanded} page={pager.page} onPages={pager.setPages} scale={scale} testID="practice-sheet" />
+      : <NotationView chart={shown} bpm={m.bpm} zero={idleZero} now={now} latencyMs={settings.latencyMs} hints={hints} leftHanded={!!settings.leftHanded} scale={scale} testID="practice-sheet" />;
+  const loopWords = `Loop: ${section ? `bars ${from}–${to}` : 'all'} · ${o.repeats}×`;
 
-      {showDetails ? (
+  if (showDetails) {
+    return (
+      <Screen withSidebar={false} testID="screen-practice-play">
+        <Stack.Screen options={{ headerShown: false }} />
         <ScrollView style={styles.detailsScroll} contentContainerStyle={styles.detailsIn}>
           <ResultsDetails f={showDetails} onAgain={() => go()} onBack={() => setDetails(false)} extras={{ chartId: chart.id }} testID="practice-details" />
         </ScrollView>
-      ) : <>
-      {playing ? (
-        <View style={styles.playingRow}>
-          <CoachLine size={20} style={styles.grow} testID="practice-live-tip">{cue ?? (eng.demo ? 'Listen: this is how it goes.' : `${chart.title} at ${m.bpm}.`)}</CoachLine>
-          <BigMove tone="night" emoji="⏹" label="Stop" gestures={gesturesFor('stop')} onPress={stop} testID="practice-stop" style={styles.stop} />
-        </View>
-      ) : <>
-      <View style={styles.coachRow}>
-        <CoachLine size={20} style={styles.grow} testID="practice-coach-line">{m.line}</CoachLine>
-        {thinking ? <View testID="practice-coach-thinking"><Pill tone="pop">Coach is listening back…</Pill></View> : null}
-      </View>
-      <View style={styles.moves}>
-        <BigMove tone="go" label={m.main.label.replace(/^\S+ /, '')} emoji={m.main.label.split(' ')[0]} gestures={gesturesFor('yes')} onPress={main} testID="practice-main" style={styles.moveGo} />
-        {m.moves.map(mv => (
-          <BigMove key={mv.id} tone={mv.id === 'listen' ? 'white' : 'alt'} label={mv.label.replace(/^\S+ /, '')} emoji={mv.label.split(' ')[0]}
-            gestures={mv.id === 'listen' ? gesturesFor('listen') : mv.id === 'faster' ? gesturesFor('faster') : mv.id === 'slower' ? gesturesFor('slower') : mv.id === 'next' ? gesturesFor('next') : []}
-            onPress={mv.id === 'listen' ? listen : mv.id === 'next' ? next : () => playAt(mv.bpm ?? m.bpm)} testID={`practice-move-${mv.id}`} style={styles.move} />
-        ))}
-      </View>
-      </>}
-      {eng.error ? <Notice text={eng.error} testID="practice-error" /> : null}
-      {notice ? <Notice text={notice} onClose={() => setNotice('')} testID="practice-notice" /> : null}
-      {!playing && eng.interrupted && eng.chartId === chart.id ? <Notice text={interruptedNote(eng.interrupted)} testID="practice-interrupted" /> : null}
+      </Screen>
+    );
+  }
 
-      <View style={styles.main}>
-        <Card style={styles.music}>
-          <View style={styles.barPick}>
-            <Body weight="800">{`${chart.bars} bar${chart.bars === 1 ? '' : 's'}`}</Body>
-            {barPickKind(chart.bars) !== 'none' ? <>
-              <Body weight="700">· Loop:</Body>
-              <Chip on={!section} label="All" onPress={() => setSection(null)} />
-              {barPickKind(chart.bars) === 'buttons'
-                ? Array.from({ length: chart.bars }, (_, i) => i + 1).map(b => <Chip key={b} on={!!section && b >= from && b <= to} label={String(b)} onPress={() => setSection(pickBar(section, b))} />)
-                : <>
-                  <Chip on={false} label="−" a11y="Loop starts a bar earlier" onPress={() => setSection({ from: Math.max(1, from - 1), to })} />
-                  <Body weight="800">{`${from} to ${to}`}</Body>
-                  <Chip on={false} label="+" a11y="Loop ends a bar later" onPress={() => setSection({ from, to: Math.min(chart.bars, to + 1) })} />
-                </>}
-            </> : null}
-            <Body weight="700">·</Body>
+  return (
+    <View style={styles.fill} testID="screen-practice-play">
+      <Stack.Screen options={{ headerShown: false }} />
+      <PlayerFrame
+        phase={phaseOf({ playing, hasResults: !!card })}
+        testID="practice"
+        title={chart.title}
+        subtitle={`${kindIcon(chart)} ${chart.kind ?? 'exercise'}${chart.source === 'ai' ? ' · ✍ by your coach' : ''}${warm ? ` · warm-up ${warm.i + 1} of ${warm.ids.length}` : ''} · ${loopWords}`}
+        barChip={<ClimbChip on={!!o.climb} cap={m.cap} onPress={() => set({ climb: !o.climb })} />}
+        bpm={m.bpm}
+        onBpm={(d: -5 | 5) => set({ speed: speedFor(m.bpm + d, chart.bpm) })}
+        onBack={back}
+        onMore={() => setMoreOpen(true)}
+        coach={{ line: m.line, ...(thinking && { pill: 'Coach is listening back…' }) }}
+        music={music}
+        onPaperHeight={setPaperH}
+        musicFoot={done && !live ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} testID="practice-sheet-pages" /> : null}
+        side={card ? (
+          <PlayerScore head={`${m.bpm} BPM`} landed={card.landed} total={card.total} testID="practice-your-take"
+            fix={card.tip ? `💡 ${card.tip}` : undefined}>
+            <Body size={13} color={color.muted}>{card.small}</Body>
+            {card.latency ? <Notice text={card.latency} testID="practice-latency-hint" /> : null}
+            <View style={styles.takeLinks}>
+              <Button label="Details and history" emoji="📊" size="small" onPress={() => setDetails(true)} testID="practice-details-open" />
+              <Button label="Hear it right" emoji="👂" size="small" onPress={hearItRight} testID="practice-hear-right" />
+            </View>
+          </PlayerScore>
+        ) : undefined}
+        bottom={!kit ? (
+          <TouchPads emitPad={(pad, vel, time) => getAppHitBus().emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
+            now={getMidiPort().clock.now} activeDrums={activeDrums} results={live ? practiceEngine.results : undefined} style={styles.fill} testID="practice-touch-pads" />
+        ) : undefined}
+        moves={moves}
+        take={playing ? {
+          bar: takeBarText(takeBar ?? { bar: 1 }), onStop: stop,
+          tip: cue ?? (eng.demo ? 'Listen: this is how it goes.' : undefined),
+          ...(takeBar?.countIn !== undefined && { countIn: takeBar.countIn }),
+        } : undefined}
+        overlayOpen={moreOpen || !!intro}
+      >
+        {eng.error || notice || (!playing && eng.interrupted && eng.chartId === chart.id) ? (
+          <View style={styles.notices} pointerEvents="box-none">
+            {eng.error ? <Notice text={eng.error} testID="practice-error" /> : null}
+            {notice ? <Notice text={notice} onClose={() => setNotice('')} testID="practice-notice" /> : null}
+            {!playing && eng.interrupted && eng.chartId === chart.id ? <Notice text={interruptedNote(eng.interrupted)} testID="practice-interrupted" /> : null}
+          </View>
+        ) : null}
+        <PlayerSheet open={moreOpen} onClose={() => setMoreOpen(false)} testID="practice-more">
+          <SheetSection title="Loop">
+            <View style={styles.barPick}>
+              <Body weight="800">{`${chart.bars} bar${chart.bars === 1 ? '' : 's'}`}</Body>
+              {barPickKind(chart.bars) !== 'none' ? <>
+                <Chip on={!section} label="All" onPress={() => setSection(null)} />
+                {barPickKind(chart.bars) === 'buttons'
+                  ? Array.from({ length: chart.bars }, (_, i) => i + 1).map(b => <Chip key={b} on={!!section && b >= from && b <= to} label={String(b)} onPress={() => setSection(pickBar(section, b))} />)
+                  : <>
+                    <Chip on={false} label="−" a11y="Loop starts a bar earlier" onPress={() => setSection({ from: Math.max(1, from - 1), to })} />
+                    <Body weight="800">{`${from} to ${to}`}</Body>
+                    <Chip on={false} label="+" a11y="Loop ends a bar later" onPress={() => setSection({ from, to: Math.min(chart.bars, to + 1) })} />
+                  </>}
+              </> : null}
+            </View>
             <Stepper label="Times round" value={o.repeats} min={1} max={50} format={v => `${v}× round`} width={86}
               onChange={v => set({ repeats: clampRepeats(v) })} testID="practice-repeats" />
-          </View>
-          <View style={styles.sheet}>
-            {live && liveChart
-              ? <NotationView chart={liveChart} bpm={m.bpm} zero={live.zero} now={now} latencyMs={settings.latencyMs} results={practiceEngine.results} hints={hints} leftHanded={!!settings.leftHanded} testID="practice-sheet" />
-              : done && scored
-                ? <NotationView chart={done.chart} bpm={scored.chart.bpm * scored.options.speed} zero={scored.zero} now={() => scored.zero} latencyMs={0} results={done.results} hints={hints}
-                  leftHanded={!!settings.leftHanded} page={pager.page} onPages={pager.setPages} testID="practice-sheet" />
-                : <NotationView chart={shown} bpm={m.bpm} zero={idleZero} now={now} latencyMs={settings.latencyMs} hints={hints} leftHanded={!!settings.leftHanded} testID="practice-sheet" />}
-          </View>
-          {done && !live ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} tone="light" testID="practice-sheet-pages" /> : null}
-          {done && !live ? <Body size={13} weight="800">● on it  ● early / late  ◌ missed  ✕ extra</Body> : null}
-          {hints && !playing && !done ? <Body size={13} color={color.muted}>R right hand · L left hand · K kick · H hi-hat foot</Body> : null}
-          {timing && !playing ? <TimingLineView line={timing} testID="practice-timing-line" /> : null}
-          {!kit ? (
-            <View style={styles.pads}>
-              <TouchPads emitPad={(pad, vel, time) => getAppHitBus().emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
-                now={getMidiPort().clock.now} activeDrums={activeDrums} results={live ? practiceEngine.results : undefined} style={styles.grow1} testID="practice-touch-pads" />
-            </View>
-          ) : null}
-          <View style={styles.goal}>
-            <Body size={13} weight="800">{`Your drums: ${myPads.join(', ')}`}</Body>
+          </SheetSection>
+          <SheetSection title="Climb">
             <View style={styles.climb}>
               <Toggle value={!!o.climb} onChange={v => set({ climb: v })} label="Climb" testID="practice-climb" />
-              <View style={styles.grow}>
-                <Body size={14}><Text style={styles.b}>Climb</Text>{`: after 2 clean takes the tempo goes up 5, until ${m.cap}.`}</Body>
-                <Body size={12.5} color={color.muted}>{o.climb ? 'On: it climbs by itself.' : 'Off: the tempo stays where you put it.'}</Body>
-              </View>
+              <Body size={14} style={styles.grow}>{`After 2 clean takes the tempo goes up 5, until ${m.cap}.`}</Body>
             </View>
-            {o.climb && !playing ? <TempoLadder bpm={m.bpm} ladder={ladderRungs(m.bpm, Math.min(m.bpm, m.cap - 5), m.cap)} /> : null}
-          </View>
-        </Card>
-
-        <ScrollView style={styles.side} contentContainerStyle={styles.sideIn}>
-          {card ? (
-            <Card tone={card.pass ? 'cream' : 'white'} testID="practice-your-take">
-              <CardTitle size={17}>Your take</CardTitle>
-              <Body size={14}><Text style={styles.bigN}>{card.landed}</Text><Text style={styles.b}>{`/${card.total} notes landed`}</Text></Body>
-              <Body size={13} color={color.muted}>{card.small}</Body>
-              {card.tip ? <Body size={14}>{`💡 ${card.tip}`}</Body> : null}
-              {card.latency ? <Notice text={card.latency} testID="practice-latency-hint" /> : null}
-              <View style={styles.takeLinks}>
-                <Button label="Details and history" emoji="📊" size="small" onPress={() => setDetails(true)} testID="practice-details-open" />
-                <Button label="Hear it right" emoji="👂" size="small" onPress={hearItRight} testID="practice-hear-right" />
-              </View>
-            </Card>
-          ) : chart.description ? <Card><CardTitle size={17}>What it is</CardTitle><Body>{chart.description}</Body></Card> : null}
-          <Card>
-            <CardTitle size={17}>How it plays</CardTitle>
+            {o.climb ? <TempoLadder bpm={m.bpm} ladder={ladderRungs(m.bpm, Math.min(m.bpm, m.cap - 5), m.cap)} /> : null}
+          </SheetSection>
+          <SheetSection title="How it plays">
             <View style={styles.chips}>
               {howItPlays(o, settings).map(c => (
                 <Pressable key={c.id} onPress={() => flip(c.id)} accessibilityRole="switch" accessibilityState={{ checked: c.on }} accessibilityLabel={`${c.label}, ${c.note}`}
@@ -360,14 +350,18 @@ export function PlayScreen() {
                 </Pressable>
               ))}
             </View>
-          </Card>
-          <Card>
-            <CardTitle size={17}>Your takes here</CardTitle>
+          </SheetSection>
+          {timing ? (
+            <SheetSection title="This take">
+              <TimingLineView line={timing} testID="practice-timing-line" />
+              <Body size={13} weight="800">● on it  ● early / late  ◌ missed  ✕ extra</Body>
+            </SheetSection>
+          ) : null}
+          <SheetSection title="Your takes here">
             {m.recent.length > 1 ? <Dots values={m.recent} width={220} label={`Notes landed in your last ${m.recent.length} takes, percent`} /> : null}
             <Body size={14}>{m.history}</Body>
-          </Card>
-          <Card testID="practice-more">
-            <CardTitle size={17}>⚙ More</CardTitle>
+          </SheetSection>
+          <SheetSection title="Sound">
             <CheckRow label={KIT_SOUNDS_LABEL} value={!!settings.browserSounds} onChange={browserSounds => writeSettings(kv, { browserSounds })} testID="practice-kit-sounds" />
             {more.latency ? <Body size={13}>{more.latency}</Body> : null}
             {more.sync ? <>
@@ -377,15 +371,32 @@ export function PlayScreen() {
                   onPress={() => nudge(ms)} testID={`practice-sync-${ms}`} />)}
               </View>
             </> : null}
-          </Card>
-          <Card>
-            <Label>Just the click</Label>
-            <Button label="Metronome" emoji="🔔" size="small" onPress={() => router.push('/practice/metronome')} testID="practice-play-metronome" style={styles.metro} />
-          </Card>
-        </ScrollView>
-      </View>
-      </>}
-    </Screen>
+            <Button label="Metronome" emoji="🔔" size="small" onPress={() => { setMoreOpen(false); router.push('/practice/metronome'); }} testID="practice-play-metronome" />
+          </SheetSection>
+          {chart.description ? <SheetSection title="What it is"><Body>{chart.description}</Body></SheetSection> : null}
+          <KeysLine />
+        </PlayerSheet>
+        {intro ? (() => {
+          // the web's practice slides: the bars you loop from beat 0, the last take's last tip, no "how it moves" slide
+          const ic = intro.chart, bpb = (ic.timeSignature[0] * 4) / ic.timeSignature[1], { from: f0 } = sectionRange(intro.sec, ic.bars);
+          return <IntroSlides onNext={introNext} onBack={introBack} onClose={() => setIntro(undefined)} intro={{
+            i: intro.i, last: 2, title: ic.title, sub: ic.title, bpm: intro.bpm, what: ic.description ?? `${ic.bars} bar${ic.bars === 1 ? '' : 's'}, ${o.repeats} times round.`,
+            notes: ic.notes.filter(n => n.t >= (f0 - 1) * bpb).map(n => ({ ...n, t: n.t - (f0 - 1) * bpb, mine: true })), beatsPerBar: bpb,
+            focus: f?.cues.at(-1)?.text, leftHanded: !!settings.leftHanded,
+          }} />;
+        })() : null}
+      </PlayerFrame>
+    </View>
+  );
+}
+
+/** Climb as a chip in the bar (D10): on, it says where it stops; tap to switch. */
+function ClimbChip({ on, cap, onPress }: { on: boolean; cap: number; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel={on ? `Climb on, up to ${cap}` : 'Climb off'}
+      hitSlop={slopFor(36)} testID="practice-climb-chip" style={[styles.climbChip, on && styles.climbChipOn]}>
+      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.climbChipText, !on && styles.climbChipTextOff]}>{on ? `🧗 Climb → ${cap}` : '🧗 Climb off'}</Text>
+    </Pressable>
   );
 }
 
@@ -399,40 +410,24 @@ function Chip({ on, label, onPress, a11y }: { on: boolean; label: string; onPres
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: color.night, borderWidth: stroke.card, borderColor: color.ink, boxShadow: hardShadow(shadow.card, color.pop), paddingVertical: 8, paddingHorizontal: 14 },
-  titleBox: { flex: 1, minWidth: 0 },
-  tempo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bpm: { fontSize: 34, fontWeight: '900', color: color.white, minWidth: 70, textAlign: 'center' },
-  bpmUnit: { fontSize: 13, color: color.pop },
-  coachRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-  playingRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 },
-  stop: { width: 260, minHeight: 88 },
-  moves: { flexDirection: 'row', gap: 12, marginTop: 12 },
-  moveGo: { flex: 1.6, minHeight: 88 },
-  move: { flex: 1, minHeight: 88 },
-  main: { flex: 1, flexDirection: 'row', gap: 16, marginTop: 14 },
-  music: { flex: 1, minWidth: 0, gap: 8, paddingVertical: 10 },
+  fill: { flex: 1 },
+  grow: { flexShrink: 1 },
+  notices: { position: 'absolute', left: 24, right: 24, bottom: 130, gap: 8 },
+  takeLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
   barPick: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   barChip: { minWidth: 34, height: 34, paddingHorizontal: 8, borderRadius: 17, borderWidth: stroke.thin, borderColor: color.ink, backgroundColor: color.panel, alignItems: 'center', justifyContent: 'center' },
   barChipOn: { backgroundColor: color.pop },
   barChipText: { fontSize: 15, fontWeight: '800', color: color.ink },
-  pads: { height: 150 },
-  grow1: { flex: 1 },
-  sheet: { flex: 1, minHeight: 100, backgroundColor: '#FFFDF6', borderWidth: stroke.thin, borderColor: color.ink },
-  goal: { flexDirection: 'row', alignItems: 'center', gap: 16, justifyContent: 'space-between' },
-  climb: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
-  grow: { flexShrink: 1 },
-  b: { fontWeight: '900' },
-  side: { width: 300, flexGrow: 0 },
-  sideIn: { gap: 12, paddingBottom: 8, paddingRight: 6 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  climb: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { width: '48%', minHeight: 44, paddingVertical: 4, paddingHorizontal: 8, borderWidth: stroke.thin, borderColor: color.ink, backgroundColor: color.panel },
   chipOn: { backgroundColor: color.pop },
   chipLabel: { fontSize: 13.5, fontWeight: '800', color: color.ink },
   chipNote: { fontSize: 11.5, fontWeight: '600', color: color.muted },
-  metro: { marginTop: 6 },
-  bigN: { fontSize: 30, fontWeight: '900' },
-  takeLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  climbChip: { height: 36, paddingHorizontal: 12, borderRadius: 18, borderWidth: stroke.thin, borderColor: color.white, justifyContent: 'center' },
+  climbChipOn: { backgroundColor: color.pop, borderColor: color.ink },
+  climbChipText: { fontSize: 14, fontWeight: '900', color: color.ink },
+  climbChipTextOff: { color: color.white },
   detailsScroll: { flex: 1, marginTop: 14 },
   detailsIn: { paddingBottom: 24 },
 });

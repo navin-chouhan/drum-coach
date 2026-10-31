@@ -9,8 +9,11 @@ tags:
   - v1
 ---
 - runFlow: subflows/open-app.yaml
-# D10: Songs is a shelf in Practice (no sidebar entry); its route stays
-- openLink: drumcoach://songs
+# D10: Songs is a shelf in Practice (no sidebar entry): Practice → the Songs tile opens it (its route stays)
+- tapOn:
+    id: nav-practice
+- tapOn:
+    id: practice-kind-song
 - extendedWaitUntil:
     visible:
       id: screen-songs

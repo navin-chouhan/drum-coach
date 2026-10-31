@@ -187,7 +187,7 @@
     "spill": [],
     "cut": [
       "text \"The beater comes back off the pad by itself.\"",
-      "text \"✗ Wrong:\""
+      "text \"\u2717 Wrong:\""
     ],
     "errors": 0
   },
@@ -235,7 +235,7 @@
       "text \"Two heights before every flam: 3 cm and 30 cm.\"",
       "text \"The hand that played loud stays down; the soft one\"",
       "text \"Two notes, very close: \"fla-am\".\"",
-      "text \"✗ Wrong:\""
+      "text \"\u2717 Wrong:\""
     ],
     "errors": 0
   },
@@ -464,6 +464,27 @@
     "errors": 0
   },
   "setup-apikey": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-grooves": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-songs": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-search": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],

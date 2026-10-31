@@ -169,10 +169,14 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
       Enter on the celebration is its main button.
 
 **Practice**
-- [ ] Pick up where you left off, the warm-up card (tom 1 × 2 starts it), For you cards with the yellow ring (ride × 2
-      moves it, hi-hat pedal × 3 plays it), the library by kind, search.
-- [ ] Play screen: − / + tempo with best clean, loop bars, times round, Climb (2 clean takes → +5), How it plays chips,
-      your takes here; a take saves (it shows in Progress).
+- [ ] (D10) For you: 4 big cards, the 🔥 warm-up first, then "left off here", your level, the coach's pick; the yellow
+      ring (ride × 2 moves it, hi-hat pedal × 3 plays it, tom 2 × 2 hears it, tom 1 × 2 starts the warm-up). Under
+      the 3 moves, 4 kind tiles (Grooves, Rudiments, Fills, **Songs**): a tile opens its shelf below (tap it again to
+      close). 🔎 searches every exercise; 🔔 Metronome stays in the bar.
+- [ ] Play screen (D10, the shared player): the bar has ‹, the title, the **Climb** chip and − BPM +; ⋯ holds loop bars,
+      times round, Climb (2 clean takes → +5), How it plays, kit sounds, song sync, your takes here and the Metronome.
+      The moves are Again / Hear / Slower / Faster / Next (ride × 2). It says the exercise when it opens and the score
+      after every take. A take saves (it shows on You); the score card has Details and history.
 - [ ] Unplug the kit: touch pads on the play screen **(M2)**. Home mid-take: the take stops **(M3)**.
 - [ ] An exercise's first take shows the intro slides (not for the warm-up, Hear it or wait mode); hi-hat × 1 turns them.
 - [ ] After a take: **📊 Details and history** shows accuracy, timing and dynamics;
@@ -191,11 +195,15 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] **Show-off & fills:** empty, it says how a song gets there; with two or more ready songs, **🎤 Concert: the
       whole set** opens the first song of the set.
 
-**Songs** (home server on)
+**Songs** (home server on; a shelf in Practice: the **Songs** tile, D10)
+- [ ] Practice → Songs tile: search / paste a link, My songs, Import files. The song screen has no "Song audio
+      (experimental)" card and Learn has no "Suggest notes" row on the iPad (D10).
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
       inline (the dev build uses the DOM player). On a refused video: the web's wording and **Open in YouTube**.
       Release builds use the native player; section 10 checks it ([YOUTUBE-RELEASE.md](YOUTUBE-RELEASE.md)).
-- [ ] Set tempo (tap along), Learn by ear, Jam, Play, Sheet music modes; speed 75 % / 50 %; versions (drumless, cover).
+- [ ] Set tempo (tap along), Learn by ear, Jam, Play, Sheet music modes; speed 75 % / 50 %. (D10) The song is on the shared
+      player: ‹ / Esc leave, **⋯** holds Versions (drumless, cover); Jam and Play show the video on top and the music under it;
+      the encore's Share take is behind its ⋯.
 - [ ] Server off (stop `npm run server`): search says it can't reach the home server; pasting a YouTube link still adds the song.
 - [ ] Import files: a drum `.mid` (AirDrop one from the Mac) → Save to library (it shows in Practice's library); with
       an MP3 backing: it plays in the take.

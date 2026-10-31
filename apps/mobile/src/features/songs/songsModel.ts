@@ -66,7 +66,8 @@ export const SPEEDS = [0.5, 0.75, 1] as const;
 
 /**
  * B13: iOS can't capture YouTube's audio (no tab capture, and a WKWebView's audio can't be tapped), so the web's
- * "Song audio (experimental)" card (drums down, suggested notes) is off on the iPad, with the reason.
+ * "Song audio (experimental)" card (drums down, suggested notes) is off on the iPad. D10 hides it (and Learn's
+ * "Suggest notes from the song"); the words stay for when it can work.
  */
 export const TAB_CAPTURE = {
   available: false,
