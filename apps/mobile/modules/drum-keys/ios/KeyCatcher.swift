@@ -46,15 +46,21 @@ final class KeyCatcherView: UIView {
 final class KeyCatcher {
   private let view = KeyCatcherView(frame: .zero)
   private var enabled = false
-  private var editing = 0
+  /// The text fields being edited (weak: a field torn down without textDidEndEditing must not hold the keys forever).
+  private var editors: [WeakView] = []
   private var observers: [NSObjectProtocol] = []
-  private(set) var keysSent = 0
-  private(set) var focusCalls = 0
+  /// Debug counters, locked: written here on main, read from the JS thread by getDebugInfo (QA2 m9).
+  let counters = DebugCounters()
+
+  private final class WeakView {
+    weak var view: UIView?
+    init(_ view: UIView) { self.view = view }
+  }
 
   var onKey: ((String, Int, Bool, Bool, Bool, Double) -> Void)? {
     didSet {
       let send = onKey
-      view.onKey = { [weak self] a, b, c, d, e, f in self?.keysSent += 1; send?(a, b, c, d, e, f) }
+      view.onKey = { [weak self] a, b, c, d, e, f in self?.counters.keySent(); send?(a, b, c, d, e, f) }
     }
   }
 
@@ -62,10 +68,14 @@ final class KeyCatcher {
     view.isAccessibilityElement = false
     view.accessibilityElementsHidden = true
     let nc = NotificationCenter.default
-    let began: (Notification) -> Void = { [weak self] _ in self?.editing += 1 }
-    let ended: (Notification) -> Void = { [weak self] _ in
+    let began: (Notification) -> Void = { [weak self] n in
+      guard let self = self, let field = n.object as? UIView else { return }
+      if !self.editors.contains(where: { $0.view === field }) { self.editors.append(WeakView(field)) }
+    }
+    let ended: (Notification) -> Void = { [weak self] n in
       guard let self = self else { return }
-      self.editing = max(0, self.editing - 1)
+      let field = n.object as? UIView
+      self.editors.removeAll { $0.view == nil || $0.view === field }
       self.refocusSoon()
     }
     observers.append(nc.addObserver(forName: UITextField.textDidBeginEditingNotification, object: nil, queue: .main, using: began))
@@ -103,15 +113,21 @@ final class KeyCatcher {
     }
   }
 
-  /// Whether the last focus attempt made the catcher first responder (read off the main thread for debug info).
-  private(set) var focused = false
+  /// Whether a text field is really being edited now: drops fields that are gone, out of a window or no longer first
+  /// responder (KeyPress.stillEditing), so a missed textDidEndEditing can't keep the keys away until relaunch.
+  private func isEditing() -> Bool {
+    editors.removeAll { e in
+      let v = e.view
+      return !KeyPress.stillEditing(alive: v != nil, inWindow: v?.window != nil, firstResponder: v?.isFirstResponder ?? false)
+    }
+    return !editors.isEmpty
+  }
 
   private func focus() {
-    guard enabled, editing == 0, let window = KeyCatcher.keyWindow() else { return }
+    guard enabled, !isEditing(), let window = KeyCatcher.keyWindow() else { return }
     if view.window !== window { window.addSubview(view) }
-    focusCalls += 1
     if !view.isFirstResponder { view.becomeFirstResponder() }
-    focused = view.isFirstResponder
+    counters.focusCall(focused: view.isFirstResponder)
   }
 
   private static func keyWindow() -> UIWindow? {

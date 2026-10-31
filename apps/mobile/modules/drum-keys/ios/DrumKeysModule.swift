@@ -46,10 +46,11 @@ public final class DrumKeysModule: Module {
     }
 
     Function("getDebugInfo") { () -> [String: Any] in
+      let c = self.catcher.counters.snapshot() // locked: written on main, read here on the JS thread
       return [
-        "focused": self.catcher.focused,
-        "keysSent": self.catcher.keysSent,
-        "focusCalls": self.catcher.focusCalls,
+        "focused": c.focused,
+        "keysSent": c.keysSent,
+        "focusCalls": c.focusCalls,
         "timebase": HostClock.timebaseDescription,
       ]
     }
