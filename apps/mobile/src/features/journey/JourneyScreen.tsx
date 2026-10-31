@@ -73,9 +73,9 @@ export function JourneyScreen() {
       ? <Button size="small" emoji="🛠" label="Check my kit" testID="journey-check-kit" onPress={() => router.navigate('/setup' as never)} />
       : <Button size="small" emoji="🗺️" label="Skill map" testID="journey-skill-map" onPress={() => router.navigate('/progress?view=skills' as never)} />;
 
-  const open = (lessonId: string, item = -1, mode: LessonMode = 'play') => {
+  const open = (lessonId: string, item = -1, mode: LessonMode = 'play', role?: 'record') => {
     if (item >= 0 && mode === 'play' && v.session.date !== readSessionDate()) writeSettings(getStorage().kv, startSessionPatch(v.session));
-    router.push(lessonHref(lessonId, item, mode) as never);
+    router.push(lessonHref(lessonId, item, mode, role) as never);
   };
   const start = v.main ? () => open(v.main!.lessonId, v.main!.item, v.main!.label === 'Jam' ? 'jam' : 'play') : undefined;
   const other = v.somethingElse ? () => setSwap(n => n + 1) : undefined;
@@ -97,11 +97,13 @@ export function JourneyScreen() {
             <BigMove testID="journey-start" tone="go" emoji={v.main.emoji} label={v.main.label} gestures={gesturesFor('yes')} onPress={start} style={styles.moveMain} />
           ) : null}
           <BigMove testID="journey-something-else" emoji="↻" label="Something else" gestures={gesturesFor('next')} onPress={other} disabled={!other} style={styles.move} />
-          {v.arcade /* after today's set, as the web: the 2-minute challenge joins the moves */
+          {v.afterSet && v.arcade /* after today's set, as the web: the 2-minute challenge and Beat your best join the moves */
             ? <BigMove testID="journey-arcade" emoji="⏱" label="2-minute challenge" note={v.arcade.sub} onPress={() => open(v.arcade!.lessonId, -1, 'arcade')} style={styles.move} />
             : <BigMove testID="journey-hear" emoji="👂" label="Hear it" gestures={gesturesFor('listen')} onPress={hear} disabled={!hear} style={styles.move} />}
-          <BigMove testID="journey-jam" emoji="🎸" label="Just jam" note="no score, with the band" disabled={!v.jamLessonId}
-            onPress={v.jamLessonId ? () => open(v.jamLessonId!, -1, 'jam') : undefined} style={styles.move} />
+          {v.afterSet && v.record
+            ? <BigMove testID="journey-record" emoji="🏆" label="Beat your best" note={v.record.sub} onPress={() => open(v.record!.lessonId, -1, 'play', 'record')} style={styles.move} />
+            : <BigMove testID="journey-jam" emoji="🎸" label="Just jam" note="no score, with the band" disabled={!v.jamLessonId}
+              onPress={v.jamLessonId ? () => open(v.jamLessonId!, -1, 'jam') : undefined} style={styles.move} />}
         </View>
       </Card>
 

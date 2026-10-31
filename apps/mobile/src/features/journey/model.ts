@@ -5,7 +5,7 @@
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
 import { greeting } from '@drum-coach/core/engine/greeting';
 import { dayAdvice, soreActive } from '@drum-coach/core/engine/health';
-import { addDays, dayKey, isProven, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
+import { addDays, dayKey, isProven, recordTarget, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
 import { buildSession, checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillMap } from '@drum-coach/core/engine/skills';
@@ -92,8 +92,12 @@ export type JourneyView = {
   recap: string | null;
   /** Badges earned and not announced yet (Settings.badges keeps the announced ones). */
   newBadges: string[];
-  /** After today's set: the 2-minute challenge on the newest finished drill groove (the web's arcade move). */
+  /** Today's set is done and the trail's next lesson leads: the 2-minute challenge and Beat your best join the moves. */
+  afterSet: boolean;
+  /** The 2-minute challenge on the newest finished drill groove (the web's arcade move and tile). */
   arcade: { lessonId: string; title: string; sub: string } | null;
+  /** Beat your best: a finished lesson played longest ago with a record left to beat (opened with role=record). */
+  record: { lessonId: string; title: string; sub: string } | null;
 };
 
 export const SETUP_NUDGE = 'Two minutes to check your pads and latency makes every timing score fair.';
@@ -241,6 +245,13 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const lastPlayed = (l: Lesson) => dash.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
   const arcadeLesson = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill')
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  // Beat your best (improvising tools have no record; a streak record as long as the whole take has nothing left).
+  const lastStep = (l: Lesson) => l.steps[l.steps.length - 1];
+  const maxedOut = (l: Lesson) => { const t = recordTarget(lastStep(l), s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
+  const recordLesson = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(lastStep(l))) && !maxedOut(l))
+    .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  const recordT = recordLesson && recordTarget(lastStep(recordLesson), s.lessons[recordLesson.id]);
+  const recordGoal = recordLesson && (recordT ? `${recordT} in a row` : s.lessons[recordLesson.id]?.bestBpm ? `${s.lessons[recordLesson.id].bestBpm + 5} BPM` : 'one take');
   const coachKey = coachLessonKey(now, milestone?.level);
   const coachAsk = s.liveCoach && s.profile.onboarded && dash.totalRuns > 0 && milestone && aiLoaded && !coachOpen.length
     && studentRead(s.lessons, runs).pace !== 'flying' ? coachKey : null;
@@ -288,7 +299,9 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     weekPlanDue: played && s.liveCoach && s.profile.onboarded,
     hearingTipDue: played && s.hearingTipWeek !== wk,
     recap, newBadges,
-    arcade: afterSet && arcadeLesson ? {
+    afterSet,
+    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}` } : null,
+    arcade: arcadeLesson ? {
       lessonId: arcadeLesson.id, title: arcadeLesson.title,
       sub: `${arcadeLesson.title} · ${s.arcade?.[arcadeLesson.id] ? `beat ${s.arcade[arcadeLesson.id] + 2} clean bars` : 'how many clean bars?'}`,
     } : null,

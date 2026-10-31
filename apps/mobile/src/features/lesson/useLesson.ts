@@ -72,7 +72,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     const exists = (id: string) => !!findLesson(lessons, id);
     const next = drill ? undefined : nextItem(settings.get().session, params.item, today, exists);
     const deps: LessonDeps = {
-      setup: { lesson, role: it?.role, minutes: it?.minutes, hasNext: !!next, flow: params.mode === 'flow', arcade: params.mode === 'arcade', drill: !!drill },
+      setup: { lesson, role: it?.role ?? params.role, minutes: it?.minutes, hasNext: !!next, flow: params.mode === 'flow', arcade: params.mode === 'arcade', drill: !!drill },
       take, settings, lessons: () => lessons, lessonById: id => findLesson(lessons, id), milestones: MILESTONES, today: todayKey,
       saveRun: run => storage.runs.add(run), coach: coach.session,
       say: text => sayNow(text.replace(/[🏆✓★]/gu, '').trim()),
@@ -91,7 +91,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     };
     return new LessonController(deps);
     // one controller per lesson and item; the lesson list only fills in coach lessons
-  }, [lesson?.id, params.item, params.mode, take]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lesson?.id, params.item, params.mode, params.role, take]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!ctl || !lesson) return;

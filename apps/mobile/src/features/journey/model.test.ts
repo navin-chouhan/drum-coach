@@ -1,5 +1,5 @@
 import { CURRICULUM, LESSON_BY_ID, MILESTONES } from '@drum-coach/core/content/curriculum';
-import { startProgress, type LessonProgress } from '@drum-coach/core/engine/lesson';
+import { startProgress, toolOf, type LessonProgress } from '@drum-coach/core/engine/lesson';
 import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import { currentMilestone } from '@drum-coach/core/engine/planner';
@@ -216,7 +216,7 @@ describe('the rest of the web TodayView: week plan, ear tip, recap, badges, 2-mi
     expect(buildJourney({ settings: { ...settings, badges: v.newBadges }, lessons: CURRICULUM, runs, now: NOW }).newBadges).toEqual([]);
   });
   it('the 2-minute challenge only after the set, on a finished drill groove', () => {
-    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).arcade).toBeNull();
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).afterSet).toBe(false);
     const today = currentSession(settings, CURRICULUM, '2026-10-30');
     const doneSet = { ...settings, session: { ...today, done: today.items.map((_, i) => i) } };
     const v = buildJourney({ settings: doneSet, lessons: CURRICULUM, runs, now: NOW });
@@ -225,6 +225,10 @@ describe('the rest of the web TodayView: week plan, ear tip, recap, badges, 2-mi
       expect(v.arcade?.sub).toMatch(/ · how many clean bars\?$/);
       const best = { ...doneSet, arcade: { [v.arcade!.lessonId]: 6 } };
       expect(buildJourney({ settings: best, lessons: CURRICULUM, runs, now: NOW }).arcade?.sub).toMatch(/beat 8 clean bars$/);
+      expect(v.afterSet).toBe(true);
+      // Beat your best: a finished lesson with a record left (no improvising tools), with its goal
+      expect(v.record?.sub).toMatch(/ · (\d+ in a row|\d+ BPM|one take)$/);
+      expect(['jam', 'trade', 'free', 'copy']).not.toContain(toolOf(LESSON_BY_ID[v.record!.lessonId].steps.at(-1)!));
     }
   });
 });

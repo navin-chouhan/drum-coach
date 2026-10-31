@@ -10,15 +10,16 @@ import { markDonePatch } from '../journey/source';
  * flow / arcade: the web's Flow and 2-minute challenge tiles. */
 export type LessonMode = 'play' | 'hear' | 'jam' | 'flow' | 'arcade';
 
-export type LessonParams = { id: string; item: number; mode: LessonMode };
+/** `role=record`: Journey's "Beat your best" (the web opens LessonPlayer with role 'record' outside today's set). */
+export type LessonParams = { id: string; item: number; mode: LessonMode; role?: 'record' };
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-export function parseLessonParams(p: { id?: string | string[]; item?: string | string[]; mode?: string | string[] }): LessonParams {
+export function parseLessonParams(p: { id?: string | string[]; item?: string | string[]; mode?: string | string[]; role?: string | string[] }): LessonParams {
   const id = one(p.id) ?? '';
   const n = Number(one(p.item));
   const m = one(p.mode);
-  return { id, item: Number.isInteger(n) && n >= 0 ? n : -1, mode: m === 'hear' || m === 'jam' || m === 'flow' || m === 'arcade' ? m : 'play' };
+  return { id, item: Number.isInteger(n) && n >= 0 ? n : -1, mode: m === 'hear' || m === 'jam' || m === 'flow' || m === 'arcade' ? m : 'play', ...(one(p.role) === 'record' && { role: 'record' as const }) };
 }
 
 /** Today's set item the lesson was opened for (only when it's today's stored set and the item is this lesson). */
@@ -40,8 +41,10 @@ export function itemDonePatch(s: Settings, item: number, today: string): Partial
   return item >= 0 && s.session?.date === today ? markDonePatch(s.session, item) : {};
 }
 
-export const lessonHref = (lessonId: string, item = -1, mode: LessonMode = 'play') =>
-  `/lesson/${encodeURIComponent(lessonId)}${item >= 0 || mode !== 'play' ? `?${[item >= 0 ? `item=${item}` : '', mode !== 'play' ? `mode=${mode}` : ''].filter(Boolean).join('&')}` : ''}`;
+export const lessonHref = (lessonId: string, item = -1, mode: LessonMode = 'play', role?: 'record') => {
+  const q = [item >= 0 ? `item=${item}` : '', mode !== 'play' ? `mode=${mode}` : '', role ? `role=${role}` : ''].filter(Boolean).join('&');
+  return `/lesson/${encodeURIComponent(lessonId)}${q ? `?${q}` : ''}`;
+};
 
 /** The lessons the route can open: built-in plus the coach's (Journey's allLessons). */
 export const findLesson = (lessons: Lesson[], id: string) => lessons.find(l => l.id === id);

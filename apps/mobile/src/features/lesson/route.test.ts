@@ -12,6 +12,9 @@ describe('lesson route', () => {
     expect(parseLessonParams({ id: 'money-8ths', item: '1', mode: 'hear' })).toEqual({ id: 'money-8ths', item: 1, mode: 'hear' });
     expect(parseLessonParams({ id: ['x'], item: 'nope', mode: 'weird' })).toEqual({ id: 'x', item: -1, mode: 'play' });
     expect(parseLessonParams({ id: 'x', item: '-1' }).item).toBe(-1);
+    expect(parseLessonParams({ id: 'x', role: 'record' })).toEqual({ id: 'x', item: -1, mode: 'play', role: 'record' });
+    expect(parseLessonParams({ id: 'x', role: 'boss' }).role).toBeUndefined();
+    expect(lessonHref('doubles', -1, 'play', 'record')).toBe('/lesson/doubles?role=record');
     expect(lessonHref('money-8ths', 2)).toBe('/lesson/money-8ths?item=2');
     expect(lessonHref('a b')).toBe('/lesson/a%20b');
   });
