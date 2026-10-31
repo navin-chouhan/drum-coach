@@ -121,6 +121,18 @@ describe('your path', () => {
     expect(after[1].state).toBe('current');
     expect([progressViewOf('skills'), progressViewOf('path'), progressViewOf('month'), progressViewOf('x'), progressViewOf(undefined)]).toEqual(['skills', 'path', 'month', 'main', 'main']);
   });
+
+  it("the web's Full path actions: rebuild today's mix, goals (change), reset all lesson progress", async () => {
+    const { goalsLabel, rebuildNeedsConfirm, rebuildTodayPatch, resetAllLessonsPatch } = await import('./path');
+    expect(goalsLabel(DEFAULTS.profile)).toBe('Goals: not sure yet · 25 min/day (change)');
+    expect(goalsLabel({ ...DEFAULTS.profile, goals: ['rock', 'funk'], minutesPerDay: 30 })).toBe('Goals: rock, funk · 30 min/day (change)');
+    expect(rebuildNeedsConfirm({})).toBe(false);
+    expect(rebuildNeedsConfirm({ session: { date: '2026-10-30', items: [], done: [] } })).toBe(false);
+    expect(rebuildNeedsConfirm({ session: { date: '2026-10-30', items: [], done: [0] } })).toBe(true);
+    expect(rebuildTodayPatch()).toEqual({ session: undefined });
+    const profile = { ...DEFAULTS.profile, goals: ['jazz' as const], onboarded: true };
+    expect(resetAllLessonsPatch(profile)).toEqual({ lessons: {}, session: undefined, profile: { ...profile, onboarded: false } });
+  });
 });
 
 describe('skill map', () => {

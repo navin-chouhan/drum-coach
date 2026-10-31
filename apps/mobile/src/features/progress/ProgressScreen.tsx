@@ -141,6 +141,12 @@ export function ProgressScreen() {
               <Body size={13} weight="700" style={tabular}>{c.words}</Body>
             </View>
           ))}
+          {/* the web's "Later:" line: every trophy not shown above, and the rank trophies still locked */}
+          {[...t.closest.slice(t.earned ? 2 : 3).map(c => c.name), ...t.later].length ? (
+            <Body size={12} color={color.muted} numberOfLines={2} testID="progress-trophies-later">
+              {`Later: ${[...t.closest.slice(t.earned ? 2 : 3).map(c => c.name), ...t.later].join(' · ')}`}
+            </Body>
+          ) : null}
         </Card>
       </View>
 
