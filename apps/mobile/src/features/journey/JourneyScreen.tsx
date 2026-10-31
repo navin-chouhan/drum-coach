@@ -4,10 +4,10 @@
 // link under the path, there whether or not the first run's test was taken) and Full path. One screen, no scrolling.
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, CoachLine, Display, Label, ListRow, Panel, Ring, Screen, Stars, StatTile, Tick, TitleBar, Trail,
-  color, gesturesFor, ratio, readSettings, tabular, type, useKitMoves, writeSettings,
+  color, gesturesFor, ratio, readSettings, slopFor, tabular, type, useKitMoves, writeSettings,
 } from '../../ui';
 import { getStorage } from '../../platform/storage';
 import { isoWeek } from '@drum-coach/core/engine/progress';
@@ -181,7 +181,11 @@ function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
     <Panel tone="pop" style={styles.nextTop}>
       <Text style={styles.bigIcon} accessible={false}>{h.icon}</Text>
       <View style={styles.heroText}>
-        <Label>{h.kicker}{h.coachWrote ? ' · ✍ your coach wrote it' : ''}</Label>
+        <View style={styles.kickerRow}>
+          <Label>{h.kicker}{h.coachWrote ? ' · ✍ your coach wrote it' : ''}</Label>
+          {h.why ? <Pressable testID="journey-why" accessibilityRole="button" accessibilityLabel="Why this one?" hitSlop={slopFor(20)}
+            onPress={() => Alert.alert('Why this one?', h.why)}><Text style={styles.why}>why this one?</Text></Pressable> : null}
+        </View>
         <Display size={type.hero} style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} accessibilityRole="header">{h.title}</Display>
         <Text style={styles.step} numberOfLines={1}>{h.step} <Text style={styles.stepMeta}>· {h.meta}</Text></Text>
         <Body size={15} numberOfLines={writing ? 1 : 2} style={styles.what}>{h.what}</Body>
@@ -282,6 +286,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   noticeBtns: { flexDirection: 'row', gap: 8 },
   week: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  why: { fontSize: 13, fontWeight: '800', color: color.ink, textDecorationLine: 'underline' },
   tiles: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 8 },
   flexShrink: { flexShrink: 1, minWidth: 0 },
   b: { fontWeight: '800' },

@@ -11,6 +11,7 @@ import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekThe
 import { skillMap } from '@drum-coach/core/engine/skills';
 import { stageSong } from '@drum-coach/core/engine/stageSong';
 import type { Session, Settings } from '@drum-coach/core/input/settings';
+import { TOOL_LABEL } from '../lesson/lessonView';
 import { groovePreview, type GroovePreview } from './preview';
 
 export const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
@@ -52,6 +53,8 @@ export type HeroView = {
   what: string;
   preview: GroovePreview | null;
   coachWrote: boolean;
+  /** A coach lesson's "why this one?" (its focus). */
+  why?: string;
 };
 
 export type SetItemView = { index: number; lessonId: string; title: string; detail?: string; value: string; stars?: number; state: 'done' | 'current' | 'todo' };
@@ -240,8 +243,9 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     heroView = {
       lessonId: hero.id, item: heroItem, icon: iconOf(hero), kicker, title: `${prove ? 'Prove it: ' : ''}${hero.title.replace(/^Song: /, '')}`,
       step: hero.steps.length > 1 ? `Step ${si + 1} of ${hero.steps.length} · ${st.title}` : st.title,
-      meta: [`${minutes} min`, ...(bpm !== undefined ? [`${bpm}${target !== bpm ? ` → ${target}` : ''} BPM`] : [])].join(' · '),
+      meta: [TOOL_LABEL[toolOf(hero.steps[0])], `${minutes} min`, ...(bpm !== undefined ? [`${bpm}${target !== bpm ? ` → ${target}` : ''} BPM`] : [])].join(' · '),
       what: hero.what, preview: groovePreview(st, s.lessons[hero.id], si > 0 ? hero.steps[si - 1] : undefined), coachWrote: hero.source === 'ai',
+      ...(hero.source === 'ai' && hero.focus && { why: hero.focus }),
     };
   }
   const main: JourneyView['main'] = hero ? { label: afterSet ? 'Next lesson' : 'Start', lessonId: hero.id, item: heroItem, emoji: '▶' }

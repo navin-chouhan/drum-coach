@@ -77,7 +77,7 @@ describe('Journey three weeks in (journey.png)', () => {
   it('up next is the money beat at step 3, + snare, 70 → 90 BPM, a checkpoint', () => {
     expect(moneyIdx).toBeGreaterThan(0);
     expect(v.hero).toMatchObject({ lessonId: 'money-8ths', title: 'The money beat', step: 'Step 3 of 4 · + snare' });
-    expect(v.hero?.meta).toMatch(/^\d+ min · 70 → 100 BPM$/);
+    expect(v.hero?.meta).toMatch(/^Practice · \d+ min · 70 → 100 BPM$/); // the web's tool pill first
     expect(v.hero?.kicker).toMatch(/^Up next · \d of \d today · ★ checkpoint$/);
     expect(v.hero?.preview?.caption).toBe('One bar · you play all three');
     expect(v.hero?.preview?.newLabel).toBe('new: snare');
