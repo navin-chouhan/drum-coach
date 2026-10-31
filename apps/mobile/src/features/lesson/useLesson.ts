@@ -16,6 +16,7 @@ import { sayNow } from '../coach/voice';
 import { allLessons } from '../journey/source';
 import { LessonController, type LessonDeps } from './controller';
 import { saveCoachLesson } from './coachLesson';
+import { findStoredChart } from '../songs/findChart';
 import { drillLesson, findDrillChart } from './drill';
 import { todayKey } from './progress';
 import { findLesson, itemDonePatch, lessonHref, nextItem, setItemOf, type LessonParams } from './route';
@@ -49,7 +50,8 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
   const [ai, setAi] = useState<unknown[] | null>(null);
   useEffect(() => { let live = true; void (storage.aiLessons?.list() ?? Promise.resolve([])).then(l => { if (live) setAi(l); }, () => { if (live) setAi([]); }); return () => { live = false; }; }, [storage]);
   const lessons = useMemo(() => allLessons(ai ?? []), [ai]);
-  const drillChart = drill ? findDrillChart(drill.chartId, id => coach.charts.byId(id)) : undefined;
+  // library, imported (the charts table) or coach-written (QA m8: one lookup)
+  const drillChart = drill ? findDrillChart(drill.chartId, id => findStoredChart(id, storage)) : undefined;
   const lesson = drill ? (drillChart ? drillLesson(drillChart, drill.bpm) : undefined) : findLesson(lessons, params.id);
   const [version, bump] = useReducer((n: number) => n + 1, 0);
 

@@ -19,6 +19,16 @@ describe('take options', () => {
     const demo = takeOptions({ chart: singles, options: { ...PLAY_DEFAULTS, wait: true }, section: null, demo: true, repeats: 1 });
     expect(demo).toMatchObject({ fromBar: 1, toBar: 2, repeats: 1, wait: false, demo: true });
   });
+  it('the band under grooves and songs, but never under a chart\'s own backing audio (the web\'s go())', () => {
+    const groove = practiceCharts().find(c => c.kind === 'groove')!;
+    const req = { chart: groove, options: { ...PLAY_DEFAULTS, chartId: groove.id }, section: null };
+    expect(takeOptions(req).band).toMatchObject({ style: expect.any(String) });
+    expect(takeOptions({ ...req, band: false }).band).toBeUndefined();
+    const backing = { uri: 'file:///backing/song.m4a', syncOffsetMs: 40 };
+    expect(takeOptions({ ...req, backing })).toMatchObject({ backing });
+    expect(takeOptions({ ...req, backing }).band).toBeUndefined();
+    expect(takeOptions({ chart: singles, options: PLAY_DEFAULTS, section: null }).band).toBeUndefined(); // a rudiment
+  });
 });
 
 describe('the run a take saves', () => {

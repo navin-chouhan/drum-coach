@@ -5,7 +5,7 @@ import { practiceStart, type RunRow } from '@drum-coach/core/engine/progress';
 import { LIBRARY } from '@drum-coach/core/content/library';
 
 /** The web's StoredChart: a chart with an id and where it came from. */
-export type PracticeChart = Chart & { id: string; source?: 'builtin' | 'import' | 'ai'; hasAudio?: boolean; syncOffsetMs?: number };
+export type PracticeChart = Chart & { id: string; source?: 'builtin' | 'import' | 'ai'; hasAudio?: boolean; syncOffsetMs?: number; audioFile?: string };
 /** studentRead's answer, as far as Practice's tempos need it. */
 export type Read = { pace: string; comfortableBpm?: number };
 

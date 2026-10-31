@@ -3,7 +3,7 @@
 // plays, and your takes here. Takes run on the core take engine (engine.ts); a finished one is saved and Climb applies.
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { Finished } from '@drum-coach/core/play/take';
+import type { Finished, TakeBacking } from '@drum-coach/core/play/take';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NotationView } from '../../notation';
 import { TouchPads } from '../../play';
@@ -22,6 +22,7 @@ import { getCoach, replyFor, setCoachPlaying, thinkingAbout, useCoachSession, ty
 import { SheetPager } from '../lesson/parts';
 import { replayResults, runChart, takenChart } from '../lesson/runChart';
 import { useSheetPages } from '../lesson/sheetPages';
+import { backingFor, prepareBacking } from '../songs/backing';
 import { useKitConnected } from '../lesson/useLesson';
 import { kindIcon, startOf, type PracticeChart } from './catalog';
 import { loadPracticeCharts } from './charts';
@@ -112,7 +113,12 @@ export function PlayScreen() {
     const speed = speedFor(bpm, c.bpm);
     if (c.id !== o.chartId || speed !== o.speed) set({ chartId: c.id, speed });
     setNotice('');
-    if (!practiceEngine.start({ chart: c, options: { ...o, chartId: c.id, speed }, section: sec, hints, ...extra })) setNotice(practiceEngine.notReady);
+    const run = (backing?: TakeBacking) => {
+      if (!practiceEngine.start({ chart: c, options: { ...o, chartId: c.id, speed }, section: sec, hints, band: settings.band !== false, backing, ...extra })) setNotice(practiceEngine.notReady);
+    };
+    // An imported chart's own audio plays under the take (the web's go()): loaded first, and without it on a failure.
+    if (!backingFor(c)) { run(); return; }
+    void prepareBacking(c).then(r => { if (r.error) setNotice(r.error); run(r.backing); });
   };
   const go = (bpm = m.bpm, extra: { demo?: boolean } = {}) => start(chart, bpm, extra);
   // The warm-up: about a minute of each at its tempo today; the next starts by itself 3 s after the last one ends.

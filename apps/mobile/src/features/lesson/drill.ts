@@ -1,6 +1,7 @@
-// /lesson/chart?chartId=…&bpm=… ("Play this drill", plan items): one chart from core LIBRARY or the coach's saved
-// charts, played in the lesson player as a one-take item. It saves its run like any take but writes no lesson
-// progress (the web plays drills in its practice player, which has no ladder either).
+// /lesson/chart?chartId=…&bpm=… ("Play this drill", plan items): one chart from core LIBRARY, the imported charts or
+// the coach's saved charts (useLesson looks them up with features/songs findStoredChart), played in the lesson
+// player as a one-take item. It saves its run like any take but writes no lesson progress (the web plays drills in
+// its practice player, which has no ladder either).
 import type { Chart } from '@drum-coach/core/engine/chart';
 import type { Lesson } from '@drum-coach/core/engine/lesson';
 import { LIBRARY } from '@drum-coach/core/content/library';
