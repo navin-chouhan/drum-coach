@@ -1,5 +1,7 @@
 // The MIDI debug screen's engine, outside React (no React Native imports, so it is tested in Vitest): a hit bus on the
 // port's clock, the port linked to it, a short hit log and a snapshot for the screen and for "Copy debug info".
+// The report also carries every kit hit since Reset (`replay`, QA m9), so scripts/mobile-playtest/compare.mjs can
+// compare a fixture played over Network MIDI (M8/T4) with the web reference.
 // The screen reads snapshot() on a timer, so neither clock messages nor hits re-render it directly (B24).
 
 import { DEFAULT_NOTE_MAP, PAD_INFO, PADS, type PadId } from '@drum-coach/core/engine/kit';
@@ -45,6 +47,20 @@ export type MidiDebugSession = {
 };
 
 export const LOG_SIZE = 40;
+/** How many kit hits the report's replay keeps (the newest; the ghost-groove fixture has 136). */
+export const REPLAY_CAP = 5000;
+
+/** One hit as compare.mjs reads it: `time` is the port's host time, ms. */
+export type ReplayHit = { time: number; pad: PadId | null; note: number; velocity: number };
+
+/** The report's `replay`: the kit's hits since Reset (not the on-screen pads), oldest first, and what compare.mjs counts. */
+export type MidiReplay = {
+  timeBase: 'host';
+  hits: ReplayHit[];
+  /** Older hits dropped past REPLAY_CAP. */
+  dropped: number;
+  counters: { noteOn: number; clock: number; activeSensing: number; hits: number; filtered: number };
+};
 
 export function createMidiDebugSession(port: DrumMidiPort, opts: { listInputs?: () => MidiInputInfo[] } = {}): MidiDebugSession {
   const listInputs = opts.listInputs ?? (() => safe(() => port.listInputs(), []));
@@ -53,6 +69,8 @@ export function createMidiDebugSession(port: DrumMidiPort, opts: { listInputs?: 
   let startedAt = port.clock.now();
   let log: LoggedHit[] = [];
   let hits = 0;
+  let replay: ReplayHit[] = [];
+  let kitHits = 0;
   let lastHitTime: number | null = null;
   let emulating = false;
 
@@ -69,11 +87,24 @@ export function createMidiDebugSession(port: DrumMidiPort, opts: { listInputs?: 
     };
     lastHitTime = h.time;
     log = [entry, ...log].slice(0, LOG_SIZE);
+    if (!emulating) {
+      kitHits++;
+      replay.push({ time: h.time, pad: h.pad ?? null, note: h.note, velocity: h.velocity });
+      if (replay.length > REPLAY_CAP * 1.2) replay = replay.slice(-REPLAY_CAP); // trimmed in steps, not on every hit
+    }
   });
 
   function tapPad(pad: PadId, velocity = 100) {
     emulating = true;
     try { bus.emitPad(pad, velocity); } finally { emulating = false; }
+  }
+
+  function replayOf(): MidiReplay {
+    const kept = replay.slice(-REPLAY_CAP), c = link.counters;
+    return {
+      timeBase: 'host', hits: kept, dropped: kitHits - kept.length,
+      counters: { noteOn: c.noteOns, clock: c.clock, activeSensing: c.activeSensing, hits: kitHits, filtered: Math.max(0, c.noteOns - kitHits) },
+    };
   }
 
   function snapshot(): MidiSnapshot {
@@ -94,12 +125,14 @@ export function createMidiDebugSession(port: DrumMidiPort, opts: { listInputs?: 
     link,
     tapPad,
     snapshot,
-    report: () => ({ kind: 'drum-coach-midi-debug', pads: PADS.length, ...snapshot() }),
+    report: () => ({ kind: 'drum-coach-midi-debug', pads: PADS.length, ...snapshot(), replay: replayOf() }),
     reset() {
       link.reset();
       bus.reset();
       log = [];
       hits = 0;
+      replay = [];
+      kitHits = 0;
       lastHitTime = null;
       startedAt = port.clock.now();
     },

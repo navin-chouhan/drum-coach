@@ -133,6 +133,47 @@ describe('compare.mjs: app take results (in-app replay)', () => {
   });
 });
 
+/** The app's "Copy debug info" on /dev/midi after one pass of a fixture (apps/mobile/src/dev/midiSession.ts report). */
+function debugReport(name, { jitter = () => 0, keep = Infinity } = {}) {
+  const r = ref(name);
+  const hits = r.hits.map((h, i) => ({ time: HOST0 + h.t + jitter(i), pad: h.pad, note: h.note, velocity: h.velocity }));
+  const kept = hits.slice(-keep);
+  return {
+    kind: 'drum-coach-midi-debug', pads: 10, hits: hits.length, log: [], counters: { noteOns: r.counts.noteOn, batchReasons: {} },
+    replay: { timeBase: 'host', hits: kept, dropped: hits.length - kept.length,
+      counters: { noteOn: r.counts.noteOn, clock: r.counts.clock, activeSensing: r.counts.activeSensing, hits: r.counts.hits, filtered: r.counts.filtered } },
+  };
+}
+
+describe("compare.mjs: the app's MIDI debug report (QA m9)", () => {
+  it('reads every hit from replay on the host clock and finds the offset', () => {
+    const res = readResults(debugReport('emulated-ghost-groove', { jitter: i => (i % 5) - 2 }));
+    assert.equal(res.source, 'app MIDI debug');
+    assert.equal(res.aligned, false);
+    const c = compare(res, ref('emulated-ghost-groove'), { mode: 'tolerant' });
+    assert.equal(c.ok, true, report(c));
+    assert.deepEqual(c.hits, { reference: 136, results: 136, paired: 136, outsideLog: 0 });
+    assert.ok(Math.abs(c.offsetMs - HOST0) < 3);
+    assert.ok(!c.differences.some(d => d.type === 'count'), report(c)); // no note-off count: not compared
+  });
+
+  it('a capped replay: older hits are outside the log, not missing', () => {
+    const c = compare(readResults(debugReport('emulated-ghost-groove', { keep: 100 })), ref('emulated-ghost-groove'), { mode: 'tolerant' });
+    assert.equal(c.ok, true, report(c));
+    assert.equal(c.hits.outsideLog + c.hits.reference, 136);
+    assert.ok(c.hits.outsideLog > 0);
+  });
+
+  it('a lost stroke is a difference; a report without replay is refused', () => {
+    const d = debugReport('emulated-ghost-groove');
+    d.replay.hits.splice(40, 1);
+    const c = compare(readResults(d), ref('emulated-ghost-groove'), { mode: 'tolerant' });
+    assert.equal(c.ok, false);
+    assert.ok(c.differences.some(x => x.type === 'missing' && !x.explainedBy));
+    assert.throws(() => readResults({ kind: 'drum-coach-midi-debug', hits: 136, log: [] }), /no replay/);
+  });
+});
+
 describe('compare.mjs CLI on a synthetic results file', () => {
   const cli = fileURLToPath(new URL('../compare.mjs', import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'cmp-'));
@@ -150,6 +191,11 @@ describe('compare.mjs CLI on a synthetic results file', () => {
     assert.match(diff.stdout, /DIFF missing/);
     const json = JSON.parse(run(bad, '--json').stdout);
     assert.equal(json.ok, false);
+    const dbg = join(dir, 'debug.json');
+    writeFileSync(dbg, JSON.stringify(debugReport('emulated-ghost-groove')));
+    const viaApp = run(dbg, '--fixture', 'emulated-ghost-groove'); // MIDI debug reports default to tolerant
+    assert.equal(viaApp.status, 0, viaApp.stdout + viaApp.stderr);
+    assert.match(viaApp.stdout, /tolerant \(±5 ms\), app MIDI debug/);
     assert.equal(run(good).status, 2); // which fixture?
     assert.equal(run().status, 2);
     assert.equal(run(good, '--fixture', 'emulated-ghost-groove', '--tol-ms', '0').status, 2);

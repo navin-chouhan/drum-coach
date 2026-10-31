@@ -61,8 +61,17 @@ Sidebar → Dev row → **MIDI** (`/dev/midi`). These replace the probe's M4–M
   | 2 | | | |
   | 3 | | | |
   - [ ] The 3 averages within ± 5 ms of each other. Then **Save** the last one: the Latency row shows ____ ms for this route.
-- **M8 (optional)**, Network MIDI: use the **probe app** as in GATE0-CHECKLIST M8 (the app's debug export can't feed
-  `compare.mjs` yet: QA m9).
+- **M8 (optional)**, Network MIDI, in the app (QA m9): Dev → **MIDI**, switch **Network MIDI session** on and note its
+  name ____. On the Mac, connect to it in Audio MIDI Setup → MIDI Network Setup (as GATE0-CHECKLIST M8 steps 2–3), then
+  **Select** the session on the iPad and press **Reset counters**. On the Mac:
+  `cd scripts/mobile-playtest && npm ci && node replay-to-ipad.mjs --list`, then
+  `node replay-to-ipad.mjs --port "<the session>" --fixture emulated-ghost-groove` (one pass).
+  On the iPad: **Copy debug info**, save it as `debug.json` on the Mac, and run
+  `node compare.mjs debug.json --fixture emulated-ghost-groove` (tolerant ±5 ms by default; the report keeps every kit
+  hit since Reset, up to 5000).
+  - [ ] Counters for the pass: note-on **153**, clock **1192**, active sensing **83**; hits **136** / filtered **17**.
+        Got: note-on ____ clock ____ active sensing ____ hits ____ filtered ____
+  - [ ] `compare.mjs` prints **SAME** or **SAME within tolerance** (paste its output); median ____ max |____| ms.
 
 ## 5. Audio checks (`apps/mobile/modules/drum-audio/CHECKS.md`) — 25 min
 Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud build; still run the pure Swift tests on the Mac:
