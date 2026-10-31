@@ -47,13 +47,14 @@ Nothing was lost; the four agents of that wave were restarted.
 - Timing feel (count-in, click versus your hits) and the M5 latency branch haven't been measured on the iPad yet.
 - Native behaviour: backing at slow speeds, the keyboard module after modals, the audio route switch to the hub.
 
-## Test counts (at the time of writing)
-- Web/root: 516 tests with coverage thresholds met; typecheck clean; lint 0; build OK.
-- iPad app: 575 tests; `check:versions` OK.
+## Test counts (final, after F2)
+- Web/root: 518 tests with coverage thresholds met; typecheck clean; lint 0; build OK.
+- iPad app: 614 tests; `check:versions` OK.
 - Dependency gate: all 5 lockfiles pass.
 
-Final numbers are added when the last agents land (I3: lesson/Practice gaps; F1: minor QA fixes; F2: seamless backing
-loops).
+All agents have landed: I3 (lesson/Practice gaps), F1 (minor QA fixes: coach exercises now in the charts table, MIDI
+debug replay export) and F2 (backing tracks now loop with no gap; listen for the seam with **Loop 1 bar** on the audio
+debug screen, CHECKS.md B7). F2's Swift compiles for the first time in the next cloud iOS build.
 
 ## Where things are
 - Board, with every decision (D0–D9) and blocker: [BOARD.md](BOARD.md).
