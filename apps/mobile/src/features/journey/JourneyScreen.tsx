@@ -1,6 +1,7 @@
 // Journey, the home screen (docs/mockups/ipad/journey.html, png/journey.png): the coach's line; Up next with its
 // groove and four moves (kit gestures: hi-hat pedal × 3 or crash × 2 = Start, ride × 2 = Something else, tom 2 × 2 =
-// Hear it); You, Today's set and the stage song in one row; the stage trail. One landscape screen, no scrolling.
+// Hear it); You, Today's set and the stage song in one row; the stage trail, with "Find my level" (the web's placement
+// link under the path, there whether or not the first run's test was taken) and Full path. One screen, no scrolling.
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -63,6 +64,8 @@ export function JourneyScreen() {
             <Label>{v.trail.title}</Label>
             <Body size={13} weight="700">{v.trail.summary}</Body>
             <View style={styles.flex} />
+            <Button tone="plain" size="small" label="Find my level" testID="journey-find-level" accessibilityLabel="Find my level (a short placement test)"
+              onPress={() => router.push('/lesson/placement' as never)} />
             <Button tone="plain" size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} onPress={() => router.navigate('/progress?view=path' as never)} />
           </View>
           <Trail stops={v.trail.stops} onOpen={id => { const s = v.trail!.stops.find(x => x.id === id); if (s?.lessonId) open(s.lessonId); }} />
