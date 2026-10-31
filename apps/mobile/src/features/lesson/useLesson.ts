@@ -2,7 +2,6 @@
 // AudioPort, Storage (settings, runs, coach lessons), the coach (A7e: session, tip wording, voice), today's set and
 // interruptions (D6).
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
-import type { PadId } from '@drum-coach/core/engine/kit';
 import type { Lesson } from '@drum-coach/core/engine/lesson';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useReducer, useState } from 'react';
@@ -22,10 +21,8 @@ import { todayKey } from './progress';
 import { findLesson, itemDonePatch, lessonHref, nextItem, setItemOf, type LessonParams } from './route';
 import { createSettingsStore } from './settings';
 import { createTakePort, type CoreTakePort } from './takePort';
+import { playFlourish } from '../../play/flourish';
 
-// Celebration flourishes (src/lesson/Celebration.tsx FILL / BIG_FILL): pad, seconds after now.
-const FILL: [PadId, number][] = [['snare', 0], ['snare', 0.12], ['tom1', 0.24], ['tom2', 0.36], ['floor', 0.48], ['kick', 0.6], ['crash', 0.6]];
-const BIG_FILL: [PadId, number][] = [...FILL.slice(0, 5), ['snare', 0.6], ['snare', 0.66], ['snare', 0.72], ['snare', 0.78], ['kick', 0.9], ['crash', 0.9], ['kick', 1.2], ['crash', 1.2]];
 
 /** Whether the e-Drum is connected right now (else the touch pads show). */
 export function useKitConnected(): boolean {
@@ -76,11 +73,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
       take, settings, lessons: () => lessons, lessonById: id => findLesson(lessons, id), milestones: MILESTONES, today: todayKey,
       saveRun: run => storage.runs.add(run), coach: coach.session,
       say: text => sayNow(text.replace(/[🏆✓★]/gu, '').trim()),
-      flourish: big => {
-        if (!audio.available) return;
-        const at = audio.clock.now() + (audio.route()?.minLeadMs ?? 100) + 50;
-        audio.schedule((big ? BIG_FILL : FILL).map(([pad, dt]) => ({ kind: 'sound' as const, at: at + dt * 1000, sound: `drum.${pad}` as const, gain: 110 / 127 })));
-      },
+      flourish: big => playFlourish(audio, big), // celebration fills (src/play/flourish.ts)
       requestCoachLesson: (key, struggle) => coach.requestLesson(key, struggle),
       drillExists: id => coach.exists(id),
       openDrill: a => coach.session.runAction(a),
