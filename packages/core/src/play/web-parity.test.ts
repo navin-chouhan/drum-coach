@@ -4,7 +4,7 @@
 // relative to each take's zero) and score the same: results, stats, extras, hits, live tips.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AudioEvent } from './audioPort.ts';
-import { createFakeAudioPort, createFakeBackingPort, createFakeClock, SPEAKER, type BackingStart } from './fakeAudio.ts';
+import { createFakeAudioPort, createFakeBackingPort, createFakeClock, SPEAKER, type HeardSegment } from './fakeAudio.ts';
 import { COUNT_WORDS } from './plan.ts';
 import { createTake, type Finished, type TakeOptions, type TakeSettings } from './take.ts';
 import { DRUM_PAD, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
@@ -101,7 +101,7 @@ const sloppy = (seed: number, bias = 0, sigma = 12): NonNullable<Script['strokes
 };
 
 /** A stretch of the backing file heard: from `at` (Clock ms), file ms `offsetMs` on, at `rate`, until `until`. */
-type Segment = { at: number; offsetMs: number; rate: number; until: number };
+type Segment = HeardSegment;
 type Outcome = { zero: number; events: AudioEvent[]; finished?: Finished; endPhase: string; feedback: { lane: string; judgement: string; time: number }[]; extraBeats: number[]; cues: string[]; backing: Segment[] };
 
 const T = 5000; // both clocks start here; web and core zeros differ (150 vs 300 ms lead), so everything is compared relative to zero
@@ -158,15 +158,7 @@ async function runCore(chart: Chart, o: TakeOptions, s: Script = {}, settings = 
     h => { clock.set(Math.max(clock.t, h.time + shift)); fns.forEach(f => f({ ...h, time: h.time + shift })); }, s, settings.latencyMs, () => take.stop('user'));
   expect(take.state.backingError).toBeUndefined();
   expect(take.state.driftMs).toBe(0); // the fake song plays exactly on its line
-  return { zero, events: port.events, finished: take.state.phase === 'done' ? take.state.finished : undefined, endPhase: take.state.phase, feedback: [...take.state.feedback], extraBeats: [...take.state.extraBeats], cues, backing: segments(song.starts, song.stops) };
-}
-
-/** The core's backing starts as heard segments (a negative offset is heard after −offset / rate), each cut by the next start or a stop. */
-function segments(starts: BackingStart[], stops: number[]): Segment[] {
-  return starts.map((s, i) => {
-    const cut = Math.min(starts[i + 1]?.now ?? Infinity, ...stops.filter(t => t >= s.now));
-    return { at: s.at + Math.max(0, -s.offsetMs) / s.rate, offsetMs: Math.max(0, s.offsetMs), rate: s.rate, until: cut };
-  });
+  return { zero, events: port.events, finished: take.state.phase === 'done' ? take.state.finished : undefined, endPhase: take.state.phase, feedback: [...take.state.feedback], extraBeats: [...take.state.extraBeats], cues, backing: song.heard() };
 }
 
 const rel = (o: Outcome) => o.events.map(e => ({ ...e, at: e.at - o.zero })).sort((a, b) => Math.round(a.at * 1e4) - Math.round(b.at * 1e4) || key(a).localeCompare(key(b)));
@@ -241,18 +233,18 @@ async function expectParity(chart: Chart, o: Partial<TakeOptions>, s: Script = {
   expect(Math.abs(c.zero - w.zero)).toBeLessThan(1e-9);
   expectSameScore(w, c);
   expectSameScore(w, far);
-  expectSameBacking(w, c);
-  expectSameBacking(w, far);
+  expectSameBacking(w, c, s.stopAtMs !== undefined || !!opts.endless);
+  expectSameBacking(w, far, s.stopAtMs !== undefined || !!opts.endless);
   return { w, c };
 }
 
 /**
- * The same stretches of the file at the same heard times (to 1e-6 ms, relative to zero). The web gives each source
- * its length; the core's BackingPort has none, so a repeat is cut by the next repeat's start (called up to the
- * route's minLeadMs + 60 ms and a tick early) or by the stop at the end (up to a tick late).
+ * The same stretches of the file at the same heard times, each ending where the web's does (to 1e-6 ms, relative to
+ * zero): the core queues each repeat behind the one before it, with its length, so seams are exact. Only a stopped
+ * take may cut one up to a tick (25 ms) apart.
  */
-function expectSameBacking(w: Outcome, c: Outcome) {
-  // the web starts every repeat up front and a stop cancels those not yet heard; the core starts each when it's due
+function expectSameBacking(w: Outcome, c: Outcome, stopped: boolean) {
+  // the web starts every repeat up front and a stop cancels those not yet heard; the core queues one repeat ahead
   const heard = (o: Outcome) => o.backing.filter(b => b.until > b.at);
   const wb = heard(w), cb = heard(c);
   expect(cb.length).toBe(wb.length);
@@ -261,9 +253,7 @@ function expectSameBacking(w: Outcome, c: Outcome) {
     expect(Math.abs(b.at - c.zero - (a.at - w.zero))).toBeLessThan(1e-6);
     expect(Math.abs(b.offsetMs - a.offsetMs)).toBeLessThan(1e-6);
     expect(b.rate).toBe(a.rate);
-    const late = b.until - c.zero - (a.until - w.zero);
-    expect(late).toBeGreaterThan(-(SPEAKER.minLeadMs + 60 + 25 + 1e-6));
-    expect(late).toBeLessThanOrEqual(25 + 1e-6);
+    expect(Math.abs(b.until - c.zero - (a.until - w.zero))).toBeLessThanOrEqual(stopped ? 25 + 1e-6 : 1e-6);
   });
 }
 
@@ -400,9 +390,11 @@ describe('backing audio (the web\'s options.backing)', () => {
   });
 
   it('a section looped at 75 %: each repeat restarts the section in the file, at rate = speed', async () => {
-    const { w } = await expectParity(rock(4), { fromBar: 2, toBar: 3, repeats: 3, speed: 0.75, ...song(250) });
+    const { w, c } = await expectParity(rock(4), { fromBar: 2, toBar: 3, repeats: 3, speed: 0.75, ...song(250) });
     expect(w.backing.map(b => b.offsetMs)).toEqual([2650, 2650, 2650]); // bar 2 at 100 BPM = 2.4 s, + 250 ms
     expect(w.backing.every(b => b.rate === 0.75)).toBe(true);
+    // seamless: each repeat is heard from the instant the one before it ends (one start, then queued segments)
+    for (let i = 1; i < 3; i++) expect(c.backing[i].at).toBeCloseTo(c.backing[i - 1].until, 9);
   });
 
   it('a negative offset: the file starts after beat 0 of each repeat', async () => {
@@ -413,7 +405,8 @@ describe('backing audio (the web\'s options.backing)', () => {
   it('a demo plays it too; stopping a take stops it', async () => {
     await expectParity(rock(), { demo: true, repeats: 2, ...song(0) });
     const { c } = await expectParity(rock(), { repeats: 4, ...song(0) }, { stopAtMs: 3000 });
-    expect(c.backing).toHaveLength(2); // repeats 3 and 4 were never started
+    expect(c.backing.filter(b => b.until > b.at)).toHaveLength(2);
+    expect(c.backing).toHaveLength(3); // repeat 3 was queued and cut before it was heard; 4 was never handed over
   });
 
   it('with live tips, layered lanes and latency, it scores the same', async () => {

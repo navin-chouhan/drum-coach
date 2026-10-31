@@ -279,13 +279,16 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
 
   // ---------- backing audio (the web's options.backing): the song is the master (AUDIO-DESIGN §6) ----------
   let backingPort: BackingPort | null = null; // loaded and ready
-  let song: { port: BackingPort; next: number; base: number; offsetMs: number; stopped: boolean } | null = null;
+  /** `queued`: repeats handed over (0 … queued − 1); `lineMs`: the drift when it started (every repeat is on that line). */
+  let song: { port: BackingPort; queued: number; lineMs: number; stopped: boolean } | null = null;
   // Each repeat of the section plays the section's stretch of the file again (the web starts one source per repeat).
   // An endless take loops for the take's own length (the web's endless takes never had backing).
   const songRepeats = endless ? Math.max(1, Math.round(run.beats / secBeats)) : Math.max(1, options.repeats);
   const songSecMs = (run.beats / songRepeats) * beatMs; // heard ms per repeat
   /** Where the section starts in the file: beat b of the chart is at b × 60/bpm s + syncOffsetMs (may be < 0). */
   const songOffsetMs = ((options.fromBar - 1) * bpb * 60000) / chart.bpm + (options.backing?.syncOffsetMs ?? 0);
+  /** Repeat r's segment: heard from zero + r × section, the section's stretch of the file (as the web's source r). */
+  const songSegment = (r: number) => ({ at: state.zero + r * songSecMs + song!.lineMs, offsetMs: songOffsetMs, durationMs: songSecMs * options.speed });
 
   async function loadBacking(b: TakeBacking) {
     if (state.audioError) { state.backingError = state.audioError; return; }
@@ -299,27 +302,34 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
     }
   }
 
-  /** Repeat r: heard from zero + r × section, from the section's start in the file, at rate = speed (pitch kept). */
-  function startSong(r: number) {
-    const s = song!, base = state.zero + r * songSecMs;
-    s.next = r + 1; s.base = base;
-    s.port.start({ at: base + state.driftMs, offsetMs: s.offsetMs, rate: options.speed });
+  /** Repeat 0 starts the song at rate = speed (pitch kept); the next repeats are queued behind it, seamless. */
+  function startSong(port: BackingPort, now: number) {
+    song = { port, queued: 1, lineMs: state.driftMs, stopped: false };
+    port.start({ ...songSegment(0), rate: options.speed });
+    queueSong(now);
   }
 
-  /** From tick: read the drift, start the next repeat just before it's due, stop the song at the take's end. */
+  /** Keeps the repeat after the one heard now queued: a queued segment begins exactly where the one before ends. */
+  function queueSong(now: number) {
+    const s = song!, heard = Math.max(0, Math.floor((now - state.zero - state.driftMs) / songSecMs));
+    for (; s.queued < songRepeats && s.queued <= heard + 1; s.queued++) s.port.queue(songSegment(s.queued));
+  }
+
+  /** From tick: read the drift, queue the next repeat, stop the song at the take's end. */
   function tickSong(now: number) {
     const s = song;
     if (!s || s.stopped) return;
     const a = s.port.anchor();
     if (a) {
-      const reading = a.at - (s.base + (a.fileMs - s.offsetMs) / options.speed); // vs the repeat's line without drift
+      // vs the line of the repeat the anchor is in (the one it sits closest to), without drift
+      const line = state.zero + (a.fileMs - songOffsetMs) / options.speed;
+      const r = Math.min(s.queued - 1, Math.max(0, Math.round((a.at - line) / songSecMs)));
+      const reading = a.at - (line + r * songSecMs);
       if (Math.abs(reading) < MAX_DRIFT_READING_MS) state.driftMs += (reading - state.driftMs) * 0.1; // smoothed as on the web
     }
-    // a start replaces what's playing at once, so the next repeat starts as late as it can still be placed
-    if (s.next < songRepeats && now >= state.zero + s.next * songSecMs + state.driftMs - restartLeadMs()) startSong(s.next);
+    queueSong(now);
     if (now >= state.zero + run.beats * beatMs + state.driftMs) stopSong(); // the song ends with the section, as the web's
   }
-  const restartLeadMs = () => (audio.route()?.minLeadMs ?? 0) + 60;
 
   function stopSong() {
     if (!song || song.stopped) return;
@@ -354,10 +364,7 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
     feeder = createFeeder(audio, spec, -spec.countInBeats);
     state.feed = feeder.stats;
     feeder.topUp(now, planEnd());
-    if (backingPort) {
-      song = { port: backingPort, next: 0, base: state.zero, offsetMs: songOffsetMs, stopped: false };
-      startSong(0);
-    }
+    if (backingPort) startSong(backingPort, now);
   }
 
   /** The plan never goes past the take's end (a timed endless take: its seconds). */

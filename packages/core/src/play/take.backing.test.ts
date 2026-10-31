@@ -41,7 +41,9 @@ describe('backing: start, repeats, stop', () => {
     await take.start();
     const z = take.state.zero, beatMs = take.state.beatMs;
     expect(r.song.loads).toEqual([SONG.uri]);
-    expect(r.song.starts).toEqual([{ now: 1000, at: z, offsetMs: 200, rate: 0.8 }]);
+    expect(beatMs).toBe(625);
+    expect(r.song.starts).toEqual([{ now: 1000, at: z, offsetMs: 200, rate: 0.8, durationMs: 8 * 625 * 0.8 }]); // the section's file ms
+    expect(r.song.queues).toEqual([]); // one repeat: nothing to queue
     drive(r, take, z + 8 * beatMs - 50);
     expect(r.song.stops).toEqual([]);
     drive(r, take, z + 20_000);
@@ -52,17 +54,22 @@ describe('backing: start, repeats, stop', () => {
     expect(take.state.backingError).toBeUndefined();
   });
 
-  it('a section starts where its first bar is in the file; each repeat starts again just before it is due', async () => {
+  it('a section starts where its first bar is in the file; each repeat is queued behind the one before, seamless', async () => {
     const r = rig(), take = r.make(quarters(4), { fromBar: 3, toBar: 4, repeats: 3 });
     await take.start();
     const z = take.state.zero, sec = 8 * 500;
     drive(r, take, z + 3 * sec + 1000);
-    expect(r.song.starts.map(s => [s.at - z, s.offsetMs])).toEqual([[0, 4200], [sec, 4200], [2 * sec, 4200]]); // bar 3 = 4 s, + 200
-    const lead = SPEAKER.minLeadMs + 60;
-    for (const s of r.song.starts.slice(1)) {
-      expect(s.at - s.now).toBeLessThanOrEqual(lead);
-      expect(s.at - s.now).toBeGreaterThan(lead - 100); // within a tick of the latest it can be placed
-    }
+    expect(r.song.starts.map(s => [s.at - z, s.offsetMs, s.durationMs])).toEqual([[0, 4200, sec]]); // bar 3 = 4 s, + 200
+    expect(r.song.queues.map(q => [q.at - z, q.offsetMs, q.durationMs])).toEqual([[sec, 4200, sec], [2 * sec, 4200, sec]]);
+    // one repeat ahead: repeat 1 with the start, repeat 2 once repeat 1 is heard (within a tick)
+    expect(r.song.queues[0].now).toBe(1000);
+    expect(r.song.queues[1].now - (z + sec)).toBeGreaterThanOrEqual(0);
+    expect(r.song.queues[1].now - (z + sec)).toBeLessThanOrEqual(100);
+    // heard back to back: no gap, no overlap at the seams, and the last one ends with the section
+    const heard = r.song.heard();
+    expect(heard.map(h => [h.at - z, h.offsetMs, h.until - z])).toEqual([[0, 4200, sec], [sec, 4200, 2 * sec], [2 * sec, 4200, 3 * sec]]);
+    expect(r.song.heardAt(z + sec - 1)).toBeCloseTo(4200 + sec - 1, 9);
+    expect(r.song.heardAt(z + sec)).toBeCloseTo(4200, 9);
     expect(r.song.stops).toHaveLength(1);
   });
 
@@ -71,11 +78,13 @@ describe('backing: start, repeats, stop', () => {
     await take.start();
     const z = take.state.zero;
     drive(r, take, z + 5 * 2000 + 700);
-    expect(r.song.starts).toHaveLength(6);
+    expect(r.song.starts).toHaveLength(1);
+    expect(r.song.queues.map(q => q.at - z)).toEqual([1, 2, 3, 4, 5, 6].map(k => k * 2000)); // repeat 5 heard, 6 queued
     take.stop('user');
     expect(take.state.phase).toBe('done');
     expect(take.state.finished!.run.beats).toBe(20);
     expect(r.song.stops).toEqual([r.clock.now()]);
+    expect(r.song.heardAt(r.clock.now() + 500)).toBeNull(); // the queued repeat went with the stop
   });
 
   it('an interruption and a dropped take stop it too', async () => {
@@ -184,6 +193,24 @@ describe('backing drift (T6-3): the song is the master', () => {
       expect(Math.abs(take.position(at) - bars * 4)).toBeLessThan(0.002);
     });
   }
+
+  it('+300 ppm across 60 seamless repeats: the drift is read against the repeat the anchor is in', async () => {
+    const r = rig({ t0: 1e9, ppm: 300 }), take = r.make(quarters(), { repeats: 60 });
+    await take.start();
+    const z = take.state.zero, s = r.song.starts[0], k = s.rate * (1 + 300e-6);
+    // the player timeline is continuous across seams: beat b (of the whole take) is heard after b × 500 ms of file
+    const heardBeat = (b: number) => s.at + (b * 500) / k;
+    const strokes = Array.from({ length: 240 }, (_, b) => heardBeat(b));
+    drive(r, take, z + 60 * 2000 + 2000, strokes);
+    expect(take.state.phase).toBe('done');
+    const f = take.state.finished!;
+    expect(f.stats.miss).toBe(0);
+    expect(Math.max(...f.results.map(x => Math.abs(x.offset!)))).toBeLessThan(1);
+    const slipped = heardBeat(240) - (z + 240 * 500); // about −36 ms after 2 minutes
+    expect(slipped).toBeLessThan(-30);
+    expect(Math.abs(take.state.driftMs - slipped)).toBeLessThan(1);
+    expect(r.song.queues).toHaveLength(59);
+  });
 
   it(`a reading of ${MAX_DRIFT_READING_MS} ms or more is a stale anchor, not drift`, async () => {
     const r = rig(), take = r.make(quarters(4), { toBar: 4 });
