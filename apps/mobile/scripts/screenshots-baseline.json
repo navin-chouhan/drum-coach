@@ -68,6 +68,7 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "songs": {
@@ -192,6 +193,11 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [
+      "text \"A small gap between the palm and the stick: the ba\"",
+      "text \"From above: back of the hand up, thumbs along the \"",
+      "text \"✗ Wrong:\""
+    ],
     "errors": 0
   },
   "technique-kick": {
@@ -373,6 +379,20 @@
     "errors": 0
   },
   "journey-more": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "lesson-take": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "placement-take": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],

@@ -66,19 +66,20 @@ tags:
     timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: lesson-countin
+      id: lesson-countin-number # the shared player's count-in number (D10)
     timeout: 5000
     optional: true
-# the count-in is one bar (4 s at 60 BPM); then tap the snare (≈65%,90%) and the kick (≈71%,92%) a few times
+# the count-in is one bar (4 s at 60 BPM); then tap the snare (≈42%,89%) and the kick (≈52%,93%) a few times
+# (the shared player: the touch pads take the bottom of the take screen)
 - repeat:
     times: 6
     commands:
       - tapOn:
-          point: "65%,90%"
+          point: "42%,89%"
           optional: true
           retryTapIfNoChange: false
       - tapOn:
-          point: "71%,92%"
+          point: "52%,93%"
           optional: true
           retryTapIfNoChange: false
 - takeScreenshot: lesson-take

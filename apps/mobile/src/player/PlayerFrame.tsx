@@ -106,9 +106,11 @@ export function PlayerFrame(p: PlayerFrameProps) {
       {playing ? (
         <View style={[styles.takeTop, side, { paddingTop: Math.max(insets.top, 20) + 8 }]} testID={`${p.testID}-take-top`}>
           <View style={styles.barBadge}><Display size={26} numberOfLines={1}>{p.take?.bar ?? ''}</Display></View>
-          <View style={styles.tip} accessibilityLiveRegion="polite" testID={`${p.testID}-tip`}>
-            {p.take?.tip ? <Display size={24} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{p.take.tip}</Display> : null}
-          </View>
+          {p.take?.tip ? (
+            <View style={styles.tip} accessibilityLiveRegion="polite" testID={`${p.testID}-tip`}>
+              <Display size={24} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{p.take.tip}</Display>
+            </View>
+          ) : <View style={styles.flex} />}
           {p.bpm !== undefined ? <View style={styles.bpmBadge}><Display size={26}>{p.bpm}</Display></View> : null}
         </View>
       ) : (

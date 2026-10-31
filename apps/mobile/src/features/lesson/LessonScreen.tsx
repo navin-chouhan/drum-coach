@@ -34,6 +34,7 @@ import { shareTake } from './shareTake';
 import type { CoreTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
 
+const RESULTS_SCALE = 1.1;
 const GESTURE: Record<MoveView['gesture'], 'yes' | 'listen' | 'slower' | 'next'> = { yes: 'yes', tom2: 'listen', floor: 'slower', ride: 'next' };
 const laneDrum = (d: string): DrumId => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
 const splitEmoji = (label: string) => { const m = label.match(/^(\p{Extended_Pictographic}️?|[▶⏭⏱✓←])\s*/u); return m ? { emoji: m[1], text: label.slice(m[0].length) } : { emoji: undefined, text: label }; };
@@ -84,8 +85,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const pager = useSheetPages(f); // a long take's results sheet: every page, one at a time
   const activeDrums = useMemo(() => [...new Set(v.myPads.map(laneDrum))], [v.myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The sheet's zoom fits the paper's height (player/sheetFit.ts). The results sheet picks its own (it steps down until
-  // two bars sit side by side), so a take shows up to 4 bars without paging when they fit (D10).
+  // The sheet's zoom fits the paper's height (player/sheetFit.ts). The results sheet uses the narrow zoom: two bars a
+  // row and two rows, so a 4-bar take shows without paging (D10; with hints the auto zoom kept one bar a row).
   const [paperH, setPaperH] = useState(0);
   const scale = sheetScaleFor(paperH);
   const music = (() => {
@@ -101,7 +102,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
       const bpm = f.chart.bpm * f.options.speed, frozen = () => f.zero;
       return highway
         ? <NoteHighway now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} testID="lesson-highway" />
-        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded}
+        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded} scale={RESULTS_SCALE}
           page={pager.page} onPages={pager.setPages} testID="lesson-sheet" />;
     }
     const bpm = v.frame.bpm;
@@ -121,6 +122,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
 
   const upNext = v.outcome?.event === 'up' ? v.frame.bpm : undefined;
   const card = v.results?.card;
+
+  // Voice (D10): R6 says the step intro (useLesson.ts) and every take's score (controller.ts speakTake); the frame only shows.
 
   // One row of moves: a rest, look or listen step has one ("done"); a quiz or transcription has its own; a break, one.
   const moves: PlayerMove[] = v.onBreak

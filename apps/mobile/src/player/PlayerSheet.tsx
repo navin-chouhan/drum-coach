@@ -1,26 +1,15 @@
 // The player's ⋯ sheet (D10: "the rest behind ⋯"): Sheet / Highway, Hints, Band, How it moves, the lesson's why,
-// Share take, Reset, the keys and gestures. The screen fills it; the sheet is a panel on the right that Esc or a tap
-// outside closes. (R1's shared ⋯ sheet in src/ui replaces the panel itself once merged; this API stays.)
+// Share take, Reset, the keys and gestures. The screen fills it; the panel is the app's ⋯ sheet (R1's MoreSheet in
+// src/ui: Esc, ✕ or a tap outside close it).
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { refocusKeyboard } from '../platform/keyboard';
-import { Body, Button, Card, Label, Segmented, Toggle, color, useAppKey } from '../ui';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Body, GestureChip, Label, MoreSheet, Segmented, Toggle, color, gesturesFor } from '../ui';
 
-export function PlayerSheet({ open, onClose, testID = 'player-more', children }: { open: boolean; onClose: () => void; testID?: string; children: ReactNode }) {
-  useAppKey('escape', () => { onClose(); }, { enabled: open });
+export function PlayerSheet({ open, onClose, title = 'More', testID = 'player-more', children }: { open: boolean; onClose: () => void; title?: string; testID?: string; children: ReactNode }) {
   return (
-    <Modal visible={open} transparent animationType="fade" supportedOrientations={['landscape']} onRequestClose={onClose} onShow={refocusKeyboard} onDismiss={refocusKeyboard}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
-        <Pressable onPress={() => {}} style={styles.panelWrap}>
-          <Card style={styles.panel} testID={testID}>
-            <ScrollView contentContainerStyle={styles.content}>
-              {children}
-              <Button label="Close" onPress={onClose} testID={`${testID}-close`} />
-            </ScrollView>
-          </Card>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <MoreSheet open={open} onClose={onClose} title={title} width={470} testID={testID}>
+      <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+    </MoreSheet>
   );
 }
 
@@ -56,21 +45,25 @@ function Row({ label, on, onChange, testID }: { label: string; on: boolean; onCh
   );
 }
 
-/** The keys and kit gestures, at the bottom of every player's sheet. */
+/** The keys and kit gestures, at the bottom of every player's sheet; say it again (R6) has its own chip. */
 export function KeysLine({ extra }: { extra?: string }) {
   return (
-    <Body size={13} color={color.muted}>
-      {`Keys: H hints · B band · Esc stops a take or leaves${extra ? ` · ${extra}` : ''}. Kit: hi-hat pedal × 3 or crash × 2 = yes, tom 2 × 2 = hear, floor × 2 = slower, tom 1 × 2 = faster, ride × 2 = next, crash × 4 = stop.`}
-    </Body>
+    <View style={styles.keys}>
+      <View style={styles.row}>
+        <GestureChip gesture={gesturesFor('again')[0]} />
+        <Body size={14} weight="700">or G: the coach says it again</Body>
+      </View>
+      <Body size={13} color={color.muted}>
+        {`Keys: H hints · B band · Esc stops a take or leaves${extra ? ` · ${extra}` : ''}. Kit: hi-hat pedal × 3 or crash × 2 = yes, tom 2 × 2 = hear, floor × 2 = slower, tom 1 × 2 = faster, ride × 2 = next, crash × 4 = stop.`}
+      </Body>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scrim: { flex: 1, backgroundColor: 'rgba(20,20,20,0.45)', alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 70, paddingRight: 20 },
-  panelWrap: { width: 470, maxHeight: '88%' },
-  panel: { maxHeight: '100%' },
-  content: { gap: 14 },
+  content: { gap: 14, paddingBottom: 6 },
+  keys: { gap: 6 },
   section: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
 });
