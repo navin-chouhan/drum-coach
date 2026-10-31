@@ -6,10 +6,10 @@ first run on the Mac. Every flow starts from a clean install, so each one goes t
 
 | Flow | Checks | Build |
 |---|---|---|
-| `launch.yaml` | the app launches, the first run finishes (kit steps skipped), Journey shows with all six sidebar tabs | any |
+| `launch.yaml` | the app launches, the first run finishes (kit steps skipped), Journey shows with the four sections (D10), the sidebar folds to its rail and back, the coach bubble opens the chat sheet | any |
 | `lesson-to-progress.yaml` | Journey's big move opens the full-screen player; Full path → "Sit, hold, strike" → Play with the touch pads → results → the lesson shows on Progress | any |
 | `setup.yaml` | Setup's groups; note map, kit test, latency and MIDI input open full screen and close; the server test explains a bad URL | any |
-| `songs-offline.yaml` | with no home server: Songs search says it needs the server, file import is there, the coach tab opens | any |
+| `songs-offline.yaml` | with no home server: Songs search says it needs the server, file import is there, /coach opens (deep link) | any |
 | `intro-slides.yaml` | "The money beat" by deep link: Play → the 4 intro slides (Next / Back, page numbers, the How it moves demo) → Ready starts the take; the next take has no slides | any |
 | `lesson-steps.yaml` | by deep link: the ear quiz (4 rounds by touch, summary, Done → the playable step), transcription (tap, Check ×2, Show me, Done → step 2), a look step (the demo, Done) | any |
 | `technique-flow.yaml` | `/technique` (movements, tempo, the demo, ← Journey) and `/flow` (opens the player in flow mode, Flow ▶ plays, Stop) | any |
