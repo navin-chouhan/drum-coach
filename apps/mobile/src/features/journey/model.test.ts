@@ -5,7 +5,9 @@ import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import { currentMilestone } from '@drum-coach/core/engine/planner';
 import { describe, expect, it } from 'vitest';
 import { flowTile } from '../flow/flow';
-import { badgeNames, buildJourney, challengeKey, currentSession, HEARING_TIP, sorePatch } from './model';
+import { badgeNames, buildJourney, challengeKey, currentSession, HEARING_TIP, journeyNotice, NEW_STAGES, NOTICE_MAX, sorePatch } from './model';
+import { BADGES, weekRecap } from '@drum-coach/core/engine/progress';
+import { dayAdvice } from '@drum-coach/core/engine/health';
 import { countWords, groovePreview, slotsPerBeat } from './preview';
 
 const NOW = new Date(2026, 9, 30, 19, 42); // Fri 30 Oct, evening
@@ -309,5 +311,30 @@ describe('new stages open (web R3)', () => {
     const later = CURRICULUM.find(l => l.level >= 7)!;
     expect(buildJourney({ settings: { ...base, lessons: { ...base.lessons, [later.id]: finished(later.id) } }, lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
     expect(buildJourney({ settings: fresh(), lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
+  });
+});
+
+describe('the title bar notice (QA3 M1: one at a time, whole)', () => {
+  const coachLine = 'Good evening. Four days in a row: keep it going.';
+  it('picks the recap, then the setup nudge, the wrists check-in, then a note; the greeting only without one', () => {
+    expect(journeyNotice({ coachLine, recap: 'Last week…', setupNudge: true, askSore: true })).toEqual({ kind: 'recap', text: 'Last week…' });
+    expect(journeyNotice({ coachLine, setupNudge: true, askSore: true }).kind).toBe('setup');
+    expect(journeyNotice({ coachLine, askSore: true, healthLine: HEARING_TIP }).kind).toBe('sore');
+    expect(journeyNotice({ coachLine, badges: ['first-take'], newStages: true, healthLine: HEARING_TIP })).toEqual({ kind: 'note', text: `🏅 New badge: ${badgeNames(['first-take'])}!` });
+    expect(journeyNotice({ coachLine, newStages: true, healthLine: HEARING_TIP }).text).toBe(NEW_STAGES);
+    expect(journeyNotice({ coachLine, healthLine: HEARING_TIP })).toEqual({ kind: 'note', text: HEARING_TIP }); // said alone, not after the greeting
+    expect(journeyNotice({ coachLine })).toEqual({ text: coachLine });
+  });
+  it('every notice fits the three fitted lines: the longest recap, health line, ear tip and badge line', () => {
+    const longestBadge = [...BADGES].sort((a, b) => b.name.length - a.name.length)[0].id;
+    const notes = [
+      weekRecap({ minutesWeek: 1234, landedWeek: 100, landedLastWeek: 99 }, [...BADGES].sort((a, b) => b.name.length - a.name.length)[0].name),
+      weekRecap({ minutesWeek: 0, landedWeek: null, landedLastWeek: null }),
+      'Easy days until 2026-12-31: shorter sets, lighter playing. If something hurts, stop; if it lasts, see a doctor.',
+      dayAdvice(45, 3)!, dayAdvice(90, 30)!, HEARING_TIP, NEW_STAGES,
+      journeyNotice({ coachLine, badges: [longestBadge] }).text,
+      journeyNotice({ coachLine, setupNudge: true }).text, journeyNotice({ coachLine, askSore: true }).text,
+    ];
+    for (const n of notes) expect(n.length, n).toBeLessThanOrEqual(NOTICE_MAX);
   });
 });
