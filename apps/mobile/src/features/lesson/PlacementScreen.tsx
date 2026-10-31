@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
-import { useAudioEngine } from '../../platform/useAudio';
+import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { NotationView } from '../../notation';
@@ -22,6 +22,9 @@ import { idleChart, runChart } from './runChart';
 import { createSettingsStore } from './settings';
 import { createTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
+
+/** An interruption ended the rung's take: it isn't judged (D6), so the same rung is played again. */
+export const INTERRUPTED_NOTE = 'The take was interrupted, so it doesn’t count: play this one again when you’re ready.';
 
 const laneDrum = (d: string): DrumId => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
 
@@ -70,6 +73,8 @@ export function PlacementScreen() {
   useEffect(() => {
     if (take.state.phase !== 'done' || !f || judged.current.has(f) || !lesson || !rung || f.chart.title !== rung.step.chart.title) return;
     judged.current.add(f);
+    // D6: an interrupted take never moves the ladder (placement saves no runs): this rung is played again.
+    if (f.interrupted) { setNotice(INTERRUPTED_NOTE); return; }
     const j = judgePlacement(f.stats, lesson);
     setLast(j.line);
     if (!j.ok) finish(item.level); else if (i + 1 >= ladder.length) finish(Infinity); else setI(i + 1);
@@ -82,6 +87,11 @@ export function PlacementScreen() {
     take.start(rung.step.chart, rung.options);
   };
   useKitMoves({ yes: () => (result ? leave() : play()), stop: () => take.stop() }, { playing });
+  // D6, as the lesson player: a call, Siri, the app leaving or a new audio output ends the take where it began.
+  useAudioInterruptions(playing, at => {
+    take.stop('interrupted', at);
+    if (take.state.phase !== 'done') setNotice(INTERRUPTED_NOTE);
+  });
   // A hardware keyboard: Enter plays (or starts there), Esc stops the take.
   useAppKey('enter', () => { if (playing) return false; if (result) leave(); else play(); return true; });
   useAppKey('escape', () => { if (!playing) return false; take.stop(); return true; });
