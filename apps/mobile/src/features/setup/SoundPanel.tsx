@@ -5,8 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
 import { getStorage } from '../../platform/storage';
-import { BigMove, Body, Button, Card, Display, Toggle, color, getAppHitBus, readSettings, useAppSettings, writeSettings } from '../../ui';
-import { Group, GroupRow, Stepper } from './parts';
+import { BigMove, Body, Button, Card, Display, Group, GroupRow, Stepper, Toggle, color, getAppHitBus, readSettings, useAppSettings, writeSettings } from '../../ui';
 import {
   LEVEL_LABEL, LEVEL_STEP, SOUND_INTRO, THRONE_ANSWERS, THRONE_STEPS, THRONE_VOICE_LINE, VOICE_TEST, answerForPad, busLevels, clampLevel, levelOf,
   loopEvents, throneAnswer, throneAsk, throneTitle, type LevelKey,
@@ -52,7 +51,7 @@ export function SoundPanel() {
   };
   const level = (key: LevelKey) => (
     <GroupRow key={key} first={key === 'clickVolume'} title={LEVEL_LABEL[key]}
-      right={<Stepper label={LEVEL_LABEL[key]} value={`${Math.round(levelOf(s, key) * 100)}%`} onStep={d => setLevels({ [key]: clampLevel(key, levelOf(s, key) + d * LEVEL_STEP) })} testID={`sound-${key}`} />} />
+      right={<Stepper label={LEVEL_LABEL[key]} value={Math.round(levelOf(s, key) * 100)} step={Math.round(LEVEL_STEP * 100)} format={v => `${v}%`} onChange={v => setLevels({ [key]: clampLevel(key, v / 100) })} testID={`sound-${key}`} />} />
   );
 
   if (throne) return <ThroneCheck onDone={() => setThrone(false)} />;

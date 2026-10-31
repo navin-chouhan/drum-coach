@@ -136,11 +136,11 @@ const COMPARED = ['', 'quarters', '8ths', '', '16ths'];
 export const jamSummary = (s: YtSong, g: BeatGrid, rate: number, steps: number, stats: JamStats) =>
   ({ mode: 'jam', song: s.title, bpm: Math.round(g.bpm * rate), speedPct: Math.round(rate * 100), comparedWith: COMPARED[steps], ...stats });
 /** The run a jam saves (the web's POST /api/runs body). */
-export function jamRun(s: YtSong, g: BeatGrid, rate: number, stats: JamStats, startedAt: string, durationS: number): RunInput {
+export function jamRun(s: YtSong, g: BeatGrid, rate: number, stats: JamStats, startedAt: string, durationS: number, interrupted = false): RunInput {
   return {
     chartId: `jam-${s.id}`.slice(0, 80), chartTitle: `Jam · ${s.title}`.slice(0, 120), startedAt, durationS,
     bpm: g.bpm * rate, speed: rate, accuracy: stats.onGridPct, meanOffset: stats.meanOffset, spread: stats.spread,
-    summary: { mode: 'jam', song: s.title, ...stats },
+    summary: { mode: 'jam', song: s.title, ...stats, ...(interrupted && { interrupted: true }) },
   };
 }
 

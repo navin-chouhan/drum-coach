@@ -18,14 +18,18 @@ export type FeedStats = { chunks: number; events: number; accepted: number; late
 
 export function createFeeder(audio: Pick<AudioPort, 'schedule' | 'route'>, spec: PlanSpec, fromBeat: number) {
   const stats: FeedStats = { chunks: 0, events: 0, accepted: 0, late: 0, plannedTo: fromBeat };
-  /** Plans up to CHUNK_MS ahead when less than AHEAD_MS is handed over; never past `endBeat`. */
-  function topUp(now: number, endBeat = spec.endBeat) {
-    const from = stats.plannedTo;
-    if (from >= endBeat || spec.zero + from * spec.beatMs >= now + AHEAD_MS) return;
-    const to = Math.min(endBeat, (now + CHUNK_MS - spec.zero) / spec.beatMs); // > from: from is heard before now + AHEAD_MS
+  /**
+   * Plans up to CHUNK_MS ahead when less than AHEAD_MS is handed over; never past `endBeat`. `shiftMs` moves what is
+   * planned now (the backing's drift, AUDIO-DESIGN §6: newly planned clicks follow the song); already handed over
+   * events keep their times.
+   */
+  function topUp(now: number, endBeat = spec.endBeat, shiftMs = 0) {
+    const from = stats.plannedTo, zero = spec.zero + shiftMs;
+    if (from >= endBeat || zero + from * spec.beatMs >= now + AHEAD_MS) return;
+    const to = Math.min(endBeat, (now + CHUNK_MS - zero) / spec.beatMs); // > from: from is heard before now + AHEAD_MS
     stats.plannedTo = to;
     const minAt = now + (audio.route()?.minLeadMs ?? 0);
-    const all = planEvents(spec, from, to), events = all.filter(e => e.at >= minAt); // after a long stall: drop, never play late
+    const all = planEvents(shiftMs ? { ...spec, zero } : spec, from, to), events = all.filter(e => e.at >= minAt); // after a long stall: drop, never play late
     stats.chunks++;
     stats.events += all.length;
     stats.late += all.length - events.length;

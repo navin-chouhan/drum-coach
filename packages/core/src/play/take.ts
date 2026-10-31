@@ -8,7 +8,7 @@
 //   AudioPort, runs the live tips once per bar and ends the take.
 // - Matching and scoring are the core's (engine/scoring.ts), called exactly as player.ts calls them.
 import type { Clock } from '../platform.ts';
-import type { AudioPort, AudioRoute } from './audioPort.ts';
+import type { AudioPort, AudioRoute, BackingPort } from './audioPort.ts';
 import { createFeeder, leadMs, type FeedStats } from './feeder.ts';
 import { planSpecFor, planWords, type PlanOptions } from './plan.ts';
 import type { BandSpec } from '../engine/band.ts';
@@ -39,7 +39,16 @@ export type TakeDeps = {
 /** A song clock someone else owns (a YouTube video): run beats at a Clock time. Scoring then uses beats × beatMs. */
 export type ExternalClock = { position: (now: number) => number; begin: () => void; end: () => void };
 
-/** One take: src/play/player.ts PlayOptions without the web-only parts (AudioBuffer backing). Extra fields ride along. */
+/**
+ * A song's own audio under the take (the web's PlayOptions.backing, `loadBacking` in src/content/charts.ts): a local
+ * file the student imported (never YouTube), and where the chart's beat 0 is in it (`syncOffsetMs`, the chart's own).
+ */
+export type TakeBacking = { uri: string; syncOffsetMs: number };
+
+/** Drift readings this far off or more are a stale anchor, not drift (the web's player.ts rule). */
+export const MAX_DRIFT_READING_MS = 50;
+
+/** One take: src/play/player.ts PlayOptions, with the backing as a file for audio.backing. Extra fields ride along. */
 export type TakeOptions = RunOptions & PlanOptions & {
   speed: number;            // 0.5–1
   wait: boolean;            // wait mode: the run advances to each group of notes and waits there until it's played
@@ -52,6 +61,8 @@ export type TakeOptions = RunOptions & PlanOptions & {
   band?: BandSpec;
   feelTarget?: { ms: number; tol: number };
   swingWant?: [number, number];
+  /** Plays through audio.backing from the take's zero, at rate = speed, once per repeat; not in wait mode or on an external clock (as the web). */
+  backing?: TakeBacking;
 };
 
 export type Feedback = { lane: string; judgement: Judgement | 'extra'; time: number };
@@ -79,6 +90,14 @@ export type TakeState<O extends TakeOptions = TakeOptions> = {
   finished?: Finished<O>;
   /** The route the take started on (null: no audio), words the port couldn't prepare, what was handed over. */
   route: AudioRoute | null; missingWords: string[]; audioError?: string; feed: FeedStats | null;
+  /** Why the backing doesn't play (no backing player, the file didn't load): the take goes on without it. */
+  backingError?: string;
+  /**
+   * How far the backing has slipped against the Clock (ms, smoothed; + = the song is late). The song is the master:
+   * hits are matched at `time − latency − driftMs`, newly planned sounds move by it, and `position` follows it. 0
+   * without backing.
+   */
+  driftMs: number;
 };
 
 export interface Take<O extends TakeOptions = TakeOptions> {
@@ -134,7 +153,7 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
   const state: TakeState<O> = {
     phase: 'idle', chart, run, options, zero: 0, beatMs,
     results: run.notes.map(() => ({ judgement: 'miss' })), feedback: [], auto: isAuto, extraBeats: [],
-    waitPos: -0.5, waitGroup: 0, waitLast: 0, route: null, missingWords: [], feed: null,
+    waitPos: -0.5, waitGroup: 0, waitLast: 0, route: null, missingWords: [], feed: null, driftMs: 0,
   };
   const finishFns = new Set<(f: Finished<O>) => void>(), endFns = new Set<(e: TakeEnd<O>) => void>();
   const cueFns = new Set<(c: Cue) => void>(), changeFns = new Set<() => void>();
@@ -163,7 +182,7 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
       state.waitLast = now;
       return state.waitPos;
     }
-    return (now - state.zero) / beatMs;
+    return (now - state.zero - state.driftMs) / beatMs;
   }
 
   // ---------- live tips (engine/liveCoach.ts): once per bar, look at the last two bars and maybe give one tip ----------
@@ -217,7 +236,7 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
     const match = createMatcher(noteWindows(scored.notes.map(n => ({ time: zero + n.t * beatMs, drum: n.drum, grace: n.grace, buzz: n.buzz })), options.goodMs), windowsFor(beatMs, Infinity, options.goodMs));
     const free = options.freeBars;
     return (h: Hit) => {
-      const hit = { time: ext ? ext.position(h.time - latency) * beatMs : h.time - latency, pad: h.pad, velocity: h.velocity };
+      const hit = { time: ext ? ext.position(h.time - latency) * beatMs : h.time - latency - state.driftMs, pad: h.pad, velocity: h.velocity };
       const m = match(hit);
       if (!m && hit.time < zero) return; // count-in noodling isn't scored (an early first note still matches)
       hits.push(hit);
@@ -248,12 +267,64 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
       state.audioError = e instanceof Error ? e.message : String(e);
     }
     const words = planWords({ timeSignature: chart.timeSignature, countInBeats: options.countInBars * bpb, countVoice, countAloud: options.countAloud });
-    if (!words.length) return;
-    try {
-      state.missingWords = (await audio.prepareWords(words)).missing;
-    } catch {
-      state.missingWords = words;
+    if (words.length) {
+      try {
+        state.missingWords = (await audio.prepareWords(words)).missing;
+      } catch {
+        state.missingWords = words;
+      }
     }
+    if (options.backing) await loadBacking(options.backing);
+  }
+
+  // ---------- backing audio (the web's options.backing): the song is the master (AUDIO-DESIGN §6) ----------
+  let backingPort: BackingPort | null = null; // loaded and ready
+  let song: { port: BackingPort; next: number; base: number; offsetMs: number; stopped: boolean } | null = null;
+  // Each repeat of the section plays the section's stretch of the file again (the web starts one source per repeat).
+  // An endless take loops for the take's own length (the web's endless takes never had backing).
+  const songRepeats = endless ? Math.max(1, Math.round(run.beats / secBeats)) : Math.max(1, options.repeats);
+  const songSecMs = (run.beats / songRepeats) * beatMs; // heard ms per repeat
+  /** Where the section starts in the file: beat b of the chart is at b × 60/bpm s + syncOffsetMs (may be < 0). */
+  const songOffsetMs = ((options.fromBar - 1) * bpb * 60000) / chart.bpm + (options.backing?.syncOffsetMs ?? 0);
+
+  async function loadBacking(b: TakeBacking) {
+    if (state.audioError) { state.backingError = state.audioError; return; }
+    const port = audio.backing;
+    if (!port) { state.backingError = 'This build has no backing player.'; return; }
+    try {
+      await port.load(b.uri);
+      backingPort = port;
+    } catch (e) {
+      state.backingError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  /** Repeat r: heard from zero + r × section, from the section's start in the file, at rate = speed (pitch kept). */
+  function startSong(r: number) {
+    const s = song!, base = state.zero + r * songSecMs;
+    s.next = r + 1; s.base = base;
+    s.port.start({ at: base + state.driftMs, offsetMs: s.offsetMs, rate: options.speed });
+  }
+
+  /** From tick: read the drift, start the next repeat just before it's due, stop the song at the take's end. */
+  function tickSong(now: number) {
+    const s = song;
+    if (!s || s.stopped) return;
+    const a = s.port.anchor();
+    if (a) {
+      const reading = a.at - (s.base + (a.fileMs - s.offsetMs) / options.speed); // vs the repeat's line without drift
+      if (Math.abs(reading) < MAX_DRIFT_READING_MS) state.driftMs += (reading - state.driftMs) * 0.1; // smoothed as on the web
+    }
+    // a start replaces what's playing at once, so the next repeat starts as late as it can still be placed
+    if (s.next < songRepeats && now >= state.zero + s.next * songSecMs + state.driftMs - restartLeadMs()) startSong(s.next);
+    if (now >= state.zero + run.beats * beatMs + state.driftMs) stopSong(); // the song ends with the section, as the web's
+  }
+  const restartLeadMs = () => (audio.route()?.minLeadMs ?? 0) + 60;
+
+  function stopSong() {
+    if (!song || song.stopped) return;
+    song.stopped = true;
+    song.port.stop();
   }
 
   function begin() {
@@ -283,6 +354,10 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
     feeder = createFeeder(audio, spec, -spec.countInBeats);
     state.feed = feeder.stats;
     feeder.topUp(now, planEnd());
+    if (backingPort) {
+      song = { port: backingPort, next: 0, base: state.zero, offsetMs: songOffsetMs, stopped: false };
+      startSong(0);
+    }
   }
 
   /** The plan never goes past the take's end (a timed endless take: its seconds). */
@@ -291,6 +366,7 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
   // ---------- the end ----------
   function teardown() {
     unsubscribe?.(); unsubscribe = undefined;
+    stopSong();
     if (ext && state.phase === 'playing') ext.end();
   }
 
@@ -351,10 +427,12 @@ export function createTake<O extends TakeOptions>(deps: TakeDeps, written: Chart
         if (pos > run.beats + 0.5) finish(run, hits, extras, 'end');
         return;
       }
-      feeder!.topUp(now, planEnd());
+      tickSong(now);
+      const z = state.zero + state.driftMs; // beat 0 as the song now hears it
+      feeder!.topUp(now, planEnd(), state.driftMs);
       liveCheck(position(now), now);
-      if (endless && options.seconds && now > state.zero + options.seconds * 1000) { finishWholeBars(now, 'end', false); return; }
-      if (now > state.zero + run.beats * beatMs + 400) finish(scored, hits, extras, 'end');
+      if (endless && options.seconds && now > z + options.seconds * 1000) { finishWholeBars(now, 'end', false); return; }
+      if (now > z + run.beats * beatMs + 400) finish(scored, hits, extras, 'end');
     },
     stop(reason = 'user', at) {
       if (state.phase === 'starting') { drop(reason); return; }

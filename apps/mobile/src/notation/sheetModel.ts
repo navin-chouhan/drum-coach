@@ -126,9 +126,7 @@ export type SheetColors = {
 };
 
 /** The web sheet's own result tones (src/notation/SheetMusic.tsx TONE): readable on paper, unlike the web highway's. */
-const WEB_TONE: Record<ResultKind, string> = { onIt: '#1E9E5A', early: '#C77700', late: '#C77700', missed: '#E8423F', extra: '#E8423F' };
-
-/** The sheet's colours for a play theme: iOS result colours on the iPad theme, the web sheet's on the web theme. */
+/** The sheet's colours for a play theme: paper, ink, and the theme's result colours for paper (`sheetResult`). */
 export function sheetColors(theme: PlayTheme): SheetColors {
   return {
     paper: '#FFFDF6',
@@ -139,7 +137,7 @@ export function sheetColors(theme: PlayTheme): SheetColors {
     cursor: theme.nowLine.startsWith('rgba') ? '#FFE14D' : theme.nowLine,
     frame: '#141414',
     barTint: 'rgba(255,213,0,0.30)',
-    result: theme.name === 'web' ? WEB_TONE : { ...theme.result },
+    result: { ...theme.sheetResult },
   };
 }
 

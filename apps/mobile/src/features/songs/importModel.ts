@@ -49,5 +49,3 @@ export function backingName(chartId: string, fileName: string): string {
   const ext = (AUDIO_EXT.exec(fileName)?.[1] ?? 'mp3').toLowerCase();
   return `backing/${chartId.replace(/[^\w-]/g, '_')}.${ext}`;
 }
-/** Until A4's BackingPort lands (Phase 3b), imported audio is kept but not played (orchestrator). */
-export const BACKING_LATER = 'Backing audio plays in a coming update.';

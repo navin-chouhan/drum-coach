@@ -1,14 +1,21 @@
-import { Stack, ThemeProvider } from 'expo-router';
+import { Stack, ThemeProvider, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { keepAwake, keepAwakeWhileForeground } from '../src/platform/keepAwake';
+import { refocusKeyboard } from '../src/platform/keyboard';
 import { colors, navigationTheme } from '../src/theme';
+import { startAppKeyboard } from '../src/ui';
 
 export default function RootLayout() {
   // The screen stays on while Drum Coach is in the foreground (hands are on sticks, not on the iPad).
   useEffect(() => keepAwakeWhileForeground(keepAwake, 'app', AppState), []);
+  // A hardware keyboard plays pads app-wide (CLAUDE.md keys: Space kick, S snare, A/Q hi-hat, Z pedal, E/R/F toms,
+  // W crash, T ride), once for the app; after each route change the keys are taken back from a closed modal or field.
+  useEffect(() => { startAppKeyboard(); }, []);
+  const path = usePathname();
+  useEffect(() => { refocusKeyboard(); }, [path]);
 
   return (
     <SafeAreaProvider>

@@ -4,10 +4,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { Body, Button, CardTitle, ListRow, Panel, color, type } from '../../ui';
+import { Body, Button, CardTitle, ListRow, Panel } from '../../ui';
 import { Field, Row, Small, Warn } from './bits';
 import { deleteBacking, isAudioName, pickAudio, pickMidi, saveBacking, type Picked } from './files';
-import { BACKING_LATER, IMPORT_HELP, LIBRARY_EMPTY, chartToSave, importSummary, libraryRow, parseMidiFile, type ParsedImport } from './importModel';
+import { IMPORT_HELP, LIBRARY_EMPTY, chartToSave, importSummary, libraryRow, parseMidiFile, type ParsedImport } from './importModel';
 import { songsWrite, useStoredCharts } from './useSongs';
 
 export function ImportCard() {
@@ -95,7 +95,6 @@ export function ImportCard() {
             </View>
           );
         })}
-        {library.some(c => c.hasAudio) ? <Body size={type.small} color={color.muted}>🔊 {BACKING_LATER}</Body> : null}
       </Panel>
     </View>
   );
