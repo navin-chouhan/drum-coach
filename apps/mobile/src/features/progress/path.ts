@@ -52,5 +52,6 @@ export const rebuildTodayPatch = (): Partial<Settings> => ({ session: undefined 
 export const resetAllLessonsPatch = (profile: Profile): Partial<Settings> => ({ lessons: {}, session: undefined, profile: { ...profile, onboarded: false } });
 
 /** Progress's views, as `/progress?view=…` (Journey's Skill map and Full path buttons land on them). */
-export type ProgressViewId = 'main' | 'skills' | 'path' | 'month' | 'teacher' | 'coming' | 'lessons';
-export const progressViewOf = (v: unknown): ProgressViewId => (v === 'skills' || v === 'path' || v === 'month' || v === 'teacher' || v === 'coming' || v === 'lessons' ? v : 'main');
+export type ProgressViewId = 'main' | 'skills' | 'path' | 'month' | 'teacher' | 'coming' | 'lessons' | 'trophies' | 'plan' | 'reports';
+export const PROGRESS_VIEWS = ['skills', 'path', 'month', 'teacher', 'coming', 'lessons', 'trophies', 'plan', 'reports'] as const;
+export const progressViewOf = (v: unknown): ProgressViewId => ((PROGRESS_VIEWS as readonly unknown[]).includes(v) ? v as ProgressViewId : 'main');
