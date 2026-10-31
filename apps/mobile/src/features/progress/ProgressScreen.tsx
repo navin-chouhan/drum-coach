@@ -164,7 +164,7 @@ export function ProgressScreen() {
                   onPress={() => { const first = startConcert(m.showoff.concert!); if (first) router.push(songHref(first.id, first.bars) as never); }} />
               ) : null}
             </ScrollView>
-          ) : <Body size={13} color={color.muted}>{m.showoff.empty}</Body>}
+          ) : <Body size={13} color={color.muted} testID="progress-showoff-empty">{m.showoff.empty}</Body>}
         </Card>
         <Card style={styles.lessons} testID="progress-lessons">
           <View style={styles.cardHead}><CardTitle size={18}>Your lessons</CardTitle><Body size={13} color={color.muted}>newest first</Body></View>

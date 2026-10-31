@@ -1,0 +1,17 @@
+# The intro slides before a first take (on by default): Next through every slide; the last one ("Ready ▶") starts the
+# take. A no-op when they don't show. testIDs: src/features/lesson/IntroSlides.tsx (lesson and Practice share it).
+appId: com.drumcoach.app
+---
+- extendedWaitUntil:
+    visible:
+      id: lesson-intro
+    timeout: 3000
+    optional: true
+- repeat:
+    while:
+      visible:
+        id: lesson-intro
+    times: 6
+    commands:
+      - tapOn:
+          id: lesson-intro-next
