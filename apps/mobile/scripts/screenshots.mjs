@@ -33,6 +33,10 @@ const SHOTS = [
   ['journey-fresh', '/?h=fresh'],
   ['journey-recap', '/?h=recap'],
   ['journey-sore', '/?h=sore'],
+  // D10 shell: the sidebar folded to its rail on Journey (« or \), the coach chat as a sheet from the bubble, You
+  ['journey-rail', '/?h=sore', [{ click: 'sidebar-toggle' }, { wait: 400 }]],
+  ['coach-chat-sheet', '/?h=coach', [{ click: 'title-coach' }, { wait: 600 }]],
+  ['you', '/you?h=sore'],
   ['journey-week', '/?h=week'],
   ['journey-writing', '/?h=writing'],
   ['journey-alldone', '/?h=alldone'],

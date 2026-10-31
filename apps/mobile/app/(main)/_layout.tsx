@@ -1,11 +1,14 @@
-// The app's main frame: the black sidebar on the left (Journey, Songs, Practice, Progress, Coach, Setup, as on the
-// web) and the section on the dotted ground. Sections are tabs, so each keeps its state while you look elsewhere.
-// Full-screen frames (the lesson player, first run) are routes outside this group and hide the sidebar.
+// The app's main frame (D10, owner-approved): the black sidebar on the left with four sections, Journey · Practice ·
+// You · Setup, and the section on the dotted ground. Sections are tabs, so each keeps its state while you look
+// elsewhere. Songs (a Practice shelf), Coach (the week plan; the chat is a sheet from the coach's bubble) and Build info
+// are tabs without a sidebar entry: the sidebar lights their section. /progress redirects to /you (old links).
+// The sidebar is expanded on Journey and an icon rail elsewhere until the owner picks with « / » or `\` (remembered).
+// Full-screen frames (players, first run, tools) are routes outside this group: no sidebar.
 import { router } from 'expo-router';
 import { Tabs, type BottomTabBarProps } from 'expo-router/js-tabs';
 import { FirstRunGate } from '../../src/features/firstRun/FirstRunGate';
 import { useLatencyRouteSync } from '../../src/features/setup/useSetup';
-import { DevRow, NAV, Sidebar, color, useStatusRows } from '../../src/ui';
+import { DevRow, NAV, Sidebar, color, sectionOf, sidebarModeFor, toggledPref, useAppKey, useKitDot, useSidebarPref } from '../../src/ui';
 
 // Debug screens (app/dev/*, the build info): a small row in the sidebar of debug builds. The testIDs are A2's home links.
 const DEV_LINKS = [
@@ -17,8 +20,12 @@ const DEV_LINKS = [
 ] as const;
 
 function SidebarTabs({ state, navigateToTab }: BottomTabBarProps) {
-  const status = useStatusRows();
-  const current = state.routes[state.index]?.name ?? 'index';
+  const kit = useKitDot();
+  const [pref, setPref] = useSidebarPref();
+  const section = sectionOf(state.routes[state.index]?.name ?? 'index');
+  const mode = sidebarModeFor(pref, section);
+  const toggle = () => setPref(toggledPref(mode));
+  useAppKey('\\', toggle);
   const go = (name: string) => {
     const route = state.routes.find(r => r.name === name);
     if (route) navigateToTab(route.key);
@@ -27,10 +34,12 @@ function SidebarTabs({ state, navigateToTab }: BottomTabBarProps) {
     <Sidebar
       brandTestID="home-title"
       items={NAV.map(n => ({ key: n.key, label: n.label, emoji: n.emoji, testID: n.testID }))}
-      current={current}
+      current={section}
       onSelect={go}
-      status={status}
-      onStatusPress={() => go('setup')}
+      mode={mode}
+      onToggle={toggle}
+      kit={kit}
+      onKitPress={() => go('setup')}
       extra={__DEV__ ? <DevRow links={DEV_LINKS.map(l => ({ label: l.label, testID: l.testID, onPress: () => router.push(l.href) }))} /> : null}
     />
   );
@@ -46,11 +55,12 @@ export default function MainLayout() {
       screenOptions={{ headerShown: false, tabBarPosition: 'left', sceneStyle: { backgroundColor: color.ground }, animation: 'none' }}
     >
       <Tabs.Screen name="index" options={{ title: 'Journey' }} />
-      <Tabs.Screen name="songs" options={{ title: 'Songs' }} />
       <Tabs.Screen name="practice" options={{ title: 'Practice' }} />
-      <Tabs.Screen name="progress" options={{ title: 'Progress' }} />
-      <Tabs.Screen name="coach" options={{ title: 'Coach' }} />
+      <Tabs.Screen name="you" options={{ title: 'You' }} />
       <Tabs.Screen name="setup" options={{ title: 'Setup' }} />
+      <Tabs.Screen name="songs" options={{ title: 'Songs' }} />
+      <Tabs.Screen name="coach" options={{ title: 'Coach' }} />
+      <Tabs.Screen name="progress" options={{ title: 'Progress' }} />
       <Tabs.Screen name="about" options={{ title: 'Build info' }} />
     </Tabs>
     </>
