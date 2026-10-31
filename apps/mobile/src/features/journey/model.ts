@@ -106,6 +106,8 @@ export type JourneyView = {
   setupNudge: boolean;
   /** The weekly wrists check-in ("All good" / "A bit sore"), after three days of playing. */
   askSore: boolean;
+  /** Finished the old path (stages 1–7, the swing / shuffle songs) with nothing at the new stages yet: say once (R3). */
+  newStages: boolean;
   /** Make sure there's a plan for this week (the web's ensureWeekPlan: played, coach on, onboarded). */
   weekPlanDue: boolean;
   /** The ear tip is showing this week: the screen marks it seen after a minute (the web's hearingTipWeek). */
@@ -132,6 +134,7 @@ function weekLine(focus: JourneyInput['weekFocus'], runs: RunRow[], now: Date): 
   return theme ? { words: theme.words, habit: { key: `theme-${now.toDateString()}`, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).` } } : null;
 }
 
+export const NEW_STAGES = '🎉 New stages open: Groove at tempo, Linear and odd and Solo voice.';
 export const HEARING_TIP = 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.';
 export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id === id)?.name ?? id).join(', ');
 
@@ -333,6 +336,7 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     } : null,
     coachKey, coachAsk,
     setupNudge: !s.setupDone && !s.setupNudged,
+    newStages: !s.newStagesSeen && ['song-swing', 'song-shuffle'].some(id => done(id)) && !Object.keys(s.lessons).some(id => (lessonById(id)?.level ?? 0) >= 7),
     askSore: played && daysPlayed >= 3 && s.soreAskedWeek !== wk && !sore,
     weekPlanDue: played && s.liveCoach && s.profile.onboarded,
     hearingTipDue: played && s.hearingTipWeek !== wk,

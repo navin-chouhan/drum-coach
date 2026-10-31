@@ -20,7 +20,7 @@ import { startSessionPatch } from './source';
 import { MoreSheet } from './MoreSheet';
 import { Tile } from './Tiles';
 import { useJourney } from './useJourney';
-import { SETUP_NUDGE, SORE_ASK, badgeNames, sorePatch, type JourneyView } from './model';
+import { NEW_STAGES, SETUP_NUDGE, SORE_ASK, badgeNames, sorePatch, type JourneyView } from './model';
 
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
@@ -65,10 +65,13 @@ export function JourneyScreen() {
     const kv = getStorage().kv, kept = readSettings(kv).badges ?? [], add = badges.filter(id => !kept.includes(id));
     if (add.length) writeSettings(kv, { badges: [...kept, ...add] });
   }, [badges]);
+  // New stages open (R3): said on this visit, then remembered.
+  const [newStages] = useState(() => v.newStages);
+  useEffect(() => { if (newStages) writeSettings(getStorage().kv, { newStagesSeen: true }); }, [newStages]);
   // D9: one notice at a time (the web's slim strip; the weekly recap first, then the setup nudge, the wrists check-in,
   // the health line). Here it takes the coach's line in the title bar, its buttons in the bar's right slot.
   const kind = recap ? 'recap' : v.setupNudge ? 'setup' : v.askSore ? 'sore' : undefined;
-  const extra = badges.length ? `🏅 New badge: ${badgeNames(badges)}!` : v.healthLine;
+  const extra = badges.length ? `🏅 New badge: ${badgeNames(badges)}!` : newStages ? NEW_STAGES : v.healthLine;
   const coachText = kind === 'recap' ? recap : kind === 'setup' ? `🛠 ${SETUP_NUDGE}` : kind === 'sore' ? `🩹 ${SORE_ASK}` : extra ? `${v.coachLine} ${extra}` : v.coachLine;
   const set = (patch: Parameters<typeof writeSettings>[1]) => writeSettings(getStorage().kv, patch);
   const titleRight = kind === 'setup' ? <View style={styles.noticeBtns}>

@@ -294,3 +294,14 @@ describe("This week and the coach's lessons (web TodayView)", () => {
     expect(buildJourney({ settings, lessons: [...CURRICULUM, ai], runs, now: NOW }).coachLessons).toEqual([{ lessonId: 'ai-x', title: 'Coach x' }]);
   });
 });
+
+describe('new stages open (web R3)', () => {
+  it('after the swing or shuffle song, with nothing at stage 8+ yet, until seen', () => {
+    const base = { ...fresh(), lessons: { 'song-swing': finished('song-swing') } };
+    expect(buildJourney({ settings: base, lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(true);
+    expect(buildJourney({ settings: { ...base, newStagesSeen: true }, lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
+    const later = CURRICULUM.find(l => l.level >= 7)!;
+    expect(buildJourney({ settings: { ...base, lessons: { ...base.lessons, [later.id]: finished(later.id) } }, lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
+    expect(buildJourney({ settings: fresh(), lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
+  });
+});
