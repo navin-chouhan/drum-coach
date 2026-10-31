@@ -42,7 +42,8 @@ describe('backing: start, repeats, stop', () => {
     const z = take.state.zero, beatMs = take.state.beatMs;
     expect(r.song.loads).toEqual([SONG.uri]);
     expect(beatMs).toBe(625);
-    expect(r.song.starts).toEqual([{ now: 1000, at: z, offsetMs: 200, rate: 0.8, durationMs: 8 * 625 * 0.8 }]); // the section's file ms
+    expect(r.song.starts).toEqual([{ now: 1000, at: z, offsetMs: 200, rate: 0.8 }]);
+    expect(r.song.heard()).toEqual([{ at: z, offsetMs: 200, rate: 0.8, until: z + 8 * 625 }]); // with the section's length
     expect(r.song.queues).toEqual([]); // one repeat: nothing to queue
     drive(r, take, z + 8 * beatMs - 50);
     expect(r.song.stops).toEqual([]);
@@ -59,7 +60,7 @@ describe('backing: start, repeats, stop', () => {
     await take.start();
     const z = take.state.zero, sec = 8 * 500;
     drive(r, take, z + 3 * sec + 1000);
-    expect(r.song.starts.map(s => [s.at - z, s.offsetMs, s.durationMs])).toEqual([[0, 4200, sec]]); // bar 3 = 4 s, + 200
+    expect(r.song.starts.map(s => [s.at - z, s.offsetMs])).toEqual([[0, 4200]]); // bar 3 = 4 s, + 200
     expect(r.song.queues.map(q => [q.at - z, q.offsetMs, q.durationMs])).toEqual([[sec, 4200, sec], [2 * sec, 4200, sec]]);
     // one repeat ahead: repeat 1 with the start, repeat 2 once repeat 1 is heard (within a tick)
     expect(r.song.queues[0].now).toBe(1000);

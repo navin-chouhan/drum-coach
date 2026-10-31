@@ -25,7 +25,8 @@ export type FakeAudioPort = AudioPort & {
   emitInterruption(e: AudioInterruption): void;
 };
 
-export type BackingStart = { now: number; at: number; offsetMs: number; rate: number; durationMs?: number };
+/** A start's line (its length, if any, shows in `heard()`). */
+export type BackingStart = { now: number; at: number; offsetMs: number; rate: number };
 export type BackingQueue = BackingSegment & { now: number };
 /** A stretch of the file heard: from `at` (Clock ms), file ms `offsetMs` on, at `rate`, until `until` (Clock ms). */
 export type HeardSegment = { at: number; offsetMs: number; rate: number; until: number };
@@ -77,7 +78,7 @@ export function createFakeBackingPort(clock: Clock, o: { durationMs?: number; pp
     },
     start({ at, offsetMs, rate, durationMs: dur }) {
       const now = clock.now();
-      b.starts.push({ now, at, offsetMs, rate, ...(dur !== undefined && { durationMs: dur }) });
+      b.starts.push({ now, at, offsetMs, rate });
       cut(now);
       run = { t0: at, rate, from: now, until: Infinity, segs: [] };
       runs.push(run);

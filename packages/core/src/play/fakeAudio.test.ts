@@ -84,7 +84,7 @@ describe('the fake backing player', () => {
     expect(b.heardAt(4300)).toBeNull(); // the lead
     expect(b.heardAt(4700)).toBe(50);
     expect(b.heardAt(7700)).toBeNull(); // after the last segment
-    expect(b.starts[0]).toEqual({ now: 0, at: 100, offsetMs: 2000, rate: 0.5, durationMs: 1000 });
+    expect(b.starts[0]).toEqual({ now: 0, at: 100, offsetMs: 2000, rate: 0.5 });
     clock.set(3000);
     b.start({ at: 3100, offsetMs: 0, rate: 1 }); // a start cuts the queued ones too
     expect(b.heardAt(4700)).toBe(1600);
