@@ -10,7 +10,7 @@ import type { ApiFailure, HomeServer } from '../../../platform/contracts';
 
 type Srv = Pick<HomeServer, 'call' | 'stream'>;
 import { ANTHROPIC_URL, createAnthropicClient, DEFAULT_COACH_MODEL, type FetchLike } from './anthropic';
-import { COACH_CACHE_KEY, createDirectCoach, extractJson, hash53 } from './direct';
+import { CACHE_MAX, COACH_CACHE_INDEX, COACH_CACHE_PREFIX, createDirectCoach, extractJson, hash53 } from './direct';
 import { withDirectFallback } from './fallback';
 import * as mine from './inputs';
 import { PROMPTS } from './prompts.gen';
@@ -111,7 +111,8 @@ describe('the routes on the iPad', () => {
     expect(input.library.length).toBeGreaterThan(5);
     expect(await direct.route('feedback', body)).toEqual({ ok: true, data: { data: FEEDBACK, cached: true } });
     expect(api.calls).toHaveLength(1);
-    expect(Object.keys(JSON.parse(kv.get(COACH_CACHE_KEY)!))).toHaveLength(1);
+    expect(JSON.parse(kv.get(COACH_CACHE_INDEX)!)).toHaveLength(1);
+    expect([...kv.m.keys()].filter(k => k.startsWith(`${COACH_CACHE_PREFIX}.`) && k !== COACH_CACHE_INDEX)).toHaveLength(1);
   });
 
   it("an answer that isn't JSON or doesn't match the schema fails in the server's words, and isn't cached", async () => {
@@ -120,7 +121,7 @@ describe('the routes on the iPad', () => {
     const r = await direct.route('feedback', { summary: {} });
     expect(r).toMatchObject({ ok: false, kind: 'failed' });
     expect(!r.ok && r.message).toMatch(/^The coach's answer didn't match the expected format \(/);
-    expect(kv.get(COACH_CACHE_KEY)).toBeNull();
+    expect(kv.get(COACH_CACHE_INDEX)).toBeNull();
     expect(await direct.route('feedback', {})).toMatchObject({ ok: false, kind: 'bad-request' });
   });
 
@@ -170,6 +171,8 @@ describe('the routes on the iPad', () => {
     expect(r1).toMatchObject({ ok: true, reply: { say: 'Nice. Again, a bit slower.' } });
     expect(api.calls[0].body.system).toBe(PROMPTS.session);
     expect(api.calls[0].body.max_tokens).toBe(2000);
+    expect(api.calls[0].headers['anthropic-beta']).toBeUndefined(); // as the server's ApiSession (QA4 m5)
+    expect(api.calls[0].body.fallbacks).toBeUndefined();
     const ev = JSON.parse(api.calls[0].body.messages[0].content);
     expect(ev).toMatchObject({ type: 'take', result: { accuracy: 80 }, weekFocus: { focus: 'even 8ths' }, teacherNotes: [{ date: '2026-10-01', text: 'Relax the wrists.' }] });
     expect(ev.context).toBeUndefined(); // the context never goes to the model as is
@@ -189,7 +192,7 @@ describe('the routes on the iPad', () => {
 });
 
 describe('the fallback: home server first, the API only when it is away', () => {
-  const unreachable: ApiFailure = { ok: false, reason: 'unreachable', detail: 'no answer within 30 s' };
+  const unreachable: ApiFailure = { ok: false, reason: 'unreachable', stage: 'connect', detail: "Can't reach http://x" };
   const fakeServer = (r: { ok: true; data: unknown } | ApiFailure) => {
     const calls: string[] = [];
     return { calls, server: { call: async (_m: string, p: string) => { calls.push(p); return r; }, stream: async () => r as ApiFailure, configured: () => ({ url: 'http://x' }) } };
@@ -224,6 +227,18 @@ describe('the fallback: home server first, the API only when it is away', () => 
     expect(await s.call('POST', '/api/coach/feedback', { summary: {} }))
       .toEqual({ ok: false, reason: 'server-error', detail: 'The API-key fallback: The Anthropic API key in Setup → Coach · fallback was rejected.' });
     expect(await s.call('POST', '/api/coach/feedback', { summary: {} })).toMatchObject({ ok: false, reason: 'rate-limited' });
+  });
+
+  it('QA4 M1: a timeout after the request was sent never asks the API (the server may still be answering)', async () => {
+    const slow: ApiFailure = { ok: false, reason: 'unreachable', stage: 'answer', detail: 'No answer within 200 s' };
+    const a = rig([FEEDBACK, { say: 'x' }]);
+    const s = withDirectFallback(fakeServer(slow).server as unknown as Srv, a.direct, async () => true);
+    expect(await s.call('POST', '/api/coach/lesson', {})).toBe(slow);
+    expect(await s.stream('/api/coach/session', { type: 'open' }, () => {})).toBe(slow);
+    expect(a.api.calls).toHaveLength(0);
+    const notSetUp: ApiFailure = { ok: false, reason: 'not-configured' };
+    expect(await withDirectFallback(fakeServer(notSetUp).server as unknown as Srv, a.direct, async () => true).call('POST', '/api/coach/feedback', { summary: {} }))
+      .toEqual({ ok: true, data: { data: FEEDBACK, cached: false } });
   });
 
   it('the live session falls back as say + reply events', async () => {
@@ -266,5 +281,32 @@ describe('parity with the server (the copied input builders)', () => {
     expect(mine.standsInFor({ ...end, bpm: { start: 40, target: 40 } }, cp)).toBe(sl.standsInFor({ ...end, bpm: { start: 40, target: 40 } }, cp));
     expect(mine.canStandIn(end)).toBe(sl.canStandIn(end));
     expect(mine.canStandIn({ ...end, rest: true } as never)).toBe(sl.canStandIn({ ...end, rest: true }));
+  });
+});
+
+describe('QA4 m5 and m6', () => {
+  it('failed session turns do not count toward the 40-turn reset', async () => {
+    const replies: unknown[] = [];
+    for (let i = 0; i < 45; i++) replies.push({ status: 500 });
+    replies.push({ say: 'Still here.' });
+    const { direct, api } = rig(replies);
+    for (let i = 0; i < 45; i++) await direct.session({ type: 'said', text: `q${i}` }, () => {});
+    expect(await direct.session({ type: 'said', text: 'last' }, () => {})).toMatchObject({ ok: true });
+    expect(api.calls.at(-1)!.body.messages).toHaveLength(1);
+  });
+
+  it('the cache is one row per answer plus an index, the last 60 kept; the old blob goes', async () => {
+    const replies = Array.from({ length: CACHE_MAX + 3 }, (_, i) => ({ ...FEEDBACK, feedback: `answer ${i}` }));
+    const { direct, kv, api } = rig(replies);
+    kv.set(COACH_CACHE_PREFIX, '{"old":1}');
+    for (let i = 0; i < CACHE_MAX + 3; i++) await direct.route('feedback', { summary: { i } });
+    expect(kv.get(COACH_CACHE_PREFIX)).toBeNull();
+    const index = JSON.parse(kv.get(COACH_CACHE_INDEX)!) as string[];
+    expect(index).toHaveLength(CACHE_MAX);
+    expect([...kv.m.keys()].filter(k => k.startsWith(`${COACH_CACHE_PREFIX}.`) && k !== COACH_CACHE_INDEX)).toHaveLength(CACHE_MAX);
+    expect(await direct.route('feedback', { summary: { i: CACHE_MAX + 2 } })).toMatchObject({ ok: true, data: { cached: true } }); // the newest stays
+    expect(api.calls).toHaveLength(CACHE_MAX + 3);
+    const r = await direct.route('feedback', { summary: { i: 0 } }); // the oldest went: asked again (no reply left: fails, not cached)
+    expect(r.ok).toBe(false);
   });
 });

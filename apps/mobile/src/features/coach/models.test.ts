@@ -40,6 +40,9 @@ describe('what failed', () => {
     const p = coachProblem(unreachable, { url: 'http://drum-laptop.local:8787' });
     expect(p).toMatchObject({ kind: 'offline', host: 'drum-laptop.local:8787', canQueue: true, settingsFirst: false });
     expect(p.lines).toEqual(['drum-laptop.local:8787 didn’t answer in 10 seconds. Is the laptop awake and on the same Wi-Fi (or Tailscale)?', "No API key is set, so there's no fallback."]);
+    // QA4 M1: sent but slow, with a key: the key wasn't used, and the line says why
+    expect(coachProblem({ ...unreachable, stage: 'answer' }, { hasFallbackKey: true }).lines[1]).toBe('It may still be working on it: the API key isn’t used for a question the server already has.');
+    expect(coachProblem({ ...unreachable, stage: 'connect' }, { hasFallbackKey: true }).lines[1]).toBe('The API-key fallback couldn’t reach Anthropic either. Is the iPad online?');
   });
   it('a refused token or host sends you to the settings; a coach error shows the server\'s words', () => {
     expect(coachProblem({ ok: false, reason: 'unauthorized', status: 401 })).toMatchObject({ kind: 'refused', settingsFirst: true, canQueue: false });

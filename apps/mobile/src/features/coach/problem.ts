@@ -54,7 +54,9 @@ export function coachProblem(f: ApiFailure, o: { url?: string; hasFallbackKey?: 
       const secs = detail.match(/within (\d+) s/)?.[1];
       const who = host ?? 'Your home server';
       return { kind: 'offline', title: 'Can’t reach your coach', host, canQueue: true, settingsFirst: false,
-        lines: [`${who} didn’t answer${secs ? ` in ${secs} seconds` : ''}. Is the laptop awake and on the same Wi-Fi (or Tailscale)?`, fallbackLine(!!o.hasFallbackKey)] };
+        lines: [`${who} didn’t answer${secs ? ` in ${secs} seconds` : ''}. Is the laptop awake and on the same Wi-Fi (or Tailscale)?`,
+          // sent but no answer in time: the server may still be writing it, so the API key wasn't used (QA4 M1)
+          f.stage === 'answer' && o.hasFallbackKey ? 'It may still be working on it: the API key isn’t used for a question the server already has.' : fallbackLine(!!o.hasFallbackKey)] };
     }
     case 'unauthorized':
       return { kind: 'refused', title: 'The server didn’t accept the token', host, canQueue: false, settingsFirst: true,
