@@ -2,15 +2,19 @@
 // week against your goal, the skill map, trophies and the closest, your time against the daily goal, and your lessons
 // in plain words, with the web's show-off set (ready songs, ▶ Play it, a concert of the set). "This month's report", the full skill map and your path open in place, as /progress?view=month,
 // /progress?view=skills and /progress?view=path (Journey's Skill map and Full path buttons). The numbers are in progress.ts.
-import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Body, Button, Card, CardTitle, CoachLine, Label, ListRow, Screen, Stars, StatTile, Strong, TitleBar,
   color, stroke, tabular, useAppSettings,
   Bars, Track,
 } from '../../ui';
+import { getStorage } from '../../platform/storage';
 import { lessonHref } from '../lesson/route';
+import type { PracticeChart } from '../practice/catalog';
+import { practiceEngine } from '../practice/engine';
+import { readPlayOptions } from '../practice/play';
 import { songHref, startConcert } from '../songs/songsModel';
 import { MonthReportView } from './MonthReportView';
 import { progressViewOf, type ProgressViewId } from './path';
@@ -32,8 +36,19 @@ export function ProgressScreen() {
   const params = useLocalSearchParams<{ view?: string }>();
   const view = progressViewOf(params.view);
   const setView = (v: ProgressViewId) => router.setParams({ view: v === 'main' ? undefined : v });
-  const m = useMemo(() => progressModel({ runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, badges: settings.badges, lessons: data?.lessons ?? [], plan: data?.plan, songs: data?.songs }),
-    [data, settings.lessons, settings.profile, settings.badges]);
+  // Your fills: 🎧 Hear it plays the fill twice with a bar of count-in (the web's hearFill), as a demo: never saved.
+  const eng = useSyncExternalStore(practiceEngine.subscribe, practiceEngine.get);
+  const hearing = eng.demo && (eng.phase === 'playing' || eng.phase === 'starting') && eng.chartId?.startsWith('fill-') ? eng.chartId : undefined;
+  const [notice, setNotice] = useState('');
+  useFocusEffect(useCallback(() => () => { if (practiceEngine.get().chartId?.startsWith('fill-')) practiceEngine.stop(); }, []));
+  const hearFill = (chart: PracticeChart) => {
+    if (hearing) { practiceEngine.stop(); if (hearing === chart.id) return; }
+    const ok = practiceEngine.start({ chart, options: { ...readPlayOptions(getStorage().kv), chartId: chart.id, speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false },
+      section: null, demo: true, repeats: 2 });
+    setNotice(ok ? '' : practiceEngine.notReady);
+  };
+  const m = useMemo(() => progressModel({ runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, badges: settings.badges, lessons: data?.lessons ?? [], plan: data?.plan, songs: data?.songs, fills: settings.fills }),
+    [data, settings.lessons, settings.profile, settings.badges, settings.fills]);
 
   const head = (
     <TitleBar title="Progress" right={<View style={styles.right}>
@@ -157,20 +172,32 @@ export function ProgressScreen() {
             bars={m.time.days.map(d => ({ key: d.date, value: d.minutes, title: d.title, fill: d.atGoal ? color.good : '#A8DDBE' }))} />
           <View style={styles.timeFoot}><Body size={11} color={color.muted}>{m.time.from}</Body><Body size={11} color={color.muted}>today</Body></View>
         </Card>
-        <Card style={styles.showoff} testID="progress-showoff">
-          <View style={styles.cardHead}><CardTitle size={18}>Show-off set</CardTitle><Text style={styles.medalEmoji}>🎤</Text></View>
-          {m.showoff.songs.length ? (
-            <ScrollView style={styles.grow}>
-              {m.showoff.songs.map((x, i) => (
-                <ListRow key={x.id} first={i === 0} compact title={x.title} testID={`progress-showoff-${i}`}
-                  value={<Button label="Play it" emoji="▶" size="small" onPress={() => router.push(songHref(x.id) as never)} accessibilityLabel={`Play ${x.title}`} />} />
-              ))}
-              {m.showoff.concert ? (
-                <Button label="Concert: the whole set" emoji="🎤" size="small" testID="progress-concert"
-                  onPress={() => { const first = startConcert(m.showoff.concert!); if (first) router.push(songHref(first.id, first.bars) as never); }} />
-              ) : null}
-            </ScrollView>
-          ) : <Body size={13} color={color.muted}>{m.showoff.empty}</Body>}
+        <Card style={styles.showoff} testID="progress-coming-up">
+          <CardTitle size={18}>Coming up</CardTitle>
+          <ScrollView style={styles.grow} contentContainerStyle={styles.comingUp}>
+            <View testID="progress-showoff">
+              <Body weight="900">🎤 Show-off set</Body>
+              {m.showoff.songs.length ? <>
+                {m.showoff.songs.map((x, i) => (
+                  <ListRow key={x.id} first={i === 0} compact title={x.title} testID={`progress-showoff-${i}`}
+                    value={<Button label="Play it" emoji="▶" size="small" onPress={() => router.push(songHref(x.id) as never)} accessibilityLabel={`Play ${x.title}`} />} />
+                ))}
+                {m.showoff.concert ? (
+                  <Button label="Concert: the whole set" emoji="🎤" size="small" testID="progress-concert"
+                    onPress={() => { const first = startConcert(m.showoff.concert!); if (first) router.push(songHref(first.id, first.bars) as never); }} />
+                ) : null}
+              </> : <Body size={13} color={color.muted}>{m.showoff.empty}</Body>}
+            </View>
+            <View testID="progress-fills">
+              <Body weight="900">🥁 Your fills</Body>
+              {m.fills.rows.length ? m.fills.rows.map((f, i) => (
+                <ListRow key={f.id} first={i === 0} compact title={f.line} testID={`progress-fill-${i}`}
+                  value={<Button label={hearing === f.chart.id ? 'Stop' : 'Hear it'} emoji={hearing === f.chart.id ? '■' : '🎧'} size="small"
+                    onPress={() => hearFill(f.chart)} accessibilityLabel={`Hear your fill, ${f.line}`} />} />
+              )) : <Body size={13} color={color.muted}>{m.fills.empty}</Body>}
+              {notice ? <Body size={13} color={color.bad}>{notice}</Body> : null}
+            </View>
+          </ScrollView>
         </Card>
         <Card style={styles.lessons} testID="progress-lessons">
           <View style={styles.cardHead}><CardTitle size={18}>Your lessons</CardTitle><Body size={13} color={color.muted}>newest first</Body></View>
@@ -234,7 +261,8 @@ const styles = StyleSheet.create({
   proven: { fontSize: 11.5, fontWeight: '800', color: color.good },
   close: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   time: { width: 300, gap: 6 },
-  showoff: { width: 260, gap: 6 },
+  showoff: { width: 280, gap: 6 },
+  comingUp: { gap: 12 },
   timeFoot: { flexDirection: 'row', justifyContent: 'space-between' },
   lessons: { flex: 1, minWidth: 0, gap: 4 },
   rowEnd: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' },

@@ -211,6 +211,21 @@ describe('stored data', () => {
   });
 });
 
+describe('your fills (web ProgressView Coming up)', () => {
+  it('newest first, with the line and a one-bar chart to hear; empty says where they come from', () => {
+    expect(progressModel({ ...base, runs: [] }).fills).toEqual({ rows: [], empty: 'Fills you make up in free bars can be kept after the take. They land here.' });
+    const notes = [{ t: 0, drum: 'snare' as const }, { t: 1, drum: 'tom1' as const }];
+    const fills = [
+      { id: 'a', at: '2026-10-09T18:00:00.000Z', bpm: 80, notes },
+      { id: 'b', at: '2026-10-29T18:00:00.000Z', bpm: 92, timeSignature: [3, 4] as [number, 4], notes: [...notes, { t: 2, drum: 'kick' as const }] },
+    ];
+    const m = progressModel({ ...base, runs: [], fills });
+    expect(m.fills.rows.map(f => f.line)).toEqual(['29 Oct · 3 notes · 92 BPM', '9 Oct · 2 notes · 80 BPM']);
+    expect(m.fills.rows[1].chart).toEqual({ id: 'fill-a', title: 'Your fill', bpm: 80, timeSignature: [4, 4], bars: 1, notes });
+    expect(m.fills.rows[0].chart.timeSignature).toEqual([3, 4]);
+  });
+});
+
 describe('show-off set (web ProgressView: showoff, bestSongBars)', () => {
   // 4/4, 20 bars: the last note on beat 76 (bar 20)
   const song = (id: string, over: Partial<YtSong> = {}): YtSong => ({
