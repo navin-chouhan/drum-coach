@@ -31,6 +31,8 @@ export function Bars({ bars, max, height, line, showLast, barWidth, style, testI
     <View style={style} testID={testID} accessibilityLabel={accessibilityLabel}>
       <View style={[styles.plot, { height }]}>
         {line ? <View style={[styles.goal, { bottom: y(line.value) }]} accessible={false}>
+          {/* drawn dashes: iOS can't draw a dashed border on one side only ("Unsupported dashed / dotted border style") */}
+          <View style={styles.dashes}>{DASHES.map(k => <View key={k} style={styles.dash} />)}</View>
           <Text maxFontSizeMultiplier={1} style={styles.goalText}>{line.words}</Text>
         </View> : null}
         {bars.map((b, i) => (
@@ -71,6 +73,9 @@ export function Dots({ values, max = 100, width = 120, height = 30, label }: { v
   );
 }
 
+/** Enough dashes for the widest chart (the row clips the rest). */
+const DASHES = Array.from({ length: 140 }, (_, k) => k);
+
 const styles = StyleSheet.create({
   notice: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: color.cream, borderWidth: stroke.thin, borderColor: color.ink, paddingVertical: 6, paddingHorizontal: 12 },
   grow: { flex: 1, minWidth: 0 },
@@ -80,7 +85,9 @@ const styles = StyleSheet.create({
   bar: { alignSelf: 'stretch', borderWidth: 2.5, borderColor: color.ink, borderBottomWidth: 0 },
   zero: { alignSelf: 'stretch', height: 3, backgroundColor: color.separator },
   val: { fontSize: 12, fontWeight: '900', color: color.ink, marginBottom: 2 },
-  goal: { position: 'absolute', left: 0, right: 0, borderTopWidth: 2.5, borderStyle: 'dashed', borderTopColor: color.ink, zIndex: 1 },
+  goal: { position: 'absolute', left: 0, right: 0, height: 2.5, zIndex: 1 },
+  dashes: { flexDirection: 'row', height: 2.5, overflow: 'hidden', gap: 4 },
+  dash: { width: 7, height: 2.5, backgroundColor: color.ink },
   goalText: { position: 'absolute', right: 0, bottom: 2, fontSize: 11, fontWeight: '800', color: color.ink },
   labels: { flexDirection: 'row', gap: 6, marginTop: 4 },
   label: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600', color: color.muted },

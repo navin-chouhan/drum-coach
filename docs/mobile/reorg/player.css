@@ -1,0 +1,22 @@
+/* The proposed full-screen player (lesson, Practice, Songs share it): a slim black bar, the music as large as it fits,
+   one strip of moves with their kit gestures, and nothing else. */
+.pbar { position: absolute; left: 0; right: 0; top: 0; height: 74px; background: var(--night); color: #fff; border-bottom: 3px solid var(--line); box-shadow: 0 4px 0 var(--pop);
+  display: flex; align-items: center; gap: 16px; padding: 18px 22px 0; }
+.pbar .t b { display: block; font: 900 22px var(--display); }
+.pbar .t span { font-size: 14px; color: #ccc; font-weight: 700; }
+.pbar .bpm { font: 900 44px/1 var(--display); }
+.pbar .bpm small { font: 800 14px var(--sf); color: #ccc; margin-left: 4px; }
+.pbar .goal { font-size: 15px; font-weight: 800; color: var(--pop); }
+.pbar .btn { box-shadow: 3px 3px 0 #ffffff88; }
+.body { position: absolute; left: 22px; right: 22px; top: 92px; bottom: 22px; display: flex; flex-direction: column; gap: 14px; }
+.say { display: flex; align-items: center; gap: 12px; }
+.say p { background: #fff; border: 3px solid var(--line); border-radius: 18px; box-shadow: 4px 4px 0 var(--line); padding: 8px 16px; font-size: 24px; font-weight: 800; }
+.spk { font-size: 13px; font-weight: 800; background: var(--night); color: var(--pop); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.music { flex: 1; min-height: 0; background: var(--night); border: 3px solid var(--line); box-shadow: 6px 6px 0 var(--pop); padding: 10px; display: flex; align-items: center; justify-content: center; position: relative; }
+.strip { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; }
+.strip .move { min-height: 78px; padding: 10px 12px; }
+.strip .move b { font-size: 20px; }
+.strip .move.go b { font-size: 28px; }
+.boxes { display: inline-flex; gap: 6px; vertical-align: middle; }
+.boxes i { width: 22px; height: 22px; border: 3px solid var(--pop); display: inline-block; }
+.boxes i.ok { background: var(--good); }

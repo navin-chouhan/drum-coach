@@ -14,7 +14,8 @@ export const MIN_TOKEN_LENGTH = 24;
 /** The secret store key for the token. */
 export const TOKEN_KEY = 'drumcoach.homeServer.token';
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const COACH_TIMEOUT_MS = 120_000;
+/** Above the server's own 180 s for a coach call (server/ai/providers.ts TIMEOUT_MS), so a slow answer still arrives. */
+export const COACH_TIMEOUT_MS = 200_000;
 export const HEALTH_TIMEOUT_MS = 8_000;
 const DETAIL_MAX = 300;
 
@@ -75,7 +76,7 @@ export type HomeServerClient = HomeServer & {
   hasToken(): Promise<boolean>;
   /**
    * A POST that answers with server-sent events (POST /api/coach/session): the same token, path check, timeouts
-   * (`timeoutMs` bounds the whole stream; default 120 s for /api/coach/*) and typed failures as `call`. Calls
+   * (`timeoutMs` bounds the whole stream; default 200 s for /api/coach/*) and typed failures as `call`. Calls
    * `onEvent` for each event as it arrives and resolves when the stream ends. Aborting `signal` stops it and resolves
    * `{ ok: true, cancelled: true }`. Never throws.
    */
@@ -94,8 +95,8 @@ export function createHomeServer(deps: { kv: KeyValueStore; secrets: SecretStore
     s = s.replace(/Bearer\s+\S+/gi, 'Bearer [token]');
     return s.length > DETAIL_MAX ? `${s.slice(0, DETAIL_MAX)}…` : s;
   };
-  const fail = (reason: ApiFailure['reason'], detail?: string, status?: number): ApiFailure =>
-    ({ ok: false, reason, ...(status !== undefined && { status }), ...(detail !== undefined && { detail: scrub(detail) }) });
+  const fail = (reason: ApiFailure['reason'], detail?: string, status?: number, stage?: ApiFailure['stage']): ApiFailure =>
+    ({ ok: false, reason, ...(status !== undefined && { status }), ...(detail !== undefined && { detail: scrub(detail) }), ...(stage && { stage }) });
 
   async function loadToken(): Promise<string | null> {
     if (token !== undefined) return token;
@@ -141,9 +142,10 @@ export function createHomeServer(deps: { kv: KeyValueStore; secrets: SecretStore
     };
   }
   const seconds = (ms: number) => Math.round(ms / 1000);
-  const networkFailure = (p: Prepared, e: unknown) => fail('unreachable', p.timedOut()
-    ? `No answer from ${p.base} within ${seconds(p.timeoutMs)} s`
-    : `Can't reach ${p.base} (${e instanceof Error ? e.message : 'network error'}). Same Wi-Fi? Server running? Local Network allowed?`);
+  // A fetch that throws on its own never got its request to the server; one we aborted at the timeout may have.
+  const networkFailure = (p: Prepared, e: unknown) => (p.timedOut()
+    ? fail('unreachable', `No answer from ${p.base} within ${seconds(p.timeoutMs)} s`, undefined, 'answer')
+    : fail('unreachable', `Can't reach ${p.base} (${e instanceof Error ? e.message : 'network error'}). Same Wi-Fi? Server running? Local Network allowed?`, undefined, 'connect'));
   const statusFailure = (status: number, text: string) => {
     let detail = '';
     try { const j = JSON.parse(text) as { error?: unknown }; if (typeof j?.error === 'string') detail = j.error; } catch { /* not JSON */ }
@@ -166,7 +168,9 @@ export function createHomeServer(deps: { kv: KeyValueStore; secrets: SecretStore
       try {
         text = await res.text();
       } catch {
-        return fail(p.timedOut() ? 'unreachable' : 'bad-response', p.timedOut() ? `The answer from ${p.base} took longer than ${seconds(p.timeoutMs)} s` : 'The answer was cut off', res.status);
+        return p.timedOut()
+          ? fail('unreachable', `The answer from ${p.base} took longer than ${seconds(p.timeoutMs)} s`, res.status, 'answer')
+          : fail('bad-response', 'The answer was cut off', res.status);
       }
       if (res.status < 200 || res.status >= 300) return statusFailure(res.status, text);
       if (!text) return { ok: true, data: null as T };
@@ -229,7 +233,7 @@ export function createHomeServer(deps: { kv: KeyValueStore; secrets: SecretStore
         if (cancelled()) return { ok: true, events, cancelled: true };
         return fail('unreachable', p.timedOut()
           ? `The coach stream from ${p.base} stopped after ${seconds(p.timeoutMs)} s`
-          : `The stream from ${p.base} broke off (${e instanceof Error ? e.message : 'network error'})`);
+          : `The stream from ${p.base} broke off (${e instanceof Error ? e.message : 'network error'})`, undefined, 'answer');
       }
       return { ok: true, events };
     } finally {

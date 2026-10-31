@@ -62,6 +62,12 @@ export type ApiFailure = {
   reason: 'not-configured' | 'unreachable' | 'unauthorized' | 'forbidden' | 'rate-limited' | 'bad-response' | 'server-error';
   status?: number;
   detail?: string;
+  /**
+   * For `unreachable`: 'connect' = the request never reached the server (refused, DNS, no route, offline); 'answer' =
+   * it was sent and no (whole) answer came in time, so the server may still be working on it (QA4 M1: the coach's
+   * API-key fallback asks only after 'connect', never a second time for a call the server is already answering).
+   */
+  stage?: 'connect' | 'answer';
 };
 
 /**
@@ -73,7 +79,7 @@ export interface HomeServer {
   configure(cfg: { url: string; token: string } | null): Promise<void>;
   configured(): { url: string } | null;
   health(): Promise<ServerHealth | ApiFailure>;
-  /** A JSON call with `Authorization: Bearer <token>`; `path` starts with /api/. Times out (default 30 s, coach 120 s). */
+  /** A JSON call with `Authorization: Bearer <token>`; `path` starts with /api/. Times out (default 30 s, coach 200 s). */
   call<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: `/api/${string}`, body?: unknown,
     opts?: { timeoutMs?: number }): Promise<{ ok: true; data: T } | ApiFailure>;
   /**

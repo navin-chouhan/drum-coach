@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { heatBad, latencyLine, timingText } from './results';
+import { heatBad, LATENCY_PATH_IPAD, latencyLine, timingText } from './results';
 
 describe('take details words and heat (web Results, iPad ResultsDetails)', () => {
   it('timing in words', () => {
@@ -24,5 +24,7 @@ describe('take details words and heat (web Results, iPad ResultsDetails)', () =>
     expect(latencyLine({ options: {}, results: early as never })).toMatch(/^Almost every stroke landed about 45 ms early\./);
     expect(latencyLine({ options: { wait: true }, results: late as never })).toBeUndefined();
     expect(latencyLine({ options: {}, results: [] })).toBeUndefined();
+    // the iPad names its own path to the test (QA4 m4)
+    expect(latencyLine({ options: {}, results: late as never }, LATENCY_PATH_IPAD)).toMatch(/run the latency test under ⚙ Setup → Latency → Measure\.$/);
   });
 });

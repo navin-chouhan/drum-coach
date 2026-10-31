@@ -90,8 +90,11 @@ const INK = '#141414', POP = '#FFE14D', CYAN = '#2DE1C2', GOOD = '#1E9E5A', BAD 
 const css = {
   root: { fontFamily: 'system-ui, sans-serif', color: INK, margin: 0 } as CSSProperties,
   pair: { display: 'flex', gap: 10 } as CSSProperties,
-  stage: { position: 'relative', background: INK, border: `3px solid ${INK}`, boxShadow: `5px 5px 0 ${INK}`, flex: 1 } as CSSProperties,
-  svg: { display: 'block', width: '100%', height: 'auto' } as CSSProperties,
+  // The stage keeps the drawing's shape with the padding-top ratio (every WebKit), and the svg fills it absolutely: an
+  // inline <svg> sized height:auto from its viewBox can come out 0 tall in the iPad's WKWebView (nothing drawn).
+  stage: (ratio: number) => ({ position: 'relative', background: INK, border: `3px solid ${INK}`, boxShadow: `5px 5px 0 ${INK}`, flex: 1, height: 0, paddingTop: `${(ratio * 100).toFixed(3)}%` }) as CSSProperties,
+  svg: { position: 'absolute', top: 0, left: 0, display: 'block', width: '100%', height: '100%' } as CSSProperties,
+  error: { font: '700 15px system-ui', color: BAD, margin: '8px 0' } as CSSProperties,
   word: (compact: boolean, wrong: boolean) => ({ position: 'absolute', top: 10, left: 14, font: `800 ${compact ? 24 : 36}px/1 ${DISPLAY}`, color: wrong ? BAD : POP, textShadow: '3px 3px 0 #000' }) as CSSProperties,
   count: (compact: boolean) => ({ position: 'absolute', top: 12, right: 14, display: 'flex', gap: 10, font: `800 ${compact ? 18 : 24}px ${DISPLAY}`, color: '#666' }) as CSSProperties,
   view: { position: 'absolute', top: 50, right: 14, font: `800 12px ${DISPLAY}`, letterSpacing: '.08em', textTransform: 'uppercase', color: '#9a9a9a' } as CSSProperties,
@@ -128,7 +131,14 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
   const speak = useRef({ talk, canSpeak, say });
   speak.current = { talk, canSpeak, say };
   const canTalk = () => speak.current.talk && speak.current.canSpeak && !!speak.current.say;
-  useEffect(() => { if (canTalk()) void speak.current.say?.(wrong ? `The mistake: ${d.mistake}` : kickText?.what ?? d.what, true); }, [id, wrong, talk, mode]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
+  // A native action: it can throw at once (the bridge isn't up yet) or never answer (domCalls.ts); fire and forget.
+  const talkNow = (text: string, now: boolean) => {
+    if (!canTalk()) return;
+    try { void Promise.resolve(speak.current.say?.(text, now)).catch(() => {}); } catch { /* no voice this time; keep drawing */ }
+  };
+  const [error, setError] = useState('');
+  useEffect(() => { talkNow(wrong ? `The mistake: ${d.mistake}` : kickText?.what ?? d.what, true); }, [id, wrong, talk, mode]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
+  useEffect(() => { document.body.style.margin = '0'; }, []);
   useEffect(() => {
     if (!art && !('right' in d) && !('leg' in d)) return;
     if (art) ensureArtDefs();
@@ -145,6 +155,10 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
       }));
     };
     const frame = (now: number) => {
+      raf = requestAnimationFrame(frame); // first: one bad frame never stops the loop
+      try { step(now); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    };
+    const step = (now: number) => {
       beat += ((now - last) / 60000) * bpm * speed; last = now;
       let word: string | undefined;
       if (art && g.current) {
@@ -164,21 +178,22 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
         word = poseAt(id, beat, wrong).word;
       }
       if (wordRef.current) wordRef.current.textContent = word ?? '';
-      if (word && word !== said && beat < 2 * d.beats && canTalk()) void speak.current.say?.(word.toLowerCase(), false);
+      if (word && word !== said && beat < 2 * d.beats) talkNow(word.toLowerCase(), false);
       said = word;
       counts(countRef.current, id === 'grip' && view === 'above' && !both ? ['R', 'L', 'R', 'L'] : d.counts);
-      raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, [id, bpm, speed, wrong, joints, d, mirror, talk, view, mode, art, both]); // eslint-disable-line react-hooks/exhaustive-deps -- canTalk reads the latest props
 
   const box = id === 'kick' ? KICK_VIEWBOX : art ? GRIP_VIEWBOX : '0 0 900 520';
-  const stage = { box, mirror, wrong, compact, label: d.title };
+  const [, , bw, bh] = box.split(' ').map(Number);
+  const stage = { box, ratio: bh / bw, mirror, wrong, compact, label: d.title };
   const segBtn = (on: boolean, label: string, onClick: () => void, last = false, bad = false) =>
     <button type="button" key={label} style={css.btn(on, bad, last)} aria-pressed={on} onClick={onClick}>{label}</button>;
   return (
     <div style={css.root}>
+      {error ? <p style={css.error} role="alert">How it moves couldn't draw: {error}</p> : null}
       {both ? <div style={css.pair}><Stage {...stage} g={g} word={wordRef} count={countRef} name="From the side" /><Stage {...stage} g={g2} word={word2} count={count2} name="From above" /></div>
         : <Stage {...stage} g={g} word={wordRef} count={countRef} name={id === 'grip' ? (view === 'side' ? 'From the side' : 'From above') : id === 'kick' ? (mode === 'down' ? 'Heel down' : 'Heel up') : undefined} />}
       <div style={css.bar}>
@@ -200,10 +215,10 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
 }
 
 /** One drawing: the SVG the frame loop draws into (mirrored for a left-handed player), the cue word, the count, which view. */
-function Stage({ box, mirror, wrong, compact, label, g, word, count, name }: { box: string; mirror: boolean; wrong: boolean; compact: boolean; label: string; name?: string;
+function Stage({ box, ratio, mirror, wrong, compact, label, g, word, count, name }: { box: string; ratio: number; mirror: boolean; wrong: boolean; compact: boolean; label: string; name?: string;
   g: React.RefObject<SVGGElement | null>; word: React.RefObject<HTMLDivElement | null>; count: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <div style={css.stage}>
+    <div style={css.stage(ratio)}>
       <svg viewBox={box} role="img" aria-label={`${label}${name ? `, ${name.toLowerCase()}` : ''}, animated`} style={css.svg}><g transform={mirror ? `translate(${box.split(' ')[2]} 0) scale(-1 1)` : undefined}><g ref={g} /></g></svg>
       <div style={css.word(compact, wrong)} ref={word} aria-live="off" />
       <div style={css.count(compact)} ref={count} aria-hidden />

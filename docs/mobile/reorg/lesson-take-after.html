@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1194">
+<title>Lesson player, during the take (after) · reorg proposal</title>
+<link rel="stylesheet" href="reorg.css"><link rel="stylesheet" href="player.css">
+<style>
+  .full { position: absolute; inset: 0; padding: 30px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .hud { display: flex; align-items: center; gap: 14px; }
+  .hud .n { font: 900 30px var(--display); background: var(--pop); border: 3px solid var(--line); padding: 4px 14px; box-shadow: 4px 4px 0 var(--line); }
+  .hud .tip { flex: 1; background: #fff; border: 3px solid var(--line); border-radius: 18px; box-shadow: 4px 4px 0 var(--line); padding: 8px 16px; font-size: 26px; font-weight: 900; }
+  .stop { position: absolute; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 8px; z-index: 5; }
+  .stop .btn { height: 48px; font-size: 18px; }
+</style>
+</head><body>
+<div class="ipad">
+  <div class="full">
+    <div class="hud">
+      <span class="n">Bar 3 / 4</span>
+      <span class="tip">💡 Lean on the kick — hear it?  <span class="spk" style="font-size:13px">🔊 if Live tips: spoken</span></span>
+      <span class="n" style="background:#fff">70</span>
+    </div>
+    <div class="music" id="m"></div>
+  </div>
+  <div class="stop"><span class="gest g-crash">crash × 4</span><span class="or" style="color:#fff">or Esc</span><span class="btn red">■ Stop</span></div>
+  <div class="ann" style="left:24px;top:770px">Only the music, the bar, one tip and Stop. No sidebar, no bar, no kit drawing (a real kit is plugged in).</div>
+  <div class="tagNew" style="bottom:auto;top:4px">AFTER · MAX SCREEN</div>
+</div>
+<script src="../../mockups/ipad/mock.js"></script>
+<script>
+document.getElementById('m').innerHTML = sheet({ W: 1130, rowH: Math.round(28 * 15.4), gap: 28, rows: [[2, 2]], pos: 20, judged: { hihat17: ['off', '+48'], kick16: ['off', '+48'] }, ball: true });
+</script>
+</body></html>

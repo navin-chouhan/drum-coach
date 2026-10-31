@@ -40,8 +40,12 @@ function failureFor(status: number, body: Reply | undefined): DirectResult {
 
 export function createAnthropicClient(deps: AnthropicDeps) {
   return {
-    /** One call: the system prompt and the conversation so far (the last message is the user's). */
-    async complete(system: string, messages: ApiMessage[], maxTokens = 16000): Promise<DirectResult> {
+    /**
+     * One call: the system prompt and the conversation so far (the last message is the user's). `fallbacks`: the
+     * server-side refusal fallback, as the server's ask() sends it; the live session sends none, as its ApiSession.
+     */
+    async complete(system: string, messages: ApiMessage[], maxTokens = 16000, opts: { fallbacks?: boolean } = {}): Promise<DirectResult> {
+      const fallbacks = opts.fallbacks ?? true;
       const key = await deps.key().catch(() => null);
       if (!key) return { ok: false, kind: 'auth', message: 'No Anthropic API key is set.' };
       const ctl = new AbortController();
@@ -49,8 +53,8 @@ export function createAnthropicClient(deps: AnthropicDeps) {
       try {
         const res = await deps.fetch(ANTHROPIC_URL, {
           method: 'POST', signal: ctl.signal,
-          headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION, 'anthropic-beta': FALLBACK_BETA },
-          body: JSON.stringify({ model: deps.model() || DEFAULT_COACH_MODEL, max_tokens: maxTokens, system, messages, fallbacks: 'default' }),
+          headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION, ...(fallbacks && { 'anthropic-beta': FALLBACK_BETA }) },
+          body: JSON.stringify({ model: deps.model() || DEFAULT_COACH_MODEL, max_tokens: maxTokens, system, messages, ...(fallbacks && { fallbacks: 'default' }) }),
         });
         let body: Reply | undefined;
         try { body = await res.json() as Reply; } catch { body = undefined; }

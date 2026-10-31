@@ -7,6 +7,7 @@
 // Text is set with textContent / React; VexFlow builds SVG nodes. No HTML strings.
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref, type RefObject } from 'react';
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from 'expo/dom';
+import { askUntilAnswered, deadline, fontOrTimeout, withTimeout } from '../../play/domCalls';
 import { engrave, paintHead, type Engraving } from './engrave';
 import {
   barAt, beatsPerBarOf, countText, cursorAt, emptyMarks, measureClockOffset, mergeBatch, nextOffset, pageBars, pageCount, pageOf,
@@ -43,6 +44,8 @@ export type SheetDomProps = {
 
 const PAD = 8; // the paper's inset in the view
 const RESYNC_MS = 2000;
+const CALL_MS = 1500; // longest wait for a native action's answer (a round trip is a few ms)
+const FONT_MS = 3000;
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 let fontReady: Promise<unknown> | null = null;
 // The beat count: a badge top right while playing, big in the middle for the count-in (the web's .sheetCount).
@@ -105,7 +108,8 @@ export default function SheetDom(props: SheetDomProps) {
     extras.current?.replaceChildren();
     shown.current?.repaint(null, []);
     let live = true;
-    ready(zero).then(b => { if (live) apply(b); }, () => {});
+    // An answer Expo's bridge drops would hang this for good: ask again (src/play/domCalls.ts).
+    void askUntilAnswered(() => withTimeout(ready(zero), CALL_MS), { tries: 4, gapMs: 400, live: () => live }).then(b => { if (live && b) apply(b); });
     return () => { live = false; };
   }, [zero, ready, apply]);
 
@@ -114,7 +118,7 @@ export default function SheetDom(props: SheetDomProps) {
     let live = true, timer: ReturnType<typeof setTimeout> | undefined;
     const sync = async () => {
       try {
-        const m = await measureClockOffset(clockNow, () => performance.now());
+        const m = await measureClockOffset(deadline(clockNow, CALL_MS), () => performance.now()); // a dropped answer: next sync
         if (live) offset.current = nextOffset(offset.current, m);
       } catch { /* the bridge isn't up yet: try again */ }
       if (live) timer = setTimeout(() => void sync(), RESYNC_MS);
@@ -222,7 +226,7 @@ export default function SheetDom(props: SheetDomProps) {
       hi.style.width = `${at.box.x1 - at.box.x0}px`;
       hi.style.transform = `translate(${PAD + at.box.x0}px, ${PAD + at.box.y + 22 * geo.scale}px)`;
     };
-    fontReady ??= document.fonts.load('30px Bravura');
+    fontReady ??= fontOrTimeout(() => document.fonts.load('30px Bravura'), FONT_MS); // a failed or slow font still draws
     void fontReady.then(() => { if (!cancelled) { draw(0); raf = requestAnimationFrame(tick); } });
     return () => { cancelled = true; cancelAnimationFrame(raf); shown.current = null; };
   }, [chart, w, h, hints, leftHanded, scale, colors, bpm, displayLeadMs]);

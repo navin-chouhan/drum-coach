@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pattern } from './chart';
 import { buildRun } from './run';
-import { cleanBars, computeStats, createMatcher, heatSlotName, recentAccuracy, worstBars, estimateLatency, latencySuspect, noteWindows, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
+import { cleanBars, computeStats, createMatcher, heatSlotName, recentAccuracy, worstBars, estimateLatency, latencyOffsets, latencySuspect, noteWindows, reactingToClick, scoreRun, windowsFor, type Expected, type PlayedHit } from './scoring';
 
 // 4/4 rock bar at 120 bpm → 500 ms per beat
 const chart = { title: 't', bpm: 120, timeSignature: [4, 4] as [number, 4], bars: 1,
@@ -220,6 +220,41 @@ describe('estimateLatency', () => {
   });
   it('ignores stray taps and needs at least 6', () => {
     expect(estimateLatency(clicks, [1250, 1750, 1030])).toBeNull();
+  });
+
+  // Synthetic hit streams for the iPad's first-run report: "16 of 16 hits", "17 taps, spread ±69 ms".
+  const rng = (seed: number) => () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const gauss = (r: () => number) => (r() + r() + r() + r() + r() + r() - 3) * Math.SQRT2; // ~N(0, 1)
+  const steady = (sd: number, bias: number, seed = 7) => { const r = rng(seed); return clicks.map(c => c + bias + gauss(r) * sd); };
+
+  it('counts one tap per click: a double hit is the same stroke (17 taps on 16 clicks before)', () => {
+    const taps = [...steady(15, -10), clicks[5] + 70, clicks[11] + 120]; // two retriggers / doubles
+    const e = estimateLatency(clicks, taps)!;
+    expect(latencyOffsets(clicks, taps)).toHaveLength(16);
+    expect(e.n).toBe(16);
+    expect(Math.abs(e.latencyMs + 10)).toBeLessThanOrEqual(8);
+    expect(e.spread).toBeLessThan(30);
+  });
+
+  it('a steady player with a couple of stray strokes is still steady (the old std said ±60+)', () => {
+    const taps = steady(18, 25);
+    taps[3] = clicks[3] + 190; taps[9] = clicks[9] - 180; // two strays, still inside ±200 ms
+    const e = estimateLatency(clicks, taps)!;
+    expect(e.n).toBe(16);
+    expect(Math.abs(e.latencyMs - 25)).toBeLessThanOrEqual(10);
+    expect(e.spread).toBeLessThan(40);
+  });
+
+  it('a player who reacts instead of playing along is still not steady', () => {
+    const r = rng(3);
+    const taps = clicks.map(c => c + 60 + (r() - 0.5) * 300); // ±150 ms all over
+    expect(estimateLatency(clicks, taps)!.spread).toBeGreaterThan(50);
+  });
+
+  it('measures the same on a clock 1e9 ms on (the iPad host clock)', () => {
+    const taps = steady(15, 30);
+    const a = estimateLatency(clicks, taps)!, b = estimateLatency(clicks.map(c => c + 1e9), taps.map(t => t + 1e9))!;
+    expect(b).toEqual(a);
   });
 });
 

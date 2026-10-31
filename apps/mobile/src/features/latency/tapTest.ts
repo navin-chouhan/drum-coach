@@ -1,7 +1,7 @@
 // The latency tap test (web: src/ui/LatencyCard.tsx; AUDIO-DESIGN §5): 60 BPM, four count-in clicks with the spoken
 // count, then 16 clicks to hit along with. The median offset (core estimateLatency) becomes the latency correction.
 // Pure: plans the AudioPort events on the Clock (heard times), collects hits, and words the verdict as the web does.
-import { estimateLatency } from '@drum-coach/core/engine/scoring';
+import { estimateLatency, latencyOffsets } from '@drum-coach/core/engine/scoring';
 import type { AudioEvent, AudioRoute } from '@drum-coach/core/play/audioPort';
 
 export const BPM = 60, COUNT_IN = 4, CLICKS = 16; // one per second: easy to count along
@@ -35,6 +35,12 @@ export function planTapTest(now: number, route: Pick<AudioRoute, 'minLeadMs'> | 
   return { events, clicks, zero, endsAt: zero + (COUNT_IN + CLICKS - 1) * BEAT_MS + TAIL_MS };
 }
 
+/** The count-in words the engine is missing, at their clicks (said live instead: play/spokenFallback.ts). */
+export function countInWords(plan: TapTestPlan, missing: readonly string[]): { word: string; at: number }[] {
+  const gone = new Set(missing);
+  return COUNT_WORDS.flatMap((word, i) => (gone.has(word) ? [{ word, at: plan.zero + i * BEAT_MS }] : []));
+}
+
 export type TapTest = { plan: TapTestPlan; taps: number[] };
 export const startTapTest = (plan: TapTestPlan): TapTest => ({ plan, taps: [] });
 
@@ -51,16 +57,21 @@ export const tapEstimate = (t: TapTest) => estimateLatency(t.plan.clicks, t.taps
 /** Saved only when steady and with enough taps (web). */
 export const trustworthy = (e: Estimate | null): e is Estimate => !!e && e.spread <= MAX_SPREAD && e.n >= MIN_TAPS;
 
-export type TapReadout = { hits: string; average: string; steady: string; steadyOk: boolean };
+export type TapReadout = { hits: string; average: string; when: 'after' | 'before'; steady: string; steadyOk: boolean };
 
-/** The three readout tiles while it runs (mockup first-run-4): hits so far, the average, how steady. */
+/**
+ * The three readout tiles while it runs (mockup first-run-4): hits so far (clicks hit: one tap per click, as the
+ * estimate counts them), the average with its side of the click (the tile said "after" for a tap before it), how
+ * steady. The same numbers as the verdict line.
+ */
 export function tapReadout(t: TapTest): TapReadout {
   const e = tapEstimate(t);
-  const hits = `${Math.min(t.taps.length, CLICKS)} of ${CLICKS}`;
-  if (!e) return { hits, average: '–', steady: '–', steadyOk: false };
+  const hits = `${latencyOffsets(t.plan.clicks, t.taps).length} of ${CLICKS}`;
+  if (!e) return { hits, average: '–', when: 'after', steady: '–', steadyOk: false };
   return {
     hits,
     average: `${Math.abs(e.latencyMs)} ms`,
+    when: e.latencyMs >= 0 ? 'after' : 'before',
     steady: `±${Math.round(e.spread)} ms`,
     steadyOk: e.spread <= MAX_SPREAD,
   };

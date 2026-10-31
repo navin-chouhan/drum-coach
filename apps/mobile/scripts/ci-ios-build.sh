@@ -143,6 +143,9 @@ swift_tests() {
 xcresult_race_only() {
   local log=$1
   grep -q '^\*\* TEST SUCCEEDED \*\*' "$log" || return 1
+  # XCTest's own summary too (QA4 m7): a run that crashed before printing it can't pass, nor one that counted failures.
+  grep -Eq 'Executed [0-9]+ tests?, with 0 failures' "$log" || return 1
+  if grep -Eq 'Executed [0-9]+ tests?, with [1-9][0-9]* failures?' "$log"; then return 1; fi
   grep -q 'CASTreeDataStructure/Importer.swift:[0-9]*: Fatal error: .*Unable to write data for .*Diagnostics.* due to resourceChanged' "$log" || return 1
   if grep -E "Test Case .* failed|error: |\*\* TEST (FAILED|EXECUTE FAILED|BUILD FAILED)" "$log" | grep -vq 'CASTreeDataStructure/Importer.swift'; then return 1; fi
   echo "::warning::$(basename "$log"): every test passed; xcodebuild then crashed writing the result bundle (Xcode's diagnostics race), counted as a pass"

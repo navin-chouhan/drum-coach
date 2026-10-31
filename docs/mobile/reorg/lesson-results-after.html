@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1194">
+<title>Lesson player, after the take (after) · reorg proposal</title>
+<link rel="stylesheet" href="reorg.css"><link rel="stylesheet" href="player.css">
+<style>
+  .row { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; }
+  .score { display: flex; flex-direction: column; gap: 12px; }
+  .score .big { font: 900 76px/1 var(--display); }
+  .score .big small { font-size: 28px; color: var(--muted); }
+  .stars { font-size: 34px; color: #FFC400; -webkit-text-stroke: 1.5px var(--line); }
+  .stars .off { color: #D6D6D6; }
+</style>
+</head><body>
+<div class="ipad">
+  <div class="pbar">
+    <span class="btn round">‹</span>
+    <div class="t"><b>The money beat</b><span>Step 3 of 4 · + snare</span></div>
+    <span class="sp"></span>
+    <span class="pill green" style="height:34px;font-size:15px">→ 75 next</span>
+    <div class="bpm">70<small>BPM</small></div>
+    <span class="btn round">⋯</span>
+  </div>
+  <div class="body">
+    <div class="say"><div class="avatar">🥁</div><p>Clean! 46 of 48. One more and we go to 75.</p><span class="spk">🔊 spoken</span></div>
+    <div class="row">
+      <div class="music" id="m"></div>
+      <div class="card score">
+        <span class="kicker">Your take</span>
+        <div class="big">46<small>/48</small></div>
+        <div class="stars">★★<span class="off">★</span></div>
+        <div style="font-size:16px;font-weight:700">Bar 2: the hi-hat & is late.</div>
+        <span class="btn">🔁 Fix bar 2</span>
+        <span class="btn sm plain" style="justify-content:flex-start">🧑‍🏫 Ask the coach ›</span>
+      </div>
+    </div>
+    <div class="strip">
+      <div class="move go"><b><span class="em">↻</span>Again</b><div class="gs"><span class="gest on-tint g-hhp">hi-hat pedal × 3</span><span class="or">or</span><span class="gest on-tint g-crash">crash × 2</span></div></div>
+      <div class="move"><b><span class="em">👂</span>Hear mine</b><div class="gs"><span class="gest g-tom2">tom 2 × 2</span></div></div>
+      <div class="move alt"><b><span class="em">🐢</span>Slower</b><div class="gs"><span class="gest g-floor">floor × 2</span></div></div>
+      <div class="move alt"><b><span class="em">⏭</span>Next</b><div class="gs"><span class="gest g-ride">ride × 2</span></div></div>
+    </div>
+  </div>
+  <div class="ann" style="left:40px;top:150px;max-width:560px">Share take, timing line, fills, legend → ⋯ / “Details” (tap the take)</div>
+  <div class="tagNew">AFTER · PROPOSAL</div>
+</div>
+<script src="../../mockups/ipad/mock.js"></script>
+<script>
+document.getElementById('m').innerHTML = sheet({ W: 790, rowH: Math.round(12.5 * 15.4), gap: 12.5, rows: [[0, 2], [2, 2]], judged: { hihat11: ['off', '+48'], snare14: ['miss'] } });
+</script>
+</body></html>
