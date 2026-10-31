@@ -5,7 +5,7 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BigMove, Body, Card, CardTitle, CheckRow, Display, Small, Stepper, color, gesturesFor, readSettings, useAppKey, useKitMoves } from '../../ui';
+import { BigMove, Body, Card, CardTitle, CheckRow, Display, MoreSheet, RoundButton, SheetItem, Small, Stepper, color, gesturesFor, readSettings, useAppKey, useKitMoves } from '../../ui';
 import { audio } from '../../platform/audio';
 import { NoteHighway } from '../../play';
 import { getStorage } from '../../platform/storage';
@@ -69,6 +69,7 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
   const hasNotes = song.notes.some(n => n.t >= 0);
   useEffect(() => (hasNotes ? getCoach().session.onCoachAction(a => { if (a.kind === 'listen') return false; goRef.current(); return true; }) : undefined), [hasNotes]);
   const [shareNote, setShareNote] = useState('');
+  const [more, setMore] = useState(false);
   const share = async (f: SongTakeResult) => { setShareNote(''); if ((await shareTake(f, song.title)) === 'failed') setShareNote('The take could not be shared.'); };
 
   // The highway runs on the song: its clock is the take's run ms, beat 0 at 0.
@@ -85,9 +86,14 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
         {next ? <BigMove testID="song-encore-next" tone="go" emoji="▶" label="Next song" gestures={gesturesFor('yes')}
           onPress={() => { concert.queue.shift(); router.replace(songHref(next.id, next.bars)); }} />
           : <BigMove testID="song-encore-again" tone="go" emoji="↻" label="Play it again" gestures={gesturesFor('yes')} onPress={go} />}
-        {canShare(done) ? <BigMove testID="song-encore-share" emoji="📤" label="Share take" onPress={() => void share(done)} /> : null}
         <BigMove label="Back" onPress={() => { concert.queue = []; setDone(null); }} />
+        {/* the rest behind ⋯ (D10): Share take */}
+        <RoundButton glyph="⋯" label="More" onPress={() => setMore(true)} testID="song-encore-more" />
       </Row>
+      <MoreSheet open={more} onClose={() => setMore(false)} testID="song-encore-sheet">
+        <SheetItem emoji="📤" label="Share take" sub="Your hits as a MIDI file (AirDrop, Messages, Files…)" disabled={!canShare(done)}
+          onPress={() => { setMore(false); void share(done); }} testID="song-encore-share" />
+      </MoreSheet>
       {shareNote ? <Body color={color.white}>{shareNote}</Body> : null}
     </Card>
   );

@@ -1,7 +1,8 @@
 // Practice, reorganised (D10, docs/mobile/reorg/practice-after.png): one job, pick and play. For you = 4 big cards (the
 // warm-up first, then where you left off, your level, the coach's pick) with the yellow ring (ride × 2 moves it,
 // hi-hat pedal × 3 plays it), the 3 moves, and 4 kind tiles; Songs is one of them (a shelf here, not a section).
-// A tile opens its shelf below; 🔎 searches every exercise; Metronome stays in the bar. Choosing opens the play screen
+// A tile opens its shelf below (Songs opens the Songs screen, a route under Practice); 🔎 searches every exercise;
+// Metronome stays in the bar. Choosing opens the play screen
 // (app/practice/play). The rules are in chooser.ts and catalog.ts.
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
@@ -12,7 +13,6 @@ import {
   color, gesturesFor, hardShadow, shadow, stroke, useAppSettings, useKitMoves,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
-import { SongsShelf } from '../songs/SongsShelf';
 import { useYtSongs } from '../songs/useSongs';
 import { chartRow, listFor, requestedChart, type ChartRow, type TabId } from './catalog';
 import { loadPracticeCharts } from './charts';
@@ -28,7 +28,7 @@ export function PracticeScreen() {
   const charts = useMemo(() => loadPracticeCharts(), [data]); // eslint-disable-line react-hooks/exhaustive-deps -- re-read with the runs
   const ytSongs = useYtSongs();
   // `?chartId=` (Songs' Play, as the web's pending chart): open that exercise's play screen, once per request.
-  const params = useLocalSearchParams<{ chartId?: string; bpm?: string; shelf?: string }>();
+  const params = useLocalSearchParams<{ chartId?: string; bpm?: string }>();
   useEffect(() => {
     if (!params.chartId) return;
     // read anew: a song imported since this tab was last shown isn't in `charts` yet (they follow the runs)
@@ -42,7 +42,7 @@ export function PracticeScreen() {
   const [ring, setRing] = useState(0);
   const focus = Math.min(ring, Math.max(0, cards.length - 1));
   const focused: ForYouCard | undefined = cards[focus];
-  const [shelf, setShelf] = useState<KindTile['id'] | undefined>(params.shelf === 'song' ? 'song' : undefined);
+  const [shelf, setShelf] = useState<KindTile['id'] | undefined>();
   const [searching, setSearching] = useState(false);
   const [q, setQ] = useState('');
   const [notice, setNotice] = useState('');
@@ -69,7 +69,10 @@ export function PracticeScreen() {
   const listTab: TabId | undefined = query ? 'foryou' : shelf && shelf !== 'song' ? shelf : undefined;
   const rows = useMemo(() => (listTab ? listFor(charts, listTab, query).map(c => allRows.get(c.id)!) : []), [charts, listTab, query, allRows]);
   const half = Math.ceil(rows.length / 2);
-  const openTile = (id: KindTile['id']) => { setShelf(s => (s === id ? undefined : id)); setSearching(false); setQ(''); };
+  const openTile = (id: KindTile['id']) => {
+    if (id === 'song') { router.navigate('/songs' as never); return; } // the Songs shelf is its own route under Practice (R1)
+    setShelf(s => (s === id ? undefined : id)); setSearching(false); setQ('');
+  };
 
   return (
     <Screen testID="screen-practice">
@@ -117,11 +120,7 @@ export function PracticeScreen() {
         ))}
       </View>
 
-      {shelf === 'song' && !query ? (
-        <ScrollView style={styles.listArea} contentContainerStyle={styles.songs} keyboardShouldPersistTaps="handled">
-          <SongsShelf />
-        </ScrollView>
-      ) : listTab ? (
+      {listTab ? (
         <ScrollView style={styles.listArea} contentContainerStyle={styles.cols} keyboardShouldPersistTaps="handled">
           {rows.length === 0 ? <Body color={color.ink} weight="700" style={styles.empty}>Nothing here yet.</Body>
             : [rows.slice(0, half), rows.slice(half)].map((col, k) => (
@@ -162,7 +161,6 @@ const styles = StyleSheet.create({
   kindLabel: { flexShrink: 0 },
   kindCount: { flexShrink: 1, marginLeft: 'auto', textAlign: 'right' },
   listArea: { flex: 1, marginTop: 16, marginHorizontal: -8 },
-  songs: { paddingHorizontal: 8, paddingBottom: 20 },
   cols: { flexDirection: 'row', gap: 18, paddingHorizontal: 8, paddingBottom: 10, alignItems: 'flex-start' },
   group: { flex: 1, minWidth: 0, paddingVertical: 0, paddingHorizontal: 0 },
   sym: { width: 32, height: 32, backgroundColor: color.teal, borderWidth: stroke.thin, borderColor: color.ink, alignItems: 'center', justifyContent: 'center' },

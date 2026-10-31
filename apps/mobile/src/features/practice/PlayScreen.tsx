@@ -34,6 +34,7 @@ import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
 import { interruptedNote, practiceEngine } from './engine';
 import { IntroSlides } from '../lesson/IntroSlides';
+import { speakMoment } from '../coach/voice';
 import { KeysLine, PlayerFrame, PlayerScore, PlayerSheet, SheetSection, phaseOf, sheetScaleFor, takeBarText, type PlayerMove } from '../../player';
 import {
   barNow, barPickKind, clampRepeats, moreCard, needsIntro, yourTakeCard, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
@@ -211,6 +212,8 @@ export function PlayScreen() {
   };
   // The coach learns what "this" is; it never talks over a take.
   useEffect(() => { session.coachOpen(chart, m.bpm); }, [chart.id, m.bpm]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Voice first (D10): the exercise is said when it opens (not in the warm-up, which runs by itself).
+  useEffect(() => { if (!warm) speakMoment({ kind: 'stepIntro', title: chart.title, what: chart.description ?? `${chart.bars} bar${chart.bars === 1 ? '' : 's'}, ${o.repeats} times round.`, bpm: m.bpm }); }, [chart.id]); // eslint-disable-line react-hooks/exhaustive-deps -- once per exercise
   useEffect(() => {
     setCoachPlaying(playing, playing ? { exercise: chart.title, bpm: m.bpm } : undefined);
   }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
