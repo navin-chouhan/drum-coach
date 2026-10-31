@@ -11,6 +11,9 @@
 //  - a start too close to place (or in the past) joins late: it skips into the file, so what is heard still sits on
 //    the line, instead of playing late the way an AudioBufferSourceNode would;
 //  - the first frame is rounded up, and the heard time is recomputed from it (sub-frame exact).
+// A start may give a length (`durationMs` of the line, from `offsetMs`); further segments are queued behind it on the
+// same player node and line (planBackingQueue). Back to back they are sample-exact: the player's own timeline (frames
+// since `play(at:)`, through the time-pitch unit) has no seams, and the anchor maps it through the segment list.
 
 /** The rates native accepts (AVAudioUnitTimePitch takes 1/32…32; the app uses 0.5…1). NaN and ≤ 0 mean 1. */
 export const BACKING_RATE = Object.freeze({ min: 0.25, max: 2 });
@@ -40,7 +43,11 @@ export type BackingTiming = {
   pitchLatencyMs: number;
 };
 
-export type BackingStartRequest = { at: number; offsetMs: number; rate: number };
+/** `durationMs`: ms of the line (file ms from `offsetMs`) to play; omitted or not finite = to the file's end. */
+export type BackingStartRequest = { at: number; offsetMs: number; rate: number; durationMs?: number };
+
+/** A queued segment: `offsetMs` heard at `at` on the start's line, `durationMs` of the line (BackingPort.queue). */
+export type BackingQueueRequest = { at: number; offsetMs: number; durationMs: number };
 
 export type BackingPlan = {
   rate: number;
@@ -56,6 +63,24 @@ export type BackingPlan = {
   /** Clock ms of the line skipped because `at` was too close or past (0 = on time). */
   joinedLateMs: number;
 };
+
+/** One segment on the player's timeline (a start's first segment is at player frame 0). */
+export type BackingSegmentPlan = {
+  /** Where the segment begins on the player's timeline: frames since `play(at:)`, at the file's rate. */
+  playerFrame: number;
+  /** First file frame (`scheduleSegment(startingFrame:)`) and how many (`frameCount:`). */
+  startFrame: number;
+  frameCount: number;
+  fileStartMs: number;
+  /** When startFrame is heard on the line (Clock ms). */
+  heardAtMs: number;
+};
+
+/** The line's end in file frames: `offsetMs + durationMs` to the nearest frame (at most the file's end); no length = the file's end. */
+export function endFrameOf(offsetMs: number, durationMs: number | undefined, sampleRate: number, frames: number): number {
+  if (durationMs === undefined || !Number.isFinite(durationMs)) return frames;
+  return Math.min(frames, Math.round(((offsetMs + durationMs) * sampleRate) / 1000));
+}
 
 /** Earliest heard time a start can still be placed exactly at `nowMs` (the late rule of AudioPolicy.isLate). */
 export function earliestHeardMs(nowMs: number, t: BackingTiming): number {
@@ -90,17 +115,80 @@ export function planBackingStart(
     at = join;
   }
   const startFrame = Math.max(0, Math.ceil((offset * file.sampleRate) / 1000 - 1e-6));
-  if (startFrame >= file.frames) return null;
+  const endFrame = endFrameOf(req.offsetMs, req.durationMs, file.sampleRate, file.frames);
+  if (startFrame >= endFrame) return null;
   const fileStartMs = (startFrame * 1000) / file.sampleRate;
   const heardAtMs = at + (fileStartMs - offset) / rate;
   return {
     rate,
     startFrame,
-    frameCount: file.frames - startFrame,
+    frameCount: endFrame - startFrame,
     fileStartMs,
     heardAtMs,
     scheduleMs: heardAtMs - t.heardOffsetMs - t.pitchLatencyMs,
     joinedLateMs,
+  };
+}
+
+/** A queued segment this close (player frames) to where the previous one ends is played right after it. */
+export const SEAM_SLACK_FRAMES = 1;
+
+/** A start's plan as the first segment of its player timeline. */
+export function firstSegment(p: BackingPlan): BackingSegmentPlan {
+  return { playerFrame: 0, startFrame: p.startFrame, frameCount: p.frameCount, fileStartMs: p.fileStartMs, heardAtMs: p.heardAtMs };
+}
+
+export type BackingQueuePlan = BackingSegmentPlan & {
+  /** Frames of the segment's line skipped: it overlapped the previous segment, or came too late to place. */
+  skippedFrames: number;
+  /** True: scheduled at an explicit player time (a gap before it). False: `at: nil`, right after the previous one. */
+  explicitTime: boolean;
+};
+
+/**
+ * The next segment on a playing line (`line`: the start's plan; player frame 0 is heard at its heardAtMs), after the
+ * segment that ends at player frame `prevEnd`. Its place on the player timeline is where the line puts `req.offsetMs`
+ * (a negative offset waits −offset / rate first, as a start does), rounded to a frame:
+ *  - within a frame of `prevEnd`: exactly `prevEnd`, back to back (`at: nil`, sample-accurate), its first file frame
+ *    moved by that frame, so a section that isn't a whole number of frames never creeps off the line;
+ *  - later: a gap, at that player frame;
+ *  - earlier (an overlap), or before what can still be placed at `nowMs` (then + the late-join margin): later than
+ *    asked, skipping as many frames into the file, so what is heard stays on the line.
+ * Null when nothing of it is left, or for a malformed request or file. The rate is the line's.
+ */
+export function planBackingQueue(
+  req: BackingQueueRequest,
+  line: Pick<BackingPlan, 'heardAtMs' | 'rate'>,
+  prevEnd: number,
+  nowMs: number,
+  t: BackingTiming,
+  file: { sampleRate: number; frames: number },
+  marginMs = LATE_JOIN_MARGIN_MS,
+): BackingQueuePlan | null {
+  if (![req.at, req.offsetMs, req.durationMs, nowMs, line.heardAtMs, prevEnd].every(Number.isFinite) || !(file.sampleRate > 0) || !(file.frames > 0)) return null;
+  const rate = clampRate(line.rate), fpm = file.sampleRate / 1000; // file frames per ms
+  let at = req.at;
+  let offset = req.offsetMs;
+  if (offset < 0) {
+    at += -offset / rate;
+    offset = 0;
+  }
+  const want = Math.round((at - line.heardAtMs) * rate * fpm);
+  let playerFrame = Math.abs(want - prevEnd) <= SEAM_SLACK_FRAMES ? prevEnd : Math.max(want, prevEnd);
+  const earliest = Math.ceil((earliestHeardMs(nowMs, t) - line.heardAtMs) * rate * fpm);
+  if (playerFrame < earliest) playerFrame = earliest + Math.ceil(marginMs * rate * fpm);
+  const skippedFrames = playerFrame - want; // −1 … : a seam a frame early starts its file a frame early too
+  const startFrame = Math.max(0, Math.ceil(offset * fpm - 1e-6) + skippedFrames);
+  const endFrame = endFrameOf(req.offsetMs, req.durationMs, file.sampleRate, file.frames);
+  if (startFrame >= endFrame) return null;
+  return {
+    playerFrame,
+    startFrame,
+    frameCount: endFrame - startFrame,
+    fileStartMs: startFrame / fpm,
+    heardAtMs: line.heardAtMs + playerFrame / fpm / rate,
+    skippedFrames,
+    explicitTime: playerFrame !== prevEnd,
   };
 }
 
@@ -139,13 +227,28 @@ export function anchorFromRender(
   t: Pick<BackingTiming, 'heardOffsetMs' | 'pitchLatencyMs'>,
   fileFrames: number,
 ): BackingAnchor | null {
+  const a = anchorInSegments([{ playerFrame: 0, startFrame: plan.startFrame, frameCount: fileFrames - plan.startFrame, fileStartMs: plan.fileStartMs }], r, t);
+  return a && { at: a.at, fileMs: a.fileMs };
+}
+
+/**
+ * The anchor across queued segments: the player's timeline has no seams, so `playerSampleTime` falls in one segment
+ * (`segment`: its index) and the file position is that segment's. Null in a gap between segments, before the first,
+ * after the last, or with invalid times.
+ */
+export function anchorInSegments(
+  segments: readonly Pick<BackingSegmentPlan, 'playerFrame' | 'startFrame' | 'frameCount' | 'fileStartMs'>[],
+  r: { playerSampleTime: number; playerSampleRate: number; hostMs: number },
+  t: Pick<BackingTiming, 'heardOffsetMs' | 'pitchLatencyMs'>,
+): (BackingAnchor & { segment: number }) | null {
   if (!(r.playerSampleRate > 0) || !Number.isFinite(r.playerSampleTime) || !Number.isFinite(r.hostMs)) return null;
-  if (r.playerSampleTime < 0) return null;
-  if (plan.startFrame + r.playerSampleTime >= fileFrames) return null;
-  return {
-    at: r.hostMs + t.heardOffsetMs + t.pitchLatencyMs,
-    fileMs: plan.fileStartMs + (r.playerSampleTime * 1000) / r.playerSampleRate,
-  };
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const s = segments[i], into = r.playerSampleTime - s.playerFrame;
+    if (into < 0) continue;
+    if (into >= s.frameCount) return null;
+    return { at: r.hostMs + t.heardOffsetMs + t.pitchLatencyMs, fileMs: s.fileStartMs + (into * 1000) / r.playerSampleRate, segment: i };
+  }
+  return null;
 }
 
 /**
@@ -163,6 +266,27 @@ export function nodeSampleForHost(last: { sampleTime: number; hostMs: number }, 
  */
 export function reanchorRequest(last: BackingAnchor | null, plan: Pick<BackingPlan, 'heardAtMs' | 'fileStartMs' | 'rate'>): BackingStartRequest {
   return last ? { at: last.at, offsetMs: last.fileMs, rate: plan.rate } : { at: plan.heardAtMs, offsetMs: plan.fileStartMs, rate: plan.rate };
+}
+
+/**
+ * After a route or engine change, the whole timeline to put back: the segment playing now from the last anchor read
+ * (to its end), then the segments after it, moved by the same drift (null `last`: from the first segment, unmoved).
+ * Null when the anchor's segment isn't one of `segments` (or there are none).
+ */
+export function reanchorPlan(
+  last: (BackingAnchor & { segment: number }) | null,
+  segments: readonly BackingSegmentPlan[],
+  rate: number,
+  sampleRate: number,
+): { start: BackingStartRequest; queue: BackingQueueRequest[] } | null {
+  const k = last ? last.segment : 0, s = segments[k];
+  if (!s || !(sampleRate > 0)) return null;
+  const r = clampRate(rate), endMs = (f: BackingSegmentPlan) => ((f.startFrame + f.frameCount) * 1000) / sampleRate;
+  const shift = last ? last.at - (s.heardAtMs + (last.fileMs - s.fileStartMs) / r) : 0;
+  const line = reanchorRequest(last, { heardAtMs: s.heardAtMs, fileStartMs: s.fileStartMs, rate: r });
+  const start = { ...line, durationMs: endMs(s) - line.offsetMs };
+  const queue = segments.slice(k + 1).map(f => ({ at: f.heardAtMs + shift, offsetMs: f.fileStartMs, durationMs: endMs(f) - f.fileStartMs }));
+  return { start, queue };
 }
 
 /** A local file to play: a file:// URI or an absolute path. Anything else (http, YouTube, content://) is refused. */

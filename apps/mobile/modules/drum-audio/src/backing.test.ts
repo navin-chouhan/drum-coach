@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  anchorFromRender, backingDriftMs, backingFilePath, clampRate, earliestHeardMs, expectedFileMs, expectedHeardMs,
-  isUnityRate, LATE_JOIN_MARGIN_MS, nodeSampleForHost, planBackingStart, reanchorRequest, renderHostMs, smoothDrift,
-  summarizeDrift, type BackingTiming,
+  anchorFromRender, anchorInSegments, backingDriftMs, backingFilePath, clampRate, earliestHeardMs, endFrameOf, expectedFileMs,
+  expectedHeardMs, firstSegment, isUnityRate, LATE_JOIN_MARGIN_MS, nodeSampleForHost, planBackingQueue, planBackingStart,
+  reanchorPlan, reanchorRequest, renderHostMs, smoothDrift, summarizeDrift, type BackingSegmentPlan, type BackingTiming,
 } from './backing';
 
 // The iPad speaker (GATE0 §9): 5.7 ms output latency (branch A heard offset), 21.3 ms IO buffer, safety 10.
@@ -82,6 +82,148 @@ describe('planBackingStart', () => {
 
   it('an invalid rate plays at 1', () => {
     expect(planBackingStart({ at: now + 1000, offsetMs: 0, rate: Number.NaN }, now, speaker, file441)!.rate).toBe(1);
+  });
+});
+
+describe('a start with a length (durationMs of the line, from offsetMs)', () => {
+  it('ends at offsetMs + durationMs, to the nearest frame; a late join keeps that end', () => {
+    const p = planBackingStart({ at: now + 1000, offsetMs: 1000, rate: 0.75, durationMs: 2400 }, now, speaker, file441)!;
+    expect(p.startFrame).toBe(44_100);
+    expect(p.frameCount).toBe(Math.round(3.4 * 44_100) - 44_100);
+    const late = planBackingStart({ at: now - 500, offsetMs: 1000, rate: 0.75, durationMs: 2400 }, now, speaker, file441)!;
+    expect(late.startFrame + late.frameCount).toBe(Math.round(3.4 * 44_100));
+  });
+  it('a negative offset counts its lead in the length; nothing left, or a length ≤ 0: null; no length or NaN: to the end', () => {
+    const p = planBackingStart({ at: now + 1000, offsetMs: -300, rate: 1, durationMs: 2400 }, now, speaker, file441)!;
+    expect(p.frameCount).toBe(Math.round(2.1 * 44_100));
+    expect(planBackingStart({ at: now + 1000, offsetMs: 0, rate: 1, durationMs: 0 }, now, speaker, file441)).toBeNull();
+    expect(planBackingStart({ at: now + 1000, offsetMs: -300, rate: 1, durationMs: 200 }, now, speaker, file441)).toBeNull();
+    expect(planBackingStart({ at: now - 5000, offsetMs: 0, rate: 1, durationMs: 2000 }, now, speaker, file441)).toBeNull();
+    expect(planBackingStart({ at: now + 1000, offsetMs: 0, rate: 1, durationMs: Number.NaN }, now, speaker, file441)!.frameCount).toBe(file441.frames);
+    expect(endFrameOf(0, 1e9, 44_100, 1000)).toBe(1000); // never past the file
+    expect(endFrameOf(0, undefined, 44_100, 1000)).toBe(1000);
+  });
+});
+
+describe('planBackingQueue (seamless loops)', () => {
+  /** A section looped `n` times: start + queued segments, as core's take hands them over. */
+  function loop(n: number, o: { rate: number; offsetMs: number; secFileMs: number; sampleRate?: number }) {
+    const file = { sampleRate: o.sampleRate ?? 44_100, frames: (o.sampleRate ?? 44_100) * 600 };
+    const at0 = now + 1000, sec = o.secFileMs / o.rate; // heard ms per repeat
+    const p = planBackingStart({ at: at0, offsetMs: o.offsetMs, rate: o.rate, durationMs: o.secFileMs }, now, speaker, file)!;
+    const segs: BackingSegmentPlan[] = [firstSegment(p)];
+    const plans = [];
+    for (let r = 1; r < n; r++) {
+      const last = segs[segs.length - 1];
+      const q = planBackingQueue({ at: at0 + r * sec, offsetMs: o.offsetMs, durationMs: o.secFileMs }, p, last.playerFrame + last.frameCount, now, speaker, file)!;
+      segs.push(q);
+      plans.push(q);
+    }
+    return { p, segs, plans, file, at0, sec };
+  }
+
+  for (const rate of [1, 0.75, 0.5]) {
+    it(`at ${rate * 100} %: 200 repeats of 2.4 s, each exactly where the one before ends, on the line to a frame`, () => {
+      const { segs, plans, at0, sec } = loop(200, { rate, offsetMs: 2650, secFileMs: 2400 });
+      for (const [i, q] of plans.entries()) {
+        const prev = segs[i];
+        expect(q.playerFrame).toBe(prev.playerFrame + prev.frameCount); // no gap, no overlap
+        expect(q.explicitTime).toBe(false);
+        expect(q.skippedFrames).toBe(0);
+        expect(q.startFrame).toBe(segs[0].startFrame); // the same stretch of the file each time
+        expect(q.frameCount).toBe(segs[0].frameCount);
+        expect(Math.abs(q.heardAtMs - (at0 + (i + 1) * sec))).toBeLessThan(1000 / 44_100 / rate); // within a frame of the line
+      }
+    });
+  }
+
+  it('48 kHz and an odd section length: rounding never opens a gap', () => {
+    const { segs, plans, at0, sec } = loop(500, { rate: 0.75, offsetMs: 123.456, secFileMs: 1234.5678, sampleRate: 48_000 });
+    plans.forEach((q, i) => {
+      expect(q.playerFrame).toBe(segs[i].playerFrame + segs[i].frameCount);
+      expect(Math.abs(q.skippedFrames)).toBeLessThanOrEqual(1); // the line is 59 259.25 frames per repeat: a frame now and then
+      // never creeps: where this segment puts the section's start is on the line, to a frame and a half, all along
+      const sectionStartHeard = q.heardAtMs - (q.fileStartMs - 123.456) / 0.75;
+      expect(Math.abs(sectionStartHeard - (at0 + (i + 1) * sec))).toBeLessThan((1.5 * 1000) / 48_000 / 0.75);
+    });
+  });
+
+  it('a negative offset: each repeat waits its lead, at an explicit player time', () => {
+    const file = file441, at0 = now + 1000;
+    const p = planBackingStart({ at: at0, offsetMs: -300, rate: 1, durationMs: 2400 }, now, speaker, file)!;
+    const q = planBackingQueue({ at: at0 + 2400, offsetMs: -300, durationMs: 2400 }, p, p.frameCount, now, speaker, file)!;
+    expect(q.explicitTime).toBe(true);
+    expect(q.playerFrame).toBe(Math.round(2.4 * 44_100)); // 0.3 s of silence after the 2.1 s of file
+    expect(q.startFrame).toBe(0);
+    expect(q.heardAtMs).toBeCloseTo(at0 + 2700, 6);
+  });
+
+  it('an overlap skips into the file; a late queue joins later on the same line', () => {
+    const at0 = now + 1000;
+    const p = planBackingStart({ at: at0, offsetMs: 0, rate: 0.5, durationMs: 10_000 }, now, speaker, file441)!;
+    const over = planBackingQueue({ at: at0 + 19_000, offsetMs: 5000, durationMs: 1000 }, p, p.frameCount, now, speaker, file441)!;
+    expect(over.playerFrame).toBe(p.frameCount);
+    expect(over.skippedFrames).toBe(Math.round(0.5 * 44_100)); // due 1 s heard (0.5 s of file) early
+    expect(over.startFrame).toBe(5.5 * 44_100);
+    expect(over.explicitTime).toBe(false);
+    // queued after the previous segment ran out: it joins at the earliest time + margin, on the line
+    const later = now + 30_000;
+    const late = planBackingQueue({ at: at0 + 20_000, offsetMs: 0, durationMs: 60_000 }, p, p.frameCount, later, speaker, file441)!;
+    expect(late.explicitTime).toBe(true);
+    expect(late.heardAtMs).toBeGreaterThanOrEqual(earliestHeardMs(later, speaker) + LATE_JOIN_MARGIN_MS - 1e-6);
+    expect(late.heardAtMs - (at0 + 20_000)).toBeCloseTo((late.fileStartMs - 0) / 0.5, 3);
+    expect(late.skippedFrames).toBe(late.startFrame);
+  });
+
+  it('null when nothing of it is left, or for a malformed request or file', () => {
+    const p = planBackingStart({ at: now + 1000, offsetMs: 0, rate: 1, durationMs: 1000 }, now, speaker, file441)!;
+    const q = (req: { at: number; offsetMs: number; durationMs: number }, f = file441, prevEnd = p.frameCount) => planBackingQueue(req, p, prevEnd, now, speaker, f);
+    expect(q({ at: now + 2000, offsetMs: 360_000, durationMs: 1000 })).toBeNull();
+    expect(q({ at: now + 1500, offsetMs: 0, durationMs: 400 })).toBeNull(); // overlapped entirely
+    expect(q({ at: now + 2000, offsetMs: 0, durationMs: Number.NaN })).toBeNull();
+    expect(q({ at: now + 2000, offsetMs: 0, durationMs: 1000 }, { sampleRate: 0, frames: 10 })).toBeNull();
+    expect(q({ at: now + 2000, offsetMs: 0, durationMs: 1000 }, { sampleRate: 44_100, frames: 0 })).toBeNull();
+    expect(q({ at: now + 2000, offsetMs: 0, durationMs: 1000 }, file441, Number.NaN)).toBeNull();
+  });
+});
+
+describe('anchorInSegments: the anchor is right across seams', () => {
+  const t = { heardOffsetMs: 5.7, pitchLatencyMs: 0 };
+  const segs = [
+    { playerFrame: 0, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000 },
+    { playerFrame: 44_100, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000 },
+    { playerFrame: 100_000, startFrame: 0, frameCount: 1000, fileStartMs: 0 }, // after a gap
+  ];
+  const at = (s: number) => anchorInSegments(segs, { playerSampleTime: s, playerSampleRate: 44_100, hostMs: now }, t);
+  it('maps the player timeline through the segment list', () => {
+    expect(at(44_099)).toMatchObject({ segment: 0, fileMs: 1000 + 44_099 / 44.1 });
+    expect(at(44_100)).toMatchObject({ segment: 1, fileMs: 1000 });
+    expect(at(100_500)).toMatchObject({ segment: 2, fileMs: 500 / 44.1 });
+    expect(at(0)!.at).toBeCloseTo(now + 5.7, 9);
+  });
+  it('null before the first, in a gap, after the last, or with invalid times', () => {
+    expect(at(-1)).toBeNull();
+    expect(at(90_000)).toBeNull();
+    expect(at(101_000)).toBeNull();
+    expect(anchorInSegments([], { playerSampleTime: 0, playerSampleRate: 44_100, hostMs: now }, t)).toBeNull();
+    expect(anchorInSegments(segs, { playerSampleTime: 0, playerSampleRate: 0, hostMs: now }, t)).toBeNull();
+  });
+  it('a looped line read on a perfect clock has zero drift in every repeat, at any rate', () => {
+    for (const rate of [1, 0.75]) {
+      const tm = { ...speaker, pitchLatencyMs: rate === 1 ? 0 : 46.4 };
+      const at0 = now + 1500, secFile = 2400, sec = secFile / rate;
+      const p = planBackingStart({ at: at0, offsetMs: 2650, rate, durationMs: secFile }, now, tm, file441)!;
+      const segs2: BackingSegmentPlan[] = [firstSegment(p)];
+      for (let r = 1; r < 50; r++) {
+        const last = segs2[r - 1];
+        segs2.push(planBackingQueue({ at: at0 + r * sec, offsetMs: 2650, durationMs: secFile }, p, last.playerFrame + last.frameCount, now, tm, file441)!);
+      }
+      for (let ms = 0; ms < 49 * sec; ms += 337) {
+        const h = p.scheduleMs + ms, a = anchorInSegments(segs2, { playerSampleTime: (ms / 1000) * 44_100 * rate, playerSampleRate: 44_100, hostMs: h }, tm)!;
+        const r = a.segment, line = { at: at0 + r * sec, offsetMs: 2650, rate };
+        expect(Math.abs(backingDriftMs(line, a))).toBeLessThan(1000 / 44_100 / rate); // within a frame
+      }
+    }
   });
 });
 
@@ -172,6 +314,44 @@ describe('reanchorRequest', () => {
     expect(q.joinedLateMs).toBeGreaterThan(0);
     expect(q.heardAtMs).toBeCloseTo(expectedHeardMs(req, q.fileStartMs), 9);
     expect(q.scheduleMs).toBeCloseTo(q.heardAtMs - 180, 9);
+  });
+});
+
+describe('reanchorPlan', () => {
+  const segs: BackingSegmentPlan[] = [
+    { playerFrame: 0, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: now + 100 },
+    { playerFrame: 44_100, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: now + 2100 },
+    { playerFrame: 88_200, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: now + 4100 },
+  ];
+  it('from the last anchor to the end of its segment, then the later segments moved by the same drift', () => {
+    // segment 1, file 1500 ms: on the line at now + 2100 + 500 / 0.5 = now + 3100; read 3 ms late
+    const plan = reanchorPlan({ at: now + 3103, fileMs: 1500, segment: 1 }, segs, 0.5, 44_100)!;
+    expect(plan.start).toEqual({ at: now + 3103, offsetMs: 1500, rate: 0.5, durationMs: 500 });
+    expect(plan.queue).toHaveLength(1);
+    expect(plan.queue[0].at).toBeCloseTo(now + 4103, 9);
+    expect(plan.queue[0]).toMatchObject({ offsetMs: 1000, durationMs: 1000 });
+  });
+  it('no anchor: the first segment unmoved; bad input: null', () => {
+    const plan = reanchorPlan(null, segs, 0.5, 44_100)!;
+    expect(plan.start).toEqual({ at: now + 100, offsetMs: 1000, rate: 0.5, durationMs: 1000 });
+    expect(plan.queue.map(q => q.at)).toEqual([now + 2100, now + 4100]);
+    expect(reanchorPlan({ at: now, fileMs: 0, segment: 3 }, segs, 0.5, 44_100)).toBeNull();
+    expect(reanchorPlan(null, [], 1, 44_100)).toBeNull();
+    expect(reanchorPlan(null, segs, 1, 0)).toBeNull();
+  });
+  it('put back after a heard-offset change, the queued segments still follow back to back', () => {
+    const at0 = now + 1000;
+    const p = planBackingStart({ at: at0, offsetMs: 0, rate: 1, durationMs: 2000 }, now, speaker, file441)!;
+    const s0 = firstSegment(p), s1 = planBackingQueue({ at: at0 + 2000, offsetMs: 0, durationMs: 2000 }, p, p.frameCount, now, speaker, file441)!;
+    const later = now + 1500, bt = { ...speaker, heardOffsetMs: 180, ioBufferMs: 10.7 };
+    const plan = reanchorPlan({ at: at0 + 500, fileMs: 500, segment: 0 }, [s0, s1], 1, 44_100)!;
+    const q = planBackingStart(plan.start, later, bt, file441)!;
+    expect(q.joinedLateMs).toBeGreaterThan(0);
+    expect(q.startFrame + q.frameCount).toBe(2 * 44_100);
+    const r = planBackingQueue(plan.queue[0], q, q.frameCount, later, bt, file441)!;
+    expect(r.playerFrame).toBe(q.frameCount);
+    expect(r.explicitTime).toBe(false);
+    expect(r.heardAtMs).toBeCloseTo(at0 + 2000, 3);
   });
 });
 
