@@ -45,6 +45,6 @@ describe('for your teacher (web TeacherView)', () => {
     expect(addTeacherNote(many, 'new', NOW)).toHaveLength(20);
     expect(readTeacherNotes([{ date: '2026-10-01', text: 'ok' }, { text: 1 }, 'x'])).toEqual([{ date: '2026-10-01', text: 'ok' }]);
     expect(readTeacherNotes(null)).toEqual([]);
-    expect(progressViewOf('teacher')).toBe('teacher');
+    expect([progressViewOf('teacher'), progressViewOf('coming'), progressViewOf('lessons')]).toEqual(['teacher', 'coming', 'lessons']);
   });
 });
