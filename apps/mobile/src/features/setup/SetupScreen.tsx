@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { getHomeServer, validateServerConfig } from '../../platform/api';
 import { audio } from '../../platform/audio';
+import { useAudioEngine } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { KitView, type PadHit, type Subscribe } from '../../play';
@@ -246,7 +247,7 @@ function KitTest() {
   const last = useLastHit();
   const hit = lastHitView(last);
   const [hits] = useState<Subscribe<PadHit>>(() => (fn: (h: PadHit) => void) => getAppHitBus().onHit(h => { if (h.pad) fn({ pad: h.pad, velocity: h.velocity, at: h.time }); }));
-  useEffect(() => { void audio.start().catch(() => {}); }, []);
+  useAudioEngine(); // tapped drums sound at once, and again after the app comes back (QA2 M2)
   return (
     <View style={styles.kitTest}>
       <View style={styles.kitArea}>

@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
+import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getStorage } from '../../platform/storage';
 import { BigMove, Body, Button, Card, Display, Group, GroupRow, Stepper, Toggle, color, getAppHitBus, readSettings, useAppKey, useAppSettings, writeSettings } from '../../ui';
 import {
@@ -38,7 +39,11 @@ async function say(text: string) {
   } catch { /* no audio in this build */ }
 }
 
+/** An interruption stopped the looping click or band (its queued sounds are gone). */
+export const SOUND_STOPPED = 'The sound stopped (a call, the app in the background or a new audio output). Press it again.';
+
 export function SoundPanel() {
+  useAudioEngine();
   const s = useAppSettings();
   const [clicking, setClicking] = useState(false);
   const [throne, setThrone] = useState(false);
@@ -46,6 +51,7 @@ export function SoundPanel() {
   const stopLoop = useRef<() => void>(() => {});
   useEffect(() => () => stopLoop.current(), []);
   const stopClick = () => { stopLoop.current(); stopLoop.current = () => {}; setClicking(false); };
+  useAudioInterruptions(clicking, () => { stopClick(); setError(SOUND_STOPPED); });
   const playClick = async () => {
     try { stopLoop.current = await startLoop('click'); setClicking(true); setError(''); } catch { setError('Sound is off in this build (it needs the Drum Coach app on the iPad).'); }
   };
@@ -81,7 +87,11 @@ function ThroneCheck({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0);
   const stepRef = useRef(0);
   const stopLoop = useRef<() => void>(() => {});
+  const [stopped, setStopped] = useState(false);
+  // An interruption silences the loop: say so; answering (or Play again) plays this step again.
+  useAudioInterruptions(!stopped, () => { stopLoop.current(); stopLoop.current = () => {}; setStopped(true); });
   const play = async (k: number) => {
+    setStopped(false);
     stopLoop.current(); stopLoop.current = () => {};
     const st = THRONE_STEPS[k];
     if (!st) return;
@@ -119,6 +129,10 @@ function ThroneCheck({ onDone }: { onDone: () => void }) {
           <BigMove key={label} tone={a === 1 ? 'go' : 'alt'} label={label} note={`${g} or key ${a + 1}`} onPress={() => answer(a)} testID={`throne-answer-${a}`} style={styles.move} />
         ))}
       </View>
+      {stopped ? <View style={styles.row}>
+        <Body size={15} color={color.bad} weight="700">{SOUND_STOPPED}</Body>
+        <Button tone="blue" label="Play it again" emoji="▶" onPress={() => void play(stepRef.current)} testID="throne-replay" />
+      </View> : null}
       <Button tone="plain" label="Stop" onPress={() => { stopLoop.current(); onDone(); }} testID="throne-stop" />
     </View>
   );

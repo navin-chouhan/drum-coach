@@ -2,6 +2,7 @@
 // browser's voice; src/voice/voice.ts). Sentences queue one after another, as the web's sayNext does; nothing is
 // said while a take runs (the session checks), and hush() stops it when a take starts.
 import * as Speech from 'expo-speech';
+import { audioKeeper } from '../../platform/audio';
 
 const RATE = 1.05; // the web's browser voice rate
 
@@ -11,6 +12,8 @@ export const setVoiceVolume = (v: number) => { volume = Math.max(0, Math.min(1, 
 
 /** Says `text` after whatever the coach is already saying. */
 export function sayNext(text: string) {
+  // Speech counts as sound: the idle suspend (setActive(false)) must not cut the coach off mid-sentence.
+  audioKeeper.activity();
   try { Speech.speak(text, { rate: RATE, volume }); } catch { /* no voice in this build: the words are on screen */ }
 }
 
