@@ -32,14 +32,30 @@ export type AudioRoute = {
 export type AudioInterruption =
   | { type: 'began'; at: number; reason?: string }                 // call, Siri, alarm… (raw iOS reason when given)
   | { type: 'ended'; at: number; shouldResume: boolean }
-  | { type: 'engine-stopped'; at: number; cause: 'config-change' | 'media-reset' | 'background' };
+  | { type: 'engine-stopped'; at: number; cause: 'config-change' | 'media-reset' | 'background' | 'route-change' };
+
+/**
+ * A stretch of the file on a line: file position `offsetMs` is heard at Clock time `at` (a negative offset: the file
+ * starts −offsetMs / rate later, at 0), and `durationMs` ms of the line (file ms, counted from `offsetMs`) play.
+ */
+export type BackingSegment = { at: number; offsetMs: number; durationMs: number };
 
 export interface BackingPort {
   load(uri: string): Promise<{ durationMs: number; sampleRate: number }>;
-  /** Heard from Clock time `at`, starting `offsetMs` into the file, at `rate` (pitch kept). */
-  start(o: { at: number; offsetMs: number; rate: number }): void;
+  /**
+   * Heard from Clock time `at`, starting `offsetMs` into the file, at `rate` (pitch kept). Cuts whatever plays (and
+   * drops what is queued) at once. Plays `durationMs` of the line, or to the file's end without it.
+   */
+  start(o: { at: number; offsetMs: number; rate: number; durationMs?: number }): void;
+  /**
+   * Queues a segment after the last one started or queued, at the same rate, without cutting it (AUDIO-DESIGN §1.4).
+   * `at` is on the line of that start: a segment due where the previous one ends (to within a frame) starts exactly
+   * there, sample-accurate; one due later waits (a negative offset's lead); one due earlier skips into the file by the
+   * overlap, so what is heard stays on its line. Ignored when nothing was started.
+   */
+  queue(o: BackingSegment): void;
   stop(): void;
-  /** The file position heard at Clock time `at`, read from the render clock. Null when not playing. */
+  /** The file position heard at Clock time `at`, read from the render clock. Null when not playing (or between segments). */
   anchor(): { at: number; fileMs: number } | null;
 }
 

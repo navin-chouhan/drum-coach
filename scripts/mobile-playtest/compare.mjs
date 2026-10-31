@@ -8,12 +8,14 @@
 //   - the Gate 0 probe's "Copy results" JSON (kind "drum-coach-gate0-probe"): its noteLog (or lastLog) and counters.
 //     Times are iPad host times, so the comparer finds the offset to beat 0 itself. The noteLog keeps the last 300
 //     messages, so hits before its first entry are reported as outside the log, not as missing.
+//   - the app's MIDI debug report ("Copy debug info" on /dev/midi, kind "drum-coach-midi-debug"): its `replay`, every
+//     kit hit since Reset (the newest 5000) on the iPad's host clock, and its counters; aligned like the probe's.
 //   - the app's take results (format TBD in Phase 2), for now: { fixture?, hits: [{ t | time, pad?, note?, velocity }],
 //     timeBase?: "beat0" | "host", summary? } with times in ms after beat 0 unless timeBase is "host".
 // Modes: exact (in-app replays: every hit, velocity and summary field must equal the reference, times within
 // 0.001 ms) and tolerant (Network MIDI: times within ±tol-ms; a missing or extra hit is accepted when Wi-Fi jitter of
 // that size could move its stroke across the bounce or crosstalk window, and those crossings are listed).
-// Default mode: tolerant for probe results, exact for app results. Exit code 0 = same, 1 = differences, 2 = usage.
+// Default mode: tolerant for probe and MIDI debug results (Network MIDI), exact for app results. Exit code 0 = same, 1 = differences, 2 = usage.
 
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -37,6 +39,17 @@ export function readResults(json) {
       counters: json.counters ?? null, summary: null,
     };
   }
+  if (json?.kind === 'drum-coach-midi-debug') {
+    const r = json.replay;
+    if (!Array.isArray(r?.hits)) throw new Error('this MIDI debug report has no replay: copy it from an app build with QA m9');
+    const hits = r.hits.map(h => ({ t: h.time, pad: h.pad ?? null, note: h.note ?? null, velocity: h.velocity }));
+    const times = hits.map(h => h.t);
+    return {
+      source: 'app MIDI debug', aligned: r.timeBase !== 'host',
+      hits, log: r.dropped > 0 && times.length ? [Math.min(...times), Math.max(...times)] : null,
+      counters: r.counters ?? null, summary: null,
+    };
+  }
   if (Array.isArray(json?.hits)) {
     return {
       source: 'app results', aligned: json.timeBase !== 'host', fixture: json.fixture,
@@ -44,7 +57,7 @@ export function readResults(json) {
       log: null, counters: json.counters ?? null, summary: json.summary ?? null,
     };
   }
-  throw new Error('not a results file: expected the probe\'s "Copy results" JSON or { hits: [...] }');
+  throw new Error('not a results file: expected the probe\'s "Copy results" JSON, the app\'s MIDI debug report or { hits: [...] }');
 }
 
 const sameKey = (a, r) => (a.pad != null ? a.pad === r.pad : a.note === r.note);
@@ -160,6 +173,7 @@ export function compare(results, ref, { mode, tolMs = 5, pairMs = 30 }) {
     if (passes > 1) notes.push(`counters cover ${passes} passes`);
     for (const k of ['noteOn', 'noteOff', 'clock', 'activeSensing', 'hits', 'filtered']) {
       if ((k === 'clock' || k === 'activeSensing') && !c[k]) continue; // sent with --no-realtime
+      if (c[k] === undefined) continue; // not counted by this source (the MIDI debug report has no note-offs)
       if (c[k] !== ref.counts[k] * passes) {
         const soft = mode === 'tolerant' && (k === 'hits' || k === 'filtered'); // jitter moves strokes between them
         diffs.push({ type: 'count', field: k, ref: ref.counts[k] * passes, got: c[k], ...(soft && { explainedBy: 'see the missing/extra hits' }) });
@@ -229,7 +243,7 @@ function main() {
     console.error(e.message ?? e);
     process.exit(2);
   }
-  const mode = o.mode ?? (results.source.startsWith('probe') ? 'tolerant' : 'exact');
+  const mode = o.mode ?? (results.source.startsWith('probe') || results.source === 'app MIDI debug' ? 'tolerant' : 'exact');
   const c = compare(results, ref, { mode, tolMs: o.tolMs, pairMs: o.pairMs });
   console.log(o.json ? JSON.stringify(c, null, 2) : report(c));
   process.exit(c.ok ? 0 : 1);

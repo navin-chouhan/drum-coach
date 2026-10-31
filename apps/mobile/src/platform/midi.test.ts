@@ -6,7 +6,7 @@ import type { MidiFixture } from '@drum-coach/core/input/fixtures';
 import { classifyPacket, flushReason, nextDeadline, type FlushReason } from '../../modules/drum-midi/src/batchPolicy';
 import type { MidiInputInfo, NativeMidiPacket } from './contracts';
 import {
-  connectMidiToHitBus, createMidiPortFrom, DEFAULT_PREFERRED_NAMES, isStale, RESUME_WINDOW_MS, STALE_AGE_MS,
+  connectMidiToHitBus, createMidiPortFrom, DEFAULT_PREFERRED_NAMES, inputsStep, isStale, RESUME_WINDOW_MS, selectionIsGone, STALE_AGE_MS,
   type AppStateLike, type DrumMidiApi, type MidiSelection, type PacketBatch,
 } from './midiCore';
 import { summarize } from './samples';
@@ -36,7 +36,7 @@ function fakeModule(opts: { available?: boolean } = {}) {
     packetFns.forEach(f => f(batch.packets, batch));
   };
   return {
-    api, calls, send, packetFns,
+    api, calls, send, packetFns, selection,
     setNow: (t: number) => { now = t; },
     get now() { return now; },
     inputsChanged: (inputs: MidiInputInfo[]) => inputFns.forEach(f => f(inputs, selection)),
@@ -54,6 +54,59 @@ function rig() {
   const link = connectMidiToHitBus(port, bus);
   return { m, port, bus, hits, link };
 }
+
+describe('selectionIsGone', () => {
+  const sel = (o: Partial<MidiSelection>): MidiSelection =>
+    ({ selectedId: '7', selectedName: 'Network Session 1', connectedId: '', preferredNames: ['e-Drum'], autoSelect: true, ...o });
+  const net = (online: boolean): MidiInputInfo => ({ id: '7', name: 'Network Session 1', manufacturer: '', online });
+  const drum: MidiInputInfo = { id: '101', name: 'e-Drum', manufacturer: 'Medeli', online: true };
+
+  it('is true for a selected source that is offline or no longer listed', () => {
+    expect(selectionIsGone([drum, net(false)], sel({}))).toBe(true);
+    expect(selectionIsGone([drum], sel({}))).toBe(true);
+    expect(selectionIsGone([drum], sel({ selectedName: '' }))).toBe(true);
+  });
+
+  it('is false while no preferred source is online to fall back to: the manual pick is kept for its return (QA3 m5)', () => {
+    expect(selectionIsGone([], sel({ selectedName: '' }))).toBe(false);
+    expect(selectionIsGone([net(false)], sel({}))).toBe(false);
+    expect(selectionIsGone([{ ...drum, online: false }], sel({}))).toBe(false);
+  });
+
+  it('is false while it is connected or online (a replug with a new id is found by name), or with nothing selected', () => {
+    expect(selectionIsGone([drum, net(true)], sel({ connectedId: '7' }))).toBe(false);
+    expect(selectionIsGone([drum, { ...net(true), id: '8' }], sel({}))).toBe(false);
+    expect(selectionIsGone([drum], sel({ selectedId: '', selectedName: '' }))).toBe(false);
+    expect(selectionIsGone([drum], null)).toBe(false);
+  });
+
+  it('is false with auto-select off ("Select none" stays none) or for an unplugged kit (the hub reconnects it by name)', () => {
+    expect(selectionIsGone([drum], sel({ autoSelect: false }))).toBe(false);
+    expect(selectionIsGone([], sel({ selectedId: '101', selectedName: 'e-Drum 2' }))).toBe(false);
+  });
+});
+
+describe('inputsStep (QA3 m5: a manual pick comes back by name)', () => {
+  const td: MidiInputInfo = { id: '9', name: 'TD-17', manufacturer: 'Roland', online: true };
+  const drum: MidiInputInfo = { id: '101', name: 'e-Drum', manufacturer: 'Medeli', online: true };
+  const sel = (o: Partial<MidiSelection>): MidiSelection =>
+    ({ selectedId: '9', selectedName: 'TD-17', connectedId: '', preferredNames: ['e-Drum'], autoSelect: true, ...o });
+
+  it('falls back to the kit and remembers the pick, then selects it again when it is back (with a new id too)', () => {
+    const gone = inputsStep([drum, { ...td, online: false }], sel({}), null);
+    expect(gone).toEqual({ action: 'fallBack', comeBack: 'TD-17' });
+    // on the kit now; the pick is still away
+    expect(inputsStep([drum], sel({ selectedId: '101', selectedName: 'e-Drum', connectedId: '101' }), 'TD-17')).toEqual({ action: 'none', comeBack: 'TD-17' });
+    // back, replugged with another id
+    expect(inputsStep([drum, { ...td, id: '12' }], sel({ selectedId: '101', selectedName: 'e-Drum', connectedId: '101' }), 'TD-17')).toEqual({ action: 'select', id: '12', comeBack: null });
+  });
+
+  it('keeps a pick with no kit to fall back to (the hub reconnects it), and never remembers the kit itself', () => {
+    expect(inputsStep([{ ...td, online: false }], sel({}), null)).toEqual({ action: 'none', comeBack: null });
+    expect(inputsStep([drum], sel({ selectedId: '', selectedName: '' }), null)).toEqual({ action: 'none', comeBack: null });
+    expect(inputsStep([drum, td], sel({ connectedId: '9' }), 'TD-17')).toEqual({ action: 'none', comeBack: null }); // already on it
+  });
+});
 
 describe('createMidiPortFrom', () => {
   it("sets the contract's default preferred names (e-Drum) once", () => {
@@ -103,6 +156,50 @@ describe('createMidiPortFrom', () => {
     expect(port.select('101')).toBe(true);
     expect(port.listInputs()[0].name).toBe('e-Drum');
     expect(port.debugInfo()).toMatchObject({ available: true, batches: 3 });
+  });
+
+  it('auto-selects again when the selected source goes away (QA2 M4: the Network MIDI session switched off)', () => {
+    const m = fakeModule();
+    createMidiPortFrom(m.api);
+    m.calls.setPreferredNames.length = 0;
+    Object.assign(m.selection, { selectedId: '7', selectedName: 'Network Session 1', connectedId: '7', preferredNames: ['e-Drum'], autoSelect: true });
+    const drum = { id: '101', name: 'e-Drum', manufacturer: 'Medeli', online: true };
+    m.inputsChanged([drum, { id: '7', name: 'Network Session 1', manufacturer: '', online: true }]); // still there
+    expect(m.calls.select).toEqual([]);
+    m.selection.connectedId = '';
+    m.inputsChanged([drum, { id: '7', name: 'Network Session 1', manufacturer: '', online: false }]);
+    expect(m.calls.select).toEqual([null]);
+    expect(m.calls.setPreferredNames).toEqual([['e-Drum']]);
+    // QA3 m5: the session comes back: the manual pick is selected again, by name
+    Object.assign(m.selection, { selectedId: '101', selectedName: 'e-Drum', connectedId: '101' });
+    m.inputsChanged([drum, { id: '8', name: 'Network Session 1', manufacturer: '', online: true }]);
+    expect(m.calls.select).toEqual([null, '8']);
+  });
+
+  it('an explicit pick or Auto-select forgets the pick that was waiting to come back', () => {
+    const m = fakeModule();
+    const port = createMidiPortFrom(m.api);
+    Object.assign(m.selection, { selectedId: '7', selectedName: 'Network Session 1', connectedId: '', preferredNames: ['e-Drum'], autoSelect: true });
+    const drum = { id: '101', name: 'e-Drum', manufacturer: 'Medeli', online: true };
+    m.inputsChanged([drum]); // gone: falls back, remembers it
+    port.select('101');
+    Object.assign(m.selection, { selectedId: '101', selectedName: 'e-Drum', connectedId: '101' });
+    m.inputsChanged([drum, { id: '7', name: 'Network Session 1', manufacturer: '', online: true }]);
+    expect(m.calls.select).toEqual([null, '101']); // not '7': the user chose the kit since
+  });
+
+  it('"Auto-select" after a manual pick drops the pick, and keeps a connection that is already the kit', () => {
+    const m = fakeModule();
+    const port = createMidiPortFrom(m.api);
+    m.calls.setPreferredNames.length = 0;
+    Object.assign(m.selection, { selectedId: '7', selectedName: 'Network Session 1', connectedId: '7', preferredNames: ['e-Drum'], autoSelect: true });
+    port.autoSelect();
+    expect(m.calls.select).toEqual([null]);
+    expect(m.calls.setPreferredNames).toEqual([['e-Drum']]);
+    Object.assign(m.selection, { selectedId: '101', selectedName: 'e-Drum', connectedId: '101' });
+    port.autoSelect(['e-Drum']);
+    expect(m.calls.select).toEqual([null]); // no second select(null): the e-Drum stays connected
+    expect(m.calls.setPreferredNames).toEqual([['e-Drum'], ['e-Drum']]);
   });
 
   it('is a safe no-op without the native module', () => {

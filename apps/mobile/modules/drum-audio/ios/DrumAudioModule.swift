@@ -93,5 +93,38 @@ public final class DrumAudioModule: Module {
     Function("stopTimingProbe") { () -> [String: Any] in
       return self.host.stopTimingProbe()
     }
+
+    // Backing audio (core's BackingPort; AUDIO-DESIGN §1.4). Local files only (file:// or a path): never YouTube audio.
+
+    /// Opens the file and installs it on the backing bus. Resolves {durationMs, sampleRate, frames, channels}.
+    AsyncFunction("backingLoad") { (uri: String) throws -> [String: Any] in
+      return try self.host.backingLoad(uri)
+    }
+
+    /// Heard from Clock time `at`, `offsetMs` into the file, at `rate` (pitch kept), for `durationMs` of the line (NaN:
+    /// to the file's end). Cuts what plays and drops what is queued. Returns the plan ({ok: true, …}) or {ok: false, reason}.
+    Function("backingStart") { (at: Double, offsetMs: Double, rate: Double, durationMs: Double) -> [String: Any] in
+      return self.host.backingStart(at: at, offsetMs: offsetMs, rate: rate, durationMs: durationMs)
+    }
+
+    /// Queues a segment right after the last one, on the same line and player node (seamless loops). Returns the
+    /// segment ({ok: true, playerFrame, …}) or {ok: false, reason}.
+    Function("backingQueue") { (at: Double, offsetMs: Double, durationMs: Double) -> [String: Any] in
+      return self.host.backingQueue(at: at, offsetMs: offsetMs, durationMs: durationMs)
+    }
+
+    Function("backingStop") {
+      self.host.backingStop()
+    }
+
+    /// {playing: true, at, fileMs} from the render clock, else {playing: false}.
+    Function("backingAnchor") { () -> [String: Any] in
+      return self.host.backingAnchor()
+    }
+
+    /// The audio debug screen's test tone: writes it to Caches and resolves its file:// URI.
+    AsyncFunction("backingTestTone") { (bpm: Double, beatsPerBar: Int, seconds: Double) throws -> String in
+      return try BackingPlayer.writeTestTone(bpm: bpm, beatsPerBar: beatsPerBar, seconds: seconds)
+    }
   }
 }

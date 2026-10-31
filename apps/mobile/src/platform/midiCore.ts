@@ -48,10 +48,51 @@ export interface DrumMidiPort extends MidiPort {
   onBatch(fn: (batch: PacketBatch) => void): () => void;
   lifecycle(): Lifecycle;
   selection(): MidiSelection | null;
+  /**
+   * Drops any explicit selection and auto-selects by `names` (default: the current preferred names, else
+   * DEFAULT_PREFERRED_NAMES). The native hub's setPreferredNames alone keeps an explicit selection.
+   */
+  autoSelect(names?: string[]): void;
 }
 
 /** The contract's default: the MPS-150 shows as "e-Drum" on iOS (CLAUDE.md). */
 export const DEFAULT_PREFERRED_NAMES = ['e-Drum'];
+
+const startsWithAny = (name: string, prefixes: readonly string[]) =>
+  prefixes.some(p => p.trim() !== '' && name.toLowerCase().startsWith(p.trim().toLowerCase()));
+
+/**
+ * QA2 M4: the selected source is gone (offline or no longer listed) and auto-select is on, so the port should drop the
+ * selection and fall back to the preferred names: the web listens to the saved input when it's there, else to the
+ * first one (src/input/useMidi.ts `effective`). The native hub instead keeps a dead selection and connects nothing,
+ * so after the Network MIDI session is switched off the kit stayed disconnected. A gone preferred source (the kit
+ * unplugged) is left alone: the hub reconnects it by name when it comes back. So is any gone source while no preferred
+ * one is online to fall back to (QA3 m5): the hub then reconnects that manual pick by name when it's back.
+ */
+export function selectionIsGone(inputs: readonly MidiInputInfo[], sel: MidiSelection | null): boolean {
+  if (!sel || !sel.autoSelect || sel.connectedId !== '') return false;
+  if (sel.selectedId === '' && sel.selectedName === '') return false;
+  if (sel.selectedName !== '' && startsWithAny(sel.selectedName, sel.preferredNames)) return false;
+  const live = inputs.filter(i => i.online);
+  if (!live.some(i => startsWithAny(i.name, sel.preferredNames))) return false; // nothing to fall back to: keep the pick
+  return !live.some(i => (sel.selectedId !== '' && i.id === sel.selectedId) || (sel.selectedName !== '' && i.name === sel.selectedName));
+}
+
+/**
+ * What the port does on an inputs change (pure, tested): fall back to the preferred names when the selection is gone
+ * (remembering a manual pick's name), or select that remembered pick again once an input with its name is back online
+ * (QA3 m5: a second kit or a Network MIDI session picked by hand comes back to it, as the web keeps the saved input).
+ */
+export function inputsStep(inputs: readonly MidiInputInfo[], sel: MidiSelection | null, comeBack: string | null):
+  { action: 'fallBack' | 'select' | 'none'; id?: string; comeBack: string | null } {
+  if (sel && selectionIsGone(inputs, sel)) {
+    const keep = sel.selectedName !== '' && !startsWithAny(sel.selectedName, sel.preferredNames) ? sel.selectedName : comeBack;
+    return { action: 'fallBack', comeBack: keep };
+  }
+  const back = comeBack !== null ? inputs.find(i => i.online && i.name === comeBack) : undefined;
+  if (back) return back.id === sel?.connectedId ? { action: 'none', comeBack: null } : { action: 'select', id: back.id, comeBack: null };
+  return { action: 'none', comeBack };
+}
 
 /**
  * The port over the native module. One native subscription per event kind, made when the first listener comes and
@@ -66,6 +107,8 @@ export function createMidiPortFrom(api: DrumMidiApi, appState?: AppStateLike): D
   let offNativeInputs: (() => void) | null = null;
   const native: Lifecycle = { foregroundAtMs: 0, backgroundAtMs: 0 };
   const js: Lifecycle = { foregroundAtMs: 0, backgroundAtMs: 0 };
+  /** A manual pick that fell back to the preferred names: selected again when an input with this name is online. */
+  let comeBack: string | null = null;
 
   if (api.available) {
     appState?.addEventListener('change', state => {
@@ -73,6 +116,30 @@ export function createMidiPortFrom(api: DrumMidiApi, appState?: AppStateLike): D
       else if (state === 'background') js.backgroundAtMs = clock.now();
     });
     api.setPreferredNames(DEFAULT_PREFERRED_NAMES);
+    // Always on (one per port): a selection whose source went away falls back to auto-select (selectionIsGone), and a
+    // manual pick that fell back comes back by name (inputsStep).
+    api.onInputsChanged((inputs, sel) => {
+      const step = inputsStep(inputs, sel, comeBack);
+      comeBack = step.comeBack;
+      if (step.action === 'fallBack') fallBack(sel.preferredNames);
+      else if (step.action === 'select' && step.id) api.select(step.id);
+    });
+  }
+
+  /** The app asks for auto-select (Dev → MIDI, Setup): no pick to come back to. */
+  function autoSelect(names?: string[]) {
+    comeBack = null;
+    fallBack(names);
+  }
+
+  function fallBack(names?: string[]) {
+    if (!api.available) return;
+    const sel = api.getSelection();
+    const prefs = names?.length ? names : sel?.preferredNames.length ? sel.preferredNames : DEFAULT_PREFERRED_NAMES;
+    const connectedName = sel?.connectedId ? api.listInputs().find(i => i.id === sel.connectedId)?.name : undefined;
+    // Already on a preferred source: keep the connection (select(null) would drop it and reconnect).
+    if (!(connectedName && startsWithAny(connectedName, prefs))) api.select(null); // clears the selection (and auto-select)
+    api.setPreferredNames(prefs); // auto-select on again, now with nothing selected
   }
 
   function onBatch(fn: (b: PacketBatch) => void) {
@@ -103,7 +170,7 @@ export function createMidiPortFrom(api: DrumMidiApi, appState?: AppStateLike): D
     available: api.available,
     clock,
     listInputs: () => (api.available ? api.listInputs() : []),
-    select: id => (api.available ? api.select(id) : false),
+    select: id => { comeBack = null; return api.available ? api.select(id) : false; }, // an explicit pick wins
     setPreferredNames: names => { if (api.available) api.setPreferredNames(names); },
     onInputsChanged,
     onPackets: fn => onBatch(b => fn(b.packets)),
@@ -115,6 +182,7 @@ export function createMidiPortFrom(api: DrumMidiApi, appState?: AppStateLike): D
       backgroundAtMs: Math.max(native.backgroundAtMs, js.backgroundAtMs),
     }),
     selection: () => (api.available ? api.getSelection() : null),
+    autoSelect,
   };
 }
 

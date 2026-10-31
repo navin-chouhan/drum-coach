@@ -1,4 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { GRID_ROWS, GRID_ROW_NAME, TRANSCRIBE_PASS, gridStepsOf } from './transcribe';
+
+describe('the note grids (song editor, transcription)', () => {
+  it('rows top to bottom with their names, the pass mark, steps per beat', () => {
+    expect(GRID_ROWS).toEqual(['crash', 'ride', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'snare', 'kick']);
+    expect(GRID_ROWS.map(d => GRID_ROW_NAME[d])).toEqual(['Crash', 'Ride', 'Hi-hat', 'HH open', 'HH foot', 'Tom 1', 'Tom 2', 'Floor', 'Snare', 'Kick']);
+    expect(TRANSCRIBE_PASS).toBe(80);
+    expect(gridStepsOf({ notes: [{ t: 0.5, drum: 'snare' }] })).toBe(2);
+    expect(gridStepsOf({ notes: [{ t: 0.25, drum: 'snare' }] })).toBe(4);
+    expect(gridStepsOf({ notes: [{ t: 1 / 3, drum: 'snare' }] })).toBe(3);
+    expect(gridStepsOf({ notes: [{ t: 0.2, drum: 'snare' }] })).toBe(4);
+  });
+});
 
 describe('gridScore (N7)', () => {
   it('scores a written grid against the chart', async () => {

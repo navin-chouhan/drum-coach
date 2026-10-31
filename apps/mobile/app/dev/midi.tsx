@@ -123,7 +123,7 @@ export default function MidiDebug() {
             <Button title="Select none" onPress={() => select(null)} disabled={!port.available} testID="dev-midi-select-none" />
             <Button
               title={`Auto-select ${DEFAULT_PREFERRED_NAMES.join(', ')}`}
-              onPress={() => { port.setPreferredNames(DEFAULT_PREFERRED_NAMES); refresh(); }}
+              onPress={() => { port.autoSelect(DEFAULT_PREFERRED_NAMES); refresh(); }}
               disabled={!port.available}
               testID="dev-midi-auto-select"
             />

@@ -35,6 +35,34 @@ export type TimingProbeResult = {
   noHostTime: number;
 };
 
+/** backingLoad: the file as native opened it. */
+export type BackingLoadResult = { durationMs: number; sampleRate: number; frames: number; channels: number };
+
+/** backingStart: the plan (src/backing.ts planBackingStart) or why nothing plays. */
+export type BackingStartResult =
+  | {
+      ok: true; rate: number; startFrame: number; fileStartMs: number; heardAtMs: number; scheduleMs: number;
+      joinedLateMs: number; pitchLatencyMs: number;
+      /** Started as a node sample time (rate ≠ 1) instead of a host time. */
+      nodeTime: boolean;
+    }
+  | { ok: false; reason: string };
+
+/** backingQueue: the queued segment (src/backing.ts planBackingQueue) or why nothing was queued. */
+export type BackingQueueResult =
+  | {
+      ok: true; playerFrame: number; startFrame: number; frameCount: number; fileStartMs: number; heardAtMs: number;
+      skippedFrames: number;
+      /** Scheduled at an explicit player time (a gap before it) instead of right after the previous segment. */
+      explicitTime: boolean;
+      /** Segments on the player's timeline now, this one included. */
+      segments: number;
+    }
+  | { ok: false; reason: string };
+
+/** backingAnchor: the file position heard at Clock time `at`, from the render clock. */
+export type NativeBackingAnchor = { playing: true; at: number; fileMs: number } | { playing: false };
+
 export type DrumAudioEvents = {
   onRoute: (route: NativeRoute) => void;
   onInterruption: (e: AudioInterruption) => void;
@@ -57,5 +85,13 @@ export interface DrumAudioApi {
   debugInfo(): Record<string, unknown>;
   startTimingProbe(): boolean;
   stopTimingProbe(): TimingProbeResult;
+  backingLoad(uri: string): Promise<BackingLoadResult>;
+  /** `durationMs`: ms of the line to play; NaN = to the file's end. */
+  backingStart(at: number, offsetMs: number, rate: number, durationMs: number): BackingStartResult;
+  /** Queues a segment behind the last one on the same line (src/backing.ts planBackingQueue). */
+  backingQueue(at: number, offsetMs: number, durationMs: number): BackingQueueResult;
+  backingStop(): void;
+  backingAnchor(): NativeBackingAnchor;
+  backingTestTone(bpm: number, beatsPerBar: number, seconds: number): Promise<string>;
   addListener<E extends keyof DrumAudioEvents>(event: E, listener: DrumAudioEvents[E]): { remove(): void };
 }

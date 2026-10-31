@@ -48,6 +48,10 @@ npm run check:versions
 EXPO_OFFLINE=1 npx expo prebuild --platform ios --no-install --clean   # then look in ios/, then delete ios/
 npx expo export --platform ios --dev --output-dir /tmp/dc-export        # Metro bundles, incl. packages/core
 ```
+- **Layout screenshots:** `node scripts/screenshots.mjs` renders the screens with react-native-web in Playwright's
+  Chromium at 1194×834 (fake data from `src/dev/harness/seeds.ts` via the `*.web.ts` platform shims, `?h=<state>`) and
+  writes PNGs plus `report.json` (what ends outside the frame) to `screenshots/` (gitignored). A budget check, not
+  the iPad's pixels: fonts and native views differ.
 
 ## How it fits together
 - `app/` is the Expo Router routes (`_layout.tsx`, `index.tsx`, `+not-found.tsx`; A3 adds `app/dev/midi.tsx`).

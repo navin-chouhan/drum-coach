@@ -6,6 +6,7 @@ import {
   LEFTWARD_DEFAULTS, mainOf, markerPlace, markerSlot, msPerBeat, NOTATION_LANES, noteLabel, noteShape, pageSpan,
   positionAt, scrollFor, visiblePages,
 } from './geometry';
+import { drumColor } from '../ui/tokens';
 import { IPAD_THEME, WEB_THEME } from './theme';
 
 const money = moneyBeat(4, 70);
@@ -132,7 +133,7 @@ describe('page content', () => {
     const kick = page0.notes.find(n => n.lane === 'kick')!;
     expect(kick).toMatchObject({ shape: 'square', color: IPAD_THEME.drum.kick, label: 'K', cross: layout.lanes[2].cross });
     const snare = page0.notes.find(n => n.lane === 'snare')!;
-    expect(snare).toMatchObject({ beat: 1, main: 124, label: 'L', color: '#5856D6' });
+    expect(snare).toMatchObject({ beat: 1, main: 124, label: 'L', color: drumColor.snare });
     expect(countIn.notes).toEqual([]);
   });
   it('bar lines with BAR n, beat lines in between, the final bar line on the last page', () => {

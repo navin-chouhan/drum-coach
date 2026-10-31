@@ -43,6 +43,8 @@ const ALLOW_DEPRECATED = {};
 // Younger than MIN_AGE_DAYS on purpose (e.g. an urgent security fix). Same rule: exact versions, with a reason.
 const ALLOW_YOUNG = {
   '@anthropic-ai/sdk@1.3.0': "Anthropic's official SDK; all of 1.x is younger than 7 days (1.0.0 is from 2026-10-21) and the code uses the 1.x API. Remove once Dependabot moves past it",
+  'minimatch@11.0.3': "Security fix: ESLint 10 / typescript-eslint pull minimatch 10.2.6 (GHSA-g3hv-75wg-m249, moderate, dev-only lint toolchain); 11.0.3 (2026-10-28) is the fixed release, forced via overrides in package.json. Owner approved 2026-10-31. Remove this entry and the override once it is 7 days old (2026-11-04) and eslint ships a fixed range",
+  '@isaacs/nonrecursive-glob-match@1.0.3': "Required by every fixed minimatch (11.0.1+), same author; it is the fix itself (non-recursive matching). No install scripts. Comes with the minimatch@11.0.3 override above; remove with it (2026-11-04)",
 };
 // Packages that declare install scripts. .npmrc sets ignore-scripts=true, so even these don't run; the list exists so
 // a new package that needs a script (and would break, or wants to run code at install time) gets looked at.

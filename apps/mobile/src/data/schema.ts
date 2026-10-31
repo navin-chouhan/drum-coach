@@ -2,6 +2,7 @@
 // server/db.ts so the row → API mappers port unchanged; `kv` is new and holds the web app's localStorage keys.
 // Versioned with PRAGMA user_version: migration N takes the database from version N-1 to N. Never edit a shipped
 // migration; add the next one.
+import { SONGS_MIGRATION } from './songs';
 import type { SqlDb } from './sql';
 
 export const MIGRATIONS: readonly string[] = [
@@ -16,6 +17,8 @@ export const MIGRATIONS: readonly string[] = [
   CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   CREATE TABLE plans (id INTEGER PRIMARY KEY, json TEXT NOT NULL, checks_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT (datetime('now')));
   CREATE TABLE ai_lessons (id TEXT PRIMARY KEY, json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')));`,
+  // 2: Songs (A8): server/db.ts's charts, yt_songs (with verified_at) and yt_grids, unchanged.
+  SONGS_MIGRATION,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
