@@ -34,3 +34,6 @@ npm-debug.*
 
 # typescript
 *.tsbuildinfo
+
+# layout harness output (scripts/screenshots.mjs): fake data only, never committed
+screenshots/
