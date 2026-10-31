@@ -39,6 +39,7 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "progress": {
@@ -74,70 +75,49 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-new": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-tempo": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-learn": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\"",
-      "song-learn \"Learn by earLoop a few bars (slow them down with S\"",
-      "song-learn-use-take \"Use take (0 notes)\"",
-      "text \"Use take (0 notes)\"",
-      "text \"Clear\"",
-      "song-learn-save \"Save bars 1–2\"",
-      "text \"Save bars 1–2\"",
-      "song-learn-groove \"Ask coach for the groove\"",
-      "text \"Ask coach for the groove\"",
-      "text \"✓ You checked this part by ear on 2026-10-28. Chan\"",
-      "song-learn-verify \"Mark as not checked\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-jam": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-play": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "song-sheet": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "song-audio-off \"Song audio (experimental)Turning the drums down an\"",
-      "text \"Turning the drums down and suggesting notes from t\""
-    ],
+    "spill": [],
+    "cut": [],
     "errors": 0
   },
   "coach-offline": {
@@ -373,6 +353,27 @@
     "errors": 0
   },
   "journey-more": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-grooves": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-songs": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "practice-search": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],

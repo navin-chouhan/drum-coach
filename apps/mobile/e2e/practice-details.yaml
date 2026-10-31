@@ -14,8 +14,9 @@ tags:
     visible:
       id: screen-practice
     timeout: 10000
+# D10: the first For you card is the warm-up (practice-play would start it); the second is an exercise
 - tapOn:
-    id: practice-play
+    id: practice-card-1
 - extendedWaitUntil:
     visible:
       id: practice-main

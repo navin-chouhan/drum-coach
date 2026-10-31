@@ -146,8 +146,10 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
       Enter on the celebration is its main button.
 
 **Practice**
-- [ ] Pick up where you left off, the warm-up card (tom 1 × 2 starts it), For you cards with the yellow ring (ride × 2
-      moves it, hi-hat pedal × 3 plays it), the library by kind, search.
+- [ ] (D10) For you: 4 big cards, the 🔥 warm-up first, then "left off here", your level, the coach's pick; the yellow
+      ring (ride × 2 moves it, hi-hat pedal × 3 plays it, tom 2 × 2 hears it, tom 1 × 2 starts the warm-up). Under
+      the 3 moves, 4 kind tiles (Grooves, Rudiments, Fills, **Songs**): a tile opens its shelf below (tap it again to
+      close). 🔎 searches every exercise; 🔔 Metronome stays in the bar.
 - [ ] Play screen: − / + tempo with best clean, loop bars, times round, Climb (2 clean takes → +5), How it plays chips,
       your takes here; a take saves (it shows in Progress).
 - [ ] Unplug the kit: touch pads on the play screen **(M2)**. Home mid-take: the take stops **(M3)**.
@@ -166,7 +168,9 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] **Show-off set:** empty, it says how a song gets there; with two or more ready songs, **🎤 Concert: the whole
       set** opens the first song of the set.
 
-**Songs** (home server on)
+**Songs** (home server on; a shelf in Practice: the **Songs** tile, D10)
+- [ ] Practice → Songs tile: search / paste a link, My songs, Import files. The song screen has no "Song audio
+      (experimental)" card and Learn has no "Suggest notes" row on the iPad (D10).
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
       inline (the dev build uses the DOM player). On a refused video: the web's wording and **Open in YouTube**.
       Release builds use the native player; section 10 checks it ([YOUTUBE-RELEASE.md](YOUTUBE-RELEASE.md)).

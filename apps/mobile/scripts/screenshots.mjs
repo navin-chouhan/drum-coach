@@ -37,6 +37,10 @@ const SHOTS = [
   ['journey-writing', '/?h=writing'],
   ['journey-alldone', '/?h=alldone'],
   ['practice', '/practice?h=sore'],
+  // Practice (D10): a kind's shelf, the Songs shelf, the search
+  ['practice-grooves', '/practice?h=sore', [{ click: 'practice-kind-groove' }, { wait: 300 }]],
+  ['practice-songs', '/practice?h=songs', [{ click: 'practice-kind-song' }, { wait: 500 }]],
+  ['practice-search', '/practice?h=sore', [{ click: 'practice-search-open' }, { fill: ['practice-search', 'rock'] }, { wait: 300 }]],
   ['progress', '/progress?h=sore'],
   ['progress-fresh', '/progress?h=fresh'],
   ['progress-busy', '/progress?h=busy'],
@@ -100,8 +104,8 @@ function W2_SHOTS() {
     ['lesson-results-more', '/lesson/money-8ths?h=sore', [...take, { click: 'lesson-more-button' }, { waitFor: 'lesson-more' }]],
     ['lesson-results-coach', '/lesson/money-8ths?h=sore', [...take, { click: 'lesson-ask-coach' }, { waitFor: 'coach-inspector' }]],
     ['lesson-more', '/lesson/money-8ths?h=sore', [{ click: 'lesson-more-button' }, { waitFor: 'lesson-more' }]],
-    ['practice-your-take', '/practice?h=sore', [{ click: 'practice-play' }, { click: 'practice-main' }, { through: 'lesson-intro-next' }, { waitFor: 'practice-your-take', ms: 60_000 }]],
-    ['practice-details-take', '/practice?h=sore', [{ click: 'practice-play' }, { click: 'practice-main' }, { through: 'lesson-intro-next' },
+    ['practice-your-take', '/practice?h=sore', [{ click: 'practice-card-1' }, { click: 'practice-main' }, { through: 'lesson-intro-next' }, { waitFor: 'practice-your-take', ms: 60_000 }]],
+    ['practice-details-take', '/practice?h=sore', [{ click: 'practice-card-1' }, { click: 'practice-main' }, { through: 'lesson-intro-next' },
       { waitFor: 'practice-details-open', ms: 60_000 }, { click: 'practice-details-open' }, { waitFor: 'practice-details' }]],
     ['journey-more', '/?h=sore', [{ click: 'journey-more-open' }, { waitFor: 'journey-more' }]],
   ];

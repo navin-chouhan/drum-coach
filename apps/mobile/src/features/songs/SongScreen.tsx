@@ -23,7 +23,7 @@ import { SHEET_EMPTY, SHEET_KEY } from './modes';
 import { PlayPanel } from './PlayPanel';
 import { findVersions } from './songsApi';
 import {
-  NOT_A_LINK, SPEEDS, TAB_CAPTURE, VERSIONS_HINT, initialMode, modeTabs, needsTitle, shownMode, songBarCount, tempoLine,
+  NOT_A_LINK, SPEEDS, VERSIONS_HINT, initialMode, modeTabs, needsTitle, shownMode, songBarCount, tempoLine,
   versionButtons, videoOf, type Mode, type SongBars, type Version,
 } from './songsModel';
 import { TempoPanel } from './TempoPanel';
@@ -112,12 +112,7 @@ function SongView({ songId, bars, onBack }: { songId: string; bars?: SongBars; o
             <Small style={styles.gapTop}>{tempoLine(song, videoId, rate)}</Small>
           </Card>
           {!stage ? <Versions songId={song.id} version={version} onVersion={v => { yt?.pause(); setVersion(v); }} /> : null}
-          {!stage ? (
-            <Card tone="cream" testID="song-audio-off">
-              <CardTitle size={17}>{TAB_CAPTURE.title}</CardTitle>
-              <Small style={styles.gapTop}>{TAB_CAPTURE.reason}</Small>
-            </Card>
-          ) : null}
+          {/* "Song audio (experimental)" is hidden on the iPad (D10, TAB_CAPTURE.available false: B13) */}
         </ScrollView>
         <ScrollView style={styles.right} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled">
           <Tabs testID="song-mode" tabs={modeTabs(song, videoId)} value={shown} onChange={m => { yt?.pause(); setMode(m); }} />
