@@ -3,12 +3,14 @@
 About 2½ hours. The Mac builds and installs; the Linux laptop runs the home server (and Metro if you like); you sit at
 the MPS-150 with the iPad. Tick each box, write the numbers in the blanks, and paste back section 12.
 
-What's already known (so you don't need to report it again): QA found 4 major issues, listed in
-[QA-2026-10-31.md](QA-2026-10-31.md): **M1** a grey header bar above the lesson player, **M2** no touch pads on
-Practice's play screen, **M3** Practice ignores calls/backgrounding, **M4** "Practise" on a song row in Progress does
-nothing. If the fixes landed before your build, check them where marked **(M1)**…**(M4)**. Also known: the API-key
-coach fallback isn't built (Setup says so), Practice doesn't list imported MIDI files yet (I3), and the hardware
-keyboard comes with I2.
+What's already known (so you don't need to report it again):
+- The first QA pass ([QA-2026-10-31.md](QA-2026-10-31.md)) found 4 major issues, all fixed since (I3): **M1** a grey
+  header bar above the lesson player, **M2** no touch pads on Practice's play screen, **M3** Practice ignored
+  calls/backgrounding, **M4** "Practise" on a song row in Progress did nothing. The places marked **(M1)**…**(M4)**
+  below check that they stay fixed. The hardware keyboard works (I2), and Practice lists imported MIDI files.
+- The second QA pass ([QA2-2026-10-31.md](QA2-2026-10-31.md): 4 major, 9 minor) is being fixed in the next wave.
+  Steps marked **(QA2 …)** check those fixes; if one fails, note the build's commit (`git log --oneline -1`).
+- Still not built: the API-key coach fallback (Setup says so).
 
 The cloud iOS build (`.github/workflows/ios.yml`, Xcode 27.1) already compiles the whole app, all Swift included, and
 the SwiftPM tests pass, so a compile error on your Mac would be a local setup problem, not new code.
@@ -72,6 +74,10 @@ Sidebar → Dev row → **MIDI** (`/dev/midi`). These replace the probe's M4–M
   - [ ] Counters for the pass: note-on **153**, clock **1192**, active sensing **83**; hits **136** / filtered **17**.
         Got: note-on ____ clock ____ active sensing ____ hits ____ filtered ____
   - [ ] `compare.mjs` prints **SAME** or **SAME within tolerance** (paste its output); median ____ max |____| ms.
+  - [ ] **Back to the kit (QA2 M4):** switch **Network MIDI session** off. The app falls back to the e-Drum by itself
+        within a few seconds (Devices: e-Drum · connected). If it doesn't, **Select** e-Drum under Devices (or press
+        **Auto-select e-Drum**, or Setup → MIDI input → **Use this**). Check the sidebar's kit pill is green before
+        section 5: the rest of the session needs the kit.
 
 ## 5. Audio checks (`apps/mobile/modules/drum-audio/CHECKS.md`) — 25 min
 Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud build; still run the pure Swift tests on the Mac:
@@ -113,7 +119,8 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Results: verdict line, the whole take on the notes, timing line ("on average N ms late"), take card (count, stars,
       best run, extras), one thing to fix with **Fix bar N**, Ask the coach.
 - [ ] Two clean takes → the tempo goes up 5 (ladder), Journey's set ticks the item done.
-- [ ] **Hear your take**, **Share take** (share sheet with `<lesson> · take N.mid`; AirDrop it to the Mac and open it).
+- [ ] **Hear your take**, **Share take** (share sheet with `<title> <UTC stamp>.mid`, e.g. `Rock beat 2026-10-31-14-05.mid`,
+      the web's name; AirDrop it to the Mac and open it).
 - [ ] **Interrupted take (D6):** start a take, press Home after ≥ 2 bars → back: kept and flagged, not on the ladder.
       Again after 1 bar: dropped with a short notice.
 - [ ] Unplug the kit: the player switches to the **touch pads**; two fingers = hi-hat + kick together; a take with
@@ -125,20 +132,23 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Play screen: − / + tempo with best clean, loop bars, times round, Climb (2 clean takes → +5), How it plays chips,
       your takes here; a take saves (it shows in Progress).
 - [ ] Unplug the kit: touch pads on the play screen **(M2)**. Home mid-take: the take stops **(M3)**.
-- [ ] Metronome (🔔): change the tempo and its options; steady clicks in the module's headphones.
+- [ ] Metronome (🔔): change the tempo and its options; steady clicks in the module's headphones. Play a tom fill
+      while it runs: the tempo must not change **(QA2 M3)**.
 
 **Progress**
 - [ ] Getting better (landed per day), This week, skill map, trophies, Your time, Your lessons in plain words, with
       today's takes in them. "Practise" on a lesson row opens it; on an exercise opens Practice at best + 5;
       on a song row opens the song **(M4)**. This month's report (needs the server).
+- [ ] Trophies: "Show-off song" counts the bars of a song you played at 85 % or better (____ / 16 bars) **(QA2 m2)**.
+      Optional: a song checked by ear with 16+ bars all ready lands in the **Show-off set** with **▶ Play it**.
 
 **Songs** (home server on)
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
       inline. Write down if you see **error 153** (known risk in Release builds).
 - [ ] Set tempo (tap along), Learn by ear, Jam, Play, Sheet music modes; speed 75 % / 50 %; versions (drumless, cover).
 - [ ] Server off (stop `npm run server`): search says it can't reach the home server; pasting a YouTube link still adds the song.
-- [ ] Import files: a drum `.mid` (AirDrop one from the Mac) → Save to library; with an MP3 backing (I1: it plays in
-      the take when merged).
+- [ ] Import files: a drum `.mid` (AirDrop one from the Mac) → Save to library (it shows in Practice's library); with
+      an MP3 backing: it plays in the take.
 
 **Coach**
 - [ ] Ask "what should I work on?" → "Your coach is thinking…" → an answer; a drill card → **Play this drill** opens it
@@ -148,7 +158,8 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Voice: live tips "voice" in Setup → tips are spoken between takes, never during one.
 
 **Setup**
-- [ ] Kit row (name, Medeli, connected), last hit live, MIDI input picker.
+- [ ] Kit row (name, Medeli, connected), last hit live, MIDI input picker. Kit test says "No kit? Keys: Space kick ·
+      S snare …" **(QA2 m3)**, and those keys play the kit on a hardware keyboard.
 - [ ] Hit each pad once (10 of 10), Soft then loud (velocity calibration ✓ done), **Note map**: change the snare to
       another note and back; hits follow the map at once (Kit test shows it).
 - [ ] Latency: the current route's value and the other routes measured (unplug the hub audio: it switches to the
@@ -192,4 +203,4 @@ cd apps/mobile && npx expo run:ios --device --configuration Release
 - Section 7: every unticked box with one line on what happened (screenshots welcome: top button + volume up).
 - Section 9: both tables and the same-lesson numbers.
 - Section 10: Release results, T6-11, error 153 yes/no.
-- Anything that surprised you, and whether **M1–M4** were fixed in your build.
+- Anything that surprised you, and any **(M…)** or **(QA2 …)** step that failed, with the build's commit.
