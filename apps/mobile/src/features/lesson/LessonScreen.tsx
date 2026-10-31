@@ -29,6 +29,7 @@ import { IntroSlides } from './IntroSlides';
 import { Transcribe } from './Transcribe';
 import { idleChart, replayResults, runChart, takenChart } from './runChart';
 import { shareTake } from './shareTake';
+import { sheetScaleFor } from './sheetFit';
 import type { CoreTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
 
@@ -83,9 +84,9 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const pager = useSheetPages(f); // a long take's results sheet: every page, one at a time
   const activeDrums = useMemo(() => [...new Set(v.myPads.map(laneDrum))], [v.myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The sheet's zoom fits the paper's height (NotationView's 1.6 needs ~290 pt with the count and hand rows under it).
+  // The sheet's zoom fits the paper's height (sheetFit.ts).
   const [paperH, setPaperH] = useState(0);
-  const scale = paperH ? Math.max(1.1, Math.min(1.6, (1.6 * paperH) / SHEET_H_AT_1_6)) : undefined;
+  const scale = sheetScaleFor(paperH);
   const music = (() => {
     const highway = v.playView === 'highway';
     const common = { now: clock.now, style: styles.musicInner } as const;
@@ -280,9 +281,6 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
     </DottedGround>
   );
 }
-
-/** The paper height the sheet needs at NotationView's iPad zoom of 1.6 (one line with the count and hand rows). */
-const SHEET_H_AT_1_6 = 300;
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: color.ink, paddingBottom: 10, borderBottomWidth: 4, borderBottomColor: color.pop },
