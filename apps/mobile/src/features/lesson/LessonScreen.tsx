@@ -2,10 +2,11 @@
 // them (lesson-ready, lesson-countin, lesson-take-sheet / lesson-take, lesson-results-sheet / lesson-results,
 // lesson-share). The logic is the controller's (src/lesson/LessonPlayer.tsx ported); this file only lays it out.
 import { useEffect, useMemo, useReducer, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Modal, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { beatsPerBar } from '@drum-coach/core/engine/chart';
 import { audio } from '../../platform/audio';
+import { refocusKeyboard } from '../../platform/keyboard';
 import { getMidiPort } from '../../platform/midi';
 import { NotationView } from '../../notation';
 import { KitView, NoteHighway, TouchPads, type PadHit, type Subscribe } from '../../play';
@@ -21,7 +22,11 @@ import {
   Banner, Boxes, CelebrationModal, CountInBadge, GoalText, MoreSheet, RestCountdown, RoundButton, SheetPager, TakeCardView,
 } from './parts';
 import { useSheetPages } from './sheetPages';
-import { laneName } from './lessonView';
+import { laneName, youtubeSearch } from './lessonView';
+import { EarQuiz } from './EarQuiz';
+import { HowItMoves } from './HowItMoves';
+import { IntroSlides } from './IntroSlides';
+import { Transcribe } from './Transcribe';
 import { idleChart, replayResults, runChart, takenChart } from './runChart';
 import { shareTake } from './shareTake';
 import type { CoreTakePort } from './takePort';
@@ -48,6 +53,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const [more, setMore] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
   const [shareNote, setShareNote] = useState<string>();
+  const [bigDemo, setBigDemo] = useState(false); // "How it moves" full size, over the lesson (web bigDemo)
   const bus = getAppHitBus();
   const hits: Subscribe<PadHit> = useMemo(() => fn => bus.onHit(h => { if (h.pad) fn({ pad: h.pad, velocity: h.velocity, at: h.time }); }), [bus]);
 
@@ -55,7 +61,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   useKitMoves({
     yes: () => ctl.padCommand('yes'), slower: () => ctl.padCommand('slower'), faster: () => ctl.padCommand('faster'),
     next: () => ctl.padCommand('next'), listen: () => ctl.padCommand('listen'), stop: () => ctl.padCommand('stop'),
-  }, { playing: v.playing, enabled: !more && !coachOpen && !v.celebration });
+  }, { playing: v.playing, enabled: !more && !coachOpen && !v.celebration && !v.intro && !bigDemo && !v.resting?.quiz }); // slides and quizzes take the kit's taps
   // A hardware keyboard's Esc stops the take (the app-wide keyboard, ui/useAppKey; its drum keys go to the hit bus).
   useAppKey('escape', () => { if (!v.playing) return false; ctl.stop(); return true; });
   // The web's lesson keys (src/lesson/LessonPlayer.tsx): H hints, B the band on / off. (C, check yourself with the
@@ -63,6 +69,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   useAppKey('h', () => ctl.toggleHints());
   useAppKey('b', () => ctl.toggleBand());
   useAppKey('escape', () => { if (!coachOpen) return false; setCoachOpen(false); return true; }, { enabled: coachOpen });
+  useAppKey('escape', () => setBigDemo(false), { enabled: bigDemo });
 
   const s = take.state, pos = v.playing ? take.position(now) : 0;
   const bpb = s.run?.beatsPerBar ?? beatsPerBar(v.chart);
@@ -136,7 +143,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
       </View>
 
       <View style={[styles.body, { paddingLeft: insets.left + 24, paddingRight: insets.right + 24, paddingBottom: Math.max(insets.bottom, 12) + 14 }]}>
-        {v.playing ? (
+        {v.playing && !v.resting ? (
           countIn !== undefined
             ? <Banner tone="cream" emoji="🥁" text={`Count-in: one bar, then ${barCounter(s, 0).of ?? ''} bars at ${v.frame.bpm}`} right={'"one, two, three, four"'} testID="lesson-countin" />
             : s.options?.endless ? <Banner tone="pop" emoji="🌊" text={flowMeter(s as never, pos, now)} testID="lesson-flow" />
@@ -148,8 +155,9 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
             </CoachLine>
             {v.thinking ? <Pill tone="pop" style={styles.thinking}>Coach is listening back…</Pill> : null}
           </View>
-          {!v.onBreak ? <View style={styles.moves}>
-            {v.moves.map(m => {
+          {v.resting && (v.resting.quiz || v.resting.transcribe) ? null : !v.onBreak ? <View style={styles.moves}>
+            {/* A rest, look or listen step has one move, "done" (web); a quiz or transcription has its own. */}
+            {(v.resting ? v.moves.slice(0, 1) : v.moves).map(m => {
               const { emoji, text } = splitEmoji(m.label);
               return <BigMove key={m.id} label={text} emoji={emoji} tone={m.id === 'main' ? 'go' : m.id === 'listen' ? 'white' : 'alt'}
                 gestures={gesturesFor(GESTURE[m.gesture])} note={m.id === 'main' ? 'or say "yes"' : undefined}
@@ -162,12 +170,16 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
 
         {v.onBreak ? <RestCountdown seconds={120} /> : v.resting ? (
           <View style={styles.restWrap}>
-            {v.resting.listen ? <Card tone="cream" testID="lesson-listen">
-              <Display size={24}>🎧 {v.resting.listen.song}</Display>
-              <Body size={18}>Listen for: {v.resting.listen.what}</Body>
-              <Body size={15} color={color.muted}>Listen two or three times, eyes closed, then tap along on your knee before you come back.</Body>
-            </Card> : v.resting.seconds ? <RestCountdown key={v.frame.stepIdx} seconds={v.resting.seconds} />
-              : <Card tone="cream"><Body size={18}>This step ({v.frame.step.title}) is coming to the iPad later. Mark it done to move on.</Body></Card>}
+            {v.resting.quiz ? <EarQuiz key={v.frame.stepIdx} kind={v.resting.quiz} chart={v.chart} onDone={() => ctl.finishRest()} play={(c, then) => ctl.playClip(c, 1, then)} />
+              : v.resting.transcribe ? <Transcribe key={v.frame.stepIdx} chart={v.chart} onDone={() => ctl.finishRest()} play={c => ctl.playClip(c, 2)} />
+              : v.resting.listen ? <Card tone="cream" testID="lesson-listen">
+                <Display size={24}>🎧 {v.resting.listen.song}</Display>
+                <Body size={18}>Listen for: {v.resting.listen.what}</Body>
+                <Button tone="blue" emoji="▶" label="Find it on YouTube" onPress={() => void Linking.openURL(youtubeSearch(v.resting!.listen!.song))} testID="lesson-listen-youtube" style={{ alignSelf: 'flex-start' }} />
+                <Body size={15} color={color.muted}>Listen two or three times, eyes closed, then tap along on your knee before you come back.</Body>
+              </Card>
+              : v.resting.look ? <HowItMoves id={v.demo} bpm={v.frame.bpm} heelUp={v.heelUp} playing={v.playing} style={styles.look} testID="lesson-look" />
+              : <RestCountdown key={v.frame.stepIdx} seconds={v.resting.seconds ?? 0} />}
           </View>
         ) : (
           <View style={styles.main}>
@@ -237,6 +249,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
         {v.results?.latencyHint ? <Body size={14} color={color.bad}>{v.results.latencyHint}</Body> : null}
         {v.results?.canHearRight ? <Button emoji="👂" label="Hear it right" onPress={() => { setMore(false); ctl.play(true); }} /> : null}
         {v.results?.helpKey ? <Button emoji="🧑‍🏫" label="Ask the coach for something different" onPress={() => { setMore(false); ctl.askHelp(); }} /> : null}
+        <Button emoji="🤸" label="How it moves" onPress={() => { setMore(false); setBigDemo(true); }} testID="lesson-how-it-moves" />
         {v.canReset ? <Button tone="plain" label="Reset this lesson" onPress={confirmReset} testID="lesson-reset" /> : null}
         <Body size={13} color={color.muted}>Keys: H hints · B band · Esc stop. Kit: hi-hat pedal × 3 or crash × 2 = yes, tom 2 × 2 = hear, floor × 2 = slower, tom 1 × 2 = faster, ride × 2 = next, crash × 4 = stop.</Body>
         <Button label="Close" onPress={() => setMore(false)} />
@@ -244,6 +257,22 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
 
       <CoachInspector visible={coachOpen && !!v.take} kitMoves={false} take={v.take} takeExtras={{ chartId: v.take?.chart.id, lesson: v.take?.options.lesson }}
         onClose={() => setCoachOpen(false)} nextLabel={v.moves.find(m => m.id === 'skip')?.label.replace(/^⏭\s*/, '') ?? 'Next ▶'} />
+
+      {v.intro ? <IntroSlides intro={v.intro} heelUp={v.heelUp} onNext={() => ctl.introNext()} onBack={() => ctl.introBack()} onClose={() => ctl.introClose()} /> : null}
+
+      {bigDemo ? (
+        <Modal visible transparent animationType="fade" supportedOrientations={['landscape']} onRequestClose={() => setBigDemo(false)} onShow={refocusKeyboard} onDismiss={refocusKeyboard}>
+          <View style={styles.demoScrim}>
+            <Card style={styles.bigDemo} testID="lesson-big-demo">
+              <View style={styles.demoHead}>
+                <Display size={22}>How it moves</Display>
+                <Button label="✕ Close (Esc)" onPress={() => setBigDemo(false)} testID="lesson-big-demo-close" />
+              </View>
+              <HowItMoves id={v.demo} bpm={v.frame.bpm} heelUp={v.heelUp} playing={v.playing} style={{ flex: 1 }} />
+            </Card>
+          </View>
+        </Modal>
+      ) : null}
     </DottedGround>
   );
 }
@@ -273,5 +302,9 @@ const styles = StyleSheet.create({
   kit: { width: 376, backgroundColor: color.ink, padding: 10, gap: 4 },
   kitTouch: { flex: 1.2, width: undefined },
   restWrap: { flex: 1, justifyContent: 'center' },
+  look: { flex: 1 },
+  bigDemo: { flex: 1, padding: 18, gap: 10 },
+  demoScrim: { flex: 1, backgroundColor: 'rgba(20,20,20,0.55)', padding: 30 },
+  demoHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   askCoach: { gap: 2 },
 });
