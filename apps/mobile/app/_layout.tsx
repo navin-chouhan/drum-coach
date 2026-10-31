@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { keepAwake, keepAwakeWhileForeground } from '../src/platform/keepAwake';
 import { refocusKeyboard } from '../src/platform/keyboard';
 import { colors, navigationTheme } from '../src/theme';
-import { startAppKeyboard } from '../src/ui';
+import { startAppKeyboard, useKitSounds } from '../src/ui';
 
 export default function RootLayout() {
   // The screen stays on while Drum Coach is in the foreground (hands are on sticks, not on the iPad).
@@ -14,6 +14,8 @@ export default function RootLayout() {
   // A hardware keyboard plays pads app-wide (CLAUDE.md keys: Space kick, S snare, A/Q hi-hat, Z pedal, E/R/F toms,
   // W crash, T ride), once for the app; after each route change the keys are taken back from a closed modal or field.
   useEffect(() => { startAppKeyboard(); }, []);
+  // "Play drum sounds on the iPad" (the web's browserSounds): each kit hit sounds through the app, when it's on.
+  useKitSounds();
   const path = usePathname();
   useEffect(() => { refocusKeyboard(); }, [path]);
 

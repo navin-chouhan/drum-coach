@@ -16,7 +16,7 @@ import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Pill, Screen, Toggle,
   color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppKey, useAppSettings, useKitMoves, writeSettings,
-  Dots, Notice, Stepper, TempoLadder, TimingLineView,
+  CheckRow, Dots, KIT_SOUNDS_LABEL, Notice, Stepper, TempoLadder, TimingLineView,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
@@ -368,8 +368,9 @@ export function PlayScreen() {
             {m.recent.length > 1 ? <Dots values={m.recent} width={220} label={`Notes landed in your last ${m.recent.length} takes, percent`} /> : null}
             <Body size={14}>{m.history}</Body>
           </Card>
-          {more.latency || more.sync ? <Card testID="practice-more">
+          <Card testID="practice-more">
             <CardTitle size={17}>⚙ More</CardTitle>
+            <CheckRow label={KIT_SOUNDS_LABEL} value={!!settings.browserSounds} onChange={browserSounds => writeSettings(kv, { browserSounds })} testID="practice-kit-sounds" />
             {more.latency ? <Body size={13}>{more.latency}</Body> : null}
             {more.sync ? <>
               <Body size={13}>{more.sync}</Body>
@@ -378,7 +379,7 @@ export function PlayScreen() {
                   onPress={() => nudge(ms)} testID={`practice-sync-${ms}`} />)}
               </View>
             </> : null}
-          </Card> : null}
+          </Card>
           <Card>
             <Label>Just the click</Label>
             <Button label="Metronome" emoji="🔔" size="small" onPress={() => router.push('/practice/metronome')} testID="practice-play-metronome" style={styles.metro} />

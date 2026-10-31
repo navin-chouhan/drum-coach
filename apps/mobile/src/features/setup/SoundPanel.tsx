@@ -6,7 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
 import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getStorage } from '../../platform/storage';
-import { BigMove, Body, Button, Card, Display, Group, GroupRow, Stepper, Toggle, color, getAppHitBus, readSettings, useAppKey, useAppSettings, writeSettings } from '../../ui';
+import { BigMove, Body, Button, Card, Display, Group, GroupRow, KIT_SOUNDS_LABEL, Stepper, Toggle, color, getAppHitBus, readSettings, useAppKey, useAppSettings, writeSettings } from '../../ui';
 import {
   LEVEL_LABEL, LEVEL_STEP, SOUND_INTRO, THRONE_ANSWERS, THRONE_STEPS, THRONE_VOICE_LINE, VOICE_TEST, answerForPad, busLevels, clampLevel, levelOf,
   loopEvents, throneAnswer, throneAsk, throneTitle, type LevelKey,
@@ -69,6 +69,7 @@ export function SoundPanel() {
         {level('voiceVolume')}
         {level('bandVolume')}
         <GroupRow title="Band under grooves" sub="bass and keys, offline" right={<Toggle label="Band under grooves" value={s.band !== false} onChange={band => writeSettings(kv(), { band })} testID="sound-band" />} />
+        <GroupRow title={KIT_SOUNDS_LABEL} right={<Toggle label={KIT_SOUNDS_LABEL} value={!!s.browserSounds} onChange={browserSounds => writeSettings(kv(), { browserSounds })} testID="sound-kit-sounds" />} />
       </Group>
       <View style={styles.row}>
         {clicking ? <Button label="Stop click" emoji="■" onPress={stopClick} testID="sound-click" />
