@@ -108,7 +108,7 @@ export function SetupScreen() {
 
         <View style={styles.col}>
           <ServerGroup />
-          <ApiKeyGroup onOpen={() => setTool('apikey')} />
+          <ApiKeyGroup onOpen={() => setTool('apikey')} editing={tool === 'apikey'} />
           <Group title="While you play">
             <GroupRow first title="Live tips" sub={LIVE_TIPS_SUB}
               right={<Segmented accessibilityLabel="Live tips" value={s.liveTips} onChange={liveTips => save({ liveTips })}
@@ -185,9 +185,14 @@ function ServerGroup() {
   );
 }
 
-function ApiKeyGroup({ onOpen }: { onOpen: () => void }) {
+function ApiKeyGroup({ onOpen, editing }: { onOpen: () => void; editing: boolean }) {
   const [set, setSet] = useState(false);
-  useEffect(() => { void hasApiKey(keychain).then(setSet, () => {}); });
+  // The Keychain is read once, and again when the API-key tool opens or closes (QA m3: not after every render).
+  useEffect(() => {
+    let live = true;
+    void hasApiKey(keychain).then(v => { if (live) setSet(v); }, () => {});
+    return () => { live = false; };
+  }, [editing]);
   return (
     <Group title="Coach · fallback" foot={API_KEY_FOOT}>
       <GroupRow first emoji="🔑" sym="yellow" title="Anthropic API key" sub="optional, kept in the Keychain" right={<><Text style={styles.val}>{apiKeyValue(set)}</Text><Chevron /></>}
