@@ -79,7 +79,7 @@ export type BackingSegmentPlan = {
 /** The line's end in file frames: `offsetMs + durationMs` to the nearest frame (at most the file's end); no length = the file's end. */
 export function endFrameOf(offsetMs: number, durationMs: number | undefined, sampleRate: number, frames: number): number {
   if (durationMs === undefined || !Number.isFinite(durationMs)) return frames;
-  return Math.min(frames, Math.round(((offsetMs + durationMs) * sampleRate) / 1000));
+  return Math.max(0, Math.min(frames, Math.round(((offsetMs + durationMs) * sampleRate) / 1000)));
 }
 
 /** Earliest heard time a start can still be placed exactly at `nowMs` (the late rule of AudioPolicy.isLate). */

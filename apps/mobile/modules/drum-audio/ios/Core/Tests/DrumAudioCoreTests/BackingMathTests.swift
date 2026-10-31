@@ -1,5 +1,5 @@
-// Backing audio math: the same vectors as src/backing.test.ts, plus the test tone. Written in a Linux container: NOT
-// compiled or run yet. Run: `swift test` in ios/Core.
+// Backing audio math: the same vectors as src/backing.test.ts, plus the test tone. Written in a Linux container (the
+// lengths / queued-segment vectors too: not compiled or run here). Run: `swift test` in ios/Core.
 import XCTest
 @testable import DrumAudioCore
 
@@ -85,6 +85,215 @@ final class BackingMathTests: XCTestCase {
     XCTAssertNil(plan(now + 1000, 0, 1, sampleRate: 0, frames: 10))
     XCTAssertNil(plan(now + 1000, 0, 1, sampleRate: 48_000, frames: 0))
     XCTAssertEqual(plan(now + 1000, 0, .nan)?.rate, 1)
+  }
+
+  // MARK: - Lengths and queued segments (seamless loops)
+
+  func testStartWithALength() throws {
+    let p = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: now + 1000, offsetMs: 1000, rate: 0.75, durationMs: 2400), nowMs: now, speaker,
+                                                fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertEqual(p.startFrame, 44_100)
+    XCTAssertEqual(p.frameCount, Int64((3.4 * 44_100).rounded()) - 44_100)
+    let late = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: now - 500, offsetMs: 1000, rate: 0.75, durationMs: 2400), nowMs: now, speaker,
+                                                   fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertEqual(late.startFrame + late.frameCount, Int64((3.4 * 44_100).rounded()))
+    let lead = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: now + 1000, offsetMs: -300, rate: 1, durationMs: 2400), nowMs: now, speaker,
+                                                   fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertEqual(lead.frameCount, Int64((2.1 * 44_100).rounded()))
+    func withLength(_ at: Double, _ offset: Double, _ d: Double) -> BackingPlan? {
+      return BackingMath.planStart(BackingStartRequest(at: at, offsetMs: offset, rate: 1, durationMs: d), nowMs: now, speaker,
+                                   fileSampleRate: rate441, fileFrames: frames441)
+    }
+    XCTAssertNil(withLength(now + 1000, 0, 0))
+    XCTAssertNil(withLength(now + 1000, -300, 200))
+    XCTAssertNil(withLength(now - 5000, 0, 2000))
+    XCTAssertEqual(withLength(now + 1000, 0, .nan)?.frameCount, frames441)
+    XCTAssertEqual(BackingMath.lineEndFrame(offsetMs: 0, durationMs: 1e9, sampleRate: 44_100, frames: 1000), 1000)
+    XCTAssertEqual(BackingMath.lineEndFrame(offsetMs: 0, durationMs: nil, sampleRate: 44_100, frames: 1000), 1000)
+    XCTAssertEqual(BackingMath.lineEndFrame(offsetMs: -500, durationMs: 100, sampleRate: 44_100, frames: 1000), 0)
+    XCTAssertEqual(BackingMath.jsRound(-2.5), -2)
+    XCTAssertEqual(BackingMath.jsRound(2.5), 3)
+  }
+
+  /// A section looped `n` times: the start, then the queued segments, as core's take hands them over.
+  private func loop(_ n: Int, rate: Double, offsetMs: Double, secFileMs: Double, sampleRate: Double = 44_100) throws
+    -> (p: BackingPlan, segs: [BackingSegmentPlan], plans: [BackingQueuePlan], at0: Double, sec: Double) {
+    let frames = Int64(sampleRate) * 600
+    let at0 = now + 1000, sec = secFileMs / rate
+    let p = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: at0, offsetMs: offsetMs, rate: rate, durationMs: secFileMs), nowMs: now, speaker,
+                                                fileSampleRate: sampleRate, fileFrames: frames))
+    var segs = [BackingMath.firstSegment(p)]
+    var plans: [BackingQueuePlan] = []
+    for r in 1..<n {
+      let last = segs[segs.count - 1]
+      let q = try XCTUnwrap(BackingMath.planQueue(BackingQueueRequest(at: at0 + Double(r) * sec, offsetMs: offsetMs, durationMs: secFileMs),
+                                                  lineHeardAtMs: p.heardAtMs, lineRate: p.rate, prevEnd: last.playerFrame + last.frameCount,
+                                                  nowMs: now, speaker, fileSampleRate: sampleRate, fileFrames: frames))
+      segs.append(q.segment)
+      plans.append(q)
+    }
+    return (p, segs, plans, at0, sec)
+  }
+
+  func testQueuedRepeatsAreBackToBack() throws {
+    for rate in [1, 0.75, 0.5] {
+      let l = try loop(200, rate: rate, offsetMs: 2650, secFileMs: 2400)
+      for (i, q) in l.plans.enumerated() {
+        let prev = l.segs[i]
+        XCTAssertEqual(q.segment.playerFrame, prev.playerFrame + prev.frameCount) // no gap, no overlap
+        XCTAssertFalse(q.explicitTime)
+        XCTAssertEqual(q.skippedFrames, 0)
+        XCTAssertEqual(q.segment.startFrame, l.segs[0].startFrame)
+        XCTAssertEqual(q.segment.frameCount, l.segs[0].frameCount)
+        XCTAssertLessThan(abs(q.segment.heardAtMs - (l.at0 + Double(i + 1) * l.sec)), 1000 / 44_100 / rate)
+      }
+    }
+  }
+
+  func testOddSectionLengthNeverCreeps() throws {
+    let l = try loop(500, rate: 0.75, offsetMs: 123.456, secFileMs: 1234.5678, sampleRate: 48_000)
+    for (i, q) in l.plans.enumerated() {
+      XCTAssertEqual(q.segment.playerFrame, l.segs[i].playerFrame + l.segs[i].frameCount)
+      XCTAssertLessThanOrEqual(abs(q.skippedFrames), 1)
+      let sectionStartHeard = q.segment.heardAtMs - (q.segment.fileStartMs - 123.456) / 0.75
+      XCTAssertLessThan(abs(sectionStartHeard - (l.at0 + Double(i + 1) * l.sec)), 1.5 * 1000 / 48_000 / 0.75)
+    }
+  }
+
+  func testQueuedLeadWaitsAtAnExplicitTime() throws {
+    let at0 = now + 1000
+    let p = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: at0, offsetMs: -300, rate: 1, durationMs: 2400), nowMs: now, speaker,
+                                                fileSampleRate: rate441, fileFrames: frames441))
+    let q = try XCTUnwrap(BackingMath.planQueue(BackingQueueRequest(at: at0 + 2400, offsetMs: -300, durationMs: 2400), lineHeardAtMs: p.heardAtMs,
+                                                lineRate: 1, prevEnd: p.frameCount, nowMs: now, speaker, fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertTrue(q.explicitTime)
+    XCTAssertEqual(q.segment.playerFrame, Int64((2.4 * 44_100).rounded()))
+    XCTAssertEqual(q.segment.startFrame, 0)
+    XCTAssertEqual(q.segment.heardAtMs, at0 + 2700, accuracy: 1e-6)
+  }
+
+  func testQueuedOverlapSkipsAndLateQueueJoinsOnTheLine() throws {
+    let at0 = now + 1000
+    let p = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: at0, offsetMs: 0, rate: 0.5, durationMs: 10_000), nowMs: now, speaker,
+                                                fileSampleRate: rate441, fileFrames: frames441))
+    let over = try XCTUnwrap(BackingMath.planQueue(BackingQueueRequest(at: at0 + 19_000, offsetMs: 5000, durationMs: 1000), lineHeardAtMs: p.heardAtMs,
+                                                   lineRate: 0.5, prevEnd: p.frameCount, nowMs: now, speaker, fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertEqual(over.segment.playerFrame, p.frameCount)
+    XCTAssertEqual(over.skippedFrames, 22_050)
+    XCTAssertEqual(over.segment.startFrame, Int64(5.5 * 44_100))
+    XCTAssertFalse(over.explicitTime)
+    let later = now + 30_000
+    let late = try XCTUnwrap(BackingMath.planQueue(BackingQueueRequest(at: at0 + 20_000, offsetMs: 0, durationMs: 60_000), lineHeardAtMs: p.heardAtMs,
+                                                   lineRate: 0.5, prevEnd: p.frameCount, nowMs: later, speaker, fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertTrue(late.explicitTime)
+    XCTAssertGreaterThanOrEqual(late.segment.heardAtMs, BackingMath.earliestHeardMs(nowMs: later, speaker) + BackingMath.lateJoinMarginMs - 1e-6)
+    XCTAssertEqual(late.segment.heardAtMs - (at0 + 20_000), late.segment.fileStartMs / 0.5, accuracy: 1e-3)
+    XCTAssertEqual(late.skippedFrames, late.segment.startFrame)
+  }
+
+  func testQueueNilWhenNothingIsLeftOrMalformed() throws {
+    let p = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: now + 1000, offsetMs: 0, rate: 1, durationMs: 1000), nowMs: now, speaker,
+                                                fileSampleRate: rate441, fileFrames: frames441))
+    func q(_ at: Double, _ offset: Double, _ d: Double, sampleRate: Double = 44_100, frames: Int64? = nil) -> BackingQueuePlan? {
+      return BackingMath.planQueue(BackingQueueRequest(at: at, offsetMs: offset, durationMs: d), lineHeardAtMs: p.heardAtMs, lineRate: 1,
+                                   prevEnd: p.frameCount, nowMs: now, speaker, fileSampleRate: sampleRate, fileFrames: frames ?? frames441)
+    }
+    XCTAssertNil(q(now + 2000, 360_000, 1000))
+    XCTAssertNil(q(now + 1500, 0, 400)) // overlapped entirely
+    XCTAssertNil(q(now + 2000, 0, .nan))
+    XCTAssertNil(q(now + 2000, 0, 1000, sampleRate: 0, frames: 10))
+    XCTAssertNil(q(now + 2000, 0, 1000, frames: 0))
+  }
+
+  func testAnchorAcrossSeams() throws {
+    let segs = [
+      BackingSegmentPlan(playerFrame: 0, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: 0),
+      BackingSegmentPlan(playerFrame: 44_100, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: 0),
+      BackingSegmentPlan(playerFrame: 100_000, startFrame: 0, frameCount: 1000, fileStartMs: 0, heardAtMs: 0), // after a gap
+    ]
+    func at(_ s: Double) -> BackingAnchor? {
+      return BackingMath.anchorInSegments(segs, playerSampleTime: s, playerSampleRate: 44_100, hostMs: now, heardOffsetMs: 5.7, pitchLatencyMs: 0)
+    }
+    let a0 = try XCTUnwrap(at(44_099))
+    XCTAssertEqual(a0.segment, 0)
+    XCTAssertEqual(a0.fileMs, 1000 + 44_099 / 44.1, accuracy: 1e-9)
+    let a1 = try XCTUnwrap(at(44_100))
+    XCTAssertEqual(a1.segment, 1)
+    XCTAssertEqual(a1.fileMs, 1000, accuracy: 1e-9)
+    let a2 = try XCTUnwrap(at(100_500))
+    XCTAssertEqual(a2.segment, 2)
+    XCTAssertEqual(a2.fileMs, 500 / 44.1, accuracy: 1e-9)
+    XCTAssertEqual(try XCTUnwrap(at(0)).at, now + 5.7, accuracy: 1e-6)
+    XCTAssertNil(at(-1))
+    XCTAssertNil(at(90_000))
+    XCTAssertNil(at(101_000))
+    XCTAssertNil(BackingMath.anchorInSegments([], playerSampleTime: 0, playerSampleRate: 44_100, hostMs: now, heardOffsetMs: 5.7, pitchLatencyMs: 0))
+    XCTAssertNil(BackingMath.anchorInSegments(segs, playerSampleTime: 0, playerSampleRate: 0, hostMs: now, heardOffsetMs: 5.7, pitchLatencyMs: 0))
+  }
+
+  func testLoopReadOnAPerfectClockHasNoDriftInAnyRepeat() throws {
+    for rate in [1, 0.75] {
+      var t = speaker
+      t.pitchLatencyMs = rate == 1 ? 0 : 46.4
+      let at0 = now + 1500, secFile = 2400.0, sec = secFile / rate
+      let p = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: at0, offsetMs: 2650, rate: rate, durationMs: secFile), nowMs: now, t,
+                                                  fileSampleRate: rate441, fileFrames: frames441))
+      var segs = [BackingMath.firstSegment(p)]
+      for r in 1..<50 {
+        let last = segs[r - 1]
+        let q = try XCTUnwrap(BackingMath.planQueue(BackingQueueRequest(at: at0 + Double(r) * sec, offsetMs: 2650, durationMs: secFile),
+                                                    lineHeardAtMs: p.heardAtMs, lineRate: rate, prevEnd: last.playerFrame + last.frameCount,
+                                                    nowMs: now, t, fileSampleRate: rate441, fileFrames: frames441))
+        segs.append(q.segment)
+      }
+      var ms = 0.0
+      while ms < 49 * sec {
+        let a = try XCTUnwrap(BackingMath.anchorInSegments(segs, playerSampleTime: ms / 1000 * 44_100 * rate, playerSampleRate: 44_100,
+                                                           hostMs: p.scheduleMs + ms, heardOffsetMs: t.heardOffsetMs, pitchLatencyMs: t.pitchLatencyMs))
+        let line = BackingStartRequest(at: at0 + Double(a.segment) * sec, offsetMs: 2650, rate: rate)
+        XCTAssertLessThan(abs(BackingMath.driftMs(line, a)), 1000 / 44_100 / rate)
+        ms += 337
+      }
+    }
+  }
+
+  func testReanchorPlan() throws {
+    let segs = [
+      BackingSegmentPlan(playerFrame: 0, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: now + 100),
+      BackingSegmentPlan(playerFrame: 44_100, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: now + 2100),
+      BackingSegmentPlan(playerFrame: 88_200, startFrame: 44_100, frameCount: 44_100, fileStartMs: 1000, heardAtMs: now + 4100),
+    ]
+    let plan = try XCTUnwrap(BackingMath.reanchorPlan(last: BackingAnchor(at: now + 3103, fileMs: 1500, segment: 1), segments: segs, rate: 0.5, sampleRate: 44_100))
+    XCTAssertEqual(plan.start, BackingStartRequest(at: now + 3103, offsetMs: 1500, rate: 0.5, durationMs: 500))
+    XCTAssertEqual(plan.queue.count, 1)
+    XCTAssertEqual(plan.queue[0].at, now + 4103, accuracy: 1e-6)
+    XCTAssertEqual(plan.queue[0].offsetMs, 1000)
+    XCTAssertEqual(plan.queue[0].durationMs, 1000, accuracy: 1e-9)
+    let fresh = try XCTUnwrap(BackingMath.reanchorPlan(last: nil, segments: segs, rate: 0.5, sampleRate: 44_100))
+    XCTAssertEqual(fresh.start, BackingStartRequest(at: now + 100, offsetMs: 1000, rate: 0.5, durationMs: 1000))
+    XCTAssertEqual(fresh.queue.map(\.at), [now + 2100, now + 4100])
+    XCTAssertNil(BackingMath.reanchorPlan(last: BackingAnchor(at: now, fileMs: 0, segment: 3), segments: segs, rate: 0.5, sampleRate: 44_100))
+    XCTAssertNil(BackingMath.reanchorPlan(last: nil, segments: [], rate: 1, sampleRate: 44_100))
+    XCTAssertNil(BackingMath.reanchorPlan(last: nil, segments: segs, rate: 1, sampleRate: 0))
+
+    // put back after a heard-offset change, the queued segment still follows back to back
+    let at0 = now + 1000
+    let p = try XCTUnwrap(BackingMath.planStart(BackingStartRequest(at: at0, offsetMs: 0, rate: 1, durationMs: 2000), nowMs: now, speaker,
+                                                fileSampleRate: rate441, fileFrames: frames441))
+    let s1 = try XCTUnwrap(BackingMath.planQueue(BackingQueueRequest(at: at0 + 2000, offsetMs: 0, durationMs: 2000), lineHeardAtMs: p.heardAtMs,
+                                                 lineRate: 1, prevEnd: p.frameCount, nowMs: now, speaker, fileSampleRate: rate441, fileFrames: frames441))
+    let later = now + 1500
+    let bt = BackingTiming(heardOffsetMs: 180, ioBufferMs: 10.7, safetyMs: 10, pitchLatencyMs: 0)
+    let back = try XCTUnwrap(BackingMath.reanchorPlan(last: BackingAnchor(at: at0 + 500, fileMs: 500, segment: 0), segments: [BackingMath.firstSegment(p), s1.segment],
+                                                      rate: 1, sampleRate: 44_100))
+    let q = try XCTUnwrap(BackingMath.planStart(back.start, nowMs: later, bt, fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertGreaterThan(q.joinedLateMs, 0)
+    XCTAssertEqual(q.startFrame + q.frameCount, 2 * 44_100)
+    let r = try XCTUnwrap(BackingMath.planQueue(back.queue[0], lineHeardAtMs: q.heardAtMs, lineRate: 1, prevEnd: q.frameCount, nowMs: later, bt,
+                                                fileSampleRate: rate441, fileFrames: frames441))
+    XCTAssertEqual(r.segment.playerFrame, q.frameCount)
+    XCTAssertFalse(r.explicitTime)
+    XCTAssertEqual(r.segment.heardAtMs, at0 + 2000, accuracy: 1e-3)
   }
 
   func testRenderHostMs() {

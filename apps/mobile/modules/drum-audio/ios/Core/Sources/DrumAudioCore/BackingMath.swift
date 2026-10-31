@@ -6,6 +6,8 @@ import Foundation
 /// A start asks for a line: file position `offsetMs` is heard at Clock time `at`, and the file advances `rate` ms per
 /// Clock ms. Native keeps that line exactly (negative offsets start later, late starts skip into the file, the first
 /// frame is rounded up and its heard time recomputed). Only local files play here (CLAUDE.md: never YouTube audio).
+/// A start may end after `durationMs` of its line; further segments are queued behind it on the same player timeline
+/// (planQueue), which has no seams, and the anchor maps that timeline through the segment list (anchorInSegments).
 struct BackingTiming: Equatable {
   /// Schedule time + heardOffsetMs = heard time (AudioRoute.heardOffsetMs).
   var heardOffsetMs: Double
@@ -20,6 +22,41 @@ struct BackingStartRequest: Equatable {
   var at: Double
   var offsetMs: Double
   var rate: Double
+  /// Ms of the line (file ms from offsetMs) to play; nil or not finite = to the file's end.
+  var durationMs: Double? = nil
+}
+
+/// A queued segment: `offsetMs` heard at `at` on the start's line, `durationMs` of the line (BackingPort.queue).
+struct BackingQueueRequest: Equatable {
+  var at: Double
+  var offsetMs: Double
+  var durationMs: Double
+}
+
+/// One segment on the player's timeline (a start's first segment is at player frame 0).
+struct BackingSegmentPlan: Equatable {
+  /// Where the segment begins on the player's timeline: frames since `play(at:)`, at the file's rate.
+  var playerFrame: Int64
+  /// First file frame (`scheduleSegment(startingFrame:)`) and how many (`frameCount:`).
+  var startFrame: Int64
+  var frameCount: Int64
+  var fileStartMs: Double
+  /// When startFrame is heard on the line (Clock ms).
+  var heardAtMs: Double
+}
+
+struct BackingQueuePlan: Equatable {
+  var segment: BackingSegmentPlan
+  /// Frames of the segment's line skipped: it overlapped the previous segment, or came too late to place.
+  var skippedFrames: Int64
+  /// True: scheduled at an explicit player time (a gap before it). False: `at: nil`, right after the previous one.
+  var explicitTime: Bool
+}
+
+/// After a route or engine change: the start to put back, then the segments to queue behind it.
+struct BackingReanchor: Equatable {
+  var start: BackingStartRequest
+  var queue: [BackingQueueRequest]
 }
 
 struct BackingPlan: Equatable {
@@ -39,6 +76,8 @@ struct BackingPlan: Equatable {
 struct BackingAnchor: Equatable {
   var at: Double
   var fileMs: Double
+  /// The segment it was read in (anchorInSegments); 0 for a single one.
+  var segment: Int = 0
 }
 
 enum BackingMath {
@@ -49,6 +88,20 @@ enum BackingMath {
   static let unityRateEps = 1e-6
   /// Extra room for a late join: the first frames are read (`prepare`) before `play(at:)`.
   static let lateJoinMarginMs = 50.0
+  /// A queued segment this close (player frames) to where the previous one ends is played right after it.
+  static let seamSlackFrames: Int64 = 1
+
+  /// JS Math.round (halves round up, also below 0), so the TS and Swift plans agree to the frame.
+  static func jsRound(_ x: Double) -> Double {
+    return (x + 0.5).rounded(.down)
+  }
+
+  /// The line's end in file frames: offsetMs + durationMs to the nearest frame, within the file; no length = its end.
+  static func lineEndFrame(offsetMs: Double, durationMs: Double?, sampleRate: Double, frames: Int64) -> Int64 {
+    guard let d = durationMs, d.isFinite else { return frames }
+    let e = min(Double(frames), jsRound((offsetMs + d) * sampleRate / 1000))
+    return e <= 0 ? 0 : Int64(e)
+  }
 
   static func clampRate(_ rate: Double) -> Double {
     if !rate.isFinite || rate <= 0 { return 1 }
@@ -84,12 +137,51 @@ enum BackingMath {
       at = join
     }
     let frame = max(0, (offset * fileSampleRate / 1000 - 1e-6).rounded(.up))
-    guard frame < Double(fileFrames) else { return nil }
+    let endFrame = lineEndFrame(offsetMs: req.offsetMs, durationMs: req.durationMs, sampleRate: fileSampleRate, frames: fileFrames)
+    guard frame < Double(endFrame) else { return nil }
     let startFrame = Int64(frame)
     let fileStartMs = Double(startFrame) * 1000 / fileSampleRate
     let heardAtMs = at + (fileStartMs - offset) / rate
-    return BackingPlan(rate: rate, startFrame: startFrame, frameCount: fileFrames - startFrame, fileStartMs: fileStartMs,
+    return BackingPlan(rate: rate, startFrame: startFrame, frameCount: endFrame - startFrame, fileStartMs: fileStartMs,
                        heardAtMs: heardAtMs, scheduleMs: heardAtMs - t.heardOffsetMs - t.pitchLatencyMs, joinedLateMs: joinedLateMs)
+  }
+
+  /// A start's plan as the first segment of its player timeline.
+  static func firstSegment(_ p: BackingPlan) -> BackingSegmentPlan {
+    return BackingSegmentPlan(playerFrame: 0, startFrame: p.startFrame, frameCount: p.frameCount, fileStartMs: p.fileStartMs, heardAtMs: p.heardAtMs)
+  }
+
+  /// The next segment on a playing line (player frame 0 heard at `lineHeardAtMs`), after the segment that ends at
+  /// player frame `prevEnd`: within a frame of it, exactly there (`at: nil`, its first file frame moved by that frame);
+  /// later, after a gap; earlier, or before what can still be placed at `nowMs` (then + the margin), later than asked
+  /// and as many frames into the file. Nil when nothing of it is left or for a malformed request or file.
+  static func planQueue(_ req: BackingQueueRequest, lineHeardAtMs: Double, lineRate: Double, prevEnd: Int64, nowMs: Double, _ t: BackingTiming,
+                        fileSampleRate: Double, fileFrames: Int64, marginMs: Double = lateJoinMarginMs) -> BackingQueuePlan? {
+    guard req.at.isFinite, req.offsetMs.isFinite, req.durationMs.isFinite, nowMs.isFinite, lineHeardAtMs.isFinite,
+          fileSampleRate > 0, fileFrames > 0 else { return nil }
+    let rate = clampRate(lineRate)
+    let fpm = fileSampleRate / 1000 // file frames per ms
+    var at = req.at
+    var offset = req.offsetMs
+    if offset < 0 {
+      at += -offset / rate
+      offset = 0
+    }
+    let wantD = jsRound((at - lineHeardAtMs) * rate * fpm)
+    let earliestD = ((earliestHeardMs(nowMs: nowMs, t) - lineHeardAtMs) * rate * fpm).rounded(.up)
+    guard abs(wantD) < 9e15, abs(earliestD) < 9e15 else { return nil }
+    let want = Int64(wantD)
+    var playerFrame = abs(want - prevEnd) <= seamSlackFrames ? prevEnd : max(want, prevEnd)
+    let earliest = Int64(earliestD)
+    if playerFrame < earliest { playerFrame = earliest + Int64((marginMs * rate * fpm).rounded(.up)) }
+    let skipped = playerFrame - want // −1 …: a seam a frame early starts its file a frame early too
+    let first = max(0, (offset * fpm - 1e-6).rounded(.up) + Double(skipped))
+    let endFrame = lineEndFrame(offsetMs: req.offsetMs, durationMs: req.durationMs, sampleRate: fileSampleRate, frames: fileFrames)
+    guard first < Double(endFrame) else { return nil }
+    let startFrame = Int64(first)
+    let seg = BackingSegmentPlan(playerFrame: playerFrame, startFrame: startFrame, frameCount: endFrame - startFrame,
+                                 fileStartMs: Double(startFrame) / fpm, heardAtMs: lineHeardAtMs + Double(playerFrame) / fpm / rate)
+    return BackingQueuePlan(segment: seg, skippedFrames: skipped, explicitTime: playerFrame != prevEnd)
   }
 
   static func expectedHeardMs(_ req: BackingStartRequest, fileMs: Double) -> Double {
@@ -116,11 +208,28 @@ enum BackingMath {
   /// with invalid times.
   static func anchor(plan: BackingPlan, playerSampleTime: Double, playerSampleRate: Double, hostMs: Double,
                      heardOffsetMs: Double, pitchLatencyMs: Double, fileFrames: Int64) -> BackingAnchor? {
+    let only = BackingSegmentPlan(playerFrame: 0, startFrame: plan.startFrame, frameCount: fileFrames - plan.startFrame,
+                                  fileStartMs: plan.fileStartMs, heardAtMs: plan.heardAtMs)
+    return anchorInSegments([only], playerSampleTime: playerSampleTime, playerSampleRate: playerSampleRate, hostMs: hostMs,
+                            heardOffsetMs: heardOffsetMs, pitchLatencyMs: pitchLatencyMs)
+  }
+
+  /// The anchor across queued segments: the player's timeline has no seams, so `playerSampleTime` falls in one segment
+  /// (`segment`: its index). Nil in a gap between segments, before the first, after the last, or with invalid times.
+  static func anchorInSegments(_ segments: [BackingSegmentPlan], playerSampleTime: Double, playerSampleRate: Double, hostMs: Double,
+                               heardOffsetMs: Double, pitchLatencyMs: Double) -> BackingAnchor? {
     guard playerSampleRate > 0, playerSampleTime.isFinite, hostMs.isFinite else { return nil }
-    guard playerSampleTime >= 0 else { return nil }
-    guard Double(plan.startFrame) + playerSampleTime < Double(fileFrames) else { return nil }
-    return BackingAnchor(at: hostMs + heardOffsetMs + pitchLatencyMs,
-                         fileMs: plan.fileStartMs + playerSampleTime * 1000 / playerSampleRate)
+    var i = segments.count - 1
+    while i >= 0 {
+      let s = segments[i]
+      let into = playerSampleTime - Double(s.playerFrame)
+      if into >= 0 {
+        guard into < Double(s.frameCount) else { return nil }
+        return BackingAnchor(at: hostMs + heardOffsetMs + pitchLatencyMs, fileMs: s.fileStartMs + into * 1000 / playerSampleRate, segment: i)
+      }
+      i -= 1
+    }
+    return nil
   }
 
   /// Behind a time-pitch unit the node timeline runs at sampleRate × rate per real second: the start as node time,
@@ -133,6 +242,28 @@ enum BackingMath {
   static func reanchorRequest(last: BackingAnchor?, plan: BackingPlan) -> BackingStartRequest {
     if let a = last { return BackingStartRequest(at: a.at, offsetMs: a.fileMs, rate: plan.rate) }
     return BackingStartRequest(at: plan.heardAtMs, offsetMs: plan.fileStartMs, rate: plan.rate)
+  }
+
+  /// After a route or engine change, the whole timeline to put back: the segment playing now from the last anchor read
+  /// (to its end), then the segments after it, moved by the same drift (nil `last`: from the first segment, unmoved).
+  /// Nil when the anchor's segment isn't one of `segments` (or there are none).
+  static func reanchorPlan(last: BackingAnchor?, segments: [BackingSegmentPlan], rate: Double, sampleRate: Double) -> BackingReanchor? {
+    let k = last?.segment ?? 0
+    guard k >= 0, k < segments.count, sampleRate > 0 else { return nil }
+    let s = segments[k]
+    let r = clampRate(rate)
+    func endMs(_ f: BackingSegmentPlan) -> Double { return Double(f.startFrame + f.frameCount) * 1000 / sampleRate }
+    var shift = 0.0
+    var start = BackingStartRequest(at: s.heardAtMs, offsetMs: s.fileStartMs, rate: r)
+    if let a = last {
+      shift = a.at - (s.heardAtMs + (a.fileMs - s.fileStartMs) / r)
+      start = BackingStartRequest(at: a.at, offsetMs: a.fileMs, rate: r)
+    }
+    start.durationMs = endMs(s) - start.offsetMs
+    let queue = segments[(k + 1)...].map { f in
+      BackingQueueRequest(at: f.heardAtMs + shift, offsetMs: f.fileStartMs, durationMs: endMs(f) - f.fileStartMs)
+    }
+    return BackingReanchor(start: start, queue: Array(queue))
   }
 
   /// A local file to play: a file:// URI or an absolute path; anything else (http, YouTube, content://) is refused.

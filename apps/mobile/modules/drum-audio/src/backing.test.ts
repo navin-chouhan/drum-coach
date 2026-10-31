@@ -102,6 +102,7 @@ describe('a start with a length (durationMs of the line, from offsetMs)', () => 
     expect(planBackingStart({ at: now + 1000, offsetMs: 0, rate: 1, durationMs: Number.NaN }, now, speaker, file441)!.frameCount).toBe(file441.frames);
     expect(endFrameOf(0, 1e9, 44_100, 1000)).toBe(1000); // never past the file
     expect(endFrameOf(0, undefined, 44_100, 1000)).toBe(1000);
+    expect(endFrameOf(-500, 100, 44_100, 1000)).toBe(0); // never before the file
   });
 });
 
