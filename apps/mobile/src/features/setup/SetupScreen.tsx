@@ -29,6 +29,7 @@ import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit
 import { CoachVoicePanel } from './CoachVoicePanel';
 import { coachVoiceSummary } from './coachVoice';
 import { SoundPanel } from './SoundPanel';
+import { TimelineView } from './TimelineView';
 import { useAudioRoute, useKitConnection, useKitData, useLastHit, useRecentRuns, keychain } from './useSetup';
 import { HAND_SUB, LIVE_TIPS, LIVE_TIPS_SUB, AUTOPILOT_SUB } from './whilePlaying';
 import type { Settings } from '@drum-coach/core/input/settings';
@@ -252,13 +253,14 @@ function InputPicker({ conn, onPicked }: { conn: ReturnType<typeof useKitConnect
   );
 }
 
-/** Kit test (web Setup → Kit test): the kit lights on every hit; tap a drum to play it. */
+/** Kit test (web Setup → Kit test): the kit lights on every hit; tap a drum to play it; the hit timeline under it. */
 function KitTest() {
   const last = useLastHit();
   const hit = lastHitView(last);
   const [hits] = useState<Subscribe<PadHit>>(() => (fn: (h: PadHit) => void) => getAppHitBus().onHit(h => { if (h.pad) fn({ pad: h.pad, velocity: h.velocity, at: h.time }); }));
   useAudioEngine(); // tapped drums sound at once, and again after the app comes back (QA2 M2)
   return (
+    <View style={styles.kitTestCol}>
     <View style={styles.kitTest}>
       <View style={styles.kitArea}>
         <KitView hits={hits} layout={TOUCH_KIT} labelSize={22} onPadPress={pad => { getAppHitBus().emitPad(pad, 100); audio.playNow(`drum.${pad}`, 1); }} testID="kittest-kit" />
@@ -269,6 +271,8 @@ function KitTest() {
         </Group>
         <Body size={14} weight="700">{KEYS_LINE}</Body>
       </View>
+    </View>
+    <TimelineView />
     </View>
   );
 }
@@ -299,6 +303,7 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16, fontWeight: '600', color: color.ink },
   panel: { flex: 1, gap: 16, maxWidth: 820 },
   row: { flexDirection: 'row', gap: 14, alignItems: 'center' },
+  kitTestCol: { flex: 1, gap: 14 },
   kitTest: { flex: 1, flexDirection: 'row', gap: 22 },
   kitArea: { flex: 2.4 },
   kitSide: { flex: 1, gap: 14 },
