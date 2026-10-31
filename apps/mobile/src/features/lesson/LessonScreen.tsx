@@ -12,13 +12,13 @@ import { KitView, NoteHighway, TouchPads, type PadHit, type Subscribe } from '..
 import type { DrumId } from '../../play/chartLike';
 import {
   Body, BigMove, Button, Card, CoachLine, Display, DottedGround, Label, Pill, Segmented, Strong, color, gesturesFor, hardShadow, shadow, stroke,
-  useAppSettings, useKitMoves, getAppHitBus,
+  StepPills, TempoLadder, TimingLineView, useAppKey, useAppSettings, useKitMoves, getAppHitBus,
 } from '../../ui';
 import { CoachInspector } from '../coach';
 import type { LessonController, MoveView } from './controller';
 import { barCounter, countInAt, flowMeter, liveTip } from './live';
 import {
-  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, KeyboardKit, MoreSheet, RestCountdown, RoundButton, SheetPager, StepPills, TakeCardView, TempoLadder, TimingLineView,
+  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, MoreSheet, RestCountdown, RoundButton, SheetPager, TakeCardView,
 } from './parts';
 import { useSheetPages } from './sheetPages';
 import { laneName } from './lessonView';
@@ -56,6 +56,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
     yes: () => ctl.padCommand('yes'), slower: () => ctl.padCommand('slower'), faster: () => ctl.padCommand('faster'),
     next: () => ctl.padCommand('next'), listen: () => ctl.padCommand('listen'), stop: () => ctl.padCommand('stop'),
   }, { playing: v.playing, enabled: !more && !coachOpen && !v.celebration });
+  // A hardware keyboard's Esc stops the take (the app-wide keyboard, ui/useAppKey; its drum keys go to the hit bus).
+  useAppKey('escape', () => { if (!v.playing) return false; ctl.stop(); return true; });
 
   const s = take.state, pos = v.playing ? take.position(now) : 0;
   const bpb = s.run?.beatsPerBar ?? beatsPerBar(v.chart);
@@ -102,9 +104,6 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
 
   return (
     <DottedGround>
-      <KeyboardKit emitPad={(pad, vel) => bus.emitPad(pad, vel)} onKey={k => {
-        if (k === 'h') ctl.toggleHints(); else if (k === 'b') ctl.toggleBand(); else if (k === 'escape') ctl.stop();
-      }} />
       {/* The black top bar */}
       <View style={[styles.bar, { paddingTop: Math.max(insets.top, 20) + 6, paddingLeft: insets.left + 24, paddingRight: insets.right + 24 }]}>
         {!v.playing ? <RoundButton label="Back to Journey" glyph="‹" onPress={() => ctl.back()} testID="lesson-back" /> : null}

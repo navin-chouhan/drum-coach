@@ -12,10 +12,9 @@ import { getStorage } from '../../platform/storage';
 import { NotationView } from '../../notation';
 import { TouchPads } from '../../play';
 import type { DrumId } from '../../play/chartLike';
-import { BigMove, Body, Button, Card, Display, Screen, color, gesturesFor, getAppHitBus, useAppSettings, useKitMoves } from '../../ui';
+import { BigMove, Body, Button, Card, Display, Screen, color, gesturesFor, getAppHitBus, useAppKey, useAppSettings, useKitMoves } from '../../ui';
 import { PLACEMENT_KEY } from '../firstRun/firstRun';
 import { allLessons } from '../journey/source';
-import { KeyboardKit } from './parts';
 import { judgePlacement, ladderOf, placeAt, placementStep, rungLine } from './placement';
 import { todayKey } from './progress';
 import { idleChart, runChart } from './runChart';
@@ -80,6 +79,9 @@ export function PlacementScreen() {
     take.start(rung.step.chart, rung.options);
   };
   useKitMoves({ yes: () => (result ? leave() : play()), stop: () => take.stop() }, { playing });
+  // A hardware keyboard: Enter plays (or starts there), Esc stops the take.
+  useAppKey('enter', () => { if (playing) return false; if (result) leave(); else play(); return true; });
+  useAppKey('escape', () => { if (!playing) return false; take.stop(); return true; });
 
   const s = take.state;
   const live = playing ? runChart(s) : undefined;
@@ -89,7 +91,6 @@ export function PlacementScreen() {
 
   return (
     <Screen withSidebar={false} testID="screen-placement">
-      <KeyboardKit emitPad={(pad, vel) => bus.emitPad(pad, vel)} onKey={k => { if (k === 'enter' && !playing) { if (result) leave(); else play(); } }} />
       <Card style={styles.card}>
         <Display size={30}>Find your level</Display>
         {result ? <>

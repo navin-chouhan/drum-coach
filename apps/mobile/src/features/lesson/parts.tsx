@@ -1,54 +1,13 @@
 // The lesson player's local pieces, drawn as the mockups draw them (docs/mockups/ipad/lesson-*.png) with the UI kit's
-// tokens. Candidates for the kit: TempoLadder, StepPills, TimingLineView, KeyboardKit (listed in the report).
-import type { PadId } from '@drum-coach/core/engine/kit';
-import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+// tokens. StepPills, TempoLadder and TimingLineView are the kit's now (src/ui/lessonBits.tsx), and the keyboard is
+// app-wide (modules/drum-keys through the hit bus).
+import { useEffect, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Body, Button, Card, Display, GestureChip, Label, Stars, Strong, color, font, hardShadow, shadow, slopFor, stroke, type } from '../../ui';
 import type { Celebration } from './controller';
-import type { Goal, Pill, Rung } from './lessonView';
+import type { Goal } from './lessonView';
 import type { TakeCard } from './results';
 import type { PagerView } from './sheetPages';
-import type { timingLine } from './results';
-
-/** The step (or layer) pills: ✓ for done, the number, the current one named. */
-export function StepPills({ pills, label }: { pills: Pill[]; label: string }) {
-  if (!pills.length) return null;
-  return (
-    <View style={s.pills} accessible accessibilityLabel={label}>
-      {pills.map((p, i) => (
-        <View key={i} style={[s.pill, p.state === 'done' && s.pillDone, p.state === 'now' && s.pillNow]}>
-          <View style={[s.pillNum, p.state === 'done' && s.pillNumDone]}>
-            <Text style={[s.pillNumText, p.state === 'done' && { color: color.white }]}>{p.state === 'done' ? '✓' : i + 1}</Text>
-          </View>
-          {p.state === 'now' ? <Text numberOfLines={1} style={s.pillName}>{p.name}</Text> : null}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-/** The tempo and its ladder: a rung per 5 BPM, start dashed, goal white, the current one yellow. */
-export function TempoLadder({ bpm, ladder }: { bpm: number; ladder?: { rungs: Rung[]; caption: string } }) {
-  return (
-    <View style={s.tempo} accessible accessibilityLabel={`${bpm} BPM${ladder ? `, ${ladder.caption}` : ''}`}>
-      <Text style={s.tempoN}>{bpm}</Text>
-      <Text style={s.tempoUnit}>BPM</Text>
-      {ladder ? (
-        <View style={s.ladder}>
-          <View style={s.rungs}>
-            {ladder.rungs.map((r, k) => {
-              const below = !!ladder.rungs.find(x => x.at) && r.bpm < (ladder.rungs.find(x => x.at)?.bpm ?? 0);
-              return <View key={r.bpm} style={[s.rung, { height: 9 + (k * 18) / Math.max(1, ladder.rungs.length - 1) },
-                below && { backgroundColor: color.good }, r.at && { backgroundColor: color.pop }, r.goal && !r.at && { backgroundColor: color.white },
-                r.start && !r.at && !below && { borderStyle: 'dashed' }]} />;
-            })}
-          </View>
-          <Text style={s.ladderCap}>{ladder.caption}</Text>
-        </View>
-      ) : null}
-    </View>
-  );
-}
 
 /** A small round icon button in the top bar (back, ⋯). */
 export function RoundButton({ label, glyph, onPress, testID }: { label: string; glyph: string; onPress: () => void; testID: string }) {
@@ -119,33 +78,6 @@ export function TakeCardView({ card, head }: { card: TakeCard; head: string }) {
   );
 }
 
-/** Where your hits landed against the click: dots, the "right on it" zone, early ← → late. */
-export function TimingLineView({ line }: { line: NonNullable<ReturnType<typeof timingLine>> }) {
-  const [w, setW] = useState(0);
-  const x = (v: number) => (v / 1000) * w;
-  return (
-    <View style={s.timing} accessible accessibilityLabel={line.label} testID="lesson-timing-line">
-      <View style={s.timingHead}>
-        <Body size={14} weight="900">Where your hits landed</Body>
-        <Body size={13} weight="600" color={color.muted} numberOfLines={1} style={{ flexShrink: 1 }}>{line.caption}</Body>
-      </View>
-      <View style={s.timingTrack} onLayout={e => setW(e.nativeEvent.layout.width)}>
-        {w > 0 ? <>
-          <View style={[s.zone, { left: x(line.zone.from), width: x(line.zone.to) - x(line.zone.from) }]} />
-          <View style={s.axis} />
-          <View style={[s.click, { left: w / 2 - 1.5 }]} />
-          {line.dots.map((d, k) => <View key={k} style={[s.dot, { left: x(d.x) - 7, top: 20 + d.row * 8, backgroundColor: d.onIt ? color.good : color.orange }]} />)}
-        </> : null}
-      </View>
-      <View style={s.timingFoot}>
-        <Body size={12} weight="800" color={color.muted}>← EARLY</Body>
-        <Body size={12} weight="900">THE CLICK</Body>
-        <Body size={12} weight="800" color={color.muted}>LATE →</Body>
-      </View>
-    </View>
-  );
-}
-
 /** The moment after a lesson: stars, the stage, what's next (src/lesson/Celebration.tsx). */
 export function CelebrationModal({ c, onNext, onAgain, onClose }: { c: Celebration; onNext: () => void; onAgain: () => void; onClose: () => void }) {
   return (
@@ -202,29 +134,6 @@ export function RestCountdown({ seconds }: { seconds: number }) {
   );
 }
 
-// The keyboard fallback (CLAUDE.md keys; src/input/keyboard.ts KEYMAP) for an iPad hardware keyboard.
-export const KEYMAP: Record<string, PadId> = { ' ': 'kick', x: 'kick', s: 'snare', a: 'hhClosed', q: 'hhOpen', z: 'hhPedal', e: 'tom1', r: 'tom2', f: 'floor', w: 'crash', t: 'ride' };
-/**
- * A hidden text field that keeps focus and turns hardware-keyboard keys into strokes (iOS delivers them to a focused
- * TextInput; the on-screen keyboard is suppressed). H toggles hints, B the band. Unverified on the iPad (no device here).
- */
-export function KeyboardKit({ emitPad, onKey }: { emitPad: (pad: PadId, velocity: number) => void; onKey?: (key: string) => void }) {
-  const ref = useRef<{ focus(): void } | null>(null);
-  return (
-    <TextInput
-      ref={ref as never} autoFocus showSoftInputOnFocus={false} caretHidden autoCorrect={false} autoCapitalize="none" spellCheck={false}
-      value="" onBlur={() => setTimeout(() => ref.current?.focus(), 300)}
-      onKeyPress={e => {
-        const k = e.nativeEvent.key, low = k.toLowerCase();
-        const pad = KEYMAP[low];
-        if (pad) emitPad(pad, k !== low ? 127 : 96); // Shift = accent
-        else onKey?.(low);
-      }}
-      style={s.hiddenInput} accessibilityElementsHidden importantForAccessibility="no"
-    />
-  );
-}
-
 export { GestureChip };
 
 /** Under the results sheet of a long take: ‹ Page 2 of 3 ›. Nothing for a one-page take. */
@@ -242,21 +151,6 @@ export function SheetPager({ v, onPrev, onNext, tone = 'dark', testID }: { v: Pa
 const s = StyleSheet.create({
   pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 },
   pagerLabel: { fontSize: 15, fontWeight: '800', color: color.white, minWidth: 110, textAlign: 'center' },
-  pills: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, minWidth: 38, borderRadius: 19, borderWidth: 2.5, borderColor: color.ink, backgroundColor: color.white, paddingHorizontal: 3 },
-  pillDone: { backgroundColor: color.good, borderColor: color.white },
-  pillNow: { backgroundColor: color.pop, paddingRight: 12 },
-  pillNum: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: color.ink, backgroundColor: color.white, alignItems: 'center', justifyContent: 'center' },
-  pillNumDone: { backgroundColor: color.good, borderColor: color.white },
-  pillNumText: { ...font.display, fontSize: 14, color: color.ink },
-  pillName: { ...font.display, fontSize: 14, color: color.ink, maxWidth: 160 },
-  tempo: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
-  tempoN: { ...font.display, fontSize: 46, lineHeight: 50, color: color.white },
-  tempoUnit: { ...font.heavy, fontSize: 14, color: color.white, marginBottom: 8 },
-  ladder: { marginLeft: 10, marginBottom: 4, gap: 3 },
-  rungs: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 28 },
-  rung: { width: 13, borderWidth: 2, borderColor: color.white, backgroundColor: 'transparent' },
-  ladderCap: { fontSize: 11.5, fontWeight: '700', color: color.white },
   round: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.white, borderWidth: 2.5, borderColor: color.ink, alignItems: 'center', justifyContent: 'center' },
   roundGlyph: { ...font.display, fontSize: 20, color: color.ink, lineHeight: 24 },
   goal: { color: color.ink, fontWeight: '700' },
@@ -274,14 +168,6 @@ const s = StyleSheet.create({
   takeCard: { gap: 6 },
   takeTop: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   takeBig: { ...font.display, fontSize: 58, lineHeight: 62, color: color.ink },
-  timing: { backgroundColor: color.cream, borderWidth: 2, borderColor: color.ink, padding: 10, gap: 4 },
-  timingHead: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  timingTrack: { height: 54 },
-  zone: { position: 'absolute', top: 6, height: 42, backgroundColor: '#1E9E5A22', borderWidth: 2, borderColor: color.good },
-  axis: { position: 'absolute', left: 0, right: 0, top: 26, height: 3, backgroundColor: color.ink },
-  click: { position: 'absolute', top: 4, width: 3, height: 46, backgroundColor: color.ink },
-  dot: { position: 'absolute', width: 14, height: 14, borderRadius: 7, borderWidth: 1.5, borderColor: color.ink },
-  timingFoot: { flexDirection: 'row', justifyContent: 'space-between' },
   scrim: { flex: 1, backgroundColor: 'rgba(20,20,20,0.55)', alignItems: 'center', justifyContent: 'center' },
   scrimRight: { flex: 1, backgroundColor: 'rgba(20,20,20,0.35)', alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 96, paddingRight: 24 },
   celebrate: { width: 640, gap: 12, paddingVertical: 26, paddingHorizontal: 30 },
@@ -289,7 +175,6 @@ const s = StyleSheet.create({
   center: { textAlign: 'center' },
   rest: { alignItems: 'center', gap: 10, paddingVertical: 30 },
   restN: { ...font.display, fontSize: 120, lineHeight: 130, color: color.ink },
-  hiddenInput: { position: 'absolute', width: 1, height: 1, opacity: 0, left: -10, top: -10 },
 });
 
 export { type };

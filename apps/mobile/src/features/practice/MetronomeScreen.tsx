@@ -10,9 +10,9 @@ import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, Display, MAX_FONT_SCALE, Screen, Segmented,
   color, gesturesFor, stroke, tabular, useAppSettings, useKitMoves,
+  Notice,
 } from '../../ui';
 import { clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readMetronome, SUBDIVISIONS, tapTempo, writeMetronome, type MetronomeSettings } from './metronome';
-import { Notice } from './parts';
 
 export function MetronomeScreen() {
   const kv = getStorage().kv;

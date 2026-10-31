@@ -15,6 +15,7 @@ import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Pill, Screen, Toggle,
   color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppSettings, useKitMoves, writeSettings,
+  Dots, Notice, Stepper,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
@@ -28,7 +29,6 @@ import { kindIcon, startOf, type PracticeChart } from './catalog';
 import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
 import { interruptedNote, practiceEngine } from './engine';
-import { Dots, Notice } from './parts';
 import {
   barPickKind, clampRepeats, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
   sectionRange, speedFor, writePlayOptions, type PracticeOptions, type Section, type WarmState,
@@ -238,9 +238,8 @@ export function PlayScreen() {
                 </>}
             </> : null}
             <Body weight="700">·</Body>
-            <Chip on={false} label="−" a11y="Fewer times round" onPress={() => set({ repeats: clampRepeats(o.repeats - 1) })} />
-            <Body weight="800">{`${o.repeats}× round`}</Body>
-            <Chip on={false} label="+" a11y="More times round" onPress={() => set({ repeats: clampRepeats(o.repeats + 1) })} />
+            <Stepper label="Times round" value={o.repeats} min={1} max={50} format={v => `${v}× round`} width={86}
+              onChange={v => set({ repeats: clampRepeats(v) })} testID="practice-repeats" />
           </View>
           <View style={styles.sheet}>
             {live && liveChart

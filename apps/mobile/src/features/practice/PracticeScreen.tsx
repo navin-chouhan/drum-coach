@@ -8,13 +8,13 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, Display, GestureChip, Label, ListRow, MAX_FONT_SCALE, Panel, Pill, Screen, Segmented, TitleBar,
   color, gesturesFor, hardShadow, shadow, stroke, type, useAppSettings, useKitMoves,
+  Notice,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { chartRow, listFor, requestedChart, type ChartRow, type TabId } from './catalog';
 import { loadPracticeCharts } from './charts';
 import { chooserModel, focusedRow, initialFocus, playLabel, stepFocus } from './chooser';
 import { practiceEngine } from './engine';
-import { Notice } from './parts';
 import { readPlayOptions, speedFor } from './play';
 
 const openPlay = (id: string, extra: Record<string, string> = {}) => router.push({ pathname: '/practice/play', params: { chartId: id, ...extra } });
