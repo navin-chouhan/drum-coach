@@ -14,15 +14,14 @@ import { KitView, NoteHighway, TouchPads, type PadHit, type Subscribe } from '..
 import type { DrumId } from '../../play/chartLike';
 import {
   Body, BigMove, Button, Card, CoachLine, Display, DottedGround, Label, Pill, Segmented, Strong, color, gesturesFor, hardShadow, shadow, stroke,
-  StepPills, TempoLadder, TimingLineView, useAppKey, useAppSettings, useKitMoves, getAppHitBus,
+  StepPills, TempoLadder, TimingLineView, useAppKey, useAppSettings, useKitMoves, getAppHitBus, RoundButton, SheetPager, useSheetPages,
 } from '../../ui';
 import { CoachInspector } from '../coach';
 import type { LessonController, MoveView } from './controller';
 import { barCounter, countInAt, flowMeter, liveTip } from './live';
 import {
-  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, MoreSheet, RestCountdown, RoundButton, SheetPager, TakeCardView,
+  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, MoreSheet, RestCountdown, TakeCardView,
 } from './parts';
-import { useSheetPages } from './sheetPages';
 import { laneName, youtubeSearch } from './lessonView';
 import { EarQuiz } from './EarQuiz';
 import { HowItMoves } from './HowItMoves';

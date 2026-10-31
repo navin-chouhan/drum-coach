@@ -11,7 +11,7 @@ import { StyleSheet, View } from 'react-native';
 import { Body, Button, Card, CardTitle, CheckRow, Choice, Panel, Small, Stepper, Warn, color, type, useAppKey, useKitMoves } from '../../ui';
 import { getHomeServer } from '../../platform/api';
 import { Row } from './bits';
-import { askGroove, coachEntry, COACH_CANT_HEAR, onCoachEntries, type Groove } from './coachAsk';
+import { askGroove, coachEntry, COACH_CANT_HEAR, COACH_THINKING, onCoachEntries, type Groove } from './coachAsk';
 import { GridEditor } from './GridEditor';
 import {
   LEARN_HELP, LEARN_STEPS, VERIFY, clampRange, grooveKey, grooveRequest, hearVelocity, keepTake, learnSaved, loopFrame, loopSpan, notesIn,
@@ -132,7 +132,7 @@ export function LearnPanel({ song, videoId, yt, rate, bus, latencyMs, sound }: M
           onPress={() => songsWrite(s => s.songs.patch(song.id, { verified: !song.verifiedAt }))} />
       </Panel>
 
-      {groove?.status === 'thinking' ? <Small style={styles.gap}>🤔 The coach is thinking…</Small> : null}
+      {groove?.status === 'thinking' ? <Small style={styles.gap}>{COACH_THINKING}</Small> : null}
       {groove?.status === 'error' ? <View style={styles.gap}><Warn>{groove.error}</Warn></View> : null}
       {groove?.status === 'done' ? (
         <Panel style={styles.verify} testID="song-learn-coach">

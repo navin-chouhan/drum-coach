@@ -24,19 +24,21 @@ export type CoachLineProps = {
   mascot?: keyof typeof MASCOT;
   /** One line that shrinks to fit (title bar) or wraps (panels). */
   singleLine?: boolean;
+  /** Up to this many lines, shrinking to fit (Journey's notices: the Monday recap is three sentences). */
+  lines?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
 
 /** The coach says one thing: the mascot and its bubble. VoiceOver reads it as "Coach: …" and announces changes. */
-export function CoachLine({ children, size = 20, mascot = 'md', singleLine = false, style, testID }: CoachLineProps) {
+export function CoachLine({ children, size = 20, mascot = 'md', singleLine = false, lines, style, testID }: CoachLineProps) {
   return (
     <View testID={testID} style={[styles.row, style]}>
       <Mascot size={mascot} />
       <View style={styles.bubble}>
         <Text
           maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityLiveRegion="polite" accessibilityLabel={undefined}
-          numberOfLines={singleLine ? 1 : undefined} adjustsFontSizeToFit={singleLine} minimumFontScale={0.8}
+          numberOfLines={lines ?? (singleLine ? 1 : undefined)} adjustsFontSizeToFit={singleLine || !!lines} minimumFontScale={0.8}
           style={[styles.text, { fontSize: size, lineHeight: Math.round(size * 1.3) }]}
         >
           {children}

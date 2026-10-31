@@ -7,7 +7,7 @@ import { getStorage } from '../../platform/storage';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, Display, GestureChip, Label, ListRow, MAX_FONT_SCALE, Panel, Pill, Screen, Segmented, TitleBar,
-  color, gesturesFor, hardShadow, shadow, stroke, type, useAppSettings, useKitMoves,
+  color, gesturesFor, hardShadow, shadow, stroke, useAppSettings, useKitMoves,
   Notice,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';

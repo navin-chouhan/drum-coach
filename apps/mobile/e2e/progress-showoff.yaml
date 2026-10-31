@@ -1,0 +1,27 @@
+# Progress's show-off set (web ProgressView): on a fresh install it says how a song lands there; with ready songs it
+# lists them with ▶ Play it and a concert of the whole set (needs a passed stage and its song: checked by the owner,
+# FINAL-CHECKLIST). testIDs: src/features/progress/ProgressScreen.tsx.
+appId: com.drumcoach.app
+name: Progress show-off set
+tags:
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+- tapOn:
+    id: nav-progress
+- extendedWaitUntil:
+    visible:
+      id: screen-progress
+    timeout: 10000
+- tapOn:
+    id: progress-back # if Progress opened on the path view
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: progress-showoff
+    timeout: 10000
+- assertVisible:
+    id: "progress-showoff-empty|progress-showoff-0"
+- assertVisible:
+    text: "Show-off set"
+- takeScreenshot: progress-showoff

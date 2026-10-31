@@ -1,0 +1,64 @@
+# Journey's "More ways to play" (by deep link, so the flow doesn't depend on where Journey draws the tiles):
+# 1. /technique: Stick technique: every movement, its tempo, the big How it moves; ← Journey.
+# 2. /flow: opens the lesson player in flow mode (a fresh install: the jam lesson); 🌊 Flow plays until Stop.
+# testIDs: src/features/technique/TechniqueScreen.tsx, src/features/flow/FlowRoute.tsx, LessonScreen.tsx.
+appId: com.drumcoach.app
+name: Stick technique and Flow
+tags:
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+
+# 1 · Stick technique
+- openLink: drumcoach://technique
+- extendedWaitUntil:
+    visible:
+      id: screen-technique
+    timeout: 10000
+- assertVisible:
+    id: technique-demo
+- assertVisible:
+    id: technique-demo-grip
+- takeScreenshot: technique-grip
+- tapOn:
+    id: technique-demo-kick
+- tapOn:
+    text: "Tempo \\(BPM\\): 80.*" # the Choice button's accessibility label
+- assertVisible:
+    id: technique-demo
+- takeScreenshot: technique-kick-80
+- tapOn:
+    id: technique-back
+- extendedWaitUntil:
+    visible:
+      id: screen-journey
+    timeout: 10000
+
+# 2 · Flow
+- openLink: drumcoach://flow
+- extendedWaitUntil:
+    visible:
+      id: "lesson-main-move|flow-none"
+    timeout: 10000
+- assertVisible:
+    text: ".*Flow ▶.*"
+- takeScreenshot: flow-ready
+- tapOn:
+    id: lesson-main-move
+- extendedWaitUntil:
+    visible:
+      id: lesson-stop
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: lesson-flow # the flow meter, after the count-in
+    timeout: 10000
+- takeScreenshot: flow-playing
+- tapOn:
+    id: lesson-stop
+- extendedWaitUntil:
+    visible:
+      id: lesson-main-move
+    timeout: 10000
+- tapOn:
+    id: lesson-back

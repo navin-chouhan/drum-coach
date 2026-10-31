@@ -4,10 +4,10 @@
 // link under the path, there whether or not the first run's test was taken) and Full path. One screen, no scrolling.
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, CoachLine, Display, Label, ListRow, Panel, Ring, Screen, Stars, StatTile, Tick, TitleBar, Trail,
-  color, gesturesFor, ratio, readSettings, slopFor, tabular, type, useKitMoves, writeSettings,
+  color, gesturesFor, ratio, readSettings, tabular, type, useKitMoves, writeSettings,
 } from '../../ui';
 import { getStorage } from '../../platform/storage';
 import { isoWeek } from '@drum-coach/core/engine/progress';
@@ -15,12 +15,13 @@ import { getCoach, useCoachEntry, useWeekPlan } from '../coach/coach';
 import { sayNow } from '../coach/voice';
 import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
-import { playFlourish } from '../lesson/useLesson';
+import { playFlourish } from '../../play/flourish';
+import { songHref } from '../songs/songsModel';
 import { audio } from '../../platform/audio';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
 import { MoreSheet } from './MoreSheet';
-import { Tile } from './Tiles';
+import { LinkText, Tile } from './Tiles';
 import { useJourney } from './useJourney';
 import { NEW_STAGES, SETUP_NUDGE, SORE_ASK, badgeNames, sorePatch, type JourneyView } from './model';
 
@@ -68,7 +69,7 @@ export function JourneyScreen() {
     if (!add.length) return;
     writeSettings(kv, { badges: [...kept, ...add] });
     // the web's flourish(false); Journey isn't a play screen, so the engine may be suspended: start it first
-    if (audio.available) audio.start().then(() => playFlourish(false), () => {});
+    if (audio.available) audio.start().then(() => playFlourish(audio, false), () => {});
   }, [badges]);
   // New stages open (R3): said on this visit, then remembered.
   const [newStages] = useState(() => v.newStages);
@@ -105,6 +106,7 @@ export function JourneyScreen() {
       <TitleBar
         title="Journey"
         coach={coachText}
+        coachLines={2}
         right={titleRight}
       />
 
@@ -124,10 +126,10 @@ export function JourneyScreen() {
           ) : null}
           <BigMove testID="journey-something-else" emoji="↻" label="Something else" gestures={gesturesFor('next')} onPress={other} disabled={!other} style={styles.move} />
           {v.afterSet && v.arcade /* after today's set, as the web: the 2-minute challenge and Beat your best join the moves */
-            ? <BigMove testID="journey-arcade" emoji="⏱" label="2-minute challenge" note={v.arcade.sub} onPress={() => open(v.arcade!.lessonId, -1, 'arcade')} style={styles.move} />
+            ? <BigMove testID="journey-arcade" emoji="⏱" label="2-minute challenge" note={v.arcade.goal} onPress={() => open(v.arcade!.lessonId, -1, 'arcade')} style={styles.move} />
             : <BigMove testID="journey-hear" emoji="👂" label="Hear it" gestures={gesturesFor('listen')} onPress={hear} disabled={!hear} style={styles.move} />}
           {v.afterSet && v.record
-            ? <BigMove testID="journey-record" emoji="🏆" label="Beat your best" note={v.record.sub} onPress={() => open(v.record!.lessonId, -1, 'play', 'record')} style={styles.move} />
+            ? <BigMove testID="journey-record" emoji="🏆" label="Beat your best" note={v.record.goal} onPress={() => open(v.record!.lessonId, -1, 'play', 'record')} style={styles.move} />
             : <BigMove testID="journey-jam" emoji="🎸" label="Just jam" note="no score, with the band" disabled={!v.jamLessonId}
               onPress={v.jamLessonId ? () => open(v.jamLessonId!, -1, 'jam') : undefined} style={styles.move} />}
         </View>
@@ -146,15 +148,10 @@ export function JourneyScreen() {
             <View style={styles.flex} />
             <Button tone="plain" size="small" label="⋯ More" testID="journey-more-open" accessibilityLabel="More ways to play" onPress={() => setMore(true)} />
           </View>
-          <View style={styles.tiles}>
-            <Tile tone="pop" emoji="🎯" title="Coach challenge" testID="journey-tile-challenge"
-              sub={v.challenge ? v.challenge.title : challengeEntry?.status === 'thinking' ? 'your coach is writing it…' : challengeEntry?.status === 'error' ? challengeEntry.error : 'a review or stretch lesson aimed at your weakest spot'}
-              onPress={challengeEntry?.status === 'thinking' ? undefined : () => (v.challenge ? open(v.challenge.lessonId) : askChallenge())} />
-            {v.flow ? <Tile emoji="🌊" title="Flow" sub={v.flow.title} testID="journey-tile-flow" onPress={() => open(v.flow!.lessonId, -1, 'flow')} /> : null}
-            {v.arcade ? <Tile emoji="⏱" title="2-minute challenge" testID="journey-tile-arcade" sub={v.arcade.sub} onPress={() => open(v.arcade!.lessonId, -1, 'arcade')} /> : null}
-            {v.record ? <Tile emoji="🏆" title="Beat your best" testID="journey-tile-record" sub={v.record.title} onPress={() => open(v.record!.lessonId, -1, 'play', 'record')} /> : null}
-            <Tile emoji="🎵" title="Learn a new song" sub="from YouTube, a few bars at a time" testID="journey-tile-song" onPress={() => router.navigate('/songs' as never)} />
-            <Tile emoji="🎤" title="Show-off set" sub="your ready songs, on Progress" testID="journey-tile-showoff" onPress={() => router.navigate('/progress' as never)} />
+          <View style={styles.tiles}>{doneTiles(v, {
+            challenge: { status: challengeEntry?.status, error: challengeEntry?.status === 'error' ? challengeEntry.error : undefined, ask: askChallenge },
+            open,
+          }).map(({ key, ...t }) => <Tile key={key} compact style={styles.tileCell} {...t} />)}
           </View>
         </Card>
       ) : null}
@@ -163,7 +160,7 @@ export function JourneyScreen() {
         <Card style={styles.trail} testID="journey-trail">
           <View style={styles.trailHead}>
             <Label>{v.trail.title}</Label>
-            <Body size={13} weight="700">{v.trail.summary}</Body>
+            <Body size={13} weight="700" numberOfLines={1} style={styles.flexShrink}>{v.trail.summary}</Body>
             <View style={styles.flex} />
             <Button tone="plain" size="small" label="⋯ More" testID="journey-more-open" accessibilityLabel="More ways to play and your coach's lessons" onPress={() => setMore(true)} />
             <Button tone="plain" size="small" label="Find my level" testID="journey-find-level" accessibilityLabel="Find my level (a short placement test)"
@@ -181,6 +178,33 @@ export function JourneyScreen() {
 
 // The stored session's date, read at tap time (the view may be a render old).
 const WRITING = '✍ Your coach is writing your next lesson… this can take a minute. You can keep playing; the answer will wait here.';
+type DoneTile = { key: string; emoji: string; title: string; sub?: string; testID: string; tone?: 'pop'; onPress?: () => void };
+/** The All stages done tiles (the web's setTiles), at most two rows of four: show-off songs past that fold into one. */
+function doneTiles(v: JourneyView, d: {
+  challenge: { status?: string; error?: string; ask: () => void };
+  open: (lessonId: string, item?: number, mode?: LessonMode, role?: 'record') => void;
+}): DoneTile[] {
+  const c = d.challenge;
+  const fixed: DoneTile[] = [
+    { key: 'challenge', tone: 'pop', emoji: '🎯', title: 'Coach challenge', testID: 'journey-tile-challenge',
+      sub: v.challenge ? v.challenge.title : c.status === 'thinking' ? 'your coach is writing it…' : c.error ?? 'a review or stretch lesson aimed at your weakest spot',
+      onPress: c.status === 'thinking' ? undefined : () => (v.challenge ? d.open(v.challenge.lessonId) : c.ask()) },
+    ...(v.flow ? [{ key: 'flow', emoji: '🌊', title: 'Flow', sub: v.flow.sub, testID: 'journey-tile-flow', onPress: () => d.open(v.flow!.lessonId, -1, 'flow') }] : []),
+    ...(v.arcade ? [{ key: 'arcade', emoji: '⏱', title: '2-minute challenge', sub: v.arcade.sub, testID: 'journey-tile-arcade', onPress: () => d.open(v.arcade!.lessonId, -1, 'arcade') }] : []),
+    ...(v.record ? [{ key: 'record', emoji: '🏆', title: 'Beat your best', sub: v.record.title, testID: 'journey-tile-record', onPress: () => d.open(v.record!.lessonId, -1, 'play', 'record') }] : []),
+    { key: 'song', emoji: '🎵', title: 'Learn a new song', sub: 'from YouTube, a few bars at a time', testID: 'journey-tile-song', onPress: () => router.navigate('/songs' as never) },
+  ];
+  const room = 8 - fixed.length, songs = v.showoff;
+  const shown = songs.length > room ? songs.slice(0, room - 1) : songs;
+  return [
+    ...fixed,
+    ...shown.map(x => ({ key: `showoff-${x.id}`, emoji: '🎤', title: `Show-off: ${x.title}`, sub: 'Stage mode is under Play', testID: `journey-tile-showoff-${x.id}`,
+      onPress: () => router.push(songHref(x.id) as never) })),
+    ...(songs.length > shown.length ? [{ key: 'showoff-more', emoji: '🎤', title: 'Show-off set', sub: `+${songs.length - shown.length} more, on Progress`, testID: 'journey-tile-showoff-more',
+      onPress: () => router.navigate('/progress' as never) }] : []),
+  ];
+}
+
 const readSessionDate = () => readSettings(getStorage().kv).session?.date;
 
 function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
@@ -190,9 +214,8 @@ function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
       <Text style={styles.bigIcon} accessible={false}>{h.icon}</Text>
       <View style={styles.heroText}>
         <View style={styles.kickerRow}>
-          <Label>{h.kicker}{h.coachWrote ? ' · ✍ your coach wrote it' : ''}</Label>
-          {h.why ? <Pressable testID="journey-why" accessibilityRole="button" accessibilityLabel="Why this one?" hitSlop={slopFor(20)}
-            onPress={() => Alert.alert('Why this one?', h.why)}><Text style={styles.why}>why this one?</Text></Pressable> : null}
+          <Label style={styles.flexShrink}>{h.kicker}{h.coachWrote ? ' · ✍ your coach wrote it' : ''}</Label>
+          {h.why ? <LinkText label="why this one?" testID="journey-why" onPress={() => Alert.alert('Why this one?', h.why)} /> : null}
         </View>
         <Display size={type.hero} style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} accessibilityRole="header">{h.title}</Display>
         <Text style={styles.step} numberOfLines={1}>{h.step} <Text style={styles.stepMeta}>· {h.meta}</Text></Text>
@@ -227,10 +250,10 @@ function You({ v, habit, onHabit }: { v: JourneyView; habit?: string; onHabit: (
       {v.week ? (
         <View style={styles.week} testID="journey-week">
           <Body size={13} numberOfLines={1} style={styles.flexShrink}>🎯 This week: <Text style={styles.b}>{v.week.words}</Text></Body>
-          {v.week.why ? <Button tone="plain" size="small" label="why?" accessibilityLabel="Why this week's focus" onPress={() => Alert.alert('This week', v.week!.why)} /> : null}
-          {v.week.habit ? (habit === 'thinking' ? <Body size={12} color={color.muted}>your coach is on it…</Body>
-            : habit === 'done' ? <Body size={12} color={color.muted}>lesson ready on your trail</Body>
-            : <Button tone="plain" size="small" label="lesson for this" testID="journey-week-lesson" onPress={onHabit} />) : null}
+          {v.week.why ? <LinkText label="why?" accessibilityLabel="Why this week's focus" onPress={() => Alert.alert('This week', v.week!.why)} /> : null}
+          {v.week.habit ? (habit === 'thinking' ? <Body size={12} color={color.muted} numberOfLines={1}>your coach is on it…</Body>
+            : habit === 'done' ? <Body size={12} color={color.muted} numberOfLines={1}>lesson ready on your trail</Body>
+            : <LinkText label="lesson for this" size={12} testID="journey-week-lesson" onPress={onHabit} />) : null}
         </View>
       ) : null}
     </Card>
@@ -295,8 +318,8 @@ const styles = StyleSheet.create({
   noticeBtns: { flexDirection: 'row', gap: 8 },
   week: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  why: { fontSize: 13, fontWeight: '800', color: color.ink, textDecorationLine: 'underline' },
-  tiles: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 8 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8, marginBottom: 8 },
+  tileCell: { flexGrow: 0, flexBasis: '23.6%' },
   flexShrink: { flexShrink: 1, minWidth: 0 },
   b: { fontWeight: '800' },
   next: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 16, gap: 14 },

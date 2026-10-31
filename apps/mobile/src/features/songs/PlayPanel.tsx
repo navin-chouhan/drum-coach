@@ -10,6 +10,7 @@ import { audio } from '../../platform/audio';
 import { NoteHighway } from '../../play';
 import { getStorage } from '../../platform/storage';
 import { getCoach } from '../coach';
+import { playFlourish } from '../../play/flourish';
 import { canShare } from '../lesson/share';
 import { shareTake } from '../lesson/shareTake';
 import { ResultsDetails } from '../results/ResultsDetails';
@@ -57,7 +58,8 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
   useAppKey('escape', () => (playing ? stop() : false));
 
   // The coach must hear an encore take too (the web: saveRun + coachTake), or it answers an older one.
-  useEffect(() => { if (done && stage) void getCoach().session.coachTake(done, { chartId: song.id }); }, [done, stage, song.id]);
+  // The encore's drum flourish, as the web's flourish(true).
+  useEffect(() => { if (done && stage) { void getCoach().session.coachTake(done, { chartId: song.id }); playFlourish(audio, true); } }, [done, stage, song.id]);
   // The song can't change speed mid-way, so any step the coach suggests = play again (not "listen").
   const goRef = useRef(go);
   goRef.current = go;

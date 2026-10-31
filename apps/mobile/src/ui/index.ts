@@ -18,6 +18,7 @@ export { ringAngles, ratio, trailGeometry, type TrailGeometry } from './layout';
 export { statusRows, type StatusRow, type StatusInput, type Dot } from './status';
 export { readSettings, writeSettings, subscribeSettings, settingsVersion, SETTINGS_KEY } from './appSettings';
 export { createKitMoveRouter, type KitMoveHandlers, type KitMoveRouter } from './kitMoves';
+export { KIT_SOUNDS_LABEL, useKitSounds } from './useKitSounds';
 export { getAppHitBus, startAppKeyboard, useAppKey, useAppSettings, useKitMoves, useStatusRows, kitName } from './hooks';
 export { NAV, type NavKey } from './nav';
 // Promoted from the screens' local pieces (I2): one API each.
@@ -25,6 +26,8 @@ export { Group, GroupHead, GroupRow, Chevron, Stepper, ToolFrame, type SymTone, 
 export { Field, CheckRow, Choice, Small, Warn, Tabs, type FieldProps, type ChoiceOption, type TabItem } from './forms';
 export { Notice, Bars, Track, Dots, type Bar } from './charts';
 export { StepPills, TempoLadder, TimingLineView, type StepPill, type LadderRung, type TimingLine } from './lessonBits';
+export { RoundButton, SheetPager, Sticker } from './round';
+export { pagerView, useSheetPages, type PagerView } from './sheetPages';
 export { PadMap, spotOfPart, type PadSpot, type PadSpotState } from './PadMap';
 export { SpeechBubble, OfflineCard, KeepsWorkingCard, HostText } from './coachBits';
 export { stepValue, stepBounds, digitsOnly, barHeight, percent, dotPositions, rungLooks, splitHost, type RungLook } from './kitMath';
