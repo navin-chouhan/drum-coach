@@ -4,6 +4,9 @@
 import { createTake, type Finished, type Take } from '@drum-coach/core/play/take';
 import { AppState } from 'react-native';
 import { audio } from '../../platform/audio';
+import { startWithSpokenFallback } from '../../play/spokenFallback';
+import { sayNow, speakMoment } from '../coach/voice';
+import { scoreMoment } from '../coach/moments';
 import { watchInterruptions } from '../../platform/audioLifecycle';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
@@ -53,7 +56,9 @@ export const practiceEngine = {
     }, req.chart, takeOptions(req));
     feed.reset(take.state);
     take.onChange(() => set({ phase: take.state.phase }));
+    take.onCue(c => speakMoment({ kind: 'tip', text: c.spoken })); // spoken by default (D10)
     take.onFinish(f => {
+      if (!req.demo) speakMoment(scoreMoment(f.stats)); // voice first: the score after every take (D10)
       const rec = runRecord(f, req.chart.id);
       set({ finished: f });
       if (rec) void getStorage().runs.add(rec).then(() => onSaved.forEach(l => l(f))).catch(() => set({ error: 'This take could not be saved.' }));
@@ -68,7 +73,8 @@ export const practiceEngine = {
     });
     set({ phase: 'starting', demo: !!req.demo, chartId: req.chart.id, take, finished: undefined, error: undefined, interrupted: undefined });
     timer = setInterval(() => { const n = clock.now(); take.tick(n); feed.misses(take.state, n); }, 100);
-    take.start().catch(e => { clearInterval(timer); offInt(); set({ phase: 'idle', error: `The take could not start: ${e instanceof Error ? e.message : 'audio error'}` }); });
+    // the count-in words the engine couldn't render are said live (play/spokenFallback.ts)
+    startWithSpokenFallback(take, { countVoice: readSettings(getStorage().kv).countIn, now: () => clock.now(), say: w => sayNow(w), setTimer: (fn, ms) => setTimeout(fn, ms), clearTimer: h => clearTimeout(h as ReturnType<typeof setTimeout>) }).catch(e => { clearInterval(timer); offInt(); set({ phase: 'idle', error: `The take could not start: ${e instanceof Error ? e.message : 'audio error'}` }); });
     return true;
   },
   stop() {

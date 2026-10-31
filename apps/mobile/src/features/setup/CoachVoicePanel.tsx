@@ -11,6 +11,7 @@ import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { Body, Button, Group, GroupRow, Segmented, Toggle, color, useAppSettings, writeSettings } from '../../ui';
 import { sayNow } from '../coach/voice';
+import { VoicePicker } from '../coach/VoicePicker';
 import { COACH_GOALS, COACH_MINUTES, COACH_VOICE_LINES as L, VOICE_TEST_LINE, coachStatusLine, minutesPatch, toggleGoalPatch } from './coachVoice';
 import { testConnection, type TestResult } from './coachServer';
 import { CHATTINESS, LIVE_TIPS, LIVE_TIPS_SUB } from './whilePlaying';
@@ -38,6 +39,8 @@ export function VoicePanel() {
           <SwitchRow k="countIn" />
           <GroupRow title="Test the voice" sub={`${L.voiceVolume.title}: Setup → Sound.`}
             right={<Button size="small" label="Test the voice" emoji="▶" onPress={() => sayNow(VOICE_TEST_LINE)} testID="coachvoice-test" />} />
+          {/* D10 voice first: the voice picker (features/coach/VoicePicker.tsx, R6) */}
+          <GroupRow><VoicePicker testID="coachvoice-voice" /></GroupRow>
         </Group>
       </View>
       <View style={styles.col}>

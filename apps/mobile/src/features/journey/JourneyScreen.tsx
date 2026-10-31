@@ -3,7 +3,7 @@
 // Hear it); You, Today's set and the stage song in one row; the stage trail, with "Find my level" (the web's placement
 // link under the path, there whether or not the first run's test was taken) and Full path. One screen, no scrolling.
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, CoachLine, Display, Label, ListRow, Panel, Ring, Screen, Stars, StatTile, Tick, TitleBar, Trail,
@@ -12,7 +12,7 @@ import {
 import { getStorage } from '../../platform/storage';
 import { isoWeek } from '@drum-coach/core/engine/progress';
 import { getCoach, useCoachEntry, useWeekPlan } from '../coach/coach';
-import { sayNow } from '../coach/voice';
+import { speakMoment } from '../coach/voice';
 import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
 import { playFlourish } from '../../play/flourish';
@@ -28,7 +28,7 @@ import { journeyNotice, sorePatch, type JourneyView } from './model';
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
   const [asks, setAsks] = useState(0); // each "Ask the coach" is a new request (the web's asks)
-  const { view: v, reload } = useJourney(swap, asks);
+  const { view: v, reload, loaded } = useJourney(swap, asks);
   // "Coach automatically": once a day, a lesson for this stage when none is waiting (the web's TodayView). Never blocks
   // playing; a server that can't be reached is skipped silently here (the asks entry keeps the error, as the web).
   useEffect(() => { if (v.coachAsk) getCoach().requestLesson(v.coachAsk, undefined, reload); }, [v.coachAsk, reload]);
@@ -61,8 +61,7 @@ export function JourneyScreen() {
   useEffect(() => {
     const kv = getStorage().kv, wk = isoWeek(new Date());
     if (!recap || readSettings(kv).lastRecapWeek === wk) return;
-    writeSettings(kv, { lastRecapWeek: wk });
-    if (readSettings(kv).voice) sayNow(recap);
+    writeSettings(kv, { lastRecapWeek: wk }); // said out loud as this visit's notice (below)
   }, [recap]);
   // A badge earned since last time is announced once on Journey, then kept in settings.
   const [badges, setBadges] = useState<string[]>([]);
@@ -84,6 +83,15 @@ export function JourneyScreen() {
   // a badge / new stages / the health line), said whole in the title bar's coach line (three fitted lines, QA3 M1);
   // its buttons in the bar's right slot.
   const { kind, text: coachText } = journeyNotice({ coachLine: v.coachLine, recap, setupNudge: v.setupNudge, askSore: v.askSore, badges, newStages, healthLine: v.healthLine });
+  // Voice first (D10): once per visit, the notice in the bar out loud, or else the Up next line.
+  const spoke = useRef(false);
+  useFocusEffect(useCallback(() => () => { spoke.current = false; }, []));
+  useEffect(() => {
+    if (spoke.current || !loaded) return;
+    spoke.current = true;
+    if (kind) speakMoment({ kind: 'notice', text: coachText });
+    else if (v.hero) speakMoment({ kind: 'upNext', title: v.hero.title, step: v.hero.step });
+  });
   const set = (patch: Parameters<typeof writeSettings>[1]) => writeSettings(getStorage().kv, patch);
   const titleRight = kind === 'setup' ? <View style={styles.noticeBtns}>
       <Button size="small" tone="pop" label="Check my kit ▶" testID="journey-notice-setup" onPress={() => { set({ setupNudged: true }); router.navigate('/setup' as never); }} />

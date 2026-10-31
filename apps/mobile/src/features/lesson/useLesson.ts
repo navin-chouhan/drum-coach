@@ -12,7 +12,7 @@ import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { getAppHitBus } from '../../ui/hooks';
 import { getCoach, setCoachPlaying } from '../coach';
-import { sayNow } from '../coach/voice';
+import { sayNow, speakMoment } from '../coach/voice';
 import { allLessons } from '../journey/source';
 import { LessonController, type LessonDeps } from './controller';
 import { findStoredChart } from '../songs/findChart';
@@ -56,7 +56,8 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     clock: getMidiPort().clock, audio, onHit: getAppHitBus().onHit,
     settings: () => { const s = settings.get(); return { latencyMs: s.latencyMs, liveTips: s.liveTips, chattiness: s.chattiness, countIn: s.countIn }; },
     wording: (chart, cue) => coach.tips.wordingFor(chart)(cue),
-    onCue: c => { if (settings.get().liveTips === 'voice') sayNow(c.spoken); },
+    onCue: c => speakMoment({ kind: 'tip', text: c.spoken }), // spoken by default (D10), short
+    sayWord: w => sayNow(w), // a count-in word the engine couldn't render
   }), [settings, coach]);
 
   // The take's clock loop: plans sounds, gives live tips, ends the take (~20×/s).
@@ -72,7 +73,8 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
       setup: { lesson, role: it?.role ?? params.role, minutes: it?.minutes, hasNext: !!next, flow: params.mode === 'flow', arcade: params.mode === 'arcade', drill: !!drill },
       take, settings, lessons: () => lessons, lessonById: id => findLesson(lessons, id), milestones: MILESTONES, today: todayKey,
       saveRun: run => storage.runs.add(run), coach: coach.session,
-      say: text => sayNow(text.replace(/[🏆✓★]/gu, '').trim()),
+      say: text => speakMoment({ kind: 'notice', text }),
+      speakTake: t => speakMoment({ kind: 'take', ...t }),
       flourish: big => playFlourish(audio, big), // celebration fills (src/play/flourish.ts)
       requestCoachLesson: (key, struggle) => coach.requestLesson(key, struggle),
       drillExists: id => coach.exists(id),
@@ -93,6 +95,8 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     const f = ctl.frame();
     void coach.tips.load(f.step.chart, f.step.text);
     if (params.mode === 'hear') ctl.play(true);
+    // Voice first (D10): the step's one line, said when the lesson opens
+    else speakMoment({ kind: 'stepIntro', title: lesson.title, what: f.step.text, bpm: f.bpm });
     // D6: a call, Siri, an alarm or the app going to the background ends the take at its last whole bar.
     // A route change ends it too (AUDIO-DESIGN §3.3); it ends where native says it began (QA2 m6).
     const offInt = watchInterruptions(audio, AppState, at => ctl.interrupt(at));
