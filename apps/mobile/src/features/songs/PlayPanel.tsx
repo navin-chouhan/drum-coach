@@ -3,12 +3,21 @@
 // of friends, always on in a concert): a big video and an encore instead of the score sheet; the concert offers the
 // next song.
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BigMove, Body, Card, CardTitle, CheckRow, Display, Small, StatTile, Stepper, color, gesturesFor, readSettings, useAppKey, useKitMoves } from '../../ui';
+import {
+  BigMove, Body, Card, CardTitle, CheckRow, CoachLine, Display, Panel, Pill, Small, StatTile, Stepper, Warn, color, gesturesFor, readSettings, useAppKey, useAppSettings, useKitMoves,
+} from '../../ui';
 import { audio } from '../../platform/audio';
+import { getHomeServer } from '../../platform/api';
 import { NoteHighway } from '../../play';
+import { NotationView } from '../../notation';
 import { getStorage } from '../../platform/storage';
+import { getCoach, replyFor, summarizeTake, thinkingAbout, useCoachSession } from '../coach';
+import { SheetPager } from '../lesson/parts';
+import { replayResults, takenChart } from '../lesson/runChart';
+import { useSheetPages } from '../lesson/sheetPages';
+import { askFeedback, coachEntry, onCoachEntries, type Feedback } from './coachAsk';
 import { Row } from './bits';
 import { PLAY_EMPTY, STAGE_LABEL, playHelp, songPart, songTakeOptions } from './modes';
 import type { ModeProps } from './modeProps';
@@ -80,10 +89,12 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
         <StatTile value={`±${done.stats.spread} ms`} label="consistency" />
         <StatTile value={String(done.stats.extra)} label="extra strokes" />
       </View>
+      <SongTakeCoach f={done} songId={song.id} />
       <Row style={styles.gap}>
         <BigMove testID="song-results-again" tone="go" emoji="↻" label="Play again" gestures={gesturesFor('yes')} onPress={go} />
         <BigMove label="Back" onPress={() => setDone(null)} />
       </Row>
+      <TakeSheet f={done} />
     </Card>
   );
 
@@ -111,7 +122,58 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
   );
 }
 
+/**
+ * The coach on a scored song take (the web's Results: coachTake once per take, its line, and "Detailed feedback and
+ * a drill" from CoachFeedback). Offline, the coach shows the server-unreachable words; the score stays.
+ */
+function SongTakeCoach({ f, songId }: { f: SongTakeResult; songId: string }) {
+  const coach = useCoachSession();
+  const [opened] = useState(Date.now);
+  useEffect(() => { void getCoach().session.coachTake(f, { chartId: songId }); }, [f, songId]);
+  const reply = replyFor(coach, f, opened);
+  const thinking = !reply && thinkingAbout(coach, f);
+  const key = `song-take:${f.startedAt}`;
+  const e = useSyncExternalStore(onCoachEntries, () => coachEntry<Feedback>(key));
+  const ask = () => void askFeedback(getHomeServer(), key, summarizeTake(f, { chartId: songId }), async () => (await getStorage().coachContext('feedback')).context);
+  return (
+    <View style={styles.stack}>
+      {reply ? <CoachLine size={18} testID="song-results-coach-line">{reply.show ?? reply.say}</CoachLine> : null}
+      {thinking ? <View testID="song-results-coach-thinking"><Pill tone="pop">Coach is listening back…</Pill></View> : null}
+      {!e && f.stats.total > 0 ? <BigMove testID="song-results-ask-coach" label="Detailed feedback and a drill" emoji="🥁" onPress={ask} /> : null}
+      {e?.status === 'thinking' ? <Small>🤔 The coach is thinking…</Small> : null}
+      {e?.status === 'error' ? <Warn>{e.error}</Warn> : null}
+      {e?.status === 'done' ? (
+        <Panel tone="cream" style={styles.coach} testID="song-results-feedback">
+          <Body>{e.data.feedback}</Body>
+          <Body weight="800">Drill: {e.data.drill.title}</Body>
+          <Body>{e.data.drill.instructions}</Body>
+        </Panel>
+      ) : null}
+    </View>
+  );
+}
+
+/** The take on the sheet with its marks, every page of it (the web's Replay of expected vs played notes). */
+function TakeSheet({ f }: { f: SongTakeResult }) {
+  const settings = useAppSettings();
+  const taken = useMemo(() => (f.results.length ? { chart: takenChart(f), results: replayResults(f) } : undefined), [f]);
+  const pager = useSheetPages(taken);
+  if (!taken) return null;
+  return (
+    <View style={styles.stack}>
+      <View style={styles.sheet}>
+        <NotationView chart={taken.chart} bpm={f.chart.bpm * f.options.speed} zero={f.zero} now={() => f.zero} latencyMs={0} results={taken.results}
+          hints={settings.hints !== false} leftHanded={!!settings.leftHanded} page={pager.page} onPages={pager.setPages} testID="song-results-sheet" />
+      </View>
+      <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} tone="light" testID="song-results-pages" />
+      <Body size={13} weight="800">● on it  ● early / late  ◌ missed  ✕ extra</Body>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  sheet: { height: 300, borderWidth: 3, borderColor: color.ink, overflow: 'hidden' },
+  coach: { padding: 12, gap: 6 },
   gap: { marginTop: 12 },
   stack: { gap: 10, marginTop: 10 },
   highway: { height: 300, marginTop: 12, borderWidth: 3, borderColor: color.ink, overflow: 'hidden' },
