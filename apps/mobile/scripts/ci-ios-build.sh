@@ -182,7 +182,7 @@ pod_tests() {
   fi
   xcrun simctl list devices available | grep "$udid"
 
-  local scheme failed=0
+  local scheme failed=0 failed_schemes=""
   while IFS= read -r scheme; do
     echo "== xcodebuild test: $scheme"
     run_logged "$LOG_DIR/xcodebuild-$scheme.log" "xcodebuild test ($scheme)" \
@@ -195,8 +195,17 @@ pod_tests() {
       -resultBundlePath "$LOG_DIR/$scheme.xcresult" \
       COMPILER_INDEX_STORE_ENABLE=NO \
       CODE_SIGNING_ALLOWED=NO \
-      test || failed=$((failed + 1))
+      test </dev/null || { failed=$((failed + 1)); failed_schemes="$failed_schemes $scheme"; }
   done <<< "$schemes"
+  # Repeat what failed at the very end: the API that serves job logs only keeps the last 5000 lines.
+  echo "== pod tests: $(wc -l <<< "$schemes" | tr -d ' ') scheme(s), $failed failed${failed_schemes:+:$failed_schemes}"
+  for scheme in $failed_schemes; do
+    local log="$LOG_DIR/xcodebuild-$scheme.log"
+    echo "----- $scheme: failures and errors -----"
+    grep -E "(error: |: error |Test Case .* failed|\*\* TEST (FAILED|EXECUTE FAILED|BUILD FAILED)|Testing failed|Fatal error|crashed)" "$log" | sort -u | head -n 60 || true
+    echo "----- $scheme: last 40 lines -----"
+    tail -n 40 "$log"
+  done
   [ "$failed" -eq 0 ]
 }
 
