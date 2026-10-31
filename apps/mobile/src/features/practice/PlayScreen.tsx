@@ -35,7 +35,7 @@ import { warmRepeats } from './chooser';
 import { interruptedNote, practiceEngine } from './engine';
 import { IntroSlides } from '../lesson/IntroSlides';
 import { speakMoment } from '../coach/voice';
-import { KeysLine, PlayerFrame, PlayerScore, PlayerSheet, SheetSection, phaseOf, sheetScaleFor, takeBarText, type PlayerMove } from '../../player';
+import { KeysLine, PlayerFrame, PlayerScore, PlayerSheet, SheetSection, phaseOf, scoreParts, sheetScaleFor, takeBarText, type PlayerMove } from '../../player';
 import {
   barNow, barPickKind, clampRepeats, moreCard, needsIntro, yourTakeCard, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
   sectionRange, speedFor, writePlayOptions, type PracticeOptions, type Section, type WarmState,
@@ -286,7 +286,7 @@ export function PlayScreen() {
         onPaperHeight={setPaperH}
         musicFoot={done && !live ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} testID="practice-sheet-pages" /> : null}
         side={card ? (
-          <PlayerScore head={`${m.bpm} BPM`} landed={card.landed} total={card.total} testID="practice-your-take"
+          <PlayerScore head={`${m.bpm} BPM`} {...scoreParts(card.landed, card.total)} label="notes landed" testID="practice-your-take"
             fix={card.tip ? `💡 ${card.tip}` : undefined}>
             <Body size={13} color={color.muted}>{card.small}</Body>
             {card.latency ? <Notice text={card.latency} testID="practice-latency-hint" /> : null}
