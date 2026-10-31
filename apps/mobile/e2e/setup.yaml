@@ -1,8 +1,10 @@
-# Setup on a simulator: the groups are there, and each tool opens full screen and closes (note map, kit test,
-# latency, the MIDI input picker). testIDs: src/features/setup/SetupScreen.tsx (ToolFrame: `setup-tool-<tool>` and
-# `setup-tool-<tool>-close`), src/features/pads/NoteMapPanel.tsx, src/features/latency/LatencyPanel.tsx.
+# Setup on a simulator (D10: one job, is everything working): the three status cards and the six rows are there, and
+# each page and tool opens full screen and closes (Pads → note map and the MIDI input picker, Kit test, latency, While
+# you play, Coach connection). testIDs: src/features/setup/SetupScreen.tsx (ToolFrame: `setup-tool-<page or tool>` and
+# `setup-tool-<page or tool>-close`; a tool opened from a page closes back to it), src/features/pads/NoteMapPanel.tsx,
+# src/features/latency/LatencyPanel.tsx.
 appId: com.drumcoach.app
-name: Setup groups and tools
+name: Setup status, pages and tools
 tags:
   - smoke
   - v1
@@ -19,18 +21,24 @@ tags:
 - assertVisible:
     id: setup-kit-name
 - assertVisible:
-    id: setup-pads
-- assertVisible:
     id: setup-latency-measure
 - assertVisible:
-    id: setup-server
+    id: setup-coach
 - assertVisible:
-    id: setup-api-key
+    id: setup-row-kitpads
 - assertVisible:
-    id: setup-gestures
+    id: setup-row-connection
 - takeScreenshot: setup
 
-# Note map: the in-app remap (CLAUDE.md: always let the user remap notes)
+# Pads → Note map: the in-app remap (CLAUDE.md: always let the user remap notes); Close goes back to Pads
+- tapOn:
+    id: setup-row-kitpads
+- extendedWaitUntil:
+    visible:
+      id: setup-tool-kitpads
+    timeout: 5000
+- assertVisible:
+    id: setup-pads
 - tapOn:
     id: setup-notemap
 - extendedWaitUntil:
@@ -41,6 +49,21 @@ tags:
     id: notemap-snare
 - tapOn:
     id: setup-tool-notemap-close
+# MIDI input picker, from the same page
+- extendedWaitUntil:
+    visible:
+      id: setup-midi-input-row
+    timeout: 5000
+- tapOn:
+    id: setup-midi-input-row
+- extendedWaitUntil:
+    visible:
+      id: setup-tool-input
+    timeout: 5000
+- tapOn:
+    id: setup-tool-input-close
+- tapOn:
+    id: setup-tool-kitpads-close
 
 # Kit test
 - tapOn:
@@ -62,17 +85,25 @@ tags:
 - tapOn:
     id: setup-tool-latency-close
 
-# MIDI input picker
+# While you play: kit gestures
 - tapOn:
-    id: setup-midi-input
+    id: setup-row-play
 - extendedWaitUntil:
     visible:
-      id: setup-tool-input
+      id: setup-gestures
     timeout: 5000
 - tapOn:
-    id: setup-tool-input-close
+    id: setup-tool-play-close
 
-# Coach server: Test connection with nothing configured stays disabled; Save and test with a bad URL says why
+# Coach connection: Test connection with nothing configured stays disabled; Save and test with a bad URL says why
+- tapOn:
+    id: setup-row-connection
+- extendedWaitUntil:
+    visible:
+      id: setup-server
+    timeout: 5000
+- assertVisible:
+    id: setup-api-key
 - tapOn:
     id: setup-server-url
 - inputText: "not a url"

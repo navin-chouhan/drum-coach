@@ -1,7 +1,7 @@
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import type { KeyValueStore } from '@drum-coach/core/platform';
 import { describe, expect, it } from 'vitest';
-import { finishKitSteps, needsFirstRun, nextStep, notSureYet, placementQueued, queuePlacement, saveWelcome, stepPills, toggleGoal, welcomeForm } from './firstRun';
+import { finishKitSteps, needsFirstRun, nextStep, notSureYet, placementQueued, queuePlacement, saveWelcome, STEP_SPOKEN, STEPS, stepPills, toggleGoal, welcomeForm } from './firstRun';
 
 const S = (p: Partial<Settings> = {}): Settings => ({ ...DEFAULTS, ...p });
 
@@ -34,5 +34,13 @@ describe('first run', () => {
     expect(placementQueued(kv)).toBe(true);
     queuePlacement(kv, false);
     expect(placementQueued(kv)).toBe(false);
+  });
+});
+
+describe('first run, voice first (D10)', () => {
+  it('every step has a short spoken instruction', () => {
+    expect(Object.keys(STEP_SPOKEN)).toEqual(STEPS.map(s => s.id));
+    for (const line of Object.values(STEP_SPOKEN)) expect(line.length).toBeLessThan(120);
+    expect(STEP_SPOKEN.plug).toBe('Plug your kit into the iPad, then hit any pad.');
   });
 });

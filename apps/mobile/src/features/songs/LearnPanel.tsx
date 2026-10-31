@@ -19,7 +19,6 @@ import {
 } from './modes';
 import type { ModeProps } from './modeProps';
 import { SheetPart } from './SheetPart';
-import { TAB_CAPTURE } from './songsModel';
 import { useInterruptions } from './useInterruptions';
 import { songsWrite } from './useSongs';
 
@@ -112,7 +111,7 @@ export function LearnPanel({ song, videoId, yt, rate, bus, latencyMs, sound }: M
         <View style={styles.half}><CheckRow label="Hear my part" value={hear} onChange={setHear} testID="song-learn-hear" /></View>
         <View style={styles.half}><CheckRow label="Show as sheet music" value={sheet} onChange={setSheet} testID="song-learn-sheet" /></View>
       </Row>
-      <CheckRow label="Suggest notes from the song" value={false} onChange={() => {}} disabled hint={TAB_CAPTURE.suggestHint} testID="song-learn-suggest" />
+      {/* "Suggest notes from the song" needs the song audio: hidden on the iPad (D10; TAB_CAPTURE, B13) */}
       <View style={styles.gap}>
         <GridEditor notes={draft} take={take} fromBeat={fromBeat} toBeat={toBeat} stepsPerBeat={steps} beatsPerBar={bpb} yt={yt} grid={grid}
           onToggle={(t, d) => setDraft(n => toggleNote(n, t, d))} />

@@ -9,8 +9,11 @@ tags:
   - v1
 ---
 - runFlow: subflows/open-app.yaml
+# D10: Songs is a shelf in Practice (no sidebar entry): Practice → the Songs tile opens it (its route stays)
 - tapOn:
-    id: nav-songs
+    id: nav-practice
+- tapOn:
+    id: practice-kind-song
 - extendedWaitUntil:
     visible:
       id: screen-songs
@@ -40,8 +43,7 @@ tags:
     id: songs-import-audio
 
 # The coach tab: the panel opens; nothing is configured, so asking shows the "no server" state, not a crash
-- tapOn:
-    id: nav-coach
+- openLink: drumcoach://coach # D10: no Coach section; the route stays (the chat is also a sheet from the coach's bubble)
 - extendedWaitUntil:
     visible:
       id: screen-coach

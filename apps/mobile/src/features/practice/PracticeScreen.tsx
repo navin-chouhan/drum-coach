@@ -1,19 +1,22 @@
-// Practice (docs/mockups/ipad/practice.html): pick up where you left off, the warm-up, For you with the yellow ring
-// (ride × 2 moves it, hi-hat pedal × 3 plays it), and the library by kind with your best clean tempo. Choosing opens
-// the play screen (app/practice/play). The rules are in chooser.ts and catalog.ts.
+// Practice, reorganised (D10, docs/mobile/reorg/practice-after.png): one job, pick and play. For you = 4 big cards (the
+// warm-up first, then where you left off, your level, the coach's pick) with the yellow ring (ride × 2 moves it,
+// hi-hat pedal × 3 plays it), the 3 moves, and 4 kind tiles; Songs is one of them (a shelf here, not a section).
+// A tile opens its shelf below (Songs opens the Songs screen, a route under Practice); 🔎 searches every exercise;
+// Metronome stays in the bar. Choosing opens the play screen
+// (app/practice/play). The rules are in chooser.ts and catalog.ts.
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { getStorage } from '../../platform/storage';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
-  BigMove, Body, Button, Card, Display, GestureChip, Label, ListRow, MAX_FONT_SCALE, Panel, Pill, Screen, Segmented, TitleBar,
+  BigMove, Body, Button, Card, Display, Label, ListRow, MAX_FONT_SCALE, Notice, RoundButton, Screen, TitleBar,
   color, gesturesFor, hardShadow, shadow, stroke, useAppSettings, useKitMoves,
-  Notice,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
+import { useYtSongs } from '../songs/useSongs';
 import { chartRow, listFor, requestedChart, type ChartRow, type TabId } from './catalog';
 import { loadPracticeCharts } from './charts';
-import { chooserModel, focusedRow, initialFocus, playLabel, stepFocus } from './chooser';
+import { chooserModel, forYouCards, kindTiles, nextCard, playCardLabel, practiceLine, type ForYouCard, type KindTile } from './chooser';
 import { practiceEngine } from './engine';
 import { readPlayOptions, speedFor } from './play';
 
@@ -23,6 +26,7 @@ export function PracticeScreen() {
   const settings = useAppSettings();
   const { data } = useStoredData();
   const charts = useMemo(() => loadPracticeCharts(), [data]); // eslint-disable-line react-hooks/exhaustive-deps -- re-read with the runs
+  const ytSongs = useYtSongs();
   // `?chartId=` (Songs' Play, as the web's pending chart): open that exercise's play screen, once per request.
   const params = useLocalSearchParams<{ chartId?: string; bpm?: string }>();
   useEffect(() => {
@@ -34,17 +38,18 @@ export function PracticeScreen() {
   }, [params.chartId]); // eslint-disable-line react-hooks/exhaustive-deps -- once per request
   const m = useMemo(() => chooserModel({ charts, runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, lessons: data?.lessons ?? [] }),
     [charts, data, settings.lessons, settings.profile]);
-  const [picked, setFocus] = useState<number>();
-  const focus = picked ?? initialFocus(m);
-  const focused = focusedRow(focus, m);
-  const [tab, setTab] = useState<TabId>('foryou');
+  const cards = useMemo(() => forYouCards(m), [m]);
+  const [ring, setRing] = useState(0);
+  const focus = Math.min(ring, Math.max(0, cards.length - 1));
+  const focused: ForYouCard | undefined = cards[focus];
+  const [shelf, setShelf] = useState<KindTile['id'] | undefined>();
+  const [searching, setSearching] = useState(false);
   const [q, setQ] = useState('');
   const [notice, setNotice] = useState('');
 
-  const play = (row?: ChartRow) => { if (row) openPlay(row.id); };
   const eng = useSyncExternalStore(practiceEngine.subscribe, practiceEngine.get);
   const hearing = eng.demo && (eng.phase === 'playing' || eng.phase === 'starting');
-  const hear = (row?: ChartRow) => {
+  const hearRow = (row?: { id: string; startsAt: number }) => {
     if (hearing) { practiceEngine.stop(); return; }
     const c = row && charts.find(x => x.id === row.id);
     if (!c || !row) return;
@@ -53,143 +58,109 @@ export function PracticeScreen() {
   };
   useFocusEffect(useCallback(() => () => practiceEngine.stop(), []));
   const warm = () => { if (m.warm) openPlay(m.warm.items[0].id, { warm: m.warm.items.map(w => w.id).join(','), bpm: String(m.warm.items[0].bpm) }); };
-  const step = () => setFocus(stepFocus(focus, m));
-  useKitMoves({ yes: () => play(focused), next: step, listen: () => hear(focused), faster: warm });
+  const playCard = (c?: ForYouCard) => { if (!c) return; if (c.row) openPlay(c.row.id); else warm(); };
+  const hearCard = (c?: ForYouCard) => hearRow(c?.row ?? (c && m.warm ? { id: m.warm.items[0].id, startsAt: m.warm.items[0].bpm } : undefined));
+  const step = () => setRing(nextCard(focus, cards.length));
+  useKitMoves({ yes: () => playCard(focused), next: step, listen: () => hearCard(focused), faster: warm });
 
+  const tiles = useMemo(() => kindTiles(charts, ytSongs.length), [charts, ytSongs.length]);
   const allRows = useMemo(() => new Map(charts.map(c => [c.id, chartRow(c, data?.runs ?? [], m.read)])), [charts, data, m.read]);
-  const rows = useMemo(() => listFor(charts, tab, q).map(c => allRows.get(c.id)!), [charts, tab, q, allRows]);
+  const query = searching ? q.trim() : '';
+  const listTab: TabId | undefined = query ? 'foryou' : shelf && shelf !== 'song' ? shelf : undefined;
+  const rows = useMemo(() => (listTab ? listFor(charts, listTab, query).map(c => allRows.get(c.id)!) : []), [charts, listTab, query, allRows]);
   const half = Math.ceil(rows.length / 2);
+  const openTile = (id: KindTile['id']) => {
+    if (id === 'song') { router.navigate('/songs' as never); return; } // the Songs shelf is its own route under Practice (R1)
+    setShelf(s => (s === id ? undefined : id)); setSearching(false); setQ('');
+  };
 
   return (
     <Screen testID="screen-practice">
-      <TitleBar title="Practice" right={<View style={styles.topRight}>
+      <TitleBar title="Practice" coach={practiceLine(cards)} right={<View style={styles.topRight}>
         <Button label="Metronome" emoji="🔔" size="small" testID="practice-metronome" onPress={() => router.push('/practice/metronome')} />
+        <RoundButton glyph="🔎" label={searching ? 'Close the search' : 'Search exercises'} onPress={() => { setSearching(x => !x); setQ(''); }} testID="practice-search-open" />
+      </View>} />
+      {searching ? (
         <View style={styles.search}>
           <Text style={styles.searchIcon} accessible={false}>🔎</Text>
-          <TextInput testID="practice-search" value={q} onChangeText={setQ} placeholder={`Search ${m.total} exercises`} placeholderTextColor={color.muted}
+          <TextInput testID="practice-search" value={q} onChangeText={setQ} placeholder={`Search ${m.total} exercises`} placeholderTextColor={color.muted} autoFocus
             accessibilityLabel="Search exercises" style={styles.searchInput} maxFontSizeMultiplier={MAX_FONT_SCALE} returnKeyType="search" clearButtonMode="while-editing" />
         </View>
-      </View>} />
+      ) : null}
 
-      <View style={styles.row1}>
-        <Card style={[styles.last, focus < 0 && styles.ring]} testID="practice-resume">
-          {m.resume ? (
-            <Panel tone="pop" style={styles.lastTop}>
-              <Text style={styles.bigIcon} accessible={false}>{m.resume.icon}</Text>
-              <View style={styles.lastText}>
-                <Label>{`Pick up where you left off · ${m.resume.kicker}`}</Label>
-                <Display size={27} numberOfLines={1}>{m.resume.title}</Display>
-                {m.resume.description ? <Body numberOfLines={1}>{m.resume.description}</Body> : null}
-                <View style={styles.pills}>
-                  <Pill emoji="⏱">{`starts at ${m.resume.startsAt} today`}</Pill>
-                  {m.resume.best > 0 ? <Pill emoji="⭐" tone="green">{`best clean: ${m.resume.best} BPM`}</Pill> : null}
-                  {m.resume.ai ? <Pill>✍ by your coach</Pill> : null}
-                </View>
-              </View>
-            </Panel>
-          ) : (
-            <Panel tone="pop" style={styles.lastTop}>
-              <Body size={17}>Pick something below. <Text style={styles.b}>Ride × 2</Text> moves the yellow ring, <Text style={styles.b}>hi-hat pedal × 3</Text> plays it.</Body>
-            </Panel>
-          )}
-          <View style={styles.moves}>
-            <BigMove tone="go" label={playLabel(focus, m).replace(/^▶ /, '')} emoji="▶" gestures={gesturesFor('yes')} onPress={() => play(focused)} disabled={!focused} testID="practice-play" style={styles.moveGo} />
-            <BigMove label={hearing ? 'Stop' : 'Hear it'} emoji={hearing ? '■' : '👂'} gestures={gesturesFor('listen')} onPress={() => hear(focused)} disabled={!focused} testID="practice-hear" style={styles.move} />
-            <BigMove label="Next card" emoji="⏭" gestures={gesturesFor('next')} onPress={step} testID="practice-next" style={styles.move} />
-          </View>
-          {notice ? <Notice text={notice} onClose={() => setNotice('')} /> : null}
-        </Card>
-
-        <Card tone="night" style={styles.warm} testID="practice-warmup">
-          <Label tone="pop">{`🔥 ${m.warm?.title ?? 'Warm-up'}`}</Label>
-          {m.warm ? <>
-            <Body size={13.5} color="#ddd">A few short exercises, one after the other, at the tempos For you picks. Just loosen up.</Body>
-            <View>
-              {m.warm.items.map((w, i) => (
-                <View key={w.id} style={[styles.warmRow, i > 0 && styles.warmSep]}>
-                  <Body size={14.5} weight="700" color={color.white} numberOfLines={1} style={styles.grow}>{w.title}</Body>
-                  <Body size={13.5} color="#ccc">{`${w.minutes} min · ${w.bpm}`}</Body>
-                </View>
-              ))}
-            </View>
-            <BigMove label="Start the warm-up" emoji="▶" tone="white" gestures={gesturesFor('faster')} onPress={warm} testID="practice-warm-start" style={styles.warmGo} />
-          </> : <Body size={13.5} color="#ddd">Play a couple of exercises and a warm-up from them shows up here.</Body>}
-        </Card>
-      </View>
-
-      <View style={styles.forHead}>
-        <View style={styles.forTitle}><Display size={20}>For you</Display></View>
-        <GestureChip gesture={gesturesFor('next')[0]} /><Body size={13.5} weight="800">moves the ring</Body>
-        <GestureChip gesture={gesturesFor('yes')[0]} /><Body size={13.5} weight="800">plays it</Body>
-      </View>
+      <View style={styles.forHead}><Label>For you</Label></View>
       <View style={styles.cards4}>
-        {m.cards.map((c, i) => (
-          <Card key={c.id} tone={focus === i ? 'white' : 'cream'} elevation={4} onPress={() => play(c)} testID={`practice-card-${i}`}
-            accessibilityLabel={`${c.title}, ${c.why}, ${c.plays}`} style={[styles.fy, focus === i && styles.ring]}>
-            {c.why ? <Text style={[styles.tag, c.ai && styles.tagCoach]}>{c.ai ? `✍ ${c.why}` : c.why}</Text> : null}
-            <Display size={16} numberOfLines={2}>{c.title}</Display>
-            <Body size={13} weight="700" color={color.muted} numberOfLines={1} style={styles.fyMeta}>{`starts at ${c.startsAt} · ${c.bars} bar${c.bars === 1 ? '' : 's'}`}</Body>
+        {cards.length === 0 ? <Body weight="700">Play a couple of exercises from the kinds below and your picks show up here.</Body> : null}
+        {cards.map((c, i) => (
+          <Card key={c.key} tone={focus === i ? 'white' : 'cream'} elevation={5} onPress={() => playCard(c)} testID={c.key === 'warm' ? 'practice-warmup' : `practice-card-${i}`}
+            accessibilityLabel={`${c.title}, ${c.tag}, ${c.line}`} style={[styles.fy, focus === i && styles.ring]}>
+            <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.tag, c.ai && styles.tagCoach]}>{c.tag}</Text>
+            <Text style={styles.cardIcon} accessible={false}>{c.icon}</Text>
+            <Display size={21} numberOfLines={2}>{c.title}</Display>
+            <Body size={14} weight="700" color={color.muted} numberOfLines={1} style={styles.fyMeta}>{c.line}</Body>
           </Card>
         ))}
-        <Card tone="cream" elevation={4} style={styles.fy} testID="practice-all" accessibilityLabel={`All exercises: ${m.allLine}`}
-          onPress={() => { const first = m.segments.find(s => s.id !== 'foryou'); if (first) setTab(first.id); }}>
-          <Display size={16}>＋ All exercises</Display>
-          <Body size={12.5} weight="700" color={color.muted} numberOfLines={2} style={styles.fyMeta}>{m.allLine}</Body>
-        </Card>
       </View>
 
-      <View style={styles.lib}>
-        <Segmented testID="practice-kinds" accessibilityLabel="Exercises by kind" value={q.trim() ? ('' as TabId) : tab} onChange={v => { setTab(v); setQ(''); }}
-          options={m.segments.map(s => ({ value: s.id, label: s.label, count: s.count }))} />
+      <View style={styles.moves}>
+        <BigMove tone="go" label={playCardLabel(focused)} emoji="▶" gestures={gesturesFor('yes')} onPress={() => playCard(focused)} disabled={!focused} testID="practice-play" style={styles.moveGo} />
+        <BigMove label={hearing ? 'Stop' : 'Hear it'} emoji={hearing ? '■' : '👂'} gestures={gesturesFor('listen')} onPress={() => hearCard(focused)} disabled={!focused} testID="practice-hear" style={styles.move} />
+        <BigMove tone="alt" label="Next card" emoji="⏭" gestures={gesturesFor('next')} onPress={step} disabled={cards.length < 2} testID="practice-next" style={styles.move} />
       </View>
-      <ScrollView style={styles.listArea} contentContainerStyle={styles.cols}>
-        {rows.length === 0 ? (
-          <Body color={color.ink} weight="700" style={styles.empty}>{q.trim() || tab !== 'foryou' ? 'Nothing here yet.' : 'Your picks are the cards above. Choose a kind to see them all.'}</Body>
-        ) : [rows.slice(0, half), rows.slice(half)].map((col, k) => (
-          <Card key={k} style={styles.group} elevation={4}>
-            {col.map((r, i) => (
-              <ListRow key={r.id} first={i === 0} title={r.title} detail={r.plays} onPress={() => play(r)} testID={`practice-row-${r.id}`}
-                accessibilityLabel={`${r.title}: ${r.bestWords}`}
-                lead={<View style={styles.sym}><Text style={styles.symText}>{r.icon}</Text></View>}
-                value={<Text style={styles.best}>{r.best ? <>best clean <Text style={styles.bestN}>{r.best}</Text></> : r.bestWords}  ›</Text>} />
-            ))}
+      {notice ? <Notice text={notice} onClose={() => setNotice('')} /> : null}
+
+      <View style={styles.kinds} accessibilityRole="tablist" testID="practice-kinds">
+        {tiles.map(t => (
+          <Card key={t.id} tone={shelf === t.id ? 'pop' : 'white'} elevation={5} onPress={() => openTile(t.id)} testID={`practice-kind-${t.id}`}
+            accessibilityLabel={`${t.label}, ${t.count}`} style={styles.kind}>
+            <Text style={styles.kindIcon} accessible={false}>{t.icon}</Text>
+            <Display size={18} numberOfLines={1} style={styles.kindLabel}>{t.label}</Display>
+            <Body size={13.5} weight="800" color={color.muted} numberOfLines={2} style={styles.kindCount}>{t.count}</Body>
           </Card>
         ))}
-      </ScrollView>
+      </View>
+
+      {listTab ? (
+        <ScrollView style={styles.listArea} contentContainerStyle={styles.cols} keyboardShouldPersistTaps="handled">
+          {rows.length === 0 ? <Body color={color.ink} weight="700" style={styles.empty}>Nothing here yet.</Body>
+            : [rows.slice(0, half), rows.slice(half)].map((col, k) => (
+              <Card key={k} style={styles.group} elevation={4}>
+                {col.map((r: ChartRow, i) => (
+                  <ListRow key={r.id} first={i === 0} title={r.title} detail={r.plays} onPress={() => openPlay(r.id)} testID={`practice-row-${r.id}`}
+                    accessibilityLabel={`${r.title}: ${r.bestWords}`}
+                    lead={<View style={styles.sym}><Text style={styles.symText}>{r.icon}</Text></View>}
+                    value={<Text style={styles.best}>{r.best ? <>best clean <Text style={styles.bestN}>{r.best}</Text></> : r.bestWords}  ›</Text>} />
+                ))}
+              </Card>
+            ))}
+        </ScrollView>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  search: { width: 280, height: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.panel, boxShadow: hardShadow(shadow.button) },
+  search: { alignSelf: 'flex-end', width: 360, height: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, marginTop: 8, borderRadius: 999, borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.panel, boxShadow: hardShadow(shadow.button) },
   searchIcon: { fontSize: 15 },
   searchInput: { flex: 1, fontSize: 15, fontWeight: '600', color: color.ink, height: 40 },
-  row1: { flexDirection: 'row', gap: 18 },
-  last: { flex: 1, minWidth: 0, gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  ring: { outlineWidth: 5, outlineColor: color.pop, outlineStyle: 'solid', outlineOffset: 2 },
-  lastTop: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8, paddingHorizontal: 14, minHeight: 112 },
-  bigIcon: { fontSize: 50 },
-  lastText: { flex: 1, minWidth: 0, gap: 3 },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  b: { fontWeight: '900' },
-  moves: { flexDirection: 'row', gap: 14 },
-  moveGo: { flex: 2.1, minHeight: 92 },
-  move: { flex: 1, minHeight: 92 },
-  warm: { width: 286, gap: 8, paddingVertical: 12, paddingHorizontal: 14 },
-  warmRow: { flexDirection: 'row', alignItems: 'center', minHeight: 31, gap: 8 },
-  warmSep: { borderTopWidth: 1, borderTopColor: '#ffffff2a' },
-  grow: { flex: 1, minWidth: 0 },
-  warmGo: { marginTop: 'auto', minHeight: 72, backgroundColor: color.pop },
-  forHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 10 },
-  forTitle: { backgroundColor: color.panel, borderWidth: stroke.card, borderColor: color.ink, boxShadow: hardShadow(3), paddingHorizontal: 10, paddingVertical: 3, marginRight: 6 },
+  forHead: { flexDirection: 'row', marginTop: 14, marginBottom: 6 },
   cards4: { flexDirection: 'row', gap: 16 },
-  fy: { flex: 1, minWidth: 0, height: 98, paddingVertical: 9, paddingHorizontal: 12, gap: 4 },
-  fyMeta: { marginTop: 'auto' },
-  tag: { alignSelf: 'flex-start', fontSize: 11.5, fontWeight: '800', paddingHorizontal: 9, paddingVertical: 1, borderRadius: 999, overflow: 'hidden', backgroundColor: color.night, color: color.white },
+  fy: { flex: 1, minWidth: 0, minHeight: 176, paddingVertical: 12, paddingHorizontal: 14, gap: 6 },
+  ring: { outlineWidth: 6, outlineColor: color.pop, outlineStyle: 'solid', outlineOffset: 0 },
+  tag: { alignSelf: 'flex-start', fontSize: 12, fontWeight: '800', paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999, overflow: 'hidden', backgroundColor: color.night, color: color.white },
   tagCoach: { backgroundColor: color.panel, color: color.ink, borderWidth: 2, borderStyle: 'dashed', borderColor: color.ink },
-  lib: { marginTop: 16, marginBottom: 10 },
-  listArea: { flex: 1, marginHorizontal: -8 },
+  cardIcon: { fontSize: 38, lineHeight: 44 },
+  fyMeta: { marginTop: 'auto' },
+  moves: { flexDirection: 'row', gap: 16, marginTop: 18 },
+  moveGo: { flex: 2, minHeight: 100 },
+  move: { flex: 1, minHeight: 100 },
+  kinds: { flexDirection: 'row', gap: 16, marginTop: 20 },
+  kind: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 54, paddingVertical: 10, paddingHorizontal: 14 },
+  kindIcon: { fontSize: 26 },
+  kindLabel: { flexShrink: 0 },
+  kindCount: { flexShrink: 1, marginLeft: 'auto', textAlign: 'right' },
+  listArea: { flex: 1, marginTop: 16, marginHorizontal: -8 },
   cols: { flexDirection: 'row', gap: 18, paddingHorizontal: 8, paddingBottom: 10, alignItems: 'flex-start' },
   group: { flex: 1, minWidth: 0, paddingVertical: 0, paddingHorizontal: 0 },
   sym: { width: 32, height: 32, backgroundColor: color.teal, borderWidth: stroke.thin, borderColor: color.ink, alignItems: 'center', justifyContent: 'center' },

@@ -78,6 +78,17 @@ export const KIT_STEP_TEXT = {
   skip: 'Skip for now',
 };
 
+/**
+ * D10 (voice first): each step's instruction, said out loud when the step opens (if "Speak the verdicts" is on), so
+ * it can be followed from the throne. Short spoken versions of the step's lead; the screen keeps the full text.
+ */
+export const STEP_SPOKEN: Record<FirstRunStep, string> = {
+  welcome: "Welcome! I'm your drum teacher. Pick what you want to play and how many minutes a day, then Continue.",
+  plug: 'Plug your kit into the iPad, then hit any pad.',
+  pads: 'Hit the pad I name. Hitting it is the answer.',
+  latency: "Now hit the snare with each click, sixteen times. I'm measuring the sound, not your playing.",
+};
+
 // ---- Placement (web: "played before" → PlacementView after the kit steps) ----
 /** Set when the student said they've played before; the placement test (Journey) clears it. */
 export const PLACEMENT_KEY = 'drumcoach.firstRun.placement';

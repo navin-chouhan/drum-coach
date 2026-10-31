@@ -1,5 +1,5 @@
 // Build info (A2's first home screen, moved here when Journey became the home): proves the build, the core link and
-// the platform pieces. Reached from the sidebar's Dev row in debug builds. Keeps A2's testIDs.
+// the platform pieces. Reached from Setup › About (D10) and the sidebar's Dev row in debug builds. Keeps A2's testIDs.
 import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -7,8 +7,14 @@ import { coreLink } from '../../src/coreLink';
 import { checkCapabilities, getCapabilities } from '../../src/platform/capabilities';
 import * as DrumYouTube from '../../modules/drum-youtube';
 import { getStorage } from '../../src/platform/storage';
-import { Body, Card, Label, Screen, TitleBar, Toggle, color } from '../../src/ui';
+import { router } from 'expo-router';
+import { Body, Button, Card, Label, Screen, TitleBar, Toggle, color } from '../../src/ui';
 import { readDevNative, writeDevNative } from '../../src/youtube/playerChoice';
+
+const DEV_SCREENS = [
+  { label: 'MIDI', href: '/dev/midi' }, { label: 'Server', href: '/dev/server' }, { label: 'Audio', href: '/dev/audio' },
+  { label: 'Play', href: '/dev/play' }, { label: 'Sheet', href: '/dev/sheet' },
+] as const;
 
 function reactNativeVersion(): string {
   const v = Platform.constants.reactNativeVersion;
@@ -57,6 +63,15 @@ export default function About() {
             onChange={v => setNativeYt(writeDevNative(getStorage().kv, v))} testID="home-dev-native-youtube" />
         </View>
       </Card>
+      {__DEV__ ? (
+        // D10: the dev links live here (Setup › About) as well as in the sidebar's dev row of debug builds.
+        <Card style={styles.card} testID="about-dev-links">
+          <Label>Dev screens</Label>
+          <View style={styles.links}>
+            {DEV_SCREENS.map(d => <Button key={d.href} size="small" label={d.label} onPress={() => router.push(d.href)} testID={`about-dev-${d.label.toLowerCase()}`} />)}
+          </View>
+        </Card>
+      ) : null}
     </Screen>
   );
 }
@@ -67,4 +82,5 @@ const styles = StyleSheet.create({
   label: { width: 140 },
   value: { flex: 1, fontVariant: ['tabular-nums'] },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  links: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
 });

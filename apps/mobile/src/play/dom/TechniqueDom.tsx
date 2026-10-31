@@ -10,6 +10,7 @@ import { DEMOS, poseAt, type DemoId } from '@drum-coach/core/content/demos';
 import { ARM, armPoints, PAD_Y, PX_PER_CM, type Pt } from '@drum-coach/core/engine/demoPose';
 import { mirrorHands } from '@drum-coach/core/engine/padCal';
 import { drawGripAbove, drawGripSide, drawKick, ensureArtDefs, GRIP_VIEWBOX, KICK_TEXT, KICK_VIEWBOX, type HitState, type KickMode } from './demoArt';
+import { fitStage, MIN_AREA, PAIR_GAP, SHADOW } from './stageFit';
 
 export type TechniqueDomProps = {
   id: DemoId;
@@ -88,11 +89,18 @@ const flipTexts = (root: Element) => root.querySelectorAll('text').forEach(t => 
 // The web's CSS (src/ui/styles.css .technique), inline.
 const INK = '#141414', POP = '#FFE14D', CYAN = '#2DE1C2', GOOD = '#1E9E5A', BAD = '#E8423F', DISPLAY = "'Arial Black', system-ui, sans-serif";
 const css = {
-  root: { fontFamily: 'system-ui, sans-serif', color: INK, margin: 0 } as CSSProperties,
-  pair: { display: 'flex', gap: 10 } as CSSProperties,
-  // The stage keeps the drawing's shape with the padding-top ratio (every WebKit), and the svg fills it absolutely: an
-  // inline <svg> sized height:auto from its viewBox can come out 0 tall in the iPad's WKWebView (nothing drawn).
-  stage: (ratio: number) => ({ position: 'relative', background: INK, border: `3px solid ${INK}`, boxShadow: `5px 5px 0 ${INK}`, flex: 1, height: 0, paddingTop: `${(ratio * 100).toFixed(3)}%` }) as CSSProperties,
+  // The whole demo fills its box (the WebView on the iPad, the native view on the web) and scrolls itself if it must;
+  // the drawing takes the room the controls and the words leave (`area`), so the words are never cut off.
+  root: { fontFamily: 'system-ui, sans-serif', color: INK, margin: 0, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' } as CSSProperties,
+  area: { flex: '1 1 0', minHeight: MIN_AREA, display: 'flex', gap: PAIR_GAP, justifyContent: 'center', alignItems: 'center', boxSizing: 'border-box', paddingRight: SHADOW, paddingBottom: SHADOW } as CSSProperties,
+  rest: { flex: 'none' } as CSSProperties,
+  // The stage keeps the drawing's shape: in pixels from the measured area (fitStage), else with the padding-top ratio
+  // (every WebKit), and the svg fills it absolutely: an inline <svg> sized height:auto from its viewBox can come out 0
+  // tall in the iPad's WKWebView (nothing drawn). Either way it is never 0 tall.
+  stage: (ratio: number, size: { w: number; h: number } | null) => ({
+    position: 'relative', background: INK, border: `3px solid ${INK}`, boxShadow: `5px 5px 0 ${INK}`, boxSizing: 'border-box',
+    ...(size ? { flex: 'none', width: size.w, height: size.h } : { flex: 1, height: 0, paddingTop: `${(ratio * 100).toFixed(3)}%` }),
+  }) as CSSProperties,
   svg: { position: 'absolute', top: 0, left: 0, display: 'block', width: '100%', height: '100%' } as CSSProperties,
   error: { font: '700 15px system-ui', color: BAD, margin: '8px 0' } as CSSProperties,
   word: (compact: boolean, wrong: boolean) => ({ position: 'absolute', top: 10, left: 14, font: `800 ${compact ? 24 : 36}px/1 ${DISPLAY}`, color: wrong ? BAD : POP, textShadow: '3px 3px 0 #000' }) as CSSProperties,
@@ -137,6 +145,19 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
     try { void Promise.resolve(speak.current.say?.(text, now)).catch(() => {}); } catch { /* no voice this time; keep drawing */ }
   };
   const [error, setError] = useState('');
+  // The room the drawing has (what the controls and the words leave), measured as it changes; 0×0 until then.
+  const areaRef = useRef<HTMLDivElement>(null);
+  const [area, setArea] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    const measure = () => setArea(a => (a.w === el.clientWidth && a.h === el.clientHeight ? a : { w: el.clientWidth, h: el.clientHeight }));
+    measure();
+    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => { talkNow(wrong ? `The mistake: ${d.mistake}` : kickText?.what ?? d.what, true); }, [id, wrong, talk, mode]); // eslint-disable-line react-hooks/exhaustive-deps -- once per demo, side or switch
   useEffect(() => { document.body.style.margin = '0'; }, []);
   useEffect(() => {
@@ -188,14 +209,18 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
 
   const box = id === 'kick' ? KICK_VIEWBOX : art ? GRIP_VIEWBOX : '0 0 900 520';
   const [, , bw, bh] = box.split(' ').map(Number);
-  const stage = { box, ratio: bh / bw, mirror, wrong, compact, label: d.title };
+  const ratio = bh / bw;
+  const stage = { box, ratio, size: fitStage(area.w, area.h, both ? 2 : 1, ratio), mirror, wrong, compact, label: d.title };
   const segBtn = (on: boolean, label: string, onClick: () => void, last = false, bad = false) =>
     <button type="button" key={label} style={css.btn(on, bad, last)} aria-pressed={on} onClick={onClick}>{label}</button>;
   return (
     <div style={css.root}>
       {error ? <p style={css.error} role="alert">How it moves couldn't draw: {error}</p> : null}
-      {both ? <div style={css.pair}><Stage {...stage} g={g} word={wordRef} count={countRef} name="From the side" /><Stage {...stage} g={g2} word={word2} count={count2} name="From above" /></div>
-        : <Stage {...stage} g={g} word={wordRef} count={countRef} name={id === 'grip' ? (view === 'side' ? 'From the side' : 'From above') : id === 'kick' ? (mode === 'down' ? 'Heel down' : 'Heel up') : undefined} />}
+      <div style={css.area} ref={areaRef}>
+        {both ? <><Stage {...stage} g={g} word={wordRef} count={countRef} name="From the side" /><Stage {...stage} g={g2} word={word2} count={count2} name="From above" /></>
+          : <Stage {...stage} g={g} word={wordRef} count={countRef} name={id === 'grip' ? (view === 'side' ? 'From the side' : 'From above') : id === 'kick' ? (mode === 'down' ? 'Heel down' : 'Heel up') : undefined} />}
+      </div>
+      <div style={css.rest}>
       <div style={css.bar}>
         <span style={css.seg}>{segBtn(!wrong, '✓ Right', () => setWrong(false))}{segBtn(wrong, '✗ Wrong', () => setWrong(true), true, true)}</span>
         {id === 'grip' && !both && <span style={css.seg}>{segBtn(view === 'side', 'Side', () => setView('side'))}{segBtn(view === 'above', 'Above', () => setView('above'), true)}</span>}
@@ -210,15 +235,16 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
         <ul>{(kickText?.watch ?? d.watch).map(w => <li key={w} style={css.watch}>{w}</li>)}</ul>
         <p style={css.small}><b>✗ Wrong:</b> {d.mistake}</p>
       </>}
+      </div>
     </div>
   );
 }
 
 /** One drawing: the SVG the frame loop draws into (mirrored for a left-handed player), the cue word, the count, which view. */
-function Stage({ box, ratio, mirror, wrong, compact, label, g, word, count, name }: { box: string; ratio: number; mirror: boolean; wrong: boolean; compact: boolean; label: string; name?: string;
+function Stage({ box, ratio, size, mirror, wrong, compact, label, g, word, count, name }: { box: string; ratio: number; size: { w: number; h: number } | null; mirror: boolean; wrong: boolean; compact: boolean; label: string; name?: string;
   g: React.RefObject<SVGGElement | null>; word: React.RefObject<HTMLDivElement | null>; count: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <div style={css.stage(ratio)}>
+    <div style={css.stage(ratio, size)}>
       <svg viewBox={box} role="img" aria-label={`${label}${name ? `, ${name.toLowerCase()}` : ''}, animated`} style={css.svg}><g transform={mirror ? `translate(${box.split(' ')[2]} 0) scale(-1 1)` : undefined}><g ref={g} /></g></svg>
       <div style={css.word(compact, wrong)} ref={word} aria-live="off" />
       <div style={css.count(compact)} ref={count} aria-hidden />

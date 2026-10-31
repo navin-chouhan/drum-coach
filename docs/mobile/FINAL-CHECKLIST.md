@@ -10,7 +10,7 @@ What's already known (so you don't need to report it again):
   below check that they stay fixed. The hardware keyboard works (I2), and Practice lists imported MIDI files.
 - The second QA pass ([QA2-2026-10-31.md](QA2-2026-10-31.md): 4 major, 9 minor) is being fixed in the next wave.
   Steps marked **(QA2 …)** check those fixes; if one fails, note the build's commit (`git log --oneline -1`).
-- New: the API-key coach fallback (Setup → Coach server · API key). With the home server off and a key saved, the coach still answers (feedback, plan, tips, lessons, month, live session; not the Songs groove/show-off asks).
+- New: the API-key coach fallback (Setup → Coach connection → API key). With the home server off and a key saved, the coach still answers (feedback, plan, tips, lessons, month, live session; not the Songs groove/show-off asks).
 
 The cloud iOS build (`.github/workflows/ios.yml`, Xcode 27.1) already compiles the whole app, all Swift included, and
 the SwiftPM tests pass, so a compile error on your Mac would be a local setup problem, not new code.
@@ -33,7 +33,7 @@ npx expo run:ios --device          # the debug build first: it has the Dev row (
 USB-C hub on the iPad: **kit USB → hub**, **hub 3.5 mm out → module AUX IN**, charger into the hub's PD port if it
 has one. Headphones on the module. Metro: on the Mac (`npx expo start --dev-client`) or on Linux
 (`cd apps/mobile && npm ci && npm start -- --lan`, then **Enter URL manually** `http://<linux-ip>:8081`). Allow **Local Network**.
-- [ ] The kit enumerates through the hub: Setup → Kit shows **e-Drum** connected (sidebar pill "kit" green). Hub model: ____
+- [ ] The kit enumerates through the hub: Setup → Kit shows **e-Drum** connected (the sidebar's kit dot green, "e-Drum · ready"). Hub model: ____
 - [ ] Click and kit sounds are in the module's headphones (iPad speaker silent). Setup → Latency shows the route
       name: ____ (expect "USB audio" or "Headphones"; it must **not** say Speaker).
 - [ ] Charging through the hub while the kit is plugged in: yes / no / hub has no PD.
@@ -41,8 +41,8 @@ has one. Headphones on the module. Metro: on the Mac (`npx expo start --dev-clie
 ## 3. Home server (Linux) — 10 min
 Follow [HOME-SERVER.md](HOME-SERVER.md): `.env` with `APP_HOST=0.0.0.0`, `APP_TOKEN` (≥ 24 chars), `ALLOWED_HOSTS`;
 firewall port 8787 on the Wi-Fi interface; `npm run server`.
-- [ ] Setup → Coach · home server: URL `http://<linux-ip>:8787`, paste the token → **Save and test** →
-      "✓ Connected · ____ ms". The token field shows 🔒 afterwards (Keychain); the sidebar's coach pill turns green.
+- [ ] Setup → Coach connection → Coach · home server: URL `http://<linux-ip>:8787`, paste the token → **Save and test** →
+      "✓ Connected · ____ ms". The token field shows 🔒 afterwards (Keychain); Setup's coach status turns green.
 - [ ] A wrong token says the server refused it; a wrong URL says it didn't answer. Then fix it again.
 
 ## 4. Gate 0 leftovers on the app's MIDI debug screen (debug build) — 20 min
@@ -76,7 +76,7 @@ Sidebar → Dev row → **MIDI** (`/dev/midi`). These replace the probe's M4–M
   - [ ] `compare.mjs` prints **SAME** or **SAME within tolerance** (paste its output); median ____ max |____| ms.
   - [ ] **Back to the kit (QA2 M4):** switch **Network MIDI session** off. The app falls back to the e-Drum by itself
         within a few seconds (Devices: e-Drum · connected). If it doesn't, **Select** e-Drum under Devices (or press
-        **Auto-select e-Drum**, or Setup → MIDI input → **Use this**). Check the sidebar's kit pill is green before
+        **Auto-select e-Drum**, or Setup → Pads → MIDI input → **Use this**). Check the sidebar's kit dot is green before
         section 5: the rest of the session needs the kit.
 
 ## 5. Audio checks (`apps/mobile/modules/drum-audio/CHECKS.md`) — 25 min
@@ -88,6 +88,11 @@ Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud buil
       paste it). Then a lesson take with "Count me in out loud" on: you hear "one, two, three, four" with the count-in
       clicks, iPad speaker and hub route, with Music playing too (it keeps playing). A lesson step passed: the coach says
       the verdict. Setup → Coach and voice → **Test the voice** is heard. Spoken words: ____ / missing: ____
+- [ ] **Voice first (D10):** Journey says Up next (or the notice) once when it opens; a lesson says its step when it
+      opens and the score + verdict after **every** take ("46 of 48. …"), and so do Practice and Songs Play; live tips
+      are spoken during takes; **kick × 2** between takes (or key **G**) says the last line again. Setup → Coach and
+      voice → the voice list shows the installed English voices (Premium / Enhanced first); pick one: it speaks in it.
+      Voice in use: ____
 - [ ] **D1** clocks agree: `midi − audio` within ±0.01 ms, 5 times.
 - [ ] **D2** IO buffer: ____ ms, then after Music + Suspend: ____ ms.
 - [ ] **D3** 5-minute timing probe: p99 |error| ____ ms (< 0.5), slope ____ ms/5 min (< 1), matched ____, late ____.
@@ -102,34 +107,50 @@ Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud buil
       (no screen taps). Set tom 1 to 49 on the module (VOICE → PAGE to N…) to see the **duplicate note** stop with the
       module fix; set it back to 48 and finish.
 - [ ] **Latency:** 16 hits with the click → the delay and how steady → Save → Journey.
-- [ ] Sidebar pills afterwards: kit green, latency ____ ms, coach (green if section 3 is done).
+- [ ] Afterwards: the sidebar's kit dot is green; Setup shows latency ____ ms and the coach (green if section 3 is done).
 
 ## 7. Every screen — 70 min
 Kit gestures everywhere: hi-hat pedal × 3 or crash × 2 = yes / the big move, tom 2 × 2 = listen, floor × 2 = slower,
 tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 
+**The frame (D10)**
+- [ ] The sidebar has four sections: Journey · Practice · You · Setup. Songs opens from Practice; the coach's week plan
+      is on You.
+- [ ] Journey shows the sidebar expanded, the other sections fold it to an icon rail. **«** (or the `\` key on a
+      keyboard) folds it, **»** opens it; quit and reopen the app: your choice stayed.
+- [ ] One kit dot at the bottom: green "e-Drum · ready" with the kit, orange "not plugged in" without; a tap opens Setup.
+- [ ] Tap the coach's speech bubble on any screen (Journey, Practice, a lesson): the chat slides in on the right; ✕,
+      Esc or a tap outside closes it. Players, the first run and full-screen tools show no sidebar.
+
 **Journey**
-- [ ] Coach line, Up next with the groove preview, four moves with gesture pills, You (rank, streak, landed, minutes),
-      Today's set with the minute bar, Stage song, the trail. Everything fits without scrolling.
+- [ ] (D10) Coach line with ⋯; Up next with the groove preview and three moves with gesture pills (a 4th, Beat your
+      best or the 2-minute challenge, only after today's set); Today's set as chips with minutes and 🔥 streak; the
+      stage as dots with its line and Full path. Nothing else; fits without scrolling.
 - [ ] **Start** by hi-hat pedal × 3 opens today's item; ride × 2 = Something else; tom 2 × 2 = Hear it.
-- [ ] Skill map and Full path open Progress on those views.
-- [ ] **Find my level:** a rung with its sheet; **Play it** (hi-hat pedal × 3) → a take; a clean one moves up a rung,
+- [ ] With the voice on, a visit says the notice (recap, kit check, sore question, badge) and then "Up next: …" once.
+- [ ] **⋯** holds Just jam, Flow, the stage song (hear / play), Learn a new song, Ask the coach, This week's focus (a
+- [ ] Skill map (⋯) and Full path open **You** on those views (old /progress links land there too).
+- [ ] **Find my level** (⋯ → the shared player: the bar, the rung as the coach line, the sheet): **Play it** (hi-hat pedal × 3) → a take; a clean one moves up a rung,
       a rough one ends the test with "Start there"; **Start at this stage** goes back to Journey on that stage.
 - [ ] **More ways to play → 🌊 Flow:** the player opens on your newest finished groove (the jam lesson if none), the
       big move is **Flow ▶**; the groove loops, the click fades out, nothing passes or fails; crash × 4 stops.
 - [ ] **More ways to play → 🥢 Stick technique:** every movement (grip, full stroke … kick); ✓ Right / ✗ Wrong,
       1× ½× ¼×, the tempo 40–100; "Talk me through it" speaks (not during a take); ← Journey (or Esc) goes back.
 
-**Lesson player** (open a groove with a tempo ladder, e.g. Stage 1–3)
-- [ ] Full screen, **no grey header bar above the black bar** **(M1)**; Sheet is the default, Highway switches (left to right).
-- [ ] Before: coach line, moves (Play / Hear it / Slower / Skip) with gestures, the goal with tick boxes, the kit view
-      lights on each hit. Hints (H) and Band (B) toggle.
-- [ ] Count-in: one bar with the big number on the beat; then the take: cursor on the sheet, notes turn green /
-      orange (+ms sticker) / red dashed MISS / red ✕ extra; one live tip at a time; **crash × 4 stops**.
-- [ ] Results: verdict line, the whole take on the notes, timing line ("on average N ms late"), take card (count, stars,
-      best run, extras), one thing to fix with **Fix bar N**, Ask the coach.
+**Lesson player** (open a groove with a tempo ladder, e.g. Stage 1–3) — the shared player (D10, R2)
+- [ ] Full screen, **no sidebar and no grey header bar** **(M1)**. The slim black bar: ‹, the title + "Step 3 of 4",
+      **□□ 2 clean → 75**, the BPM, ⋯. Sheet is the default; ⋯ → Sheet / Highway switches (left to right).
+- [ ] Before: the coach line (spoken), the music across the full width, one row of moves (Play / Hear it / Slower /
+      Next) with gestures. With the kit plugged in there's **no kit drawing** (⋯ → Show the kit drawing brings it back);
+      without it the touch pads sit under the music. Hints (H) and Band (B) toggle (also in ⋯).
+- [ ] Count-in: the big number on the beat over the music; then the take: **no bar** — only "Bar 1 / 4", one live
+      tip, the BPM, the music (cursor; green / orange +ms / red dashed MISS / red ✕), the ■ Stop corner. **crash × 4**,
+      **Esc** or ■ Stop stop it. Not playing, **Esc** or ‹ leaves the lesson.
+- [ ] Results: the verdict line (spoken), the take on the notes (up to 4 bars a page), the score card (**46/48**, stars,
+      one fix line with **🔁 Fix bar N**, **Ask the coach ›**), "→ 75 next" in the bar when the tempo went up. ⋯ holds
+      the legend, timing line, Keep fill N, Share take, Hear it right, the lesson's why, How it moves, Reset, the keys.
 - [ ] Two clean takes → the tempo goes up 5 (ladder), Journey's set ticks the item done.
-- [ ] **Hear your take**, **Share take** (share sheet with `<title> <UTC stamp>.mid`, e.g. `Rock beat 2026-10-31-14-05.mid`,
+- [ ] **Hear your take**, ⋯ → **Share take** (share sheet with `<title> <UTC stamp>.mid`, e.g. `Rock beat 2026-10-31-14-05.mid`,
       the web's name; AirDrop it to the Mac and open it).
 - [ ] **Interrupted take (D6):** start a take, press Home after ≥ 2 bars → back: kept and flagged, not on the ladder.
       Again after 1 bar: dropped with a short notice.
@@ -151,10 +172,14 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
       Enter on the celebration is its main button.
 
 **Practice**
-- [ ] Pick up where you left off, the warm-up card (tom 1 × 2 starts it), For you cards with the yellow ring (ride × 2
-      moves it, hi-hat pedal × 3 plays it), the library by kind, search.
-- [ ] Play screen: − / + tempo with best clean, loop bars, times round, Climb (2 clean takes → +5), How it plays chips,
-      your takes here; a take saves (it shows in Progress).
+- [ ] (D10) For you: 4 big cards, the 🔥 warm-up first, then "left off here", your level, the coach's pick; the yellow
+      ring (ride × 2 moves it, hi-hat pedal × 3 plays it, tom 2 × 2 hears it, tom 1 × 2 starts the warm-up). Under
+      the 3 moves, 4 kind tiles (Grooves, Rudiments, Fills, **Songs**): a tile opens its shelf below (tap it again to
+      close). 🔎 searches every exercise; 🔔 Metronome stays in the bar.
+- [ ] Play screen (D10, the shared player): the bar has ‹, the title, the **Climb** chip and − BPM +; ⋯ holds loop bars,
+      times round, Climb (2 clean takes → +5), How it plays, kit sounds, song sync, your takes here and the Metronome.
+      The moves are Again / Hear / Slower / Faster / Next (ride × 2). It says the exercise when it opens and the score
+      after every take. A take saves (it shows on You); the score card has Details and history.
 - [ ] Unplug the kit: touch pads on the play screen **(M2)**. Home mid-take: the take stops **(M3)**.
 - [ ] An exercise's first take shows the intro slides (not for the warm-up, Hear it or wait mode); hi-hat × 1 turns them.
 - [ ] After a take: **📊 Details and history** shows accuracy, timing and dynamics;
@@ -162,45 +187,54 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Metronome (🔔): change the tempo and its options; steady clicks in the module's headphones. Play a tom fill
       while it runs: the tempo must not change **(QA2 M3)**.
 
-**Progress**
-- [ ] Getting better (landed per day), This week, skill map, trophies, Your time, Your lessons in plain words, with
-      today's takes in them. "Practise" on a lesson row opens it; on an exercise opens Practice at best + 5;
-      on a song row opens the song **(M4)**. This month's report (needs the server).
+**You** (was Progress, D10)
+- [ ] Getting better (landed per day, the coach's line) and This week (days, streak, minutes, the focus; "(coach's
+      plan)" when the week plan set it). Six doors, each opening its page with **‹ You** back: Path & skills (Your
+      path / Skill map), Trophies, Your lessons, Coach's week plan, Show-off & fills, Reports (month, teacher).
+- [ ] Your lessons: today's takes in plain words. "Practise" on a lesson row opens it; on an exercise opens Practice
+      at best + 5; on a song row opens the song **(M4)**. Reports → This month's report (needs the server).
 - [ ] Trophies: "Show-off song" counts the bars of a song you played at 85 % or better (____ / 16 bars) **(QA2 m2)**.
       Optional: a song checked by ear with 16+ bars all ready lands in the **Show-off set** with **▶ Play it**.
-- [ ] **Show-off set:** empty, it says how a song gets there; with two or more ready songs, **🎤 Concert: the whole
-      set** opens the first song of the set.
+- [ ] **Show-off & fills:** empty, it says how a song gets there; with two or more ready songs, **🎤 Concert: the
+      whole set** opens the first song of the set.
 
-**Songs** (home server on)
+**Songs** (home server on; a shelf in Practice: the **Songs** tile, D10)
+- [ ] Practice → Songs tile: search / paste a link, My songs, Import files. The song screen has no "Song audio
+      (experimental)" card and Learn has no "Suggest notes" row on the iPad (D10).
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
       inline (the dev build uses the DOM player). On a refused video: the web's wording and **Open in YouTube**.
       Release builds use the native player; section 10 checks it ([YOUTUBE-RELEASE.md](YOUTUBE-RELEASE.md)).
-- [ ] Set tempo (tap along), Learn by ear, Jam, Play, Sheet music modes; speed 75 % / 50 %; versions (drumless, cover).
+- [ ] Set tempo (tap along), Learn by ear, Jam, Play, Sheet music modes; speed 75 % / 50 %. (D10) The song is on the shared
+      player: ‹ / Esc leave, **⋯** holds Versions (drumless, cover); Jam and Play show the video on top and the music under it;
+      the encore's Share take is behind its ⋯.
 - [ ] Server off (stop `npm run server`): search says it can't reach the home server; pasting a YouTube link still adds the song.
 - [ ] Import files: a drum `.mid` (AirDrop one from the Mac) → Save to library (it shows in Practice's library); with
       an MP3 backing: it plays in the take.
 
-**Coach**
+**Coach** (the chat from any coach bubble; the week plan on You, or /coach)
 - [ ] Ask "what should I work on?" → "Your coach is thinking…" → an answer; a drill card → **Play this drill** opens it
       in the player; the week plan's items open their lesson/drill/song.
 - [ ] Results → Ask the coach → feedback and a drill for that take.
 - [ ] Server off: the offline card (what failed, Try again, Coach settings, what keeps working); the question waits.
-- [ ] Voice: live tips "voice" in Setup → tips are spoken between takes, never during one.
+- [ ] Voice: live tips "+ spoken" in Setup → Coach's voice → tips are spoken between takes, never during one.
 
-**Setup**
-- [ ] Kit row (name, Medeli, connected), last hit live, MIDI input picker. Kit test says "No kit? Keys: Space kick ·
+**Setup** (D10: three status cards and six rows)
+- [ ] Kit card (name, green dot, "last hit: snare 38 · v96" live). Kit test says "No kit? Keys: Space kick ·
       S snare …" **(QA2 m3)**, and those keys play the kit on a hardware keyboard.
-- [ ] Hit each pad once (10 of 10), Soft then loud (velocity calibration ✓ done), **Note map**: change the snare to
-      another note and back; hits follow the map at once (Kit test shows it).
-- [ ] Latency: the current route's value and the other routes measured (unplug the hub audio: it switches to the
-      speaker's value, plug back: the hub's value).
-- [ ] Sound levels, which hand leads, live tips, kit gestures off → gestures do nothing anywhere; on again.
+- [ ] Pads → Hit each pad once (10 of 10), Soft then loud (velocity calibration ✓ done), **Note map**: change the
+      snare to another note and back; hits follow the map at once (Kit test shows it); MIDI input picker. Close in a
+      tool goes back to Pads.
+- [ ] Latency card: the current route's value and the other routes measured (unplug the hub audio: it switches to the
+      speaker's value, plug back: the hub's value). Coach card: Home server and its host, or the one fix.
+- [ ] Sound; Coach's voice (verdicts, count-in, live tips, how much the coach says, test); While you play (which hand
+      leads, autopilot, kit gestures off → gestures do nothing anywhere; on again); Coach connection; About (Build info
+      and, in the debug build, the debug screens).
 - [ ] Hardware keyboard in the tools: Hit each pad once ← goes back a pad, Esc stops; Sound levels → Check from the
       kit answers with keys 1 / 2 / 3; Esc closes any tool.
 
 ## 8. Offline — 5 min
 Wi-Fi off (Control Center).
-- [ ] Journey, a lesson take, Practice, Progress, Setup all work; the coach pill goes grey; Coach and Songs search
+- [ ] Journey, a lesson take, Practice, You, Setup all work; Setup's coach status goes grey; Coach and Songs search
       show their offline states; nothing hangs.
 
 ## 9. Timing comparison with the web (Linux, Chrome, same day, same kit) — 15 min

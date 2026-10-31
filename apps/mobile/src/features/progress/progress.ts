@@ -79,7 +79,13 @@ export function progressModel(input: ProgressInput) {
     minutes: weekMin, goalMinutes: goal * 7, goal,
     fraction: Math.min(1, weekMin / Math.max(1, goal * 7)),
     focus: (plan?.week === isoWeek(now) ? plan.focus : undefined) ?? weekTheme(runs, now)?.words,
+    /** The focus is the coach's plan for this week (else the app's own week theme). */
+    focusFromPlan: !!(plan?.week === isoWeek(now) && plan.focus),
     rank: `${passed.length ? passed[passed.length - 1].rank : 'New drummer'}${milestone ? ` · Stage ${path.indexOf(milestone) + 1} · ${milestone.title}` : ''}`,
+    /** You's chip: "Limb Wrangler · Stage 3". */
+    rankShort: `${passed.length ? passed[passed.length - 1].rank : 'New drummer'}${milestone ? ` · Stage ${path.indexOf(milestone) + 1}` : ''}`,
+    /** Path & skills door: "Stage 3 of 9". */
+    stage: { n: milestone ? path.indexOf(milestone) + 1 : path.length, of: path.length },
   };
 
   // Skill map

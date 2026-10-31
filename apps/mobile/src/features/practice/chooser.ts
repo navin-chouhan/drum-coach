@@ -8,7 +8,7 @@ import { currentMilestone, studentRead } from '@drum-coach/core/engine/planner';
 import { forYou, type RunRow } from '@drum-coach/core/engine/progress';
 import type { PadCommand } from '@drum-coach/core/engine/padCommands';
 import { weekdayOf } from '../progress/dates';
-import { chartRow, segments, type ChartRow, type PracticeChart, type Read } from './catalog';
+import { chartRow, segments, tabCount, type ChartRow, type PracticeChart, type Read, type TabId } from './catalog';
 
 export type ChooserInput = {
   charts: PracticeChart[];
@@ -87,3 +87,44 @@ export const CHOOSER_GESTURES: Partial<Record<PadCommand, ChooserAction>> = { ye
 /** About a minute of one warm-up exercise at its tempo: how many times round (the web's warmTake). */
 export const warmRepeats = (c: Pick<PracticeChart, 'timeSignature' | 'bars'>, bpm: number) =>
   Math.max(1, Math.round(60 / ((beatsPerBar(c) * 60) / bpm) / c.bars));
+
+// ---------- The reorganised Practice (D10, docs/mobile/reorg/practice-after.png) ----------
+
+/** One of the 4 big For you cards: the warm-up first, then where you left off, then the picks (the coach's tagged). */
+export type ForYouCard = {
+  key: string; tag: string; icon: string; title: string; line: string;
+  /** The exercise it plays, or undefined for the warm-up. */
+  row?: ChartRow; ai?: boolean;
+};
+
+export function forYouCards(m: Pick<ChooserModel, 'warm' | 'resume' | 'cards'>): ForYouCard[] {
+  const chart = (r: ChartRow, tag: string): ForYouCard => ({
+    key: r.id, tag: r.ai ? '✍ by your coach' : tag, icon: r.icon, title: r.title, row: r, ai: r.ai,
+    line: `starts at ${r.startsAt}${r.best ? ` · best ${r.best}` : ` · ${r.bars} bar${r.bars === 1 ? '' : 's'}`}`,
+  });
+  const out: ForYouCard[] = [];
+  if (m.warm) out.push({ key: 'warm', tag: `warm-up · ${m.warm.items.length} min`, icon: '🔥', title: 'Warm-up', line: m.warm.items.map(w => w.title).join(' · ') });
+  if (m.resume) out.push(chart(m.resume, 'left off here'));
+  for (const c of m.cards) out.push(chart(c, c.why || 'for you'));
+  return out.slice(0, 4);
+}
+
+/** Ride × 2 / Next card: round the 4 cards. */
+export const nextCard = (i: number, n: number) => (n ? (i + 1) % n : 0);
+/** The big move: "Play Warm-up", "Play Basic rock beat". */
+export const playCardLabel = (c: ForYouCard | undefined) => (c ? `Play ${c.title}` : 'Play');
+/** The coach's line in the bar. */
+export const practiceLine = (cards: ForYouCard[]) =>
+  cards[0]?.key === 'warm' ? 'Warm up first? Ride × 2 moves the ring.' : cards.length ? 'Pick one. Ride × 2 moves the ring.' : 'Pick a kind below to see every exercise.';
+
+/** The 4 kind tiles (Songs is a shelf here, D10): exercises per kind; Songs counts your songs and adds YouTube. */
+export type KindTile = { id: 'groove' | 'rudiment' | 'fill' | 'song'; label: string; icon: string; count: string };
+export function kindTiles(charts: PracticeChart[], ytSongs: number): KindTile[] {
+  const n = (id: TabId) => tabCount(charts, id);
+  return [
+    { id: 'groove', label: 'Grooves', icon: '🥁', count: String(n('groove')) },
+    { id: 'rudiment', label: 'Rudiments', icon: '🥢', count: String(n('rudiment')) },
+    { id: 'fill', label: 'Fills', icon: '💥', count: String(n('fill')) },
+    { id: 'song', label: 'Songs', icon: '🎵', count: `${n('song') + ytSongs} + YouTube` },
+  ];
+}
