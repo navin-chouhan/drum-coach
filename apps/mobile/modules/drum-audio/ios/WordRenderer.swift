@@ -38,13 +38,17 @@ final class WordRenderer {
         c.lock.lock()
         defer { c.lock.unlock() }
         if c.finished { return }
-        if pcm.frameLength == 0 {
+        switch WordChunks.action(frameLength: Int(pcm.frameLength), haveAudio: !c.chunks.isEmpty) {
+        case .skip:
+          return // an empty buffer before any audio (some iOS versions send one first): not the end
+        case .end:
           c.finished = true
           done.signal()
           return
+        case .append:
+          if let copy = Self.copy(pcm) { c.chunks.append(copy) }
+          c.lastAt = Date()
         }
-        if let copy = Self.copy(pcm) { c.chunks.append(copy) }
-        c.lastAt = Date()
       }
     }
     let deadline = Date().addingTimeInterval(timeout)

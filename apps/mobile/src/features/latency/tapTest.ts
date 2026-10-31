@@ -35,6 +35,12 @@ export function planTapTest(now: number, route: Pick<AudioRoute, 'minLeadMs'> | 
   return { events, clicks, zero, endsAt: zero + (COUNT_IN + CLICKS - 1) * BEAT_MS + TAIL_MS };
 }
 
+/** The count-in words the engine is missing, at their clicks (said live instead: play/spokenFallback.ts). */
+export function countInWords(plan: TapTestPlan, missing: readonly string[]): { word: string; at: number }[] {
+  const gone = new Set(missing);
+  return COUNT_WORDS.flatMap((word, i) => (gone.has(word) ? [{ word, at: plan.zero + i * BEAT_MS }] : []));
+}
+
 export type TapTest = { plan: TapTestPlan; taps: number[] };
 export const startTapTest = (plan: TapTestPlan): TapTest => ({ plan, taps: [] });
 
