@@ -6,12 +6,15 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import type { Finished } from '@drum-coach/core/play/take';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NotationView } from '../../notation';
+import { TouchPads } from '../../play';
+import type { DrumId } from '../../play/chartLike';
+import { audio } from '../../platform/audio';
 import { getMidiPort } from '../../platform/midi';
 import type { RunsRepo } from '../../data/runs';
 import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Pill, Screen, Toggle,
-  color, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppSettings, useKitMoves, writeSettings,
+  color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppSettings, useKitMoves, writeSettings,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
@@ -19,6 +22,7 @@ import { getCoach, replyFor, setCoachPlaying, thinkingAbout, useCoachSession, ty
 import { SheetPager } from '../lesson/parts';
 import { replayResults, runChart, takenChart } from '../lesson/runChart';
 import { useSheetPages } from '../lesson/sheetPages';
+import { useKitConnected } from '../lesson/useLesson';
 import { kindIcon, startOf, type PracticeChart } from './catalog';
 import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
@@ -85,6 +89,9 @@ export function PlayScreen() {
   const done = useMemo(() => (scored && !scored.options.wait && scored.results.length ? { chart: takenChart(scored), results: replayResults(scored) } : undefined), [scored]);
   const pager = useSheetPages(done);
   const myPads = [...new Set(chart.notes.filter(n => !n.auto).map(n => n.drum))];
+  // No kit connected: touch pads under the sheet, as the lesson player swaps them in (QA M2).
+  const kit = useKitConnected();
+  const activeDrums = useMemo(() => [...new Set(myPads.map(d => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId))], [myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Once a take is saved: the runs again (history, best), and Climb: 2 clean takes here move the tempo up 5.
   const latest = useRef({ chart, o, warm });
@@ -240,6 +247,12 @@ export function PlayScreen() {
           {done && !live ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} tone="light" testID="practice-sheet-pages" /> : null}
           {done && !live ? <Body size={13} weight="800">● on it  ● early / late  ◌ missed  ✕ extra</Body> : null}
           {hints ? <Body size={13} color={color.muted}>R right hand · L left hand · K kick · H hi-hat foot</Body> : null}
+          {!kit ? (
+            <View style={styles.pads}>
+              <TouchPads emitPad={(pad, vel, time) => getAppHitBus().emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
+                now={getMidiPort().clock.now} activeDrums={activeDrums} results={live ? practiceEngine.results : undefined} style={styles.grow1} testID="practice-touch-pads" />
+            </View>
+          ) : null}
           <View style={styles.goal}>
             <Body size={13} weight="800">{`Your drums: ${myPads.join(', ')}`}</Body>
             <View style={styles.climb}>
@@ -320,7 +333,9 @@ const styles = StyleSheet.create({
   barChip: { minWidth: 34, height: 34, paddingHorizontal: 8, borderRadius: 17, borderWidth: stroke.thin, borderColor: color.ink, backgroundColor: color.panel, alignItems: 'center', justifyContent: 'center' },
   barChipOn: { backgroundColor: color.pop },
   barChipText: { fontSize: 15, fontWeight: '800', color: color.ink },
-  sheet: { flex: 1, minHeight: 120, backgroundColor: '#FFFDF6', borderWidth: stroke.thin, borderColor: color.ink },
+  pads: { height: 150 },
+  grow1: { flex: 1 },
+  sheet: { flex: 1, minHeight: 100, backgroundColor: '#FFFDF6', borderWidth: stroke.thin, borderColor: color.ink },
   goal: { flexDirection: 'row', alignItems: 'center', gap: 16, justifyContent: 'space-between' },
   climb: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   grow: { flexShrink: 1 },
