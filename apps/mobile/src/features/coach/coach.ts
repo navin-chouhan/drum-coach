@@ -14,6 +14,8 @@ import { getHomeServer } from '../../platform/api';
 import { getStorage } from '../../platform/storage';
 import { readSettings } from '../../ui';
 import { lessonHref } from '../lesson/route';
+import { hasApiKey } from '../setup/coachServer';
+import { keychain } from '../setup/useSetup';
 import { createCoachAsks, type Entry } from './asks';
 import { createCoachCharts, targetExists } from './charts';
 import { createContextFor } from './context';
@@ -54,9 +56,11 @@ function build() {
   const contextFor = createContextFor(storage);
   const voiceOn = () => { const s = settings(); setVoiceVolume(s.voiceVolume); return s.voice; };
 
-  const asks = createCoachAsks({ server, context: contextFor });
+  // Setup → Coach · fallback API key, read from the Keychain (async) when a call fails, so it's never stale.
+  const hasFallbackKey = () => hasApiKey(keychain);
+  const asks = createCoachAsks({ server, context: contextFor, hasFallbackKey });
   const session = createCoachSession({
-    server, context: () => contextFor('session'), settings, isPlaying: () => playing, playing: () => nowPlaying,
+    server, context: () => contextFor('session'), settings, hasFallbackKey, isPlaying: () => playing, playing: () => nowPlaying,
     sayNext: text => { if (voiceOn()) sayNext(text); },
     saveChart: chart => charts.save(chart), exists,
     nav: { openLesson: id => router.push(lessonHref(id) as never), openDrill: t => router.push(drillRoute(t) as never) },

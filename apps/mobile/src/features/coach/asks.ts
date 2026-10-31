@@ -7,7 +7,7 @@
 // never answers from its own database instead.
 import type { ApiFailure, HomeServer } from '../../platform/contracts';
 import type { CoachContext, CoachRoute } from '../../data/coachContext';
-import { coachProblem, type CoachProblem } from './problem';
+import { coachProblem, readFallbackKey, type CoachProblem, type FallbackKeyRead } from './problem';
 
 export type Entry<T> = {
   status: 'thinking' | 'done' | 'error';
@@ -33,8 +33,8 @@ export type CoachAsksDeps = {
   server: CoachServer;
   /** The context for one route (src/data/coachContext.ts through Storage). May reject: an empty one is sent then. */
   context(route: CoachRoute): Promise<CoachContext>;
-  /** Whether an Anthropic key is in the Keychain (only for the "no fallback" line). */
-  hasFallbackKey?: () => boolean;
+  /** Whether an Anthropic key is in the Keychain (only for the "no fallback" line); read when a call fails. */
+  hasFallbackKey?: FallbackKeyRead;
 };
 
 export type CoachAsks = ReturnType<typeof createCoachAsks>;
@@ -45,7 +45,7 @@ export function createCoachAsks(deps: CoachAsksDeps) {
   let version = 0;
   const notify = () => { version++; listeners.forEach(l => l()); };
 
-  const problemOf = (f: ApiFailure) => coachProblem(f, { url: deps.server.configured()?.url, hasFallbackKey: deps.hasFallbackKey?.() });
+  const problemOf = async (f: ApiFailure) => coachProblem(f, { url: deps.server.configured()?.url, hasFallbackKey: await readFallbackKey(deps.hasFallbackKey) });
 
   /**
    * Asks once per key; `again` asks anew even after an answer (not while one is on its way). Resolves when the entry
@@ -66,7 +66,7 @@ export function createCoachAsks(deps: CoachAsksDeps) {
       }
       const r = await deps.server.call<{ data?: T; note?: string; cached?: boolean } | null>('POST', `/api/coach/${path}`, payload);
       if (!r.ok) {
-        const problem = problemOf(r);
+        const problem = await problemOf(r);
         entries.set(key, { status: 'error', error: problem.lines[0] ?? problem.title, problem });
         return;
       }

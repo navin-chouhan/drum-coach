@@ -1,6 +1,6 @@
 // "Find your level" (/lesson/placement): the web's PlacementView (src/ui/SkillMapView.tsx), which the first run opens
 // for someone who has played before (drumcoach.firstRun.placement = '1', as the web's Onboarding → kit steps →
-// placement). One take of each stage's first challenge at its target tempo; the first one that doesn't pass is where
+// placement), or Journey's "Find my level" any time later. One take of each stage's first challenge at its target tempo; the first one that doesn't pass is where
 // you start. The rules are placement.ts; the take runs on the lesson player's TakePort (core take engine).
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
 import { router } from 'expo-router';
@@ -52,7 +52,8 @@ export function PlacementScreen() {
   useEffect(() => { const t = setInterval(() => take.tick(), 50); return () => { clearInterval(t); take.stop(); }; }, [take]);
   const playing = take.state.phase === 'playing';
 
-  const leave = () => { take.stop(); storage.kv.remove(PLACEMENT_KEY); router.replace('/' as never); };
+  // The web's onDone: back to Journey with today's set planned again (rebuildToday), whichever way you leave.
+  const leave = () => { take.stop(); settings.set({ session: undefined }); storage.kv.remove(PLACEMENT_KEY); router.replace('/' as never); };
   const finish = (level: number) => {
     take.stop();
     const r = placeAt(level, MILESTONES, settings.get().lessons, byId, todayKey());

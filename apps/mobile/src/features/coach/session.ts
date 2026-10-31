@@ -11,7 +11,7 @@ import type { Chart } from '@drum-coach/core/engine/chart';
 import type { TakeResult } from './summary';
 import type { CoachContext } from '../../data/coachContext';
 import type { HomeServer } from '../../platform/contracts';
-import { coachError, coachProblem, type CoachProblem } from './problem';
+import { coachError, coachProblem, readFallbackKey, type CoachProblem, type FallbackKeyRead } from './problem';
 import { summarizeTake, type RunSummary, type TakeExtras } from './summary';
 
 /** A take as the session tells it: the core take result (compared by identity, as the web compares `Finished`). */
@@ -104,7 +104,8 @@ export type SessionDeps = {
   saveChart(chart: Chart): { id: string };
   exists(chartId: string): boolean;
   nav: { openLesson(id: string): void; openDrill(t: { chartId: string; bpm?: number }): void };
-  hasFallbackKey?(): boolean;
+  /** Whether an Anthropic key is in the Keychain (the "no fallback" line); read when a call fails. */
+  hasFallbackKey?: FallbackKeyRead;
   now?(): number;
   /** Runs `fn` after the current task (queueMicrotask). */
   later?(fn: () => void): void;
@@ -195,7 +196,11 @@ export function createCoachSession(deps: SessionDeps) {
       }
       set({ status: 'idle', streaming: undefined, error: problem.lines[0] ?? problem.title, problem, at: now(), thread, ...(queue && { queued: event.text as string }) });
     };
-    if (!r.ok) return failedTo(coachProblem(r, { url: deps.server.configured()?.url, hasFallbackKey: deps.hasFallbackKey?.() }));
+    if (!r.ok) {
+      const hasKey = await readFallbackKey(deps.hasFallbackKey);
+      if (my !== seq) return; // a newer event took over while the Keychain was read
+      return failedTo(coachProblem(r, { url: deps.server.configured()?.url, hasFallbackKey: hasKey }));
+    }
     if (r.cancelled) { set({ status: 'idle', streaming: undefined }); return; }
     if (failed || !reply) return failedTo(coachError(failed ?? 'The coach didn’t answer.'));
     lastFailed = undefined;

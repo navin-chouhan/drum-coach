@@ -29,6 +29,15 @@ export function hostOf(url: string | undefined): string | undefined {
   try { return new URL(url).host || undefined; } catch { return undefined; }
 }
 
+/**
+ * Whether an Anthropic key is in the Keychain, read when a call fails (the Keychain read is async, so it's awaited
+ * then, never guessed at start-up; a read that throws counts as no key).
+ */
+export type FallbackKeyRead = () => boolean | Promise<boolean>;
+export async function readFallbackKey(read?: FallbackKeyRead): Promise<boolean> {
+  try { return !!(await read?.()); } catch { return false; }
+}
+
 /** The API-key fallback (D2) isn't built: the line says why there's no fallback either way. */
 const fallbackLine = (hasKey: boolean) => (hasKey
   ? "The API-key fallback isn't built yet, so there's no fallback."
