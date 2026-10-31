@@ -1,10 +1,10 @@
 // The first run (mockup first-run-1…4; web Onboarding + KitSetup): Welcome → Plug in → Your pads → Latency, full
 // screen under the black bar with the step pills. Welcome saves the profile (and queues the placement test for
 // players who have played before); the kit steps can be skipped (touch pads, Skip for now) and are nagged later in
-// Setup and the sidebar, as on the web. The coach server stays in Setup.
+// Setup and the sidebar, as on the web. The coach server stays in Setup. Each step's instruction is spoken (D10).
 import type { Genre } from '@drum-coach/core/engine/lesson';
 import { Stack, router } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getStorage } from '../../platform/storage';
@@ -12,12 +12,13 @@ import {
   BigMove, Body, Button, Card, Display, DottedGround, Mascot, Segmented, color, font, gesturesFor, hardShadow, readSettings, slopFor, stroke, useAppSettings,
   useKitMoves, writeSettings,
 } from '../../ui';
+import { sayNow } from '../coach/voice';
 import { LatencyPanel } from '../latency/LatencyPanel';
 import { PadWizardView } from '../pads/PadWizardView';
 import { firstHitLine, kitStatus } from '../setup/kit';
 import { useKitConnection, useKitData, useLastHit, useLatencyRouteSync } from '../setup/useSetup';
 import {
-  GOALS, KIT_STEP_TEXT, MINUTES, RECOMMENDED_MINUTES, WELCOME, finishKitSteps, nextStep, notSureYet, placementQueued, queuePlacement, saveWelcome, stepPills, toggleGoal,
+  GOALS, KIT_STEP_TEXT, MINUTES, STEP_SPOKEN, RECOMMENDED_MINUTES, WELCOME, finishKitSteps, nextStep, notSureYet, placementQueued, queuePlacement, saveWelcome, stepPills, toggleGoal,
   welcomeForm, type FirstRunStep, type WelcomeForm,
 } from './firstRun';
 
@@ -41,6 +42,8 @@ export function FirstRunScreen() {
     queuePlacement(kv(), form.playedBefore);
     setStep('plug');
   };
+  // D10 voice first: each step says its instruction once when it opens (the coach's voice setting decides).
+  useEffect(() => { if (readSettings(kv()).voice) sayNow(STEP_SPOKEN[step]); }, [step]);
   // Hands-free on the two steps without pad answers: the "yes" gesture is Continue.
   useKitMoves({ yes: () => (step === 'welcome' ? continueWelcome() : go('plug')) }, { enabled: step === 'welcome' || step === 'plug' });
 
