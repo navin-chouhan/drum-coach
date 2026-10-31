@@ -14,7 +14,7 @@ export function CoachScreen() {
   return (
     <Screen testID="screen-coach">
       <TitleBar title="Coach" coach={line}
-        right={<Button size="small" emoji="⚙️" label="Coach settings" testID="coach-open-settings" onPress={() => router.navigate('/setup' as never)} />} />
+        right={<Button size="small" emoji="⚙️" label="Coach settings" testID="coach-open-settings" onPress={() => router.navigate('/setup')} />} />
       <View style={styles.row}>
         <View style={styles.left}><PlanCard /></View>
         <CoachPanel style={styles.panel} testID="coach-panel" />

@@ -55,7 +55,7 @@ export function detailsView(f: DetailsTake, emptyHeat = '#E9E4D6'): DetailsView 
       small: `Average velocity · variation ${v.normalCv}%${v.accentMean !== null ? ` · accents ${v.accentMean}` : ''}${v.ghostMean !== null ? ` · ghosts ${v.ghostMean}` : ''}`,
     },
     perDrum: wait ? [] : Object.entries(s.perDrum).map(([d, x]) => ({
-      drum: d, lane: laneOf(d), accuracy: x!.accuracy,
+      drum: d, lane: laneOf(d), accuracy: x.accuracy,
       name: d === 'hhOpen' ? 'Hi-hat open' : d === 'hhPedal' ? 'Hi-hat foot' : DRUM_NAME[laneOf(d)],
     })),
     heat: wait ? [] : s.heat.map((c, i) => {

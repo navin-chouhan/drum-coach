@@ -54,8 +54,8 @@ function PathActions() {
   return (
     <View style={styles.actions}>
       <Button size="small" tone="plain" label={REBUILD_LABEL} onPress={rebuild} testID="path-rebuild" />
-      <Button size="small" tone="plain" label={FIND_LEVEL_LABEL} onPress={() => router.push('/lesson/placement' as never)} testID="path-find-level" />
-      <Button size="small" tone="plain" label={goalsLabel(s.profile)} onPress={() => router.push('/setup?tool=connection' as never)} testID="path-goals" />
+      <Button size="small" tone="plain" label={FIND_LEVEL_LABEL} onPress={() => router.push('/lesson/placement')} testID="path-find-level" />
+      <Button size="small" tone="plain" label={goalsLabel(s.profile)} onPress={() => router.push('/setup?tool=connection')} testID="path-goals" />
       <Button size="small" tone="red" label={RESET_LABEL} onPress={reset} testID="path-reset" />
     </View>
   );
@@ -63,7 +63,7 @@ function PathActions() {
 
 function LessonChip({ c }: { c: PathChip }) {
   return (
-    <Pressable onPress={() => router.push(lessonHref(c.id) as never)} hitSlop={slopFor(34)} accessibilityRole="button" accessibilityLabel={`${c.title}: ${c.detail}`}
+    <Pressable onPress={() => router.push(lessonHref(c.id))} hitSlop={slopFor(34)} accessibilityRole="button" accessibilityLabel={`${c.title}: ${c.detail}`}
       style={[styles.chip, c.state === 'done' && styles.done, c.state === 'started' && styles.started, c.checkpoint && styles.checkpoint, c.ai && styles.ai]}>
       <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.chipText}>
         {c.title}{c.stars ? <Text style={styles.stars}>{` ${'★'.repeat(c.stars)}${'☆'.repeat(3 - c.stars)}`}</Text> : null}

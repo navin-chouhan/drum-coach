@@ -2,7 +2,6 @@
 // screen under the black bar with the step pills. Welcome saves the profile (and queues the placement test for
 // players who have played before); the kit steps can be skipped (touch pads, Skip for now) and are nagged later in
 // Setup and the sidebar, as on the web. The coach server stays in Setup. Each step's instruction is spoken (D10).
-import type { Genre } from '@drum-coach/core/engine/lesson';
 import { Stack, router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -34,7 +33,7 @@ export function FirstRunScreen() {
   const finish = (done: boolean) => {
     writeSettings(kv(), finishKitSteps(readSettings(kv()), done));
     // Played before: the placement test comes next, as the web's Onboarding → kit steps → PlacementView.
-    router.replace((placementQueued(kv()) ? '/lesson/placement' : '/') as never);
+    router.replace((placementQueued(kv()) ? '/lesson/placement' : '/'));
   };
   const go = (from: FirstRunStep) => { const n = nextStep(from); if (n === 'finish') finish(true); else setStep(n); };
   const continueWelcome = () => {
@@ -115,7 +114,7 @@ function Welcome({ form, setForm, onContinue }: { form: WelcomeForm; setForm: (f
             <Display size={20}>🎸 {WELCOME.goalsQ}</Display>
             <Body size={14}>{WELCOME.goalsSub}</Body>
             <View style={styles.chips}>
-              {GOALS.map(g => chip(g.label, form.goals.includes(g.id), () => setForm(toggleGoal(form, g.id as Genre)), `firstrun-goal-${g.id}`))}
+              {GOALS.map(g => chip(g.label, form.goals.includes(g.id), () => setForm(toggleGoal(form, g.id)), `firstrun-goal-${g.id}`))}
               {chip('Not sure yet', !form.goals.length, () => setForm(notSureYet(form)), 'firstrun-goal-none')}
             </View>
           </View>

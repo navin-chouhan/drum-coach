@@ -49,7 +49,7 @@ const num = (v: unknown) => (typeof v === 'number' ? v : undefined);
 const obj = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
 
 export function runRowOf(r: ContextRun): RunRow {
-  const s = (r.summary ?? {}) as Record<string, unknown>, section = obj(s.section), lesson = obj(s.lesson);
+  const s = (r.summary ?? {}), section = obj(s.section), lesson = obj(s.lesson);
   return {
     hasTake: false, chartId: r.chartId, chartTitle: r.chartTitle, level: r.level, startedAt: r.startedAt, durationS: r.durationS,
     bpm: r.bpm, speed: r.speed, accuracy: r.accuracy, meanOffset: r.meanOffset, spread: r.spread, notes: num(s.notes),
@@ -66,7 +66,7 @@ export function contextData(c: CoachContext): CoachData {
   const latest = (n: number) => (n > 0 ? runs.slice(-n) : []);
   return {
     runRows: (limit = 5000) => latest(limit).map(runRowOf),
-    settings: () => (c.settings ?? {}) as Settings,
+    settings: () => (c.settings ?? {}),
     plan: () => c.plan,
     teacherNotes: () => (c.teacherNotes ?? []).slice(-3),
     aiLessons: () => (c.aiLessons ?? []) as unknown as Lesson[],
@@ -74,7 +74,7 @@ export function contextData(c: CoachContext): CoachData {
     song: id => songs.find(s => s.id === id),
     savedCharts: () => (c.charts ?? []) as unknown as CatalogEntry[],
     recentForLesson: () => latest(15).map(r => {
-      const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = (r.summary ?? {}) as Record<string, unknown>;
+      const { weakSpots, perDrum, velocity, meanOffsetMs, spreadMs, lesson } = (r.summary ?? {});
       return { chart: r.chartTitle, at: r.startedAt.slice(0, 16), bpm: Math.round(r.bpm), accuracy: r.accuracy, summary: { meanOffsetMs, spreadMs, perDrum, velocity, weakSpots, lesson } };
     }),
     pastTakes: chartId => runs.filter(r => r.chartId === chartId).slice(-5)
@@ -155,7 +155,7 @@ export function uniqueTitle(title: string, focus: string, builtinTitles: string[
 export function toLesson(a: AiLesson, level: number, rand = Math.random().toString(36).slice(2, 7)): Lesson {
   const slug = a.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'lesson';
   const id = `ai-${slug}-${rand}`;
-  return { ...a, id, level, source: 'ai', steps: a.steps.map((s, i) => ({ ...s, chart: { ...s.chart, id: `lesson/${id}/${i + 1}`, title: `${a.title} · ${s.title}` } })) } as Lesson;
+  return { ...a, id, level, source: 'ai', steps: a.steps.map((s, i) => ({ ...s, chart: { ...s.chart, id: `lesson/${id}/${i + 1}`, title: `${a.title} · ${s.title}` } })) };
 }
 
 // ---------------- server/index.ts route bodies ----------------

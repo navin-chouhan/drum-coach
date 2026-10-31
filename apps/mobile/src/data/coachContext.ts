@@ -170,7 +170,7 @@ export function buildCoachContext(src: ContextSource, route: CoachRoute, maxByte
     charts: want.has('charts') ? objectsWith(src.charts, ['id', 'title'], 200) : [],
     aiLessons: want.has('aiLessons') ? objectsWith(src.aiLessons, ['id', 'steps'], Infinity).reverse().slice(0, 100) : [],
     teacherNotes: want.has('teacherNotes') && Array.isArray(src.teacherNotes)
-      ? src.teacherNotes.map(n => TeacherNoteSchema.safeParse(n)).filter(p => p.success).map(p => p.data!).slice(-TEACHER_NOTES).reverse() // newest first while trimming
+      ? src.teacherNotes.map(n => TeacherNoteSchema.safeParse(n)).filter(p => p.success).map(p => p.data).slice(-TEACHER_NOTES).reverse() // newest first while trimming
       : [],
   };
   if (want.has('runs') && lists.runs.length < Math.min(src.runs.length, 1000)) dropped.push(`runs: ${Math.min(src.runs.length, 1000) - lists.runs.length} invalid`);

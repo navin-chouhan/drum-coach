@@ -33,6 +33,10 @@ import { idleChart, replayResults, runChart, takenChart } from './runChart';
 import { shareTake } from './shareTake';
 import type { CoreTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
+import { useSameList } from '../../ui/useSameList';
+
+/** The Clock's now, one function for the screen's views (Clock.now is a method: called through its port). */
+const clockNow = () => getMidiPort().clock.now();
 
 const RESULTS_SCALE = 1.1;
 const GESTURE: Record<MoveView['gesture'], 'yes' | 'listen' | 'slower' | 'next'> = { yes: 'yes', tom2: 'listen', floor: 'slower', ride: 'next' };
@@ -80,10 +84,12 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const tip = v.playing ? liveTip(s, now) : '';
   const f = v.results ? v.take : undefined;
   const takeChart = v.playing ? runChart(s) : undefined;
-  const idle = useMemo(() => ({ chart: idleChart(v.chart), zero: clock.now() + 1e9 }), [v.chart]); // eslint-disable-line react-hooks/exhaustive-deps
+  const idle = useMemo(() => ({ chart: idleChart(v.chart), zero: clock.now() + 1e9 }), [v.chart]); // eslint-disable-line react-hooks/exhaustive-deps -- one standing sheet per chart (its zero must not move)
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- a finished take is never changed (core play/take.ts); the compiler only sees it passed to shareTake below
   const done = useMemo(() => (f ? { chart: takenChart(f), results: replayResults(f) } : undefined), [f]);
   const pager = useSheetPages(f); // a long take's results sheet: every page, one at a time
-  const activeDrums = useMemo(() => [...new Set(v.myPads.map(laneDrum))], [v.myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const myPads = useSameList(v.myPads);
+  const activeDrums = useMemo(() => [...new Set(myPads.map(laneDrum))], [myPads]);
 
   // The sheet's zoom fits the paper's height (player/sheetFit.ts). The results sheet uses the narrow zoom: two bars a
   // row and two rows, so a 4-bar take shows without paging (D10; with hints the auto zoom kept one bar a row).
@@ -91,7 +97,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const scale = sheetScaleFor(paperH);
   const music = (() => {
     const highway = v.playView === 'highway';
-    const common = { now: clock.now, style: styles.musicInner } as const;
+    const common = { now: clockNow, style: styles.musicInner } as const;
     if (takeChart && s.options) {
       const bpm = takeChart.bpm * s.options.speed;
       return highway
@@ -132,7 +138,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
     : (v.resting ? v.moves.slice(0, 1) : v.moves).map(m => {
       const { emoji, text } = splitEmoji(m.label);
       return { id: m.id, label: text, emoji, gestures: gesturesFor(GESTURE[m.gesture]), note: m.id === 'main' ? 'or say "yes"' : undefined,
-        onPress: m.run, tone: m.id === 'main' ? 'go' : m.id === 'listen' ? 'white' : 'alt', testID: `lesson-${m.id === 'main' ? 'main-move' : m.id}` } as PlayerMove;
+        onPress: m.run, tone: m.id === 'main' ? 'go' : m.id === 'listen' ? 'white' : 'alt', testID: `lesson-${m.id === 'main' ? 'main-move' : m.id}` };
     });
 
   const rest = v.onBreak ? <RestCountdown seconds={120} /> : v.resting ? (
@@ -153,10 +159,10 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   // Under the music (ready and take): touch pads without a kit; with a kit, its drawing only when asked for in ⋯.
   const bottom = !kit
     ? <TouchPads emitPad={(pad, vel, time) => bus.emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
-      now={clock.now} activeDrums={activeDrums} results={take.results} style={styles.fill} testID="lesson-touch-pads" />
+      now={clockNow} activeDrums={activeDrums} results={take.results} style={styles.fill} testID="lesson-touch-pads" />
     : kitDrawing ? <KitView hits={hits} results={take.results} activeDrums={activeDrums} style={styles.fill} onPadPress={pad => bus.emitPad(pad, 96)} /> : undefined;
 
-  const barTip = countIn !== undefined ? '"one, two, three, four"' : s.options?.endless ? flowMeter(s as never, pos, now) : tip ? tip.slice(3) : undefined;
+  const barTip = countIn !== undefined ? '"one, two, three, four"' : s.options?.endless ? flowMeter(s, pos, now) : tip ? tip.slice(3) : undefined;
 
   return (
     <PlayerFrame

@@ -105,7 +105,7 @@ export function JourneyScreen() {
   const titleRight = (
     <View style={styles.noticeBtns}>
       {kind === 'setup' ? <>
-        <Button size="small" tone="pop" label="Check my kit ▶" testID="journey-notice-setup" onPress={() => { set({ setupNudged: true }); router.navigate('/setup' as never); }} />
+        <Button size="small" tone="pop" label="Check my kit ▶" testID="journey-notice-setup" onPress={() => { set({ setupNudged: true }); router.navigate('/setup'); }} />
         <Button size="small" label="Not now" testID="journey-notice-not-now" onPress={() => set({ setupNudged: true })} />
       </> : kind === 'sore' ? <>
         <Button size="small" label="All good" testID="journey-notice-all-good" onPress={() => set({ soreAskedWeek: isoWeek(new Date()) })} />
@@ -117,13 +117,13 @@ export function JourneyScreen() {
 
   const open = (lessonId: string, item = -1, mode: LessonMode = 'play', role?: 'record') => {
     if (item >= 0 && mode === 'play' && v.session.date !== readSessionDate()) writeSettings(getStorage().kv, startSessionPatch(v.session));
-    router.push(lessonHref(lessonId, item, mode, role) as never);
+    router.push(lessonHref(lessonId, item, mode, role));
   };
   // The ⋯ sheet's and the extra moves' actions (more.ts): lessons, routes and the coach's asks.
   const run = (e: MoreEntry) => {
     const a = e.action;
     if (a.kind === 'lesson') open(a.lessonId, -1, a.mode ?? 'play', a.role);
-    else if (a.kind === 'route') { if (PUSHED.some(p => a.href.startsWith(p))) router.push(a.href as never); else router.navigate(a.href as never); }
+    else if (a.kind === 'route') { if (PUSHED.some(p => a.href.startsWith(p))) router.push(a.href); else router.navigate(a.href); }
     else if (a.kind === 'askNew') askNew();
     else if (a.kind === 'askHabit') askHabit();
     else askChallenge();
@@ -252,7 +252,7 @@ function StageStrip({ v, onOpen }: { v: JourneyView; onOpen: (lessonId: string) 
         <Label>{t.title}</Label>
         <Body size={15} weight="700" numberOfLines={1} style={styles.flexShrink}>{stageLine(v)}</Body>
         <View style={styles.flex} />
-        <Button size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} testID="journey-full-path" onPress={() => router.navigate(MORE_ROUTES.path as never)} />
+        <Button size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} testID="journey-full-path" onPress={() => router.navigate(MORE_ROUTES.path)} />
       </View>
       <View style={styles.dots}>
         {t.stops.map(s => (

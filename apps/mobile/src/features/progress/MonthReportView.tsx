@@ -1,7 +1,7 @@
 // "This month's report" (the web's YouVsYou): you a month ago against you now, month by month, and the coach's monthly
 // report. The first two work offline; the report needs the home server, and says so clearly when it can't be reached.
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { getCoach } from '../coach/coach';
@@ -14,11 +14,10 @@ import { askMonthReport, historyModel, keptReport, keptTakeChart, MONTH_REPORT_K
 export function MonthReportView({ runs }: { runs: RunRow[] }) {
   const [now] = useState(() => Date.now());
   const h = useMemo(() => historyModel(runs, now), [runs, now]);
-  const [report, setReport] = useState<MonthReport>();
+  const [report, setReport] = useState<MonthReport | undefined>(() => keptReport(getStorage().settings?.get(MONTH_REPORT_KEY), new Date()));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [notice, setNotice] = useState('');
-  useEffect(() => { setReport(keptReport(getStorage().settings?.get(MONTH_REPORT_KEY), new Date())); }, []);
 
   const ask = (again = false) => {
     setBusy(true); setErr('');

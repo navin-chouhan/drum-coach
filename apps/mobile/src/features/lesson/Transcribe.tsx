@@ -7,7 +7,7 @@ import { BigMove, Body, Card, Display, MAX_FONT_SCALE, color, drumColor, font, s
 import { cellKey, cellState, checkGrid, checkLine, gridOf, LANE_NAME } from './transcribe';
 
 const LANE_W = 92, CELL_MIN = 36;
-const swatch = (d: ChartDrum) => drumColor[d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d as keyof typeof drumColor];
+const swatch = (d: ChartDrum) => drumColor[d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d];
 
 export function Transcribe({ chart, play, onDone }: { chart: Chart; play: (c: Chart) => void; onDone: () => void }) {
   const g = useMemo(() => gridOf(chart), [chart]);

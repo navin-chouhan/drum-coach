@@ -72,7 +72,7 @@ function build() {
     server, context: () => contextFor('session'), settings, hasFallbackKey, isPlaying: () => playing, playing: () => nowPlaying,
     sayNext: text => speakMoment({ kind: 'reply', text }), // gated by the voice setting and the take
     saveChart: chart => charts.save(chart), exists,
-    nav: { openLesson: id => router.push(lessonHref(id) as never), openDrill: t => router.push(drillRoute(t) as never) },
+    nav: { openLesson: id => router.push(lessonHref(id)), openDrill: t => router.push(drillRoute(t)) },
   });
   const tips = createTipsCache({ kv, asks, settings });
   const weekPlan = createWeekPlan({ plans: storage.plans, asks });

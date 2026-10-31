@@ -140,7 +140,7 @@ describe('HomeServer.stream', () => {
     const none = await setup();
     expect(await none.server.stream('/api/coach/session', {}, none.onEvent)).toMatchObject({ ok: false, reason: 'bad-response' });
     const { server, sf, onEvent } = await setup(() => Promise.reject(new Error('should not be called')));
-    expect(await server.stream('/api/../x' as `/api/${string}`, {}, onEvent)).toMatchObject({ ok: false, reason: 'bad-response' });
+    expect(await server.stream('/api/../x', {}, onEvent)).toMatchObject({ ok: false, reason: 'bad-response' });
     await server.configure(null);
     expect(await server.stream('/api/coach/session', {}, onEvent)).toMatchObject({ ok: false, reason: 'not-configured' });
     expect(sf).not.toHaveBeenCalled();

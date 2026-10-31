@@ -1,11 +1,12 @@
 // Drives the dev screen: loops a fake take of the fixture chart on a timer, replays the fixture student (optional),
 // judges strokes from the touch pads too, and feeds the hit and result streams. Core-agnostic; A1/A4's createTake
 // replaces it in the real lesson player.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { beatsPerBar, type ChartLike, type PadId } from '../chartLike';
 import { createStream, type PadHit, type PlayResult } from '../events';
 import { msPerBeat } from '../geometry';
 import { createFixtureJudge, FIXTURE_WINDOWS, replayHits } from './fixture';
+import { useLatest } from '../../ui/useLatest';
 
 export type FixtureTake = {
   zero: number;
@@ -25,8 +26,7 @@ export function useFixtureTake(chart: ChartLike, bpm: number, now: () => number,
   const [{ take, zero }, setTake] = useState(() => ({ take: 0, zero: nextZero() }));
   const restart = useCallback(() => setTake(s => ({ take: s.take + 1, zero: nextZero() })), [nextZero]);
   const judge = useMemo(() => createFixtureJudge(chart, zero, beatMs, { ...FIXTURE_WINDOWS, good: FIXTURE_WINDOWS.good + 20 }), [chart, zero, beatMs]);
-  const judgeRef = useRef(judge);
-  judgeRef.current = judge;
+  const judgeRef = useLatest(judge);
 
   useEffect(() => {
     const queue = autoplay ? replayHits(chart, zero, beatMs) : [];
@@ -51,7 +51,7 @@ export function useFixtureTake(chart: ChartLike, bpm: number, now: () => number,
   const emitPad = useCallback((pad: PadId, velocity: number, time: number) => {
     hits.emit({ pad, velocity, at: time });
     results.emit(judgeRef.current.hit(pad, time));
-  }, [hits, results]);
+  }, [hits, results, judgeRef]);
 
   return { zero, take, hits, results, emitPad, restart };
 }

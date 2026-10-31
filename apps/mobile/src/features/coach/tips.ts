@@ -71,7 +71,7 @@ export function createTipsCache(deps: {
       return deps.asks.ask<{ tips: Tips }>(`tips:${key}`, 'tips',
         { title: chart.title, kind: chart.kind, level: chart.level, ...(goal && { goal: goal.slice(0, 400) }), cueIds: cueIdsFor(chart) },
         d => {
-          const tips = Object.fromEntries(Object.entries(d?.tips ?? {}).filter(([, t]) => isTip(t))) as Tips;
+          const tips: Tips = Object.fromEntries(Object.entries(d?.tips ?? {}).filter((e): e is [string, Tip] => isTip(e[1])));
           load().delete(key);
           load().set(key, tips);
           save();

@@ -13,13 +13,14 @@ import {
 } from './velocityWizard';
 import type { KitCalibration } from '@drum-coach/core/engine/padCal';
 import type { NoteMap } from '@drum-coach/core/engine/kit';
+import { useLatest } from '../../ui/useLatest';
 
 export function VelocityPanel({ kit, map, padCal, kitConnected }: { kit: string; map: NoteMap; padCal: KitCalibration; kitConnected: boolean }) {
   const [state, setState] = useState(idleVelocity);
-  const ref = useRef({ state, map });
-  ref.current = { state, map };
+  const stateRef = useRef(state); // the hits between two renders see each other's step
+  const mapRef = useLatest(map);
   const apply = (step: VelocityStep) => {
-    ref.current.state = step.state;
+    stateRef.current = step.state;
     setState(step.state);
     if (step.save) writePadCal(getStorage().kv, kit, step.save);
   };
@@ -28,12 +29,12 @@ export function VelocityPanel({ kit, map, padCal, kitConnected }: { kit: string;
   useEffect(() => {
     if (!state.on) return;
     const bus = getAppHitBus();
-    const take = (note: number, velocity: number, time: number) => apply(velocityNote(ref.current.state, ref.current.map, note, velocity, time));
+    const take = (note: number, velocity: number, time: number) => apply(velocityNote(stateRef.current, mapRef.current, note, velocity, time));
     const offRaw = bus.onRawMidi((data, time) => { const n = kitConnected ? parseMidiMessage(data) : null; if (n) take(n.note, n.velocity, time); });
     const offHit = bus.onHit(h => { if (!kitConnected) take(h.note, h.velocity, h.time); });
-    const t = setInterval(() => apply(velocityTick(ref.current.state, getMidiPort().clock.now(), existing())), 50);
+    const t = setInterval(() => apply(velocityTick(stateRef.current, getMidiPort().clock.now(), existing())), 50);
     return () => { offRaw(); offHit(); clearInterval(t); };
-  }, [state.on, kitConnected, kit]); // eslint-disable-line react-hooks/exhaustive-deps -- the handlers read the latest state through the ref
+  }, [state.on, kitConnected, kit]); // eslint-disable-line react-hooks/exhaustive-deps -- the handlers read the latest state and map through refs
 
   const v = velocityView(state);
   const summary = calSummary(padCal);

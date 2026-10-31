@@ -30,7 +30,7 @@ export function getStorage(): AppStorage {
     list: async () => ai, put: l => { ai = [...ai.filter(x => x.id !== l.id), l]; }, remove: id => { const n = ai.length; ai = ai.filter(x => x.id !== id); return ai.length < n; },
     replace: (l, ids) => { ai = [...ai.filter(x => x.id !== l.id && !ids.includes(x.id)), l]; },
   };
-  const plans: PlansRepo = { latest: async () => (seed.plan ? { id: 1, plan: seed.plan, checks: {} } as never : null), add: () => 1, setChecks: () => true };
+  const plans: PlansRepo = { latest: async () => (seed.plan ? { id: 1, plan: seed.plan, checks: {} } : null), add: () => 1, setChecks: () => true };
   // Progress's show-off set and the teacher page read the settings rows; the Songs library uses the in-memory songs
   const rows: Record<string, unknown> = { ...seed.rows };
   const settings: SettingsRepo = { get: k => rows[k], put: (k, v) => { rows[k] = v; }, all: () => ({ ...rows }) };

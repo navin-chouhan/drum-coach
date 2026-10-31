@@ -9,7 +9,6 @@ import type { Finished, TakeBacking } from '@drum-coach/core/play/take';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NotationView } from '../../notation';
 import { TouchPads } from '../../play';
-import type { DrumId } from '../../play/chartLike';
 import { audio } from '../../platform/audio';
 import { useAudioEngine } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
@@ -40,8 +39,11 @@ import {
   barNow, barPickKind, clampRepeats, moreCard, needsIntro, yourTakeCard, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
   sectionRange, speedFor, writePlayOptions, type PracticeOptions, type Section, type WarmState,
 } from './play';
+import { useLatest } from '../../ui/useLatest';
+import { useSameList } from '../../ui/useSameList';
 
 const now = () => getMidiPort().clock.now();
+const NO_RUNS: never[] = [];
 const YOUR_TAKE = 'your-take'; // the chart id of a take played back (Hear your take)
 
 export function PlayScreen() {
@@ -50,12 +52,16 @@ export function PlayScreen() {
   const kv = getStorage().kv;
   const settings = useAppSettings();
   const { data, reload } = useStoredData();
-  const charts = useMemo(() => loadPracticeCharts(), [params.chartId]); // read anew per request (a chart saved since)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- params.chartId: read anew per request (a chart saved since)
+  const loaded = useMemo(() => loadPracticeCharts(), [params.chartId]);
+  // A song's sync nudged on this screen: saved, and the chart shown with it (the list is read once per visit).
+  const [synced, setSynced] = useState<Record<string, number>>({});
+  const charts = useMemo(() => loaded.map(c => (c.id in synced ? { ...c, syncOffsetMs: synced[c.id] } : c)), [loaded, synced]);
   const [o, setO] = useState<PracticeOptions>(() => readPlayOptions(kv));
   const set = (patch: Partial<PracticeOptions>) => setO(prev => writePlayOptions(kv, prev, patch));
   const [section, setSection] = useState<Section>(null);
   const [notice, setNotice] = useState('');
-  const runs = data?.runs ?? [];
+  const runs = data?.runs ?? NO_RUNS;
   const read = useMemo(() => studentRead(settings.lessons, runs), [settings.lessons, runs]);
   const eng = useSyncExternalStore(practiceEngine.subscribe, practiceEngine.get);
   const playing = eng.phase === 'playing' || eng.phase === 'starting';
@@ -64,13 +70,14 @@ export function PlayScreen() {
   const warmIds = params.warm ? params.warm.split(',').filter(id => charts.some(c => c.id === id)) : [];
   const [warm, setWarm] = useState<WarmState | undefined>(() => warmIds.length > 1
     ? { i: 0, ids: warmIds, titles: warmIds.map(id => charts.find(c => c.id === id)!.title), done: false } : undefined);
-  useEffect(() => {
+  const request = `${params.chartId ?? ''} ${params.bpm ?? ''}`;
+  const [applied, setApplied] = useState<string>();
+  if (applied !== request) {
+    setApplied(request);
     const target = charts.find(c => c.id === params.chartId);
-    if (!target) return;
     const bpm = Number(params.bpm);
-    set({ chartId: target.id, ...(bpm > 0 && { speed: speedFor(bpm, target.bpm) }) });
-    setSection(null);
-  }, [params.chartId, params.bpm]); // eslint-disable-line react-hooks/exhaustive-deps -- once per request
+    if (target) { set({ chartId: target.id, ...(bpm > 0 && { speed: speedFor(bpm, target.bpm) }) }); setSection(null); }
+  }
   useEffect(() => () => practiceEngine.stop(), []);
 
   const chart = charts.find(c => c.id === o.chartId) ?? charts[0];
@@ -107,29 +114,27 @@ export function PlayScreen() {
   // After a take: the timing line (when the take played the chart on screen), the side card, and ⚙ More.
   const timing = useMemo(() => { const k = takeMarks(scored, chart, playing); return k && timingLine(k.offsets, k.missed, scored?.stats.extra ?? 0); }, [scored, chart, playing]);
   const card = scored && !playing ? yourTakeCard(scored) : undefined;
-  const [, setSyncTick] = useState(0);
   const more = moreCard(settings.latencyMs, chart);
   const nudge = (ms: number) => {
     const charts = getStorage().charts;
     const next = charts ? nudgeSync(charts, chart, ms) : null;
     if (next === null) { setNotice('Song sync could not be saved.'); return; }
-    chart.syncOffsetMs = next; // the list is read once per visit; this chart now carries the stored offset
-    setSyncTick(t => t + 1);
+    setSynced(prev => ({ ...prev, [chart.id]: next }));
   };
-  const myPads = [...new Set(chart.notes.filter(n => !n.auto).map(n => n.drum))];
+  const myPads = useSameList([...new Set(chart.notes.filter(n => !n.auto).map(n => n.drum))]);
   // No kit connected: touch pads under the sheet, as the lesson player swaps them in (QA M2).
   const kit = useKitConnected();
-  const activeDrums = useMemo(() => [...new Set(myPads.map(d => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId))], [myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const activeDrums = useMemo(() => [...new Set(myPads.map(d => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d)))], [myPads]);
 
   // Once a take is saved: the runs again (history, best), and Climb: 2 clean takes here move the tempo up 5.
-  const latest = useRef({ chart, o, warm });
-  latest.current = { chart, o, warm };
+  const latest = useLatest({ chart, o, warm });
   useEffect(() => practiceEngine.onSaved(take => {
     reload();
     const { chart: c, o: cur, warm: w } = latest.current;
     // The coach hears each take here once (not the warm-up's), as the web's PlayView tells it.
     if (!w && take.chart.title === c.title) void getCoach().session.coachTake(take, { chartId: c.id });
     if (!cur.climb || w || take.interrupted || take.chart.title !== c.title) return; // an interrupted take never climbs (D6)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- runs is Storage['runs'] & RunsRepo; without the cast list() resolves to Storage's unknown[]
     void (getStorage().runs as RunsRepo).list().then(rs => {
       const speed = climbAfterTake(c, rs, cur.speed);
       if (speed) { set({ speed }); setClimbedFor(take); }
@@ -175,14 +180,25 @@ export function PlayScreen() {
     start(c, bpm, { repeats: warmRepeats(c, bpm) }, null);
     warmTakeOf.current = practiceEngine.get().take;
   };
-  useEffect(() => { if (warm) warmTake(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- the warm-up starts when it opens
+  // The warm-up's first take starts when the screen opens: starting the engine is the effect, and the start's
+  // own state (notice, section) comes with it.
+  useEffect(() => { if (warm) warmTake(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect -- once, on open
+  const warmNow = useLatest({ warm, warmTake });
   useEffect(() => {
-    if (!warm || eng.phase !== 'done' || warm.done || !eng.take || eng.take !== warmTakeOf.current) return;
-    setWarm({ ...warm, done: true });
-    if (warm.i + 1 >= warm.ids.length) { setWarm(undefined); return; }
-    const t = setTimeout(() => warmTake(warm.i + 1), 3000);
-    return () => clearTimeout(t);
-  }, [eng.phase]); // eslint-disable-line react-hooks/exhaustive-deps -- once per finished take
+    let phase = practiceEngine.get().phase, t: ReturnType<typeof setTimeout> | undefined;
+    const off = practiceEngine.subscribe(() => {
+      const e = practiceEngine.get();
+      if (e.phase === phase) return;
+      phase = e.phase;
+      clearTimeout(t); // a new phase cancels the next one's start, as before
+      const { warm: w } = warmNow.current;
+      if (!w || e.phase !== 'done' || w.done || !e.take || e.take !== warmTakeOf.current) return;
+      setWarm({ ...w, done: true });
+      if (w.i + 1 >= w.ids.length) { setWarm(undefined); return; }
+      t = setTimeout(() => warmNow.current.warmTake(w.i + 1), 3000);
+    });
+    return () => { off(); clearTimeout(t); };
+  }, [warmNow]);
 
   const main = () => {
     if (m.main.kind === 'stopWarm') { stop(); return; }
@@ -211,16 +227,15 @@ export function PlayScreen() {
     if (p.settings) writeSettings(kv, p.settings);
   };
   // The coach learns what "this" is; it never talks over a take.
-  useEffect(() => { session.coachOpen(chart, m.bpm); }, [chart.id, m.bpm]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { session.coachOpen(chart, m.bpm); }, [chart.id, m.bpm]); // eslint-disable-line react-hooks/exhaustive-deps -- once per exercise and tempo, not per chart object
   // Voice first (D10): the exercise is said when it opens (not in the warm-up, which runs by itself).
   useEffect(() => { if (!warm) speakMoment({ kind: 'stepIntro', title: chart.title, what: chart.description ?? `${chart.bars} bar${chart.bars === 1 ? '' : 's'}, ${o.repeats} times round.`, bpm: m.bpm }); }, [chart.id]); // eslint-disable-line react-hooks/exhaustive-deps -- once per exercise
   useEffect(() => {
     setCoachPlaying(playing, playing ? { exercise: chart.title, bpm: m.bpm } : undefined);
-  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps -- told when a take starts or ends; what's playing is read then
   useEffect(() => () => setCoachPlaying(false), []);
   // The coach's actions (its suggestion, a "yes" in the panel), as the web's onCoachAction on this screen.
-  const acts = useRef({ main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro, introNext });
-  acts.current = { main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro, introNext };
+  const acts = useLatest({ main, listen, next, playAt, go, bpm: m.bpm, intro: !!intro, introNext });
   useEffect(() => session.onCoachAction((a: Act) => {
     const x = acts.current;
     if (x.intro) { if (a.kind === 'main') x.introNext(); return true; } // the slides have the kit's taps: yes turns one, the rest is swallowed
@@ -241,13 +256,16 @@ export function PlayScreen() {
   const [paperH, setPaperH] = useState(0);
   const scale = sheetScaleFor(paperH);
   const [moreOpen, setMoreOpen] = useState(false);
-  const toPlayerMove = (mv: { id: string; label: string }, onPress: () => void, gestures: ReturnType<typeof gesturesFor>, testID: string): PlayerMove =>
-    ({ id: mv.id, label: mv.label.replace(/^\S+ /, ''), emoji: mv.label.split(' ')[0], gestures, onPress, testID });
+  // The moves' look (a pure helper); their handlers are attached here (they start takes, so they're never called while rendering).
+  const moveLook = (mv: { id: string; label: string }, gestures: ReturnType<typeof gesturesFor>, testID: string): Omit<PlayerMove, 'onPress'> =>
+    ({ id: mv.id, label: mv.label.replace(/^\S+ /, ''), emoji: mv.label.split(' ')[0], gestures, testID });
   const moves: PlayerMove[] = [
-    toPlayerMove({ id: 'main', label: m.main.label }, main, gesturesFor('yes'), 'practice-main'),
-    ...m.moves.map(mv => toPlayerMove(mv, mv.id === 'listen' ? listen : mv.id === 'next' ? next : () => playAt(mv.bpm ?? m.bpm),
-      mv.id === 'listen' ? gesturesFor('listen') : mv.id === 'faster' ? gesturesFor('faster') : mv.id === 'slower' ? gesturesFor('slower') : mv.id === 'next' ? gesturesFor('next') : [],
-      `practice-move-${mv.id}`)),
+    { ...moveLook({ id: 'main', label: m.main.label }, gesturesFor('yes'), 'practice-main'), onPress: main },
+    ...m.moves.map(mv => ({
+      ...moveLook(mv, mv.id === 'listen' ? gesturesFor('listen') : mv.id === 'faster' ? gesturesFor('faster') : mv.id === 'slower' ? gesturesFor('slower') : mv.id === 'next' ? gesturesFor('next') : [],
+        `practice-move-${mv.id}`),
+      onPress: mv.id === 'listen' ? listen : mv.id === 'next' ? next : () => playAt(mv.bpm ?? m.bpm),
+    })),
   ];
   const music = live && liveChart
     ? <NotationView chart={liveChart} bpm={m.bpm} zero={live.zero} now={now} latencyMs={settings.latencyMs} results={practiceEngine.results} hints={hints} leftHanded={!!settings.leftHanded} scale={scale} testID="practice-sheet" />
@@ -298,7 +316,7 @@ export function PlayScreen() {
         ) : undefined}
         bottom={!kit ? (
           <TouchPads emitPad={(pad, vel, time) => getAppHitBus().emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
-            now={getMidiPort().clock.now} activeDrums={activeDrums} results={live ? practiceEngine.results : undefined} style={styles.fill} testID="practice-touch-pads" />
+            now={now} activeDrums={activeDrums} results={live ? practiceEngine.results : undefined} style={styles.fill} testID="practice-touch-pads" />
         ) : undefined}
         moves={moves}
         take={playing ? {

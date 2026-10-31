@@ -10,6 +10,7 @@
     "ios:device": "expo run:ios --device",
     "prebuild": "expo prebuild --platform ios --clean",
     "typecheck": "tsc --noEmit",
+    "lint": "node ../../node_modules/eslint/bin/eslint.js . --max-warnings 0",
     "test": "vitest run",
     "doctor": "npx --yes expo-doctor@1.21.5",
     "check:versions": "node ../../scripts/check-expo-versions.mjs .",

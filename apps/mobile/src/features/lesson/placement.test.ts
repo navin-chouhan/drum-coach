@@ -24,7 +24,7 @@ describe('the placement test (the web\'s PlacementView)', () => {
   it('passes a clean take and not a rough one', () => {
     const l = byId(ladder[0].lessonId);
     const clean = { total: 16, perfect: 16, good: 0, ok: 0, miss: 0, extra: 0, accuracy: 100, meanOffset: 0, spread: 5, perDrum: {}, streak: 16, recoveries: 0, heat: [], flam: null } as unknown as RunStats;
-    const rough = { ...clean, perfect: 4, miss: 12, accuracy: 25, streak: 4 } as unknown as RunStats;
+    const rough = { ...clean, perfect: 4, miss: 12, accuracy: 25, streak: 4 };
     expect(judgePlacement(clean, l)).toEqual({ ok: true, line: `${l.title}: 16 of 16 notes landed, passed.` });
     expect(judgePlacement(rough, l)).toMatchObject({ ok: false, line: `${l.title}: 4 of 16 notes landed.` });
   });

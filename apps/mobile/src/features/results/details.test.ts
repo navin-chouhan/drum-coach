@@ -6,8 +6,8 @@ const heat = (n: number) => Array.from({ length: n }, (_, i) => (i % 4 === 0 ? {
 function take(over: Partial<DetailsTake['options']> = {}, results: DetailsTake['results'] = []): DetailsTake {
   return {
     chart: { title: 'Money beat', bpm: 100, timeSignature: [4, 4], bars: 1, notes: [] } as unknown as DetailsTake['chart'],
-    options: { fromBar: 1, toBar: 2, repeats: 3, speed: 0.8, metronome: true, subdivision: 1, countInBars: 1, wait: false, ...over } as DetailsTake['options'],
-    run: { beats: 8, beatsPerBar: 4, notes: [] } as unknown as DetailsTake['run'],
+    options: { fromBar: 1, toBar: 2, repeats: 3, speed: 0.8, metronome: true, subdivision: 1, countInBars: 1, wait: false, ...over },
+    run: { beats: 8, beatsPerBar: 4, notes: [] },
     results,
     cues: [{ text: 'Relax your shoulders' }] as DetailsTake['cues'],
     stats: {

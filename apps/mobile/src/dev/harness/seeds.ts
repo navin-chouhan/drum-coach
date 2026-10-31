@@ -81,7 +81,7 @@ function busy(): Seed {
     if (d % 3 === 0) runs.push({ chartId: d % 2 ? 'singles' : 'paradiddle-16ths-around-the-kit-long-title', chartTitle: d % 2 ? 'Single strokes (16ths)' : 'Paradiddles around the kit with accents on the toms (16ths)',
       startedAt: new Date(at.getTime() + 3_600_000).toISOString(), durationS: 300, bpm: 80, speed: 1, accuracy: 88, meanOffset: 4, spread: 12, notes: 64 });
   }
-  const notes = Array.from({ length: 20 * 8 }, (_, i) => ({ t: i / 2, drum: (i % 4 === 2 ? 'snare' : i % 4 === 0 ? 'kick' : 'hihat') as 'snare' | 'kick' | 'hihat' }));
+  const notes: YtSong['notes'] = Array.from({ length: 20 * 8 }, (_, i) => ({ t: i / 2, drum: i % 4 === 2 ? 'snare' : i % 4 === 0 ? 'kick' : 'hihat' }));
   const song = (id: string, title: string): YtSong => ({ id, title, originalId: id.slice(3), drumlessId: null, coverId: null, timeSignature: [4, 4], notes, grids: {}, verifiedAt: day(new Date()) });
   const songs = [song('yt-aaaaaaaaaaa', 'Seven Nation Army (Official Music Video)'), song('yt-bbbbbbbbbbb', 'Billie Jean (Official Video)')];
   for (const s of songs) runs.push({ chartId: s.id, chartTitle: s.title, startedAt: new Date().toISOString(), durationS: 240, bpm: 100, speed: 1, accuracy: 92, meanOffset: 3, spread: 10, notes: 160, fromBar: 1, toBar: 20 });

@@ -1,6 +1,6 @@
 // The Clock on the UI thread: a shared value that a Reanimated frame callback sets every frame to the Clock time the
 // frame shows. No React render per frame; animated styles read it directly. See clockSync.ts for the mapping.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFrameCallback, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { nextOffset, sampleOffset } from './clockSync';
 
@@ -16,18 +16,19 @@ export type UiClockOptions = {
 /** Clock ms for the current frame, updated on the UI thread. `now` is the app's Clock (iOS: MidiPort.clock.now). */
 export function useUiClock(now: () => number, o: UiClockOptions = {}): SharedValue<number> {
   const enabled = o.enabled ?? true;
-  const offset = useSharedValue(sampleOffset(now, () => performance.now()));
+  const [firstOffset] = useState(() => sampleOffset(now, () => performance.now()));
+  const offset = useSharedValue(firstOffset);
   const lead = useSharedValue(o.displayLeadMs ?? 0);
   const clock = useSharedValue(now());
 
   useEffect(() => {
-    lead.value = o.displayLeadMs ?? 0;
+    lead.set(o.displayLeadMs ?? 0);
   }, [lead, o.displayLeadMs]);
 
   useEffect(() => {
     if (!enabled) return;
     const resync = () => {
-      offset.value = nextOffset(offset.value, sampleOffset(now, () => performance.now()));
+      offset.set(nextOffset(offset.get(), sampleOffset(now, () => performance.now())));
     };
     resync();
     const id = setInterval(resync, o.resyncMs ?? 1000);
@@ -36,7 +37,7 @@ export function useUiClock(now: () => number, o: UiClockOptions = {}): SharedVal
 
   const frames = useFrameCallback(() => {
     'worklet';
-    clock.value = performance.now() + offset.value + lead.value;
+    clock.set(performance.now() + offset.get() + lead.get());
   }, enabled);
   useEffect(() => frames.setActive(enabled), [frames, enabled]);
 

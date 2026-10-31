@@ -2,21 +2,21 @@
 // moves, full screen. The kit turns them (one hi-hat hit forward, one snare hit back: src/play/introSlides.ts), so do
 // → / Enter, ← and Esc on a hardware keyboard; forward on the last one starts the take. The slide index is the
 // controller's (introNext / introBack / introClose), so the coach's "yes" turns a slide too.
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { refocusKeyboard } from '../../platform/keyboard';
 import { introContent, introTap } from '../../play/introSlides';
 import { BigMove, Body, Display, DottedGround, MAX_FONT_SCALE, Sticker, color, font, getAppHitBus, hardShadow, stroke, useAppKey } from '../../ui';
 import type { LessonView } from './controller';
 import { HowItMoves } from './HowItMoves';
+import { useLatest } from '../../ui/useLatest';
 
 // `demo` is optional: Practice's slides have no 4th "how it moves" slide (the web's PlayView passes none).
 type Intro = Omit<NonNullable<LessonView['intro']>, 'demo'> & { demo?: NonNullable<LessonView['intro']>['demo'] };
 
 export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro: Intro; heelUp?: boolean; onNext: () => void; onBack: () => void; onClose: () => void }) {
   const c = introContent(intro);
-  const acts = useRef({ onNext, onBack });
-  acts.current = { onNext, onBack };
+  const acts = useLatest({ onNext, onBack });
   useEffect(() => {
     let at = -Infinity;
     return getAppHitBus().onHit(h => {
@@ -24,7 +24,7 @@ export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro:
       at = t.at;
       if (t.move === 'next') acts.current.onNext(); else if (t.move === 'back') acts.current.onBack();
     });
-  }, []);
+  }, [acts]);
   useAppKey('right', onNext);
   useAppKey('enter', onNext);
   useAppKey('left', onBack);

@@ -71,13 +71,15 @@ jobs:
       - name: Dependencies of every sub-project are stable, aged and from the registry
         working-directory: .
         run: node scripts/check-deps.mjs --projects
-      - name: Install the root too (parity tests import the web and server schemas, which need the root's zod)
+      - name: Install the root too (parity tests import the web and server schemas, which need the root's zod; lint uses the root's ESLint)
         working-directory: .
         run: npm ci
       - name: Install (lockfile only, no install scripts)
         run: npm ci
       - name: Typecheck
         run: npm run typecheck
+      - name: Lint (the root's rules, eslint.rules.js)
+        run: npm run lint
       - name: Tests
         run: npm test
       - name: Native modules match the Expo SDK patch

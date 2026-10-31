@@ -21,7 +21,7 @@ export type { Moment } from './moments';
 let voices: VoiceInfo[] | null = null;
 let loading: Promise<void> | null = null;
 function loadVoices(): Promise<void> {
-  loading ??= Speech.getAvailableVoicesAsync().then(v => { voices = v as VoiceInfo[]; }, () => { voices = []; });
+  loading ??= Speech.getAvailableVoicesAsync().then(v => { voices = v; }, () => { voices = []; });
   return loading;
 }
 const kvGet = (k: string) => { try { return getStorage().kv.get(k); } catch { return null; } };

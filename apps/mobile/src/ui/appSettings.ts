@@ -11,7 +11,7 @@ export function readSettings(kv: Pick<KeyValueStore, 'get'>): Settings {
   let saved: Partial<Settings> = {};
   try {
     const parsed = JSON.parse(kv.get(SETTINGS_KEY) ?? '{}') as unknown;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) saved = parsed as Partial<Settings>;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) saved = parsed;
   } catch { /* defaults */ }
   return migrate({ ...DEFAULTS, ...saved, profile: { ...DEFAULTS.profile, ...saved.profile }, lessons: saved.lessons ?? {} });
 }

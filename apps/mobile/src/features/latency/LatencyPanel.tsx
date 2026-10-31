@@ -37,7 +37,7 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
   async function start() {
     stop.current();
     setPhase({ kind: 'starting' });
-    let r: AudioRoute, missing: string[] = [];
+    let r: AudioRoute, missing: string[];
     try {
       r = await audio.start();
       missing = (await audio.prepareWords(COUNT_WORDS)).missing;

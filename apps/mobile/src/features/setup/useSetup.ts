@@ -34,7 +34,7 @@ export function useKitConnection() {
       if (want && safe(() => port.selection()?.connectedId, undefined) !== want.id) safe(() => port.select(want.id), false);
     };
     restore();
-    setState(read());
+    setState(read()); // eslint-disable-line react-hooks/set-state-in-effect -- restore() may select an input and the port sends no event for it
     return port.onInputsChanged(() => { restore(); setState(read()); });
   }, [port, read]);
   const select = useCallback((input: MidiInputInfo) => {
@@ -60,7 +60,7 @@ export function useKitData() {
     const kit = kitName();
     const kv = getStorage().kv;
     return { kit, map: readNoteMap(kv, kit), padCal: readPadCal(kv, kit) };
-  }, [v, connected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [v, connected?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- v is the kit store's version, connected?.id the kit whose data is read
 }
 
 /** The audio route (null until the engine has started once). */

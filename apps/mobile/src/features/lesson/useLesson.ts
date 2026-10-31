@@ -33,7 +33,7 @@ export function useKitConnected(): boolean {
     return !!id && port.listInputs().some(i => i.id === id && i.online);
   };
   const [on, setOn] = useState(read);
-  useEffect(() => port.onInputsChanged(() => setOn(read())), [port]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => port.onInputsChanged(() => setOn(read())), [port]); // eslint-disable-line react-hooks/exhaustive-deps -- read() only reads the port
   return on;
 }
 
@@ -79,14 +79,14 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
       requestCoachLesson: (key, struggle) => coach.requestLesson(key, struggle),
       drillExists: id => coach.exists(id),
       openDrill: a => coach.session.runAction(a),
-      onBack: () => { if (router.canGoBack()) router.back(); else router.replace('/' as never); },
-      onNext: next ? () => router.replace(lessonHref(next.lessonId, next.index) as never) : undefined,
+      onBack: () => { if (router.canGoBack()) router.back(); else router.replace('/'); },
+      onNext: next ? () => router.replace(lessonHref(next.lessonId, next.index)) : undefined,
       onItemDone: () => { const p = itemDonePatch(settings.get(), params.item, todayKey()); if (p.session) settings.set(p); },
-      openLatency: () => router.navigate('/setup' as never),
+      openLatency: () => router.navigate('/setup'),
     };
     return new LessonController(deps);
     // one controller per lesson and item; the lesson list only fills in coach lessons
-  }, [lesson?.id, params.item, params.mode, params.role, take]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lesson?.id, params.item, params.mode, params.role, take]); // eslint-disable-line react-hooks/exhaustive-deps -- one controller per lesson and item (above)
 
   useEffect(() => {
     if (!ctl || !lesson) return;
@@ -101,7 +101,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     // A route change ends it too (AUDIO-DESIGN §3.3); it ends where native says it began (QA2 m6).
     const offInt = watchInterruptions(audio, AppState, at => ctl.interrupt(at));
     return () => { off(); offInt(); ctl.dispose(); setCoachPlaying(false); };
-  }, [ctl]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ctl]); // eslint-disable-line react-hooks/exhaustive-deps -- once per controller: it owns the lesson and the params it was made with
 
   // The coach never talks over a take, and a question mid-take means what's playing.
   const playing = !!ctl?.playing;
@@ -109,7 +109,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     if (!ctl || !lesson) return;
     const s = take.state;
     setCoachPlaying(playing, playing ? { exercise: s.chart?.title, bpm: s.chart && s.options ? Math.round(s.chart.bpm * s.options.speed) : undefined, lesson: lesson.title } : undefined);
-  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps -- told when a take starts or ends; what's playing is read then
 
   if (!lesson) return ai === null && !drill ? null : { missing: true };
   return ctl ? { ctl, take, lesson, version } : null;

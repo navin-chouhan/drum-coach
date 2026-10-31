@@ -15,6 +15,7 @@ import { getStorage } from '../platform/storage';
 import YouTubeDom, { type YouTubeHandle } from './dom/YouTubeDom';
 import { choosePlayer, readDevNative } from './playerChoice';
 import { createYtController, LOAD_ERROR, type YtCommand, type YtController, type YtEvent } from './ytController';
+import { useLatest } from '../ui/useLatest';
 
 export type YouTubeViewProps = {
   videoId: string;
@@ -35,8 +36,8 @@ export function YouTubeView({ videoId, now, onPlayer, style, testID }: YouTubeVi
   const [kind] = useState(() => choosePlayer({ nativeAvailable: DrumYouTube.available, dev: __DEV__, devNative: readDevNative(getStorage().kv) }));
   const handle = useRef<YouTubeHandle>(null);
   const native = useRef<DrumYouTube.NativePlayerRef>(null);
-  const nowRef = useRef(now);
-  nowRef.current = now;
+  const nowRef = useLatest(now);
+  // eslint-disable-next-line react-hooks/refs -- the controller reads the refs only when it's called (a command, a tick), never while rendering
   const yt = useMemo(() => createYtController({
     now: () => nowRef.current(),
     send: (cmd: YtCommand) => {
@@ -44,12 +45,12 @@ export function YouTubeView({ videoId, now, onPlayer, style, testID }: YouTubeVi
       const h = handle.current as { command?: (c: YtCommand) => void } | null;
       h?.command?.(cmd);
     },
-  }), [kind]);
+  }), [kind, nowRef]);
   const [first] = useState(videoId); // a version switch is yt.load(); the WebView keeps its player
   useEffect(() => { onPlayer(yt); }, [yt, onPlayer]);
   useEffect(() => () => yt.destroy(), [yt]);
 
-  const clockNow = useCallback(async () => nowRef.current(), []);
+  const clockNow = useCallback(async () => nowRef.current(), [nowRef]);
   const onEvent = useCallback(async (e: YtEvent) => { yt.handle(e); }, [yt]);
   const onNative = useCallback((e: { nativeEvent: unknown }) => { const ev = DrumYouTube.toYtEvent(e.nativeEvent, LOAD_ERROR); if (ev) yt.handle(ev); }, [yt]);
   const Native = DrumYouTube.NativePlayer;

@@ -1,7 +1,7 @@
 // Debug screen: set up and test the home server (D2) before the Setup screens exist. The token field is write-only:
 // a saved token is never read back into the screen.
 import { Stack } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { failureText, healthLines, type Line } from '../../src/dev/server/model';
@@ -21,7 +21,7 @@ function Row({ line }: { line: Line }) {
   );
 }
 
-function Button({ title, onPress, disabled, testID, kind = 'primary' }: { title: string; onPress(): void; disabled?: boolean; testID: string; kind?: 'primary' | 'plain' }) {
+function Button({ title, onPress, disabled, testID, kind = 'primary' }: { title: string; onPress: () => void; disabled?: boolean; testID: string; kind?: 'primary' | 'plain' }) {
   return (
     <Pressable testID={testID} accessibilityRole="button" disabled={disabled} onPress={onPress}
       style={({ pressed }) => [styles.button, kind === 'plain' && styles.buttonPlain, (pressed || disabled) && styles.pressed]}>
@@ -41,13 +41,18 @@ export default function ServerDebug() {
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [lastError, setLastError] = useState<{ at: Date; text: string } | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = async () => {
+    const has = await server.hasToken();
     setSaved(server.configured());
-    setHasToken(await server.hasToken());
+    setHasToken(has);
+  };
+  useEffect(() => {
+    let live = true;
+    void server.hasToken().then(has => { if (live) setHasToken(has); });
+    return () => { live = false; };
   }, [server]);
-  useEffect(() => { void refresh(); }, [refresh]);
 
-  const test = useCallback(async () => {
+  const test = async () => {
     setStatus({ kind: 'busy', what: 'Testing…' });
     const r = await server.health();
     const at = new Date();
@@ -56,9 +61,9 @@ export default function ServerDebug() {
       setStatus({ kind: 'failure', at, failure: r });
       setLastError({ at, text: failureText(r).title });
     }
-  }, [server]);
+  };
 
-  const save = useCallback(async () => {
+  const save = async () => {
     const v = validateServerConfig(url, token);
     if (!v.ok) { setInputError(v.error); return; }
     setInputError(null);
@@ -68,15 +73,15 @@ export default function ServerDebug() {
     setUrl(v.url);
     await refresh();
     await test();
-  }, [url, token, server, refresh, test]);
+  };
 
-  const forget = useCallback(async () => {
+  const forget = async () => {
     await server.configure(null);
     setUrl('');
     setToken('');
     setStatus({ kind: 'idle' });
     await refresh();
-  }, [server, refresh]);
+  };
 
   const busy = status.kind === 'busy';
   return (

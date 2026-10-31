@@ -70,7 +70,7 @@ export function PracticeScreen() {
   const rows = useMemo(() => (listTab ? listFor(charts, listTab, query).map(c => allRows.get(c.id)!) : []), [charts, listTab, query, allRows]);
   const half = Math.ceil(rows.length / 2);
   const openTile = (id: KindTile['id']) => {
-    if (id === 'song') { router.navigate('/songs' as never); return; } // the Songs shelf is its own route under Practice (R1)
+    if (id === 'song') { router.navigate('/songs'); return; } // the Songs shelf is its own route under Practice (R1)
     setShelf(s => (s === id ? undefined : id)); setSearching(false); setQ('');
   };
 
