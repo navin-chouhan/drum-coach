@@ -371,10 +371,10 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     challenge: challenges[0] ? { lessonId: challenges[0].id, title: challenges[0].title } : null,
     flow: flowTile(lessons, s),
     showoff: pathDone ? readySongs ?? [] : [],
-    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}`, goal: recordGoal! } : null,
+    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}`, goal: recordGoal } : null,
     arcade: arcadeLesson ? {
       lessonId: arcadeLesson.id, title: arcadeLesson.title,
-      sub: `${arcadeLesson.title} · ${arcadeGoal}`, goal: arcadeGoal!,
+      sub: `${arcadeLesson.title} · ${arcadeGoal}`, goal: arcadeGoal,
     } : null,
   };
 }

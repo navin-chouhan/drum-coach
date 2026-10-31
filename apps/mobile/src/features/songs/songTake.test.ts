@@ -93,7 +93,7 @@ describe('song take (the song is the clock)', () => {
     r.advance(2000 + 4500);
     take.interrupt();
     expect(take.running).toBe(false);
-    const d = done! as SongTakeResult;
+    const d = done!;
     expect(d.interrupted).toBe(true);
     expect(d.run.beats).toBe(8);
     const run = songRun(d, song.title, song.id);

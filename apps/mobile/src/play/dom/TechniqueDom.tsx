@@ -11,6 +11,7 @@ import { ARM, armPoints, PAD_Y, PX_PER_CM, type Pt } from '@drum-coach/core/engi
 import { mirrorHands } from '@drum-coach/core/engine/padCal';
 import { drawGripAbove, drawGripSide, drawKick, ensureArtDefs, GRIP_VIEWBOX, KICK_TEXT, KICK_VIEWBOX, type HitState, type KickMode } from './demoArt';
 import { fitStage, MIN_AREA, PAIR_GAP, SHADOW } from './stageFit';
+import { useLatest } from '../../ui/useLatest';
 
 export type TechniqueDomProps = {
   id: DemoId;
@@ -136,8 +137,7 @@ export default function TechniqueDom({ id, bpm = 70, compact = false, heelUp, mi
   // D15: the coach talks you through it: on by default in the full view, one tap in the small one; never during a
   // take or with the voice off.
   const [talk, setTalk] = useState(!compact);
-  const speak = useRef({ talk, canSpeak, say });
-  speak.current = { talk, canSpeak, say };
+  const speak = useLatest({ talk, canSpeak, say });
   const canTalk = () => speak.current.talk && speak.current.canSpeak && !!speak.current.say;
   // A native action: it can throw at once (the bridge isn't up yet) or never answer (domCalls.ts); fire and forget.
   const talkNow = (text: string, now: boolean) => {

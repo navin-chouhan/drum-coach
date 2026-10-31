@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color } from './tokens';
+import DOTS from './assets/dots.png';
 
-const DOTS = require('./assets/dots.png') as number;
 
 /** Just the ground: pink with white dots (12 pt grid). Fills its parent. */
 export function DottedGround({ style, children, tone = color.ground }: { style?: StyleProp<ViewStyle>; children?: ReactNode; tone?: string }) {

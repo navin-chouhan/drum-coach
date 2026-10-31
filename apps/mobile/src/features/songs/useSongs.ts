@@ -36,13 +36,13 @@ export function useSongsVersion() {
 }
 export function useYtSongs(): YtSong[] {
   const v = useSongsVersion();
-  return useMemo(() => songsStore()?.songs.list() ?? [], [v]); // eslint-disable-line react-hooks/exhaustive-deps
+  return useMemo(() => songsStore()?.songs.list() ?? [], [v]); // eslint-disable-line react-hooks/exhaustive-deps -- v is the songs' version: re-read on each save
 }
 export function useSong(id: string): YtSong | null {
   const v = useSongsVersion();
-  return useMemo(() => songsStore()?.songs.get(id) ?? null, [id, v]); // eslint-disable-line react-hooks/exhaustive-deps
+  return useMemo(() => songsStore()?.songs.get(id) ?? null, [id, v]); // eslint-disable-line react-hooks/exhaustive-deps -- v is the songs' version: re-read on each save
 }
 export function useStoredCharts(): StoredChart[] {
   const v = useSongsVersion();
-  return useMemo(() => songsStore()?.charts.list() ?? [], [v]); // eslint-disable-line react-hooks/exhaustive-deps
+  return useMemo(() => songsStore()?.charts.list() ?? [], [v]); // eslint-disable-line react-hooks/exhaustive-deps -- v is the songs' version: re-read on each save
 }

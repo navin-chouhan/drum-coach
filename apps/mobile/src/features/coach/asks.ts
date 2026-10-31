@@ -86,7 +86,7 @@ export function createCoachAsks(deps: CoachAsksDeps) {
     /** Forget an entry (e.g. "Try again" after an error asks anew). */
     clear(key: string) { if (entries.delete(key)) notify(); },
     /** For useSyncExternalStore. */
-    subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    subscribe: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
     version: () => version,
   };
 }

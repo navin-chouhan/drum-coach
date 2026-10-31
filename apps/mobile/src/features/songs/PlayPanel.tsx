@@ -3,7 +3,7 @@
 // of friends, always on in a concert): a big video and an encore instead of the score sheet; the concert offers the
 // next song.
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BigMove, Body, Card, CardTitle, CheckRow, Display, MoreSheet, RoundButton, SheetItem, Small, Stepper, color, gesturesFor, readSettings, useAppKey, useKitMoves } from '../../ui';
 import { audio } from '../../platform/audio';
@@ -22,6 +22,7 @@ import type { ModeProps } from './modeProps';
 import { concert, songHref } from './songsModel';
 import { createSongTake, songRun, type SongTake, type SongTakeResult } from './songTake';
 import { useInterruptions } from './useInterruptions';
+import { useLatest } from '../../ui/useLatest';
 
 export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: ModeProps & { onStage: (on: boolean) => void }) {
   const grid = song.grids[videoId];
@@ -64,10 +65,9 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
   // The encore's drum flourish, as the web's flourish(true).
   useEffect(() => { if (done && stage) { void getCoach().session.coachTake(done, { chartId: song.id }); playFlourish(audio, true); } }, [done, stage, song.id]);
   // The song can't change speed mid-way, so any step the coach suggests = play again (not "listen").
-  const goRef = useRef(go);
-  goRef.current = go;
+  const goRef = useLatest(go);
   const hasNotes = song.notes.some(n => n.t >= 0);
-  useEffect(() => (hasNotes ? getCoach().session.onCoachAction(a => { if (a.kind === 'listen') return false; goRef.current(); return true; }) : undefined), [hasNotes]);
+  useEffect(() => (hasNotes ? getCoach().session.onCoachAction(a => { if (a.kind === 'listen') return false; goRef.current(); return true; }) : undefined), [hasNotes, goRef]);
   const [shareNote, setShareNote] = useState('');
   const [more, setMore] = useState(false);
   const share = async (f: SongTakeResult) => { setShareNote(''); if ((await shareTake(f, song.title)) === 'failed') setShareNote('The take could not be shared.'); };

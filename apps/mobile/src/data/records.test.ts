@@ -62,7 +62,7 @@ describe('ai lessons repo', () => {
     const { db } = setup();
     const lessons = createAiLessonsRepo(db);
     lessons.put({ id: 'ai-a' });
-    expect(() => lessons.replace({ id: '' } as never, ['ai-a'])).toThrow();
+    expect(() => lessons.replace({ id: '' }, ['ai-a'])).toThrow();
     expect((await lessons.list()).map(l => l.id)).toEqual(['ai-a']);
   });
 });

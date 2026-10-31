@@ -36,7 +36,7 @@ export function readMetronome(kv: Pick<KeyValueStore, 'get'>): MetronomeSettings
   try {
     const s = JSON.parse(kv.get(METRONOME_KEY) ?? '{}') as Partial<MetronomeSettings> & { beatsPerBar?: unknown };
     // a meter saved before /8 meters were offered was clicks per bar in quarters
-    const ts = Array.isArray(s.timeSignature) ? meterOf(meterLabel(s.timeSignature as unknown as Meter)) : meterOf(`${String(s.beatsPerBar)}/4`);
+    const ts = Array.isArray(s.timeSignature) ? meterOf(meterLabel(s.timeSignature)) : meterOf(`${String(s.beatsPerBar)}/4`);
     return {
       bpm: clampBpm(typeof s.bpm === 'number' ? s.bpm : METRONOME_DEFAULTS.bpm),
       timeSignature: ts ?? METRONOME_DEFAULTS.timeSignature,

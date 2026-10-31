@@ -1,13 +1,14 @@
 // "Hit each pad once", big and readable from the throne (mockup first-run-3-pads; web PadWizard `big`): the pad to hit
 // in huge type on the web wizard's black stage with the kit drawing, what each pad sent on the right, and Back /
 // Skip / Stop. Hitting the pad is the answer. Used by Setup → Pads and by the first run's step 3.
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigMove, Body, Card, Group, GroupRow, MAX_FONT_SCALE, PadMap, Sticker, color, font, getAppHitBus, hardShadow, stroke, tabular, useAppKey, writeSettings } from '../../ui';
 import { getStorage } from '../../platform/storage';
 import { writeNoteMap } from './kitStore';
 import { startWizard, wizardKey, wizardReduce, wizardSave, wizardView, type WizardAction, type WizardState } from './padWizard';
 import type { NoteMap } from '@drum-coach/core/engine/kit';
+import { useLatest } from '../../ui/useLatest';
 
 type Props = {
   kit: string;
@@ -20,10 +21,10 @@ type Props = {
 };
 
 export function PadWizardView({ kit, map, onSaved, onStop, testID = 'pads' }: Props) {
-  const mapRef = useRef(map);
-  mapRef.current = map;
-  const [state, dispatch] = useReducer((s: WizardState, a: WizardAction) => wizardReduce(s, a, mapRef.current), undefined, startWizard);
-  useEffect(() => getAppHitBus().onHit(h => dispatch({ kind: 'hit', note: h.note, time: h.time })), []);
+  const mapRef = useLatest(map);
+  const [state, send] = useReducer((s: WizardState, a: WizardAction & { map: NoteMap }) => wizardReduce(s, a, a.map), undefined, startWizard);
+  const dispatch = (a: WizardAction) => send({ ...a, map: mapRef.current });
+  useEffect(() => getAppHitBus().onHit(h => send({ kind: 'hit', note: h.note, time: h.time, map: mapRef.current })), [mapRef]);
   const v = wizardView(state, map, kit);
   // A hardware keyboard, as the web's Calibrate: ← back one pad, Esc stops (where there is a Stop).
   const onKey = (k: 'left' | 'escape') => { const a = wizardKey(k); if (a === 'back') dispatch({ kind: 'back' }); else if (a === 'stop') onStop?.(); };

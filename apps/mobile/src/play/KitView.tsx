@@ -45,7 +45,7 @@ export function KitView({ hits, results, activeDrums, theme = IPAD_THEME, layout
     for (const t of e.nativeEvent.changedTouches) {
       const [x, y] = toLayout(t.locationX, t.locationY, fit);
       const part = hitTest(layout, x, y);
-      if (part) onPadPress(part.id === 'hhPedal' ? 'hhPedal' : part.drum === 'hihat' ? 'hhClosed' : (part.drum as PadId));
+      if (part) onPadPress(part.id === 'hhPedal' ? 'hhPedal' : part.drum === 'hihat' ? 'hhClosed' : (part.drum));
     }
   }, [onPadPress, fit, layout]);
 

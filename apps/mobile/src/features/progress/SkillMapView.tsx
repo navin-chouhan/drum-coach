@@ -23,7 +23,7 @@ export function SkillMapView({ lessons, progress }: { lessons: Lesson[]; progres
             <Track done={k.fill} style={styles.track} />
             <Body size={13} weight="700" style={styles.count}>{k.count}</Body>
             <Dots values={k.growth} label={`${k.name}, the last 6 months, percent`} />
-            <View style={styles.action}>{k.refresh ? <Button label="Refresh" emoji="🔁" size="small" onPress={() => router.push(lessonHref(k.refresh!) as never)} accessibilityLabel={`Refresh ${k.name}`} /> : null}</View>
+            <View style={styles.action}>{k.refresh ? <Button label="Refresh" emoji="🔁" size="small" onPress={() => router.push(lessonHref(k.refresh!))} accessibilityLabel={`Refresh ${k.name}`} /> : null}</View>
           </View>
         ))}
       </ScrollView>

@@ -13,6 +13,7 @@ import {
   loopEvents, throneAnswer, throneAsk, throneTitle, type LevelKey,
 } from './sound';
 import type { Settings } from '@drum-coach/core/input/settings';
+import { useLatest } from '../../ui/useLatest';
 
 const kv = () => getStorage().kv;
 function setLevels(patch: Partial<Settings>) {
@@ -86,27 +87,26 @@ function ThroneCheck({ onDone }: { onDone: () => void }) {
   const [stopped, setStopped] = useState(false);
   // An interruption silences the loop: say so; answering (or Play again) plays this step again.
   useAudioInterruptions(!stopped, () => { stopLoop.current(); stopLoop.current = () => {}; setStopped(true); });
-  const play = async (k: number) => {
-    setStopped(false);
+  const startStep = async (k: number) => {
     stopLoop.current(); stopLoop.current = () => {};
     const st = THRONE_STEPS[k];
     if (!st) return;
     if (st.key === 'voiceVolume') { sayNow(THRONE_VOICE_LINE); return; } // the coach's real voice, as the test button
     try { stopLoop.current = await startLoop(st.key === 'clickVolume' ? 'click' : 'band'); } catch { /* no audio */ }
   };
+  const play = (k: number) => { setStopped(false); return startStep(k); };
   const answer = (a: number) => {
     const r = throneAnswer(stepRef.current, a, readSettings(kv()));
     if (r.patch) setLevels(r.patch);
     if (r.finished) { stopLoop.current(); onDone(); return; }
     if (r.step !== stepRef.current) { stepRef.current = r.step; setStep(r.step); void play(r.step); } else if (r.replay) void play(r.step);
   };
-  const answerRef = useRef(answer);
-  answerRef.current = answer;
+  const answerRef = useLatest(answer);
   useEffect(() => {
-    void play(0);
+    void startStep(0);
     const off = getAppHitBus().onHit(h => { const a = answerForPad(h.pad); if (a !== null) answerRef.current(a); });
     return () => { off(); stopLoop.current(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once; answers read the step through the ref
+  }, [answerRef]); // once: the first step plays when the check opens
   // Keys 1, 2, 3 answer too (web SoundCheckCard), as the buttons say.
   useAppKey('1', () => answerRef.current(0));
   useAppKey('2', () => answerRef.current(1));

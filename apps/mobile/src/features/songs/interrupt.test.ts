@@ -1,4 +1,3 @@
-import type { AudioInterruption } from '@drum-coach/core/play/audioPort';
 import { createFakeAudioPort, createFakeClock } from '@drum-coach/core/play/fakeAudio';
 import { describe, expect, it, vi } from 'vitest';
 import { jamKeepsInterrupted, watchInterruptions, type AppStateLike } from './interrupt';
@@ -20,7 +19,7 @@ describe('watchInterruptions (QA m5, as the lesson player)', () => {
     const off = watchInterruptions(port, app, fn);
     port.emitInterruption({ type: 'began', at: 1234 });
     port.emitInterruption({ type: 'engine-stopped', at: 2000, cause: 'config-change' });
-    port.emitInterruption({ type: 'ended', at: 3000, shouldResume: true } as AudioInterruption);
+    port.emitInterruption({ type: 'ended', at: 3000, shouldResume: true });
     app.emit('active');
     app.emit('background');
     app.emit('inactive');

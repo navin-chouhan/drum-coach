@@ -31,7 +31,7 @@ function Row({ label, value, testID, tone }: { label: string; value: string; tes
 }
 
 export default function About() {
-  const core = useMemo(coreLink, []);
+  const core = useMemo(() => coreLink(), []);
   const [caps, setCaps] = useState(getCapabilities);
   useEffect(() => {
     let live = true;

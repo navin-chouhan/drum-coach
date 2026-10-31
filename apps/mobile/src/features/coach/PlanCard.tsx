@@ -39,7 +39,7 @@ export function PlanCard() {
               {d.items.map((it, ii) => {
                 const k = `${di}.${ii}`, done = !!shown.checks[k];
                 const target = planItemTarget(it, coach.exists);
-                const play = target ? () => router.push((target.kind === 'song' ? songRoute(target.id) : drillRoute(target)) as never) : undefined;
+                const play = target ? () => router.push((target.kind === 'song' ? songRoute(target.id) : drillRoute(target))) : undefined;
                 return (
                   <View key={k} style={styles.item}>
                     <Pressable onPress={() => coach.weekPlan.toggle(k)} hitSlop={slopFor(26)} testID={`coach-plan-item-${k}`}

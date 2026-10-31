@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createVoice, HOLD_MAX_MS, RATE, type SpeakOptions, type VoiceDeps } from './voiceCore';
 
 function rig(o: { ready?: () => Promise<unknown>; volume?: number | undefined; speakThrows?: boolean } = {}) {

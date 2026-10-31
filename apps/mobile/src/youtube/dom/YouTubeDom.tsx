@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type Ref } from 'react';
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from 'expo/dom';
 import { nextOffset } from '../../play/clockSync';
 import { deadline } from '../../play/domCalls';
+import { useLatest } from '../../ui/useLatest';
 import { LOAD_ERROR, measureOffset, ytPlayerVars, type YtCommand, type YtEvent } from '../ytController';
 
 export type YouTubeHandle = DOMImperativeFactory & {
@@ -59,17 +60,16 @@ function loadApi(): Promise<YTNamespace> {
 }
 
 export default function YouTubeDom(props: YouTubeDomProps) {
-  const { clockNow, onEvent } = props;
+  const { clockNow, onEvent, ref, videoId } = props;
   const host = useRef<HTMLDivElement>(null);
   const player = useRef<YTPlayer | null>(null);
   const offset = useRef(NaN);
   const [failed, setFailed] = useState('');
-  const first = useRef(props.videoId); // later videos arrive as `load` commands
+  const [first] = useState(videoId); // later videos arrive as `load` commands
+  const events = useLatest(onEvent);
 
-  const stamp = () => (Number.isFinite(offset.current) ? { at: performance.now() + offset.current } : {});
-  const send = (e: YtEvent) => { void onEvent(e).catch(() => {}); };
-
-  useDOMImperativeHandle(props.ref ?? null, () => ({
+  useDOMImperativeHandle(ref ?? null, () => ({
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- tsc needs it: the bridge types each argument as any JSON value
     command: ((cmd: YtCommand) => {
       const p = player.current;
       if (!p) return;
@@ -79,7 +79,7 @@ export default function YouTubeDom(props: YouTubeDomProps) {
       else if (cmd.type === 'rate') p.setPlaybackRate(cmd.rate);
       else if (cmd.type === 'load') p.cueVideoById({ videoId: cmd.videoId, startSeconds: cmd.startSeconds });
     }) as never,
-  }) as YouTubeHandle, []);
+  }), []);
 
   // The Clock offset, measured now and every few seconds.
   useEffect(() => {
@@ -100,6 +100,8 @@ export default function YouTubeDom(props: YouTubeDomProps) {
     document.body.style.background = '#000';
     document.body.style.overflow = 'hidden';
     let live = true, poll: ReturnType<typeof setInterval> | undefined, lastRaw = -1;
+    const stamp = () => (Number.isFinite(offset.current) ? { at: performance.now() + offset.current } : {});
+    const send = (e: YtEvent) => { void events.current(e).catch(() => {}); };
     const read = (p: YTPlayer) => ({ raw: p.getCurrentTime?.() ?? 0, rate: p.getPlaybackRate?.() || 1, ...stamp() });
     const meta = (p: YTPlayer) => ({ duration: p.getDuration?.() ?? 0, title: p.getVideoData?.().title ?? '' });
     loadApi().then(YT => {
@@ -108,7 +110,7 @@ export default function YouTubeDom(props: YouTubeDomProps) {
       host.current.replaceChildren(el);
       const origin = typeof location !== 'undefined' ? location.origin : undefined;
       const p = new YT.Player(el, {
-        videoId: first.current, width: '100%', height: '100%',
+        videoId: first, width: '100%', height: '100%',
         playerVars: ytPlayerVars(origin),
         events: {
           onReady: () => {
@@ -137,7 +139,7 @@ export default function YouTubeDom(props: YouTubeDomProps) {
       try { player.current?.destroy(); } catch { /* already gone */ }
       player.current = null;
     };
-  }, []);
+  }, [events, first]); // once: the player is made for the first video
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#000', overflow: 'hidden' }}>

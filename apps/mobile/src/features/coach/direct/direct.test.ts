@@ -263,7 +263,7 @@ describe('parity with the server (the copied input builders)', () => {
     expect(ours.recentForLesson()).toEqual(theirs.recentForLesson());
     expect(ours.pastTakes('singles')).toEqual(theirs.pastTakes('singles'));
     expect(ours.teacherNotes()).toEqual(theirs.teacherNotes());
-    expect(mine.weekFocus(ours)).toEqual((sc.weekFocus as (d: unknown) => unknown)(theirs));
+    expect(mine.weekFocus(ours)).toEqual((sc.weekFocus)(theirs));
     const state = { profile: { ...DEFAULTS.profile, goals: ['rock'] }, progress: {}, aiLessons: [], recent: ours.recentForLesson(), teacherNotes: ours.teacherNotes(), weekFocus: mine.weekFocus(ours) };
     expect(JSON.parse(JSON.stringify(mine.lessonInput(state as never)))).toEqual(JSON.parse(JSON.stringify(sl.lessonInput(state))));
   });

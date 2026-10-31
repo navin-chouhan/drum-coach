@@ -8,8 +8,11 @@ import { useUiClock } from '../../play';
 import { Body, color, drumColor, getAppHitBus, stroke } from '../../ui';
 import { TIMELINE_LABEL_W, TIMELINE_LANES, TIMELINE_NOW_INSET, TIMELINE_TITLE, addTimelineHit, timelineDot, timelineX, type TimelineHit } from './timeline';
 
+/** The Clock's now, one function for the screen's views (Clock.now is a method: called through its port). */
+const clockNow = () => getMidiPort().clock.now();
+
 export function TimelineView({ height = 168 }: { height?: number }) {
-  const clock = useUiClock(getMidiPort().clock.now);
+  const clock = useUiClock(clockNow);
   const [width, setWidth] = useState(0);
   const [hits, setHits] = useState<TimelineHit[]>([]);
   const key = useRef(0);

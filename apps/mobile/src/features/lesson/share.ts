@@ -6,6 +6,7 @@ import type { Finished } from './types';
 /** src/ui/download.ts stamp: 2026-10-30-19-45. */
 export const stamp = (d = new Date()) => d.toISOString().slice(0, 16).replace(/[:T]/g, '-');
 /** A file name iOS accepts: no path separators or control characters. */
+// eslint-disable-next-line no-control-regex -- the control characters are what's replaced (iOS refuses them in file names)
 export const safeFileName = (name: string) => name.replace(/[/\\:\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120) || 'take';
 
 export const canShare = (f: Finished | undefined) => !!f && f.hits.length > 0;

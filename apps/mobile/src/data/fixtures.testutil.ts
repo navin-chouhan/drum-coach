@@ -39,7 +39,7 @@ export async function serverContext() {
   return (await import(/* @vite-ignore */ path)) as {
     CONTEXT_MAX_BYTES: number;
     CoachContextSchema: ZodLike;
-    splitContext(body: unknown): { rest: unknown; context?: unknown; error?: string };
-    contextData(c: unknown): { runRows(limit?: number): Record<string, unknown>[]; recentForLesson(): unknown[]; pastTakes(id: string): unknown[]; teacherNotes(): unknown[]; aiLessons(): { id: string }[] };
+    splitContext: (body: unknown) => { rest: unknown; context?: unknown; error?: string };
+    contextData: (c: unknown) => { runRows(limit?: number): Record<string, unknown>[]; recentForLesson(): unknown[]; pastTakes(id: string): unknown[]; teacherNotes(): unknown[]; aiLessons(): { id: string }[] };
   };
 }
