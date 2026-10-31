@@ -1,6 +1,8 @@
 // Colours of the play surfaces. Pure data (no React Native), so worklets can capture it and tests can read it.
-// IPAD_THEME follows the owner's iPad mockups (docs/mockups/ipad/ipad.css, not yet approved: D4); WEB_THEME keeps the
-// web app's pop-art drum colours (src/ui/drums.ts). Every component takes `theme`, so the choice is one prop.
+// IPAD_THEME is the approved iPad look (docs/mockups/ipad: the web's black music panel with the approved drum
+// colours) and reads every colour it shares with the screens from src/ui/tokens.ts, the one source; WEB_THEME keeps
+// the web app's pop-art drum colours (src/ui/drums.ts) as the alternative. Every component takes `theme`.
+import { color, drumColor, resultColor, resultOnNight } from '../ui/tokens';
 import type { DrumId } from './chartLike';
 
 /** How a judged note came out. 'onIt' = perfect, early/late = good but off, missed, extra = a stroke with no note. */
@@ -13,6 +15,8 @@ export type PlayTheme = {
   idle: string;
   idleText: string;
   result: Record<ResultKind, string>;
+  /** The result colours on the sheet music's paper (NotationView). */
+  sheetResult: Record<ResultKind, string>;
   /** Text colour for an early/late offset ("+48 ms"). */
   offsetText: string;
   background: string;
@@ -33,39 +37,33 @@ export type PlayTheme = {
   accentRing: string;
 };
 
-const RESULT_IOS: Record<ResultKind, string> = {
-  onIt: '#34C759', // green
-  early: '#FF9500', // orange
-  late: '#FF9500',
-  missed: '#FF3B30', // red, dashed outline
-  extra: '#FF3B30', // red ✕
-};
+const WHITE = (alpha: number) => `rgba(255,255,255,${alpha})`;
 
+/** The approved iPad look (mockups mock.js `highway`, `kit`): drum colours and results from the UI tokens. */
 export const IPAD_THEME: PlayTheme = {
   name: 'ipad',
-  drum: {
-    hihat: '#0FA3B1', crash: '#D99A00', snare: '#5856D6', tom1: '#AF52DE',
-    tom2: '#C93A9E', floor: '#A2845E', ride: '#00A383', kick: '#48484A',
-  },
-  idle: '#E3E3E8',
-  idleText: 'rgba(60,60,67,0.55)',
-  result: RESULT_IOS,
-  offsetText: '#C25E00',
-  background: '#FFFFFF',
-  laneFill: ['#FAFAFC', '#F6F6F9'],
-  barLine: 'rgba(60,60,67,0.35)',
-  beatLine: 'rgba(60,60,67,0.10)',
-  laneLabel: '#1C1C1E',
-  gridLabel: 'rgba(60,60,67,0.6)',
-  countNumber: '#1C1C1E',
-  countAnd: '#007AFF',
-  countRowFill: '#F2F2F7',
-  nowLine: '#FFCC00',
-  nowBall: '#FFCC00',
-  nowBallStroke: '#C99A00',
-  noteText: '#FFFFFF',
-  padText: '#FFFFFF',
-  accentRing: '#1C1C1E',
+  drum: { ...drumColor },
+  idle: '#3A3A3A',
+  idleText: '#9A9A9A',
+  result: { ...resultOnNight },
+  sheetResult: { ...resultColor },
+  offsetText: resultOnNight.early,
+  background: color.night,
+  laneFill: [WHITE(0.09), WHITE(0.05)],
+  barLine: WHITE(0.53),
+  beatLine: WHITE(0.13),
+  laneLabel: color.white,
+  gridLabel: color.pop,
+  countNumber: color.white,
+  countAnd: '#8FB4FF',
+  countRowFill: WHITE(0.07),
+  nowLine: color.pop,
+  nowBall: color.pop,
+  nowBallStroke: color.ink,
+  // Drum colours are light (the kick is white): ink on them, as the mockups' gems.
+  noteText: color.ink,
+  padText: color.ink,
+  accentRing: color.white,
 };
 
 /** The web app's colours (src/ui/drums.ts, src/play/Highway.tsx JCOLOR) on the web's dark stage. */
@@ -78,6 +76,8 @@ export const WEB_THEME: PlayTheme = {
   idle: '#3A3A3A',
   idleText: '#9A9A9A',
   result: { onIt: '#4BE08A', early: '#FFE14D', late: '#FFE14D', missed: '#FF5A4F', extra: '#FF5A4F' },
+  // The web sheet's tones (its yellow "good" can't be read on paper).
+  sheetResult: { onIt: '#1E9E5A', early: '#C77700', late: '#C77700', missed: '#E8423F', extra: '#E8423F' },
   offsetText: '#FFE14D',
   background: '#141414',
   laneFill: ['rgba(255,255,255,0.025)', 'rgba(255,255,255,0)'],

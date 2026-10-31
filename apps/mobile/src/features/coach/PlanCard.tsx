@@ -2,8 +2,8 @@
 // then the plan's days with tick boxes and play links. Kept on the iPad (weekPlan.ts).
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Body, Button, Card, Display, Label, MAX_FONT_SCALE, color, slopFor } from '../../ui';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Body, Button, Card, Display, Field, Label, color, slopFor } from '../../ui';
 import { drillRoute, getCoach, songRoute, useCoachEntry, useWeekPlan } from './coach';
 import { ProblemCard } from './CoachPanel';
 import { THINKING } from './panel';
@@ -21,9 +21,9 @@ export function PlanCard() {
     <Card style={styles.card} testID="coach-plan">
       <Label>Weekly plan</Label>
       <View style={styles.form}>
-        <Field label="Goals" value={form.goals} onChange={goals => setForm({ ...form, goals })} maxLength={500} flex testID="coach-plan-goals" />
-        <Field label="Minutes/day" value={form.minutesPerDay} onChange={minutesPerDay => setForm({ ...form, minutesPerDay })} numeric testID="coach-plan-minutes" />
-        <Field label="Days/week" value={form.daysPerWeek} onChange={daysPerWeek => setForm({ ...form, daysPerWeek })} numeric testID="coach-plan-days" />
+        <Field label="Goals" value={form.goals} onChange={goals => setForm({ ...form, goals })} maxLength={500} showLabel style={styles.flex} testID="coach-plan-goals" />
+        <Field label="Minutes/day" value={form.minutesPerDay} onChange={minutesPerDay => setForm({ ...form, minutesPerDay })} numeric showLabel style={styles.narrow} testID="coach-plan-minutes" />
+        <Field label="Days/week" value={form.daysPerWeek} onChange={daysPerWeek => setForm({ ...form, daysPerWeek })} numeric showLabel style={styles.narrow} testID="coach-plan-days" />
       </View>
       {e?.status === 'thinking'
         ? <View style={styles.think}><Display size={15}>The coach is writing your plan…</Display><Body size={13.5}>{THINKING.line}</Body></View>
@@ -63,23 +63,11 @@ export function PlanCard() {
   );
 }
 
-function Field({ label, value, onChange, numeric, maxLength, flex, testID }: { label: string; value: string; onChange: (v: string) => void; numeric?: boolean; maxLength?: number; flex?: boolean; testID?: string }) {
-  return (
-    <View style={flex ? styles.flex : styles.narrow}>
-      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.fieldLabel}>{label}</Text>
-      <TextInput value={value} onChangeText={t => onChange(numeric ? t.replace(/\D/g, '').slice(0, 3) : t)} keyboardType={numeric ? 'number-pad' : 'default'}
-        maxLength={maxLength} accessibilityLabel={label} testID={testID} style={styles.input} maxFontSizeMultiplier={MAX_FONT_SCALE} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   card: { flex: 1, gap: 10, minHeight: 0 },
   form: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
   flex: { flex: 1 },
   narrow: { width: 110 },
-  fieldLabel: { fontSize: 12, fontWeight: '800', color: color.muted, marginBottom: 3 },
-  input: { height: 44, borderWidth: 3, borderColor: color.ink, backgroundColor: color.panel, paddingHorizontal: 10, fontSize: 15, fontWeight: '600', color: color.ink },
   think: { backgroundColor: color.cream, borderWidth: 3, borderStyle: 'dashed', borderColor: color.ink, padding: 10 },
   plan: { flex: 1, minHeight: 0 },
   planInner: { gap: 8, paddingBottom: 8 },

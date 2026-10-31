@@ -57,7 +57,7 @@ session. The decisions it needs are D1–D5, below.
 | A4p3 Backing audio | **done, merged** (1c3b238) | `apps/mobile/modules/drum-audio/**`, `src/platform/audio*` | [briefs/A4p3.md](briefs/A4p3.md) | BackingPort |
 
 | I1 Backing in take + Songs | running | `packages/core/src/play/**`, `features/songs/**`, `src/youtube/**` | [briefs/I1.md](briefs/I1.md) | backing plays |
-| I2 Keyboard + kit consolidation | running | `modules/drum-keys/**`, `src/ui/**`, `app/_layout.tsx`, imports in setup/firstRun/pads/latency/coach/journey/progress | [briefs/I2.md](briefs/I2.md) | app-wide keys, one kit |
+| I2 Keyboard + kit consolidation | **done, merged** (e6ddbf9) | `modules/drum-keys/**`, `src/ui/**`, `app/_layout.tsx`, imports in setup/firstRun/pads/latency/coach/journey/progress | [briefs/I2.md](briefs/I2.md) | app-wide keys, one kit |
 | I3 Lesson + Practice integration | running | `features/{lesson,practice}/**`, `app/{lesson,practice}/**`, `features/coach/asks.ts` | [briefs/I3.md](briefs/I3.md) | backlog items |
 | A10 QA | **done, merged** (6ed44da) | `docs/mobile/QA-*.md`, `docs/mobile/FINAL-CHECKLIST.md`, `apps/mobile/e2e/**` | [briefs/A10.md](briefs/A10.md) | findings + owner checklist |
 

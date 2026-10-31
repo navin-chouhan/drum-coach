@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { layoutMeasures } from '@drum-coach/core/engine/notation';
 import { IPAD_THEME, WEB_THEME } from '../play/theme';
+import { resultColor } from '../ui/tokens';
 import type { PlayResult } from '../play/events';
 import { markShowcase, moneyBeat } from './dev/fixtures';
 import {
@@ -84,8 +85,8 @@ describe('chart and pages', () => {
 });
 
 describe('colours', () => {
-  it('uses the iOS result colours on the iPad theme and the web sheet tones on the web theme', () => {
-    expect(sheetColors(IPAD_THEME).result).toEqual(IPAD_THEME.result);
+  it('uses the paper result colours of each theme (the approved tokens on the iPad theme, the web sheet tones on the web)', () => {
+    expect(sheetColors(IPAD_THEME).result).toEqual(resultColor);
     const web = sheetColors(WEB_THEME);
     expect(web.result.onIt).toBe('#1E9E5A'); // the web's yellow "good" can't be read on paper
     expect(web.result.early).toBe('#C77700');

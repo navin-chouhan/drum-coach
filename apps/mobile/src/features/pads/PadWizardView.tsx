@@ -1,14 +1,12 @@
 // "Hit each pad once", big and readable from the throne (mockup first-run-3-pads; web PadWizard `big`): the pad to hit
 // in huge type on the web wizard's black stage with the kit drawing, what each pad sent on the right, and Back /
 // Skip / Stop. Hitting the pad is the answer. Used by Setup → Pads and by the first run's step 3.
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import { TOUCH_KIT, fitLayout, partBox } from '../../play/kitLayout';
-import { BigMove, Body, Card, MAX_FONT_SCALE, color, drumColor, font, getAppHitBus, hardShadow, stroke, tabular, writeSettings } from '../../ui';
+import { useEffect, useReducer, useRef } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { BigMove, Body, Card, Group, GroupRow, MAX_FONT_SCALE, PadMap, color, font, getAppHitBus, hardShadow, stroke, tabular, writeSettings } from '../../ui';
 import { getStorage } from '../../platform/storage';
-import { Group, GroupRow } from '../setup/parts';
 import { writeNoteMap } from './kitStore';
-import { startWizard, wizardReduce, wizardSave, wizardView, type KitSpot, type SpotState, type WizardAction, type WizardState } from './padWizard';
+import { startWizard, wizardReduce, wizardSave, wizardView, type WizardAction, type WizardState } from './padWizard';
 import type { NoteMap } from '@drum-coach/core/engine/kit';
 
 type Props = {
@@ -73,33 +71,6 @@ export function PadWizardView({ kit, map, onSaved, onStop, testID = 'pads' }: Pr
   );
 }
 
-const SPOT_OF: Record<string, KitSpot> = { hhPedal: 'hhPedal' };
-
-/** The kit from the throne (src/play kitLayout positions): the pad to hit big in yellow, done ones green, the rest dim. */
-export function PadMap({ spots }: { spots: Record<KitSpot, SpotState> }) {
-  const [size, setSize] = useState({ w: 0, h: 0 });
-  const onLayout = (e: LayoutChangeEvent) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
-  const fit = useMemo(() => fitLayout(TOUCH_KIT, size.w, size.h), [size]);
-  return (
-    <View style={styles.map} onLayout={onLayout} accessible accessibilityLabel={`Your kit from the throne: ${Object.values(spots).filter(s => s === 'ok').length} done`}>
-      {fit.scale > 0 && TOUCH_KIT.parts.map(p => {
-        const spot = SPOT_OF[p.id] ?? (p.drum as KitSpot);
-        const st = spots[spot];
-        const box = partBox(p, fit);
-        const round = p.kind === 'circle' ? box.width / 2 : p.radius * fit.scale;
-        return (
-          <View key={p.id} style={[styles.part, box, { borderRadius: round },
-            st === 'now' ? { backgroundColor: color.pop, boxShadow: hardShadow(4, color.white) } : st === 'ok' ? { backgroundColor: color.good } : { backgroundColor: drumColor[p.drum], opacity: 0.35 }]}>
-            <Text maxFontSizeMultiplier={1} numberOfLines={1} style={[styles.partLabel, { fontSize: Math.max(10, (st === 'now' ? 24 : 15) * fit.scale * 1.6) }, st === 'ok' && { color: color.white }]}>
-              {st === 'ok' ? '✓ ' : ''}{p.label}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   wrap: { flex: 1, gap: 14 },
   cols: { flex: 1, flexDirection: 'row', gap: 26 },
@@ -111,9 +82,6 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   toast: { marginTop: 6, backgroundColor: color.panel, borderWidth: stroke.card, borderColor: color.ink, boxShadow: hardShadow(3, color.ground), paddingHorizontal: 14, paddingVertical: 6, transform: [{ rotate: '-1.5deg' }] },
   toastText: { ...font.display, fontSize: 15, color: color.ink },
-  map: { flex: 1, alignSelf: 'stretch', marginTop: 4 },
-  part: { position: 'absolute', borderWidth: stroke.card, borderColor: color.ink, alignItems: 'center', justifyContent: 'center' },
-  partLabel: { ...font.display, color: color.ink },
   side: { flex: 1, maxWidth: 380 },
   ck: { width: 16, fontWeight: '900', color: color.ink },
   rowName: { flex: 1, fontSize: 15, fontWeight: '700', color: color.ink },

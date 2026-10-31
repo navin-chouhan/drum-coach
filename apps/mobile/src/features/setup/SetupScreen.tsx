@@ -11,7 +11,7 @@ import { getStorage } from '../../platform/storage';
 import { KitView, type PadHit, type Subscribe } from '../../play';
 import { TOUCH_KIT } from '../../play/kitLayout';
 import {
-  Body, Button, GestureChip, Pill, Screen, Segmented, TitleBar, Toggle, color, font, getAppHitBus, padColor, stroke, useAppSettings, useKitMoves, writeSettings,
+  Body, Button, Chevron, GestureChip, Group, GroupRow, Pill, Screen, Segmented, TitleBar, Toggle, ToolFrame, color, font, getAppHitBus, padColor, stroke, useAppSettings, useKitMoves, writeSettings,
 } from '../../ui';
 import { LatencyPanel } from '../latency/LatencyPanel';
 import { LATENCY_FOOT, latencyRow, otherRoutes, readLatencyByRoute, shortDate } from '../latency/latencyByRoute';
@@ -24,7 +24,6 @@ import {
   API_KEY_FOOT, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
 } from './coachServer';
 import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit';
-import { Chevron, Group, GroupRow, ToolFrame } from './parts';
 import { SoundPanel } from './SoundPanel';
 import { useAudioRoute, useKitConnection, useKitData, useLastHit, useLatencyRouteSync, useRecentRuns, keychain } from './useSetup';
 import { HAND_SUB, LIVE_TIPS, LIVE_TIPS_SUB, AUTOPILOT_SUB } from './whilePlaying';
@@ -109,7 +108,7 @@ export function SetupScreen() {
 
         <View style={styles.col}>
           <ServerGroup />
-          <ApiKeyGroup onOpen={() => setTool('apikey')} />
+          <ApiKeyGroup onOpen={() => setTool('apikey')} editing={tool === 'apikey'} />
           <Group title="While you play">
             <GroupRow first title="Live tips" sub={LIVE_TIPS_SUB}
               right={<Segmented accessibilityLabel="Live tips" value={s.liveTips} onChange={liveTips => save({ liveTips })}
@@ -186,9 +185,14 @@ function ServerGroup() {
   );
 }
 
-function ApiKeyGroup({ onOpen }: { onOpen: () => void }) {
+function ApiKeyGroup({ onOpen, editing }: { onOpen: () => void; editing: boolean }) {
   const [set, setSet] = useState(false);
-  useEffect(() => { void hasApiKey(keychain).then(setSet, () => {}); });
+  // The Keychain is read once, and again when the API-key tool opens or closes (QA m3: not after every render).
+  useEffect(() => {
+    let live = true;
+    void hasApiKey(keychain).then(v => { if (live) setSet(v); }, () => {});
+    return () => { live = false; };
+  }, [editing]);
   return (
     <Group title="Coach · fallback" foot={API_KEY_FOOT}>
       <GroupRow first emoji="🔑" sym="yellow" title="Anthropic API key" sub="optional, kept in the Keychain" right={<><Text style={styles.val}>{apiKeyValue(set)}</Text><Chevron /></>}

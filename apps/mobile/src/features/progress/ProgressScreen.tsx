@@ -8,9 +8,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   Body, Button, Card, CardTitle, CoachLine, Label, ListRow, Screen, Stars, StatTile, Strong, TitleBar,
   color, stroke, tabular, useAppSettings,
+  Bars, Track,
 } from '../../ui';
 import { lessonHref } from '../journey/JourneyScreen';
-import { Bars, Track } from '../practice/parts';
 import { MonthReportView } from './MonthReportView';
 import { progressViewOf, type ProgressViewId } from './path';
 import { PathView } from './PathView';
