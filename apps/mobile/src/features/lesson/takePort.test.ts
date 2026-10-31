@@ -54,6 +54,16 @@ describe('TakePort on core createTake', () => {
     expect(short.take.lastEnd).toBe('dropped');
   });
 
+  it('an interruption ends the take where native says it began, not when JS heard of it (QA2 m6)', async () => {
+    const r = rig();
+    r.take.start(money.chart, opts());
+    await flush();
+    const s = r.take.state, began = s.zero + 9 * s.beatMs + 100; // in bar 3
+    await playAll(r, () => 0, s.zero + 13 * s.beatMs + 100); // JS is told late, in bar 4
+    r.take.stop('interrupted', began);
+    expect(r.take.state.finished!.run.beats).toBe(8); // bars 1–2, not 1–3
+  });
+
   it('a demo runs `then` at its end; Stop drops a take', async () => {
     const r = rig();
     let then = 0;

@@ -206,10 +206,10 @@ export class LessonController {
   findTempo() { this.probe = { tempo: this.frame().step.bpm.start, accs: [] }; this.probeBar(); }
   /** Stop (the Stop button, crash × 4, Esc): an endless take keeps its whole bars. */
   stop() { this.d.take.stop('user'); }
-  /** D6: a call, Siri, the app in the background. */
-  interrupt() {
+  /** D6: a call, Siri, the app in the background, a route change; `at` = when it began (Clock ms), default now. */
+  interrupt(at?: number) {
     if (!this.playing) return;
-    this.d.take.stop('interrupted');
+    this.d.take.stop('interrupted', at);
     if (this.d.take.state.phase !== 'done') { this.notice = 'Take stopped. It was too short to keep: press Play when you are ready.'; this.notify(); }
   }
   private goNext() { this.d.take.stop(); (this.d.onNext ?? this.d.onBack)(); }

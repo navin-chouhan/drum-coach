@@ -9,6 +9,7 @@ import { NotationView } from '../../notation';
 import { TouchPads } from '../../play';
 import type { DrumId } from '../../play/chartLike';
 import { audio } from '../../platform/audio';
+import { useAudioEngine } from '../../platform/useAudio';
 import { getMidiPort } from '../../platform/midi';
 import type { RunsRepo } from '../../data/runs';
 import { getStorage } from '../../platform/storage';
@@ -37,6 +38,7 @@ import {
 const now = () => getMidiPort().clock.now();
 
 export function PlayScreen() {
+  useAudioEngine(); // the engine runs while this play screen is shown: touch pads sound before the first take (QA2 M2)
   const params = useLocalSearchParams<{ chartId?: string; bpm?: string; warm?: string }>();
   const kv = getStorage().kv;
   const settings = useAppSettings();
