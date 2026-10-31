@@ -65,6 +65,17 @@ describe('one-off coach questions', () => {
     await asks.ask('k', 'feedback', {}, undefined, true);
     expect(f.calls).toHaveLength(3);
   });
+  it("a failure reads the Keychain's API key (async) for the fallback line", async () => {
+    const f = fakeServer();
+    f.answerCalls(async () => unreachable);
+    let key = false;
+    const asks = createCoachAsks({ server: f.server, context: async () => ({}), hasFallbackKey: () => Promise.resolve(key) });
+    await asks.ask('a', 'plan', {});
+    expect(asks.entry('a')?.problem?.lines[1]).toBe("No API key is set, so there's no fallback.");
+    key = true; // saved in Setup meanwhile: the next failure knows
+    await asks.ask('b', 'plan', {});
+    expect(asks.entry('b')?.problem?.lines[1]).toBe("The API-key fallback isn't built yet, so there's no fallback.");
+  });
   it('an unreadable storage still sends an empty context (never the server\'s own data); a failure is an error entry', async () => {
     const f = fakeServer();
     f.answerCalls(async () => unreachable);

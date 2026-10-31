@@ -195,6 +195,17 @@ describe('offline (mockup coach-offline)', () => {
     expect(st.queued).toBeUndefined();
   });
 
+  it("reads the Keychain's API key (async) when a call fails; a throwing read counts as none", async () => {
+    const { s, f } = setup({ hasFallbackKey: async () => true });
+    f.answerStreams(() => ({ events: [], result: unreachable }));
+    await s.coachTake(fakeTake(), {});
+    expect(s.get().problem?.lines[1]).toBe("The API-key fallback isn't built yet, so there's no fallback.");
+    const none = setup({ hasFallbackKey: async () => { throw new Error('locked'); } });
+    none.f.answerStreams(() => ({ events: [], result: unreachable }));
+    await none.s.coachTake(fakeTake(), {});
+    expect(none.s.get().problem?.lines[1]).toBe("No API key is set, so there's no fallback.");
+  });
+
   it('keeps one question and sends it when the coach is back', async () => {
     const { s, f } = setup();
     f.answerStreams(() => ({ events: [], result: unreachable }));
