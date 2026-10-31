@@ -3,12 +3,15 @@
 // of friends, always on in a concert): a big video and an encore instead of the score sheet; the concert offers the
 // next song.
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BigMove, Body, Card, CardTitle, CheckRow, Display, Small, Stepper, color, gesturesFor, readSettings, useAppKey, useKitMoves } from '../../ui';
 import { audio } from '../../platform/audio';
 import { NoteHighway } from '../../play';
 import { getStorage } from '../../platform/storage';
+import { getCoach } from '../coach';
+import { canShare } from '../lesson/share';
+import { shareTake } from '../lesson/shareTake';
 import { ResultsDetails } from '../results/ResultsDetails';
 import { Row } from './bits';
 import { PLAY_EMPTY, STAGE_LABEL, playHelp, songPart, songTakeOptions } from './modes';
@@ -53,6 +56,16 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
   useAppKey('enter', () => (playing ? false : go()));
   useAppKey('escape', () => (playing ? stop() : false));
 
+  // The coach must hear an encore take too (the web: saveRun + coachTake), or it answers an older one.
+  useEffect(() => { if (done && stage) void getCoach().session.coachTake(done, { chartId: song.id }); }, [done, stage, song.id]);
+  // The song can't change speed mid-way, so any step the coach suggests = play again (not "listen").
+  const goRef = useRef(go);
+  goRef.current = go;
+  const hasNotes = song.notes.some(n => n.t >= 0);
+  useEffect(() => (hasNotes ? getCoach().session.onCoachAction(a => { if (a.kind === 'listen') return false; goRef.current(); return true; }) : undefined), [hasNotes]);
+  const [shareNote, setShareNote] = useState('');
+  const share = async (f: SongTakeResult) => { setShareNote(''); if ((await shareTake(f, song.title)) === 'failed') setShareNote('The take could not be shared.'); };
+
   // The highway runs on the song: its clock is the take's run ms, beat 0 at 0.
   const runNow = useMemo(() => (take ? () => take.runMs(now()) : now), [take, now]);
 
@@ -67,8 +80,10 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
         {next ? <BigMove testID="song-encore-next" tone="go" emoji="▶" label="Next song" gestures={gesturesFor('yes')}
           onPress={() => { concert.queue.shift(); router.replace(songHref(next.id, next.bars)); }} />
           : <BigMove testID="song-encore-again" tone="go" emoji="↻" label="Play it again" gestures={gesturesFor('yes')} onPress={go} />}
+        {canShare(done) ? <BigMove testID="song-encore-share" emoji="📤" label="Share take" onPress={() => void share(done)} /> : null}
         <BigMove label="Back" onPress={() => { concert.queue = []; setDone(null); }} />
       </Row>
+      {shareNote ? <Body color={color.white}>{shareNote}</Body> : null}
     </Card>
   );
 

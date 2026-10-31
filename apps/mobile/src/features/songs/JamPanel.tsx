@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BigMove, Body, Card, CardTitle, Choice, Display, Panel, Small, StatTile, Warn, color, gesturesFor, tabular, type, useAppKey, useKitMoves } from '../../ui';
 import { getHomeServer } from '../../platform/api';
+import { getCoach } from '../coach';
 import { getStorage } from '../../platform/storage';
 import { askFeedback, coachEntry, onCoachEntries, type Feedback } from './coachAsk';
 import { JAM_HELP, JAM_STEPS, jamBand, jamLive, jamOffset, jamResultTiles, jamRun, jamStartAt, jamSummary, scoreJamTake, timing } from './modes';
@@ -81,6 +82,8 @@ export function JamPanel({ song, videoId, yt, rate, bus, latencyMs, now }: ModeP
 
 function JamResults({ stats: s, keyId, summary }: { stats: JamStats; keyId: string; summary: Record<string, unknown> }) {
   const e = useSyncExternalStore(onCoachEntries, () => coachEntry<Feedback>(keyId));
+  // the coach's main point, said once per answer (when "speak" is on), as the web's speakOnce
+  useEffect(() => { if (e?.status === 'done') getCoach().speakOnce(keyId, e.data); }, [keyId, e]);
   const tiles = jamResultTiles(s);
   return (
     <View style={styles.results} testID="song-jam-results">
