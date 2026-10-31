@@ -3,11 +3,38 @@
 import { CURRICULUM, LESSON_BY_ID } from '@drum-coach/core/content/curriculum';
 import { startProgress, type LessonProgress } from '@drum-coach/core/engine/lesson';
 import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
+import { pattern } from '@drum-coach/core/engine/chart';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
+import type { YtSong } from '@drum-coach/core/youtube/schemas';
 import { currentSession } from '../../features/journey/model';
 
-export type HarnessState = 'fresh' | 'recap' | 'sore' | 'week' | 'alldone' | 'writing';
-export type Seed = { settings: Settings; runs: RunRow[]; ai: unknown[]; plan?: Record<string, unknown>; coachHangs?: boolean };
+export type HarnessState = 'fresh' | 'recap' | 'sore' | 'week' | 'alldone' | 'writing' | 'songs' | 'coach' | 'firstrun';
+export type Seed = {
+  settings: Settings; runs: RunRow[]; ai: unknown[]; plan?: Record<string, unknown>; coachHangs?: boolean;
+  /** YouTube songs in the Songs library (`songs`). */
+  songs?: YtSong[];
+  /** The home server answers: health, and the coach with a canned reply (`coach`). */
+  coachAnswers?: boolean;
+};
+
+/** Two fake songs (no real videos: the harness stubs the player): one with its tempo set and a part, one new. */
+const fakeSongs = (): YtSong[] => [
+  {
+    id: 'yt-harnessAAAA', title: 'Harness Song: Steady Rock', originalId: 'harnessAAAA', drumlessId: 'harnessBBBB', coverId: null, timeSignature: [4, 4],
+    notes: Array.from({ length: 16 }, (_, bar) => pattern({ hihat: 'xxxxxxxx', snare: '..x...x.', kick: 'x...x...' }, 2).map(n => ({ ...n, t: n.t + bar * 4 }))).flat(),
+    grids: { harnessAAAA: { bpm: 96, offsetSec: 0.4 }, harnessBBBB: { bpm: 96, offsetSec: 0.2 } }, verifiedAt: day(new Date(Date.now() - 3 * 86_400_000)),
+  },
+  { id: 'yt-harnessCCCC', title: 'Harness Song: New One', originalId: 'harnessCCCC', drumlessId: null, coverId: null, timeSignature: [4, 4], notes: [], grids: {} },
+];
+
+/** A week plan the coach wrote (fake). */
+const fakePlan = (week: string) => ({
+  title: 'Steady eighths, then the money beat', focus: 'even hi-hat 8ths', why: 'Your takes rush a little in bar 2.', week,
+  lessonIds: ['hh-8ths', 'money-8ths'], days: [
+    { day: 'Monday', items: [{ title: 'Hi-hat 8ths', minutes: 10, chartId: 'lesson/hh-8ths' }, { title: 'The money beat', minutes: 15, chartId: 'lesson/money-8ths' }] },
+    { day: 'Wednesday', items: [{ title: 'Money beat at 75', minutes: 20, chartId: 'lesson/money-8ths', bpm: 75 }] },
+  ],
+});
 
 const today = () => new Date();
 const day = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -49,6 +76,15 @@ export function seedFor(state: string): Seed {
       const set = currentSession(s, CURRICULUM, day(today()));
       return { settings: { ...s, session: { ...set, done: set.items.map((_, i) => i) } }, runs: threeWeeksIn().runs, ai: [] };
     }
+    case 'songs': {
+      const t = threeWeeksIn();
+      return { settings: { ...t.settings, lastRecapWeek: wk, soreAskedWeek: wk, hearingTipWeek: wk }, runs: t.runs, ai: [], songs: fakeSongs() };
+    }
+    case 'coach': {
+      const t = threeWeeksIn();
+      return { settings: { ...t.settings, lastRecapWeek: wk, soreAskedWeek: wk, hearingTipWeek: wk, liveCoach: true, voice: false }, runs: t.runs, ai: [], plan: fakePlan(wk), coachAnswers: true };
+    }
+    case 'firstrun': return { settings: { ...base(), profile: { goals: [], minutesPerDay: 25, onboarded: false } }, runs: [], ai: [] };
     default: return { settings: base(), runs: [], ai: [] }; // fresh: day one, the setup nudge
   }
 }
