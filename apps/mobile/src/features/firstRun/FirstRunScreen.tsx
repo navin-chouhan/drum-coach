@@ -17,7 +17,7 @@ import { PadWizardView } from '../pads/PadWizardView';
 import { firstHitLine, kitStatus } from '../setup/kit';
 import { useKitConnection, useKitData, useLastHit, useLatencyRouteSync } from '../setup/useSetup';
 import {
-  GOALS, KIT_STEP_TEXT, MINUTES, RECOMMENDED_MINUTES, WELCOME, finishKitSteps, nextStep, notSureYet, queuePlacement, saveWelcome, stepPills, toggleGoal,
+  GOALS, KIT_STEP_TEXT, MINUTES, RECOMMENDED_MINUTES, WELCOME, finishKitSteps, nextStep, notSureYet, placementQueued, queuePlacement, saveWelcome, stepPills, toggleGoal,
   welcomeForm, type FirstRunStep, type WelcomeForm,
 } from './firstRun';
 
@@ -32,7 +32,8 @@ export function FirstRunScreen() {
 
   const finish = (done: boolean) => {
     writeSettings(kv(), finishKitSteps(readSettings(kv()), done));
-    router.replace('/');
+    // Played before: the placement test comes next, as the web's Onboarding → kit steps → PlacementView.
+    router.replace((placementQueued(kv()) ? '/lesson/placement' : '/') as never);
   };
   const go = (from: FirstRunStep) => { const n = nextStep(from); if (n === 'finish') finish(true); else setStep(n); };
   const continueWelcome = () => {
