@@ -8,7 +8,7 @@ import globals from 'globals';
 import { SAFETY_RULES, TYPED_RULES } from '../../eslint.rules.js';
 
 export default tseslint.config(
-  { ignores: ['node_modules', 'ios', 'android', 'dist', '.expo', 'coverage', 'modules/*/ios', 'modules/*/android', 'e2e', 'assets'] },
+  { ignores: ['node_modules', 'ios', 'android', 'dist', '.expo', 'coverage', 'modules/*/ios', 'modules/*/android', 'e2e', 'assets', 'screenshots'] }, // screenshots: the layout harness's web export and PNGs (gitignored)
   js.configs.recommended,
   ...tseslint.configs.recommended,
   reactHooks.configs.flat.recommended,
