@@ -57,6 +57,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     settings: () => { const s = settings.get(); return { latencyMs: s.latencyMs, liveTips: s.liveTips, chattiness: s.chattiness, countIn: s.countIn }; },
     wording: (chart, cue) => coach.tips.wordingFor(chart)(cue),
     onCue: c => { if (settings.get().liveTips === 'voice') sayNow(c.spoken); },
+    sayWord: w => sayNow(w), // a count-in word the engine couldn't render
   }), [settings, coach]);
 
   // The take's clock loop: plans sounds, gives live tips, ends the take (~20×/s).

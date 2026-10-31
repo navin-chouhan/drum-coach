@@ -84,6 +84,10 @@ Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud buil
 `cd apps/mobile/modules/drum-audio/ios/Core && swift test`.
 - [ ] `swift test`: all pass (paste the summary).
 - [ ] **S1–S5** (smoke) on the hub route instead of the speaker, then S1 once on the speaker (unplug the 3.5 mm).
+- [ ] **Coach voice:** Dev → Audio → **Prepare one…four, and**: the Words row says `ready: …` (if it says `missing: …`,
+      paste it). Then a lesson take with "Count me in out loud" on: you hear "one, two, three, four" with the count-in
+      clicks, iPad speaker and hub route, with Music playing too (it keeps playing). A lesson step passed: the coach says
+      the verdict. Setup → Coach and voice → **Test the voice** is heard. Spoken words: ____ / missing: ____
 - [ ] **D1** clocks agree: `midi − audio` within ±0.01 ms, 5 times.
 - [ ] **D2** IO buffer: ____ ms, then after Music + Suspend: ____ ms.
 - [ ] **D3** 5-minute timing probe: p99 |error| ____ ms (< 0.5), slope ____ ms/5 min (< 1), matched ____, late ____.

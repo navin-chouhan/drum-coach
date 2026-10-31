@@ -9,6 +9,7 @@ import { createTake, type Take, type TakeOptions, type TakeSettings, type TakeSt
 import type { Clock } from '@drum-coach/core/platform';
 import { laneOf, PAD_DRUM } from '../../play/chartLike';
 import { createStream, type PlayResult } from '../../play/events';
+import { startWithSpokenFallback } from '../../play/spokenFallback';
 import type { PlayOptions, TakePort, TakeState } from './types';
 
 export type TakePortDeps = {
@@ -21,6 +22,8 @@ export type TakePortDeps = {
   wallClock?: () => number;
   /** Every live tip as it's given (the voice). */
   onCue?: (c: Cue) => void;
+  /** Says one count-in word live (the system voice) when the engine couldn't render it. */
+  sayWord?: (word: string) => void;
 };
 
 export type CoreTakePort = TakePort & {
@@ -110,7 +113,8 @@ export function createTakePort(deps: TakePortDeps): CoreTakePort {
           notify();
         }),
       ];
-      void t.start();
+      // the count-in words the engine couldn't render are said live (play/spokenFallback.ts)
+      void startWithSpokenFallback(t, { countVoice: deps.settings().countIn, now: () => deps.clock.now(), say: w => deps.sayWord?.(w), setTimer: (fn, ms) => setTimeout(fn, ms), clearTimer: h => clearTimeout(h as ReturnType<typeof setTimeout>) }).catch(() => {});
       notify();
     },
     stop(reason = 'user', at) {
