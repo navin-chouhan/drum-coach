@@ -22,7 +22,7 @@ import { useSheetPages } from '../lesson/sheetPages';
 import { kindIcon, startOf, type PracticeChart } from './catalog';
 import { loadPracticeCharts } from './charts';
 import { warmRepeats } from './chooser';
-import { practiceEngine } from './engine';
+import { interruptedNote, practiceEngine } from './engine';
 import { Dots, Notice } from './parts';
 import {
   barPickKind, clampRepeats, climbAfterTake, flipChip, howItPlays, nextChartId, pickBar, playGesture, playModel, readPlayOptions, sectionChart,
@@ -94,7 +94,7 @@ export function PlayScreen() {
     const { chart: c, o: cur, warm: w } = latest.current;
     // The coach hears each take here once (not the warm-up's), as the web's PlayView tells it.
     if (!w && take.chart.title === c.title) void getCoach().session.coachTake(take, { chartId: c.id });
-    if (!cur.climb || w || take.chart.title !== c.title) return;
+    if (!cur.climb || w || take.interrupted || take.chart.title !== c.title) return; // an interrupted take never climbs (D6)
     void (getStorage().runs as RunsRepo).list().then(rs => {
       const speed = climbAfterTake(c, rs, cur.speed);
       if (speed) { set({ speed }); setClimbedFor(take); }
@@ -207,6 +207,7 @@ export function PlayScreen() {
       </>}
       {eng.error ? <Notice text={eng.error} testID="practice-error" /> : null}
       {notice ? <Notice text={notice} onClose={() => setNotice('')} testID="practice-notice" /> : null}
+      {!playing && eng.interrupted && eng.chartId === chart.id ? <Notice text={interruptedNote(eng.interrupted)} testID="practice-interrupted" /> : null}
 
       <View style={styles.main}>
         <Card style={styles.music}>

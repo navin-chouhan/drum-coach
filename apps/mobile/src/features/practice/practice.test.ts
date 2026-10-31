@@ -160,6 +160,9 @@ describe('play screen', () => {
     expect(climbAfterTake(c, [run('singles', 95, 70), run('singles', 92, 70)], 1)).toBeCloseTo(75 / 70);
     expect(climbAfterTake(c, [run('singles', 95, 70), run('singles', 70, 70)], 1)).toBeUndefined();
     expect(climbAfterTake(c, [], 1)).toBeUndefined();
+    // D6: an interrupted take is kept but never counts towards the 2 clean takes
+    expect(climbAfterTake(c, [run('singles', 95, 70), { ...run('singles', 96, 70), interrupted: true as const }], 1)).toBeUndefined();
+    expect(climbAfterTake(c, [run('singles', 95, 70), { ...run('singles', 96, 70), interrupted: true as const }, run('singles', 93, 70)], 1)).toBeCloseTo(75 / 70);
     expect(climbCap(c, [run('singles', 95, 80)])).toBe(85);
     expect(climbCap(c, [])).toBe(75);
   });
