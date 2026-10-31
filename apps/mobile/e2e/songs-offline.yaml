@@ -1,0 +1,69 @@
+# Songs and the coach with no home server configured (a fresh install is "offline" for both): search says it needs
+# the server and that a pasted link still works; file import is there; the coach tab opens and keeps working.
+# testIDs: src/features/songs/SongsScreen.tsx, ImportCard.tsx; src/features/coach/CoachScreen.tsx, CoachPanel.tsx.
+# Text: src/features/songs/songsApi.ts songsFailureText('not-configured').
+appId: com.drumcoach.app
+name: Songs and coach without the home server
+tags:
+  - smoke
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+- tapOn:
+    id: nav-songs
+- extendedWaitUntil:
+    visible:
+      id: screen-songs
+    timeout: 10000
+- assertVisible:
+    id: songs-mine
+- assertNotVisible:
+    id: songs-storage-down
+- tapOn:
+    id: songs-search
+- inputText: "back in black"
+- hideKeyboard
+- tapOn:
+    id: songs-search-go
+- extendedWaitUntil:
+    visible:
+      id: songs-error
+    timeout: 15000
+- assertVisible:
+    text: "Search needs the home server.*"
+- takeScreenshot: songs-offline
+- tapOn:
+    id: songs-import-toggle
+- assertVisible:
+    id: songs-import-midi
+- assertVisible:
+    id: songs-import-audio
+
+# The coach tab: the panel opens; nothing is configured, so asking shows the "no server" state, not a crash
+- tapOn:
+    id: nav-coach
+- extendedWaitUntil:
+    visible:
+      id: screen-coach
+    timeout: 10000
+- assertVisible:
+    id: coach-panel
+- runFlow:
+    when:
+      visible:
+        id: coach-input
+    commands:
+      - tapOn:
+          id: coach-input
+      - inputText: "What should I work on?"
+      - tapOn:
+          id: coach-send
+          optional: true # disabled while the live coach is off
+- extendedWaitUntil:
+    visible:
+      id: "coach-problem|coach-queued|coach-keeps-working"
+    timeout: 15000
+    optional: true
+- takeScreenshot: coach-offline
+- assertVisible:
+    id: coach-open-settings
