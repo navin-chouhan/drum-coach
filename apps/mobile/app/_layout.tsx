@@ -39,6 +39,8 @@ export default function RootLayout() {
           <Stack.Screen name="technique/index" options={{ headerShown: false }} />
           <Stack.Screen name="flow/index" options={{ headerShown: false }} />
           <Stack.Screen name="welcome/index" options={{ headerShown: false, gestureEnabled: false }} />
+          {/* The dev screens: their own stack and headers (app/dev/_layout.tsx: debug builds and the web harness only). */}
+          <Stack.Screen name="dev" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </SafeAreaProvider>
