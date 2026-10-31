@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { dirname, extname, join, normalize, resolve } from 'node:path';
+import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const app = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -97,14 +97,21 @@ if (!args.includes('--no-build') || !existsSync(join(web, 'index.html'))) {
   execFileSync('npx', ['expo', 'export', '--platform', 'web', '--output-dir', web], { cwd: app, stdio: 'inherit', env: { ...process.env, TMPDIR: mkdtempSync(join(tmpdir(), 'dc-web-')) } });
 }
 
+// Reads a file, or null when it isn't there (one read, no exists-then-read race).
+function readOrNull(file, enc) {
+  try { return readFileSync(file, enc); } catch (err) { if (err?.code === 'ENOENT' || err?.code === 'EISDIR') return null; throw err; }
+}
+
 // A static server with the single-page fallback (expo-router's web export is one index.html).
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.ttf': 'font/ttf', '.json': 'application/json', '.wasm': 'application/wasm' };
 const server = createServer((req, res) => {
   const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
   let file = join(web, path);
-  if (!file.startsWith(web) || !existsSync(file) || !extname(file)) file = join(web, 'index.html');
+  if (!file.startsWith(web + sep) || !extname(file)) file = join(web, 'index.html');
+  let body = readOrNull(file);
+  if (body === null) body = readFileSync(file = join(web, 'index.html'));
   res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
-  res.end(readFileSync(file));
+  res.end(body);
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
@@ -163,12 +170,12 @@ console.log(`PNGs in ${out}`);
 // A dev tool, not CI: the numbers come from Chromium, not the iPad.
 const key = s => s.replace(/ ends at \d+×\d+$/, '');
 if (args.includes('--update-baseline')) {
-  const prev = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : {};
+  const prev = JSON.parse(readOrNull(baselinePath, 'utf8') ?? '{}');
   for (const r of report) prev[r.name] = { scrollW: r.scrollW, scrollH: r.scrollH, spill: r.spill.map(key), errors: r.errors.length };
   writeFileSync(baselinePath, `${JSON.stringify(prev, null, 2)}\n`);
   console.log(`baseline written: ${baselinePath}`);
 } else if (args.includes('--check')) {
-  const baseline = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : {};
+  const baseline = JSON.parse(readOrNull(baselinePath, 'utf8') ?? '{}');
   const worse = [];
   for (const r of report) {
     const b = baseline[r.name];
