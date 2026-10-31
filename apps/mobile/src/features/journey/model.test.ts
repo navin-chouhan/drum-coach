@@ -275,3 +275,22 @@ describe('after the whole path (web TodayView: All stages done)', () => {
     expect(v.hero?.lessonId).toBe('ai-stretch');
   });
 });
+
+describe("This week and the coach's lessons (web TodayView)", () => {
+  const { settings, runs } = threeWeeksIn();
+  it("the coach plan's focus leads; else the most-given live tip, with a lesson for that habit", () => {
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW, weekFocus: { focus: 'Even eighths', why: 'They rush.' } }).week)
+      .toEqual({ words: 'Even eighths', why: 'They rush.' });
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).week).toBeNull();
+    const tipped = runs.map(r => ({ ...r, tips: ['rushing'] }));
+    const w = buildJourney({ settings, lessons: CURRICULUM, runs: tipped, now: NOW }).week;
+    expect(w?.habit?.key).toBe(`theme-${NOW.toDateString()}`);
+    expect(w?.habit?.reason).toMatch(/^This week's habit to work on: .+ \(the live tip came 6 times\)\.$/);
+  });
+  it("lists the coach's unfinished lessons for this stage", () => {
+    const level = currentMilestone(MILESTONES, CURRICULUM, settings.lessons, settings.profile)!.level;
+    const base = CURRICULUM.find(l => l.level === level)!;
+    const ai = { ...base, id: 'ai-x', title: 'Coach x', source: 'ai' as const };
+    expect(buildJourney({ settings, lessons: [...CURRICULUM, ai], runs, now: NOW }).coachLessons).toEqual([{ lessonId: 'ai-x', title: 'Coach x' }]);
+  });
+});

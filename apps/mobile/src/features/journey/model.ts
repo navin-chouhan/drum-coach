@@ -7,7 +7,7 @@ import { greeting } from '@drum-coach/core/engine/greeting';
 import { dayAdvice, soreActive } from '@drum-coach/core/engine/health';
 import { addDays, dayKey, isProven, recordTarget, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
 import { buildSession, checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
-import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, type RunRow } from '@drum-coach/core/engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillMap } from '@drum-coach/core/engine/skills';
 import { stageSong } from '@drum-coach/core/engine/stageSong';
 import type { Session, Settings } from '@drum-coach/core/input/settings';
@@ -30,6 +30,8 @@ export type JourneyInput = {
   swap?: number;
   /** This week's lessons from the coach's plan (R6), when there is one. */
   focusIds?: string[];
+  /** This week's focus from the coach's plan, when there is one for this week. */
+  weekFocus?: { focus: string; why?: string };
   /** "Ask the coach" presses: each is a new lesson request (the web's `asks`, the last part of the keys). */
   asks?: number;
   /** The coach's lessons are read from storage (until then, "no coach lesson" isn't known: the web's aiLessonsLoaded). */
@@ -69,6 +71,13 @@ export type JourneyView = {
   main: { label: string; lessonId: string; item: number; emoji: string; challenge?: boolean } | null;
   /** Every stage passed: the "All stages done" card (coach challenge, Flow, 2-minute challenge, Beat your best, songs). */
   pathDone: boolean;
+  /** The coach's unfinished lessons for this stage (the web's "Lessons written for you"). */
+  coachLessons: { lessonId: string; title: string }[];
+  /**
+   * "This week": the coach plan's focus (with its why), else the live tip that came most this week, with a coach lesson
+   * for that habit (`habit`: its key and the reason sent as the struggle).
+   */
+  week: { words: string; why?: string; habit?: { key: string; reason: string } } | null;
   /** The coach challenge's key (asked when there's no open one). */
   challengeKey: string;
   /** The coach's open challenge lesson at the last stage, if one is written. */
@@ -114,6 +123,12 @@ export const SETUP_NUDGE = 'Two minutes to check your pads and latency makes eve
 export const SORE_ASK = 'Quick check: anything sore after drumming (wrists, forearms, back)?';
 /** "A bit sore": lighter days for three days (the web's addDays(today, 3)). */
 export const sorePatch = (today: string, wk: string): Partial<Settings> => ({ soreAskedWeek: wk, soreUntil: addDays(today, 3) });
+function weekLine(focus: JourneyInput['weekFocus'], runs: RunRow[], now: Date): JourneyView['week'] {
+  if (focus) return { words: focus.focus, ...(focus.why && { why: focus.why }) };
+  const theme = weekTheme(runs, now);
+  return theme ? { words: theme.words, habit: { key: `theme-${now.toDateString()}`, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).` } } : null;
+}
+
 export const HEARING_TIP = 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.';
 export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id === id)?.name ?? id).join(', ');
 
@@ -171,7 +186,7 @@ export function trailStops(trail: Lesson[], current: Lesson | undefined, song: L
 
 const hoursOf = (d: Date) => d.getHours();
 
-export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false, asks = 0 }: JourneyInput): JourneyView {
+export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false, asks = 0, weekFocus }: JourneyInput): JourneyView {
   const today = dayKey(now);
   const dash = dashboard(runs, now);
   const lessonById = (id: string) => lessons.find(l => l.id === id);
@@ -318,6 +333,8 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     weekPlanDue: played && s.liveCoach && s.profile.onboarded,
     hearingTipDue: played && s.hearingTipWeek !== wk,
     recap, newBadges,
+    coachLessons: coachOpen.map(l => ({ lessonId: l.id, title: l.title })),
+    week: weekLine(weekFocus, runs, now),
     afterSet, pathDone, challengeKey: challengeKey(now, asks),
     challenge: challenges[0] ? { lessonId: challenges[0].id, title: challenges[0].title } : null,
     flow: flowLesson ? { lessonId: flowLesson.id, title: flowLesson.title } : null,

@@ -6,7 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { getStorage } from '../../platform/storage';
 import { useAppSettings } from '../../ui/hooks';
 import { buildJourney, type JourneyView } from './model';
-import { allLessons, planFocus } from './source';
+import { allLessons, planFocus, planWeekFocus } from './source';
 
 type Loaded = { runs: RunRow[]; ai: unknown[]; plan?: Record<string, unknown> };
 
@@ -30,7 +30,7 @@ export function useJourney(swap: number, asks = 0): { view: JourneyView; loaded:
   const dayHour = `${now.toDateString()} ${now.getHours()}`;
   const view = useMemo(() => {
     const at = new Date();
-    return buildJourney({ settings, lessons: allLessons(data?.ai ?? []), runs: data?.runs ?? [], now: at, swap, focusIds: planFocus(data?.plan, at), aiLoaded: data !== null, asks });
+    return buildJourney({ settings, lessons: allLessons(data?.ai ?? []), runs: data?.runs ?? [], now: at, swap, focusIds: planFocus(data?.plan, at), aiLoaded: data !== null, asks, weekFocus: planWeekFocus(data?.plan, at) });
   }, [settings, data, swap, asks, dayHour]); // eslint-disable-line react-hooks/exhaustive-deps
   return { view, loaded: data !== null, reload };
 }

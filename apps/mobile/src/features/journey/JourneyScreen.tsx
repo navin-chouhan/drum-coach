@@ -4,7 +4,7 @@
 // link under the path, there whether or not the first run's test was taken) and Full path. One screen, no scrolling.
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, CoachLine, Display, Label, ListRow, Panel, Ring, Screen, Stars, StatTile, Tick, TitleBar, Trail,
   color, gesturesFor, ratio, readSettings, tabular, type, useKitMoves, writeSettings,
@@ -17,6 +17,7 @@ import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
+import { MoreSheet } from './MoreSheet';
 import { Tile } from './Tiles';
 import { useJourney } from './useJourney';
 import { SETUP_NUDGE, SORE_ASK, badgeNames, sorePatch, type JourneyView } from './model';
@@ -31,6 +32,11 @@ export function JourneyScreen() {
   const coachEntry = useCoachEntry(v.coachKey), challengeEntry = useCoachEntry(v.challengeKey);
   const writing = coachEntry?.status === 'thinking' || challengeEntry?.status === 'thinking';
   const askChallenge = () => getCoach().requestLesson(v.challengeKey, undefined, reload);
+  // "Ask the coach for a different lesson": a new key each time (the web's askNew).
+  const askNew = () => { getCoach().requestLesson(v.coachKey.replace(/-\d+$/, `-${asks + 1}`), undefined, reload); setAsks(a => a + 1); };
+  const [more, setMore] = useState(false);
+  const habitEntry = useCoachEntry(v.week?.habit?.key ?? null);
+  const askHabit = () => { const h = v.week?.habit; if (h) getCoach().requestLesson(h.key, { lessonId: 'week', step: 1, reason: h.reason, run: {} }, reload); };
   // The coach's week plan (the web's refreshWeekPlan + ensureWeekPlan): read it, ask for this week's once when you've
   // played, the coach is on and the first run is done; offline is skipped silently. A new plan re-plans the view.
   useEffect(() => { void getCoach().weekPlan.refresh(); }, []);
@@ -120,14 +126,18 @@ export function JourneyScreen() {
       </Card>
 
       <View style={styles.rowB}>
-        <You v={v} />
+        <You v={v} habit={habitEntry?.status} onHabit={askHabit} />
         <TodaysSet v={v} onOpen={(id, item) => open(id, item)} />
         <StageSong v={v} onHear={id => open(id, -1, 'hear')} onPlay={id => open(id)} />
       </View>
 
       {v.pathDone ? (
         <Card style={styles.trail} testID="journey-all-done">
-          <Label>All stages done</Label>
+          <View style={styles.trailHead}>
+            <Label>All stages done</Label>
+            <View style={styles.flex} />
+            <Button tone="plain" size="small" label="⋯ More" testID="journey-more-open" accessibilityLabel="More ways to play" onPress={() => setMore(true)} />
+          </View>
           <View style={styles.tiles}>
             <Tile tone="pop" emoji="🎯" title="Coach challenge" testID="journey-tile-challenge"
               sub={v.challenge ? v.challenge.title : challengeEntry?.status === 'thinking' ? 'your coach is writing it…' : challengeEntry?.status === 'error' ? challengeEntry.error : 'a review or stretch lesson aimed at your weakest spot'}
@@ -147,6 +157,7 @@ export function JourneyScreen() {
             <Label>{v.trail.title}</Label>
             <Body size={13} weight="700">{v.trail.summary}</Body>
             <View style={styles.flex} />
+            <Button tone="plain" size="small" label="⋯ More" testID="journey-more-open" accessibilityLabel="More ways to play and your coach's lessons" onPress={() => setMore(true)} />
             <Button tone="plain" size="small" label="Find my level" testID="journey-find-level" accessibilityLabel="Find my level (a short placement test)"
               onPress={() => router.push('/lesson/placement' as never)} />
             <Button tone="plain" size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} onPress={() => router.navigate('/progress?view=path' as never)} />
@@ -154,6 +165,8 @@ export function JourneyScreen() {
           <Trail stops={v.trail.stops} onOpen={id => { const s = v.trail!.stops.find(x => x.id === id); if (s?.lessonId) open(s.lessonId); }} />
         </Card>
       ) : null}
+      <MoreSheet v={v} visible={more} onClose={() => setMore(false)} onOpen={id => open(id)} onFlow={() => v.flow && open(v.flow.lessonId, -1, 'flow')} onAskNew={askNew}
+        coach={{ thinking: coachEntry?.status === 'thinking', error: coachEntry?.status === 'error' ? coachEntry.error : undefined }} />
     </Screen>
   );
 }
@@ -181,7 +194,7 @@ function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
   );
 }
 
-function You({ v }: { v: JourneyView }) {
+function You({ v, habit, onHabit }: { v: JourneyView; habit?: string; onHabit: () => void }) {
   const y = v.you;
   return (
     <Card style={[styles.colYou, styles.you]} testID="journey-you">
@@ -199,6 +212,15 @@ function You({ v }: { v: JourneyView }) {
         <StatTile value={y.landedPct === null ? '–' : `${y.landedPct}%`} label="landed" />
         <StatTile value={String(y.minutesToday)} unit={`/${y.minutesGoal}`} label="min today" />
       </View>
+      {v.week ? (
+        <View style={styles.week} testID="journey-week">
+          <Body size={13} numberOfLines={1} style={styles.flexShrink}>🎯 This week: <Text style={styles.b}>{v.week.words}</Text></Body>
+          {v.week.why ? <Button tone="plain" size="small" label="why?" accessibilityLabel="Why this week's focus" onPress={() => Alert.alert('This week', v.week!.why)} /> : null}
+          {v.week.habit ? (habit === 'thinking' ? <Body size={12} color={color.muted}>your coach is on it…</Body>
+            : habit === 'done' ? <Body size={12} color={color.muted}>lesson ready on your trail</Body>
+            : <Button tone="plain" size="small" label="lesson for this" testID="journey-week-lesson" onPress={onHabit} />) : null}
+        </View>
+      ) : null}
     </Card>
   );
 }
@@ -259,6 +281,7 @@ function StageSong({ v, onHear, onPlay }: { v: JourneyView; onHear: (id: string)
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   noticeBtns: { flexDirection: 'row', gap: 8 },
+  week: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tiles: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 8 },
   flexShrink: { flexShrink: 1, minWidth: 0 },
   b: { fontWeight: '800' },
