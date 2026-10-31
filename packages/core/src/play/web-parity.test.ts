@@ -53,9 +53,27 @@ const player = await import('../../../../src/play/player.ts');
 const tickWeb = () => web.interval?.();
 
 // The web reads performance.now(); core source must never (vitest.setup.ts): the stand-in throws if core reads it.
-const fromCore = (stack = '') => /packages\/core\/src\//.test(stack.split('\n')[2] ?? '') && !/\.test\.ts\b/.test(stack.split('\n')[2] ?? '');
+const fromCore = (file = '') => /packages\/core\/src\//.test(file) && !/\.test\.ts\b/.test(file);
+/**
+ * The file of whoever called performance.now(). The web's player reads it on every tick, so this runs thousands of
+ * times per case: read the raw call site (3 frames, no stack string, no source-map lookup of every frame), which is
+ * what `new Error().stack` line 2 named, at a fraction of the cost.
+ */
+function callerFile(): string {
+  const prepare = Object.getOwnPropertyDescriptor(Error, 'prepareStackTrace'), limit = Error.stackTraceLimit;
+  try {
+    Error.stackTraceLimit = 3; // 0: this function, 1: the performance.now stand-in, 2: its caller
+    Error.prepareStackTrace = (_e, sites) => sites[2]?.getFileName() ?? '';
+    const holder: { stack?: unknown } = {};
+    Error.captureStackTrace(holder);
+    return String(holder.stack ?? '');
+  } finally {
+    if (prepare) Object.defineProperty(Error, 'prepareStackTrace', prepare); else delete (Error as { prepareStackTrace?: unknown }).prepareStackTrace;
+    Error.stackTraceLimit = limit;
+  }
+}
 beforeEach(() => {
-  vi.stubGlobal('performance', { now: () => { if (fromCore(new Error().stack)) throw new Error('core read performance'); return web.now; } });
+  vi.stubGlobal('performance', { now: () => { if (fromCore(callerFile())) throw new Error('core read performance'); return web.now; } });
   vi.stubGlobal('setInterval', (fn: () => void) => { web.interval = fn; return 1; });
   vi.stubGlobal('clearInterval', () => { web.interval = null; });
 });
