@@ -97,9 +97,10 @@ describe('hit each pad', () => {
     expect(same).toBe(s);
     s = wizardReduce(s, { kind: 'skip' }, map);
     expect(wizardView(s, map, 'k').rows[1]).toMatchObject({ value: 'kept 38', state: 'kept' });
-    expect(wizardKey('ArrowLeft')).toBe('back');
-    expect(wizardKey('Escape')).toBe('stop');
-    expect(wizardKey('a')).toBeNull();
+    expect(wizardKey('left')).toBe('back');
+    expect(wizardKey('escape')).toBe('stop');
+    expect(wizardKey('enter')).toBeNull();
+    expect(wizardKey('h')).toBeNull();
   });
 });
 

@@ -3,10 +3,10 @@
 // Skip / Stop. Hitting the pad is the answer. Used by Setup → Pads and by the first run's step 3.
 import { useEffect, useReducer, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { BigMove, Body, Card, Group, GroupRow, MAX_FONT_SCALE, PadMap, color, font, getAppHitBus, hardShadow, stroke, tabular, writeSettings } from '../../ui';
+import { BigMove, Body, Card, Group, GroupRow, MAX_FONT_SCALE, PadMap, color, font, getAppHitBus, hardShadow, stroke, tabular, useAppKey, writeSettings } from '../../ui';
 import { getStorage } from '../../platform/storage';
 import { writeNoteMap } from './kitStore';
-import { startWizard, wizardReduce, wizardSave, wizardView, type WizardAction, type WizardState } from './padWizard';
+import { startWizard, wizardKey, wizardReduce, wizardSave, wizardView, type WizardAction, type WizardState } from './padWizard';
 import type { NoteMap } from '@drum-coach/core/engine/kit';
 
 type Props = {
@@ -25,6 +25,10 @@ export function PadWizardView({ kit, map, onSaved, onStop, testID = 'pads' }: Pr
   const [state, dispatch] = useReducer((s: WizardState, a: WizardAction) => wizardReduce(s, a, mapRef.current), undefined, startWizard);
   useEffect(() => getAppHitBus().onHit(h => dispatch({ kind: 'hit', note: h.note, time: h.time })), []);
   const v = wizardView(state, map, kit);
+  // A hardware keyboard, as the web's Calibrate: ← back one pad, Esc stops (where there is a Stop).
+  const onKey = (k: 'left' | 'escape') => { const a = wizardKey(k); if (a === 'back') dispatch({ kind: 'back' }); else if (a === 'stop') onStop?.(); };
+  useAppKey('left', () => onKey('left'));
+  useAppKey('escape', () => onKey('escape'), { enabled: !!onStop });
 
   const save = () => {
     const out = wizardSave(state, map);
