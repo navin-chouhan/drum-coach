@@ -1,14 +1,14 @@
-// One song, full screen: the web's src/youtube/SongView.tsx in the iPad landscape. Left: the inline YouTube player
-// (official IFrame player in a WebView), play / speed, versions (original, drumless, drum cover) and the song-audio
-// card (off on the iPad, B13, with the reason). Right: the modes (Set tempo, Learn by ear, Jam, Play, Sheet music).
-// Stage mode makes the video big.
+// One song, on the shared player (D10, src/player): the web's src/youtube/SongView.tsx in the iPad landscape. The bar
+// (‹, title, tempo, ⋯ with Versions), then the work: Set tempo, Learn by ear and Sheet music keep the video (official
+// IFrame player) beside them; Jam and Play (scored) put the video on top and the music under it. Stage mode makes the
+// video big. "Song audio (experimental)" is hidden on the iPad (B13).
 import type { SoundId } from '@drum-coach/core/play/audioPort';
 import { parseYouTubeId } from '@drum-coach/core/engine/youtube';
 import type { YtResult } from '@drum-coach/core/youtube/schemas';
 import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Linking, ScrollView, StyleSheet, View } from 'react-native';
-import { Body, Button, Card, CardTitle, Choice, Display, Field, Screen, Small, Strong, Tabs, Warn, color, getAppHitBus, type, useAppSettings } from '../../ui';
+import { Body, Button, Card, CardTitle, Choice, Field, Screen, Small, Strong, Tabs, Warn, color, getAppHitBus, type, useAppSettings } from '../../ui';
 import { getHomeServer } from '../../platform/api';
 import { audio } from '../../platform/audio';
 import { useAudioEngine } from '../../platform/useAudio';
@@ -27,6 +27,7 @@ import {
   versionButtons, videoOf, type Mode, type SongBars, type Version,
 } from './songsModel';
 import { TempoPanel } from './TempoPanel';
+import { KeysLine, PlayerFrame, PlayerSheet } from '../../player';
 import { songsWrite, useSong } from './useSongs';
 
 export function SongScreen({ id, bars }: { id: string; bars?: SongBars }) {
@@ -85,56 +86,84 @@ function SongView({ songId, bars, onBack }: { songId: string; bars?: SongBars; o
   const onPlayer = useCallback((p: YtController) => setYt(p), []);
   const onStage = useCallback((on: boolean) => setStage(on), []);
 
-  return (
-    <Screen withSidebar={false} testID="screen-song">
-      <Stack.Screen options={{ headerShown: false }} />
-      <Row style={styles.head}>
-        <Button label="← Songs" onPress={onBack} testID="song-back" />
-        <Display size={type.title} numberOfLines={1} style={styles.grow} accessibilityRole="header">{song.title}</Display>
-      </Row>
-      <View style={styles.cols}>
-        <ScrollView style={stage ? styles.leftStage : styles.left} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled">
-          <View style={styles.video}>
-            <YouTubeView videoId={videoId} now={now} onPlayer={onPlayer} style={StyleSheet.absoluteFill} testID="song-video" />
-          </View>
-          {yt?.error ? <Warn testID="song-video-error">{yt.error}</Warn> : null}
-          {yt?.error && isRefused(yt.errorCode) ? (
-            // YouTube won't play it in this player: watch it there instead (no song clock, so no scoring).
-            <Button testID="song-open-youtube" emoji="▶" label="Open in YouTube" accessibilityLabel="Open this video in YouTube"
-              onPress={() => { void Linking.openURL(watchUrl(videoId)).catch(() => {}); }} />
-          ) : null}
-          <Card>
-            <Row>
-              <Button testID="song-play-pause" tone="blue" label={yt?.playing ? 'Pause' : 'Play'} emoji={yt?.playing ? '⏸' : '▶'} disabled={!yt?.isReady}
-                onPress={() => (yt?.playing ? yt.pause() : yt?.play())} />
-              <Choice label="Speed" value={rate} options={SPEEDS.map(r => ({ value: r, label: `${r * 100}%` }))} onChange={r => yt && setRate(yt.setRate(r))} testID="song-speed" />
-            </Row>
-            <Small style={styles.gapTop}>{tempoLine(song, videoId, rate)}</Small>
-          </Card>
-          {!stage ? <Versions songId={song.id} version={version} onVersion={v => { yt?.pause(); setVersion(v); }} /> : null}
-          {/* "Song audio (experimental)" is hidden on the iPad (D10, TAB_CAPTURE.available false: B13) */}
-        </ScrollView>
-        <ScrollView style={styles.right} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled">
-          <Tabs testID="song-mode" tabs={modeTabs(song, videoId)} value={shown} onChange={m => { yt?.pause(); setMode(m); }} />
-          {props && shown === 'tempo' ? <TempoPanel {...props} /> : null}
-          {props && grid && shown === 'learn' ? <LearnPanel key={videoId} {...props} /> : null}
-          {props && grid && shown === 'jam' ? <JamPanel key={videoId} {...props} /> : null}
-          {props && grid && shown === 'play' ? <PlayPanel key={videoId} {...props} onStage={onStage} /> : null}
-          {grid && shown === 'sheet' ? (
-            <Card testID="song-sheet-card">
-              <CardTitle>Sheet music</CardTitle>
-              {song.notes.length ? (
-                <View style={styles.stackTop}>
-                  <SheetPages notes={song.notes} timeSignature={song.timeSignature} bars={songBarCount(song)} title={song.title} />
-                  <Small>{SHEET_KEY}</Small>
-                </View>
-              ) : <Small style={styles.gapTop}>{SHEET_EMPTY}</Small>}
-            </Card>
-          ) : null}
-          {!props ? <Small>Loading the player…</Small> : null}
-        </ScrollView>
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Jam and Play (scored) play along with the video: YouTube on top, the music under it (D10); the work modes (tempo,
+  // Learn by ear, sheet music) keep the video beside them. Stage mode makes the video big.
+  const stacked = !stage && (shown === 'jam' || shown === 'play');
+  const video = (
+    <View style={stacked ? styles.videoTop : undefined}>
+      <View style={[styles.video, stacked && styles.videoStacked]}>
+        <YouTubeView videoId={videoId} now={now} onPlayer={onPlayer} style={StyleSheet.absoluteFill} testID="song-video" />
       </View>
-    </Screen>
+      {yt?.error ? <Warn testID="song-video-error">{yt.error}</Warn> : null}
+      {yt?.error && isRefused(yt.errorCode) ? (
+        // YouTube won't play it in this player: watch it there instead (no song clock, so no scoring).
+        <Button testID="song-open-youtube" emoji="▶" label="Open in YouTube" accessibilityLabel="Open this video in YouTube"
+          onPress={() => { void Linking.openURL(watchUrl(videoId)).catch(() => {}); }} />
+      ) : null}
+      <Card style={stacked ? styles.transportStacked : undefined}>
+        <Row>
+          <Button testID="song-play-pause" tone="blue" label={yt?.playing ? 'Pause' : 'Play'} emoji={yt?.playing ? '⏸' : '▶'} disabled={!yt?.isReady}
+            onPress={() => (yt?.playing ? yt.pause() : yt?.play())} />
+          <Choice label="Speed" value={rate} options={SPEEDS.map(r => ({ value: r, label: `${r * 100}%` }))} onChange={r => yt && setRate(yt.setRate(r))} testID="song-speed" />
+        </Row>
+        {!stacked ? <Small style={styles.gapTop}>{tempoLine(song, videoId, rate)}</Small> : null}
+      </Card>
+    </View>
+  );
+  const panel = (
+    <>
+      <Tabs testID="song-mode" tabs={modeTabs(song, videoId)} value={shown} onChange={m => { yt?.pause(); setMode(m); }} />
+      {props && shown === 'tempo' ? <TempoPanel {...props} /> : null}
+      {props && grid && shown === 'learn' ? <LearnPanel key={videoId} {...props} /> : null}
+      {props && grid && shown === 'jam' ? <JamPanel key={videoId} {...props} /> : null}
+      {props && grid && shown === 'play' ? <PlayPanel key={videoId} {...props} onStage={onStage} /> : null}
+      {grid && shown === 'sheet' ? (
+        <Card testID="song-sheet-card">
+          <CardTitle>Sheet music</CardTitle>
+          {song.notes.length ? (
+            <View style={styles.stackTop}>
+              <SheetPages notes={song.notes} timeSignature={song.timeSignature} bars={songBarCount(song)} title={song.title} />
+              <Small>{SHEET_KEY}</Small>
+            </View>
+          ) : <Small style={styles.gapTop}>{SHEET_EMPTY}</Small>}
+        </Card>
+      ) : null}
+      {!props ? <Small>Loading the player…</Small> : null}
+    </>
+  );
+
+  return (
+    <View style={styles.fill} testID="screen-song">
+      <Stack.Screen options={{ headerShown: false }} />
+      <PlayerFrame
+        phase="ready"
+        testID="song"
+        title={song.title}
+        subtitle={tempoLine(song, videoId, rate)}
+        onBack={onBack}
+        onMore={() => setMoreOpen(true)}
+        music={null}
+        body={stacked ? (
+          <ScrollView style={styles.fill} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled">
+            {video}
+            {panel}
+          </ScrollView>
+        ) : (
+          <View style={styles.cols}>
+            <ScrollView style={stage ? styles.leftStage : styles.left} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled">{video}</ScrollView>
+            <ScrollView style={styles.right} contentContainerStyle={styles.stack} keyboardShouldPersistTaps="handled">{panel}</ScrollView>
+          </View>
+        )}
+        overlayOpen={moreOpen}
+      >
+        <PlayerSheet open={moreOpen} onClose={() => setMoreOpen(false)} testID="song-more">
+          {/* Versions moved here (D10); "Song audio (experimental)" is hidden on the iPad (TAB_CAPTURE, B13) */}
+          <Versions songId={song.id} version={version} onVersion={v => { yt?.pause(); setVersion(v); }} />
+          <KeysLine extra="Enter starts, Esc stops" />
+        </PlayerSheet>
+      </PlayerFrame>
+    </View>
   );
 }
 
@@ -186,7 +215,10 @@ function Versions({ songId, version, onVersion }: { songId: string; version: Ver
 }
 
 const styles = StyleSheet.create({
-  head: { gap: 14, marginBottom: 12, flexWrap: 'nowrap' },
+  fill: { flex: 1 },
+  videoTop: { alignItems: 'center', gap: 10 },
+  videoStacked: { width: 560 },
+  transportStacked: { alignSelf: 'center' },
   grow: { flex: 1, minWidth: 0 },
   cols: { flex: 1, flexDirection: 'row', gap: 18 },
   left: { width: 470, flexGrow: 0 },
