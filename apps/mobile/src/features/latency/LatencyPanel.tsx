@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { audio } from '../../platform/audio';
+import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getStorage } from '../../platform/storage';
 import { BigMove, Body, Button, Card, Display, Pill, StatTile, color, drumColor, font, getAppHitBus, hardShadow, stroke, useAppSettings, writeSettings } from '../../ui';
 import { busLevels } from '../setup/sound';
@@ -13,6 +14,9 @@ import {
   verdictText, type Estimate, type TapTest,
 } from './tapTest';
 import type { AudioRoute } from '@drum-coach/core/play/audioPort';
+
+/** A call, the app leaving or the engine stopping mid-test: its clicks are gone, so the taps measure nothing. */
+export const TEST_STOPPED = 'The test stopped (a call, the app in the background or the sound restarting). Press Start again.';
 
 type Phase = { kind: 'idle' } | { kind: 'starting' } | { kind: 'running' } | { kind: 'done'; estimate: Estimate | null } | { kind: 'error'; text: string };
 
@@ -25,6 +29,8 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
   const stop = useRef<() => void>(() => {});
   useEffect(() => audio.onRouteChange(r => { setRoute(r); stop.current(); setPhase(p => (p.kind === 'running' ? { kind: 'idle' } : p)); }), []);
   useEffect(() => () => stop.current(), []);
+  useAudioEngine(); // the clicks can start at once
+  useAudioInterruptions(phase.kind === 'running', () => { stop.current(); setPhase({ kind: 'error', text: TEST_STOPPED }); });
 
   async function start() {
     stop.current();
