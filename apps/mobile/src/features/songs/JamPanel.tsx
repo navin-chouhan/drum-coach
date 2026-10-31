@@ -4,10 +4,9 @@ import type { JamHit, JamStats } from '@drum-coach/core/engine/jam';
 import { PAD_INFO, type PadId } from '@drum-coach/core/engine/kit';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BigMove, Body, Card, CardTitle, Display, Panel, StatTile, color, gesturesFor, tabular, type, useKitMoves } from '../../ui';
+import { BigMove, Body, Card, CardTitle, Choice, Display, Panel, Small, StatTile, Warn, color, gesturesFor, tabular, type, useAppKey, useKitMoves } from '../../ui';
 import { getHomeServer } from '../../platform/api';
 import { getStorage } from '../../platform/storage';
-import { Choice, Small, Warn } from './bits';
 import { askFeedback, coachEntry, onCoachEntries, type Feedback } from './coachAsk';
 import { JAM_HELP, JAM_STEPS, jamBand, jamLive, jamOffset, jamResultTiles, jamRun, jamStartAt, jamSummary, scoreJamTake, timing } from './modes';
 import type { ModeProps } from './modeProps';
@@ -55,6 +54,8 @@ export function JamPanel({ song, videoId, yt, rate, bus, latencyMs, now }: ModeP
   useInterruptions(running, () => stop(true));
   useEffect(() => () => yt.pause(), [yt]);
   useKitMoves({ yes: () => (running ? undefined : start()), stop: () => (running ? stop() : undefined) }, { playing: running });
+  useAppKey('enter', () => (running ? false : start()));
+  useAppKey('escape', () => (running ? stop() : false));
 
   const last = live[live.length - 1];
   return (
