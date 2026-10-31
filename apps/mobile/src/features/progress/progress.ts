@@ -1,12 +1,16 @@
 // Progress: are you getting better (notes landed per day played, in the coach's words), this week against your goal,
 // the skill map, trophies with the closest ones, your time against the daily goal and your lessons in plain words.
 // Ported from the web's src/ui/ProgressView.tsx; the numbers are the core's (dashboard, landedByDay, progressLine,
-// badgeProgress, skillGroups, rankState, weekTheme). Songs come after v1 (D5), so there is no show-off set yet.
+// badgeProgress, skillGroups, rankState, weekTheme, songReady, barsReady) and the show-off set (songs checked by ear
+// with every bar ready).
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
 import type { Lesson, LessonProgress, Profile } from '@drum-coach/core/engine/lesson';
 import { checkpointsOf, currentMilestone, rankState } from '@drum-coach/core/engine/planner';
-import { badgeProgress, dashboard, isoWeek, landedByDay, progressLine, weekTheme, type RunRow } from '@drum-coach/core/engine/progress';
+import { badgeProgress, barsReady, dashboard, isoWeek, landedByDay, progressLine, songReady, weekTheme, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillGroups } from '@drum-coach/core/engine/skills';
+import { cleanSongTitle } from '@drum-coach/core/engine/youtube';
+import type { YtSong } from '@drum-coach/core/youtube/schemas';
+import { songBarCount, songVerified, type ConcertSong } from '../songs/songsModel';
 import { ago, dayKey, dayName, daysBetween, minutesWords, noonOf, plural, shortDate, thousands } from './dates';
 
 export type ProgressInput = {
@@ -19,6 +23,8 @@ export type ProgressInput = {
   lessons: Lesson[];
   /** The coach's latest week plan (PlansRepo.latest().plan), if any. */
   plan?: { week?: string; focus?: string };
+  /** The saved YouTube songs (SongsRepo.list()), for the show-off set and the show-off trophy. */
+  songs?: YtSong[];
   now?: Date;
 };
 
@@ -90,7 +96,10 @@ export function progressModel(input: ProgressInput) {
   };
 
   // Trophies: ranks earned (✓ proven) and badges, then the closest with how far you are
-  const badges = badgeProgress(runs, progress, MILESTONES.map(m => m.checkpoints), now);
+  const songs = input.songs ?? [];
+  const ready = songs.filter(s => songVerified(s) && songReady(runs, s.id, songBarCount(s))); // N4: checked by ear
+  const bestSongBars = Math.max(0, ...songs.map(s => barsReady(runs, s.id, songBarCount(s))));
+  const badges = badgeProgress(runs, progress, MILESTONES.map(m => m.checkpoints), now, ready.map(s => s.id), bestSongBars);
   const got = badges.filter(b => b.done || input.badges?.includes(b.id));
   const open = badges.filter(b => !got.includes(b)).sort((a, b) => b.value / b.max - a.value / a.max);
   const ranks = MILESTONES.map(m => ({ m, s: rankState(m, lessons, progress, profile) })).filter(x => x.s.state !== 'locked');
@@ -128,7 +137,14 @@ export function progressModel(input: ProgressInput) {
   }).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
   const exercises = d.charts.filter(c => !c.chartId.startsWith('lesson/')).map(c => ({ chartId: c.chartId, title: c.title, practise: practiseTarget(c.chartId, c.best90Bpm) }));
 
-  return { empty: runs.length === 0, since, better, week, skills, trophies, time, lessons: lessonRows, exercises };
+  // Show-off set (the web's Coming up): each ready song with ▶ Play it, and a concert of the whole set from two songs
+  const showoff = {
+    songs: ready.map(s => ({ id: s.id, title: cleanSongTitle(s.title) })),
+    concert: ready.length > 1 ? ready.map((s): ConcertSong => ({ id: s.id, bars: { from: 1, to: songBarCount(s) } })) : undefined,
+    empty: 'Pass a stage, then play 16 bars or more of its song with every bar at 85% or better. It lands here, ready to play for a friend.',
+  };
+
+  return { empty: runs.length === 0, since, better, week, skills, trophies, showoff, time, lessons: lessonRows, exercises };
 }
 export type ProgressModel = ReturnType<typeof progressModel>;
 
