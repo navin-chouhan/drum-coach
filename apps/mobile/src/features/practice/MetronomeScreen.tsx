@@ -5,7 +5,7 @@
 // on the AudioPort's clock ahead of time by the take engine's planner (core createMetronome: ≥ 2 s handed over).
 import { router, Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { createMetronome, type Metronome } from '@drum-coach/core/play/metronome';
 import { audio } from '../../platform/audio';
 import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
@@ -13,7 +13,7 @@ import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, Display, MAX_FONT_SCALE, Screen, Segmented,
   color, gesturesFor, stroke, tabular, useAppSettings, useKitMoves,
-  Notice,
+  Notice, RoundButton,
 } from '../../ui';
 import { clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readMetronome, SUBDIVISIONS, tapTempo, writeMetronome, type MetronomeSettings } from './metronome';
 
@@ -86,12 +86,12 @@ export function MetronomeScreen() {
       <View style={styles.body}>
         <Card style={styles.tempoCard}>
           <View style={styles.tempoRow}>
-            <Round label="−" a11y="5 BPM slower" onPress={() => change({ bpm: nudgeBpm(s.bpm, -5) })} onLong={() => change({ bpm: nudgeBpm(s.bpm, -1) })} testID="metronome-slower" />
+            <RoundButton size="large" glyph="−" label="5 BPM slower" onPress={() => change({ bpm: nudgeBpm(s.bpm, -5) })} onLongPress={() => change({ bpm: nudgeBpm(s.bpm, -1) })} testID="metronome-slower" />
             <View style={styles.bpmBox} accessible accessibilityLabel={`${s.bpm} BPM`}>
               <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.bpm, tabular]}>{s.bpm}</Text>
               <Body weight="800" color={color.muted}>BPM</Body>
             </View>
-            <Round label="+" a11y="5 BPM faster" onPress={() => change({ bpm: nudgeBpm(s.bpm, 5) })} onLong={() => change({ bpm: nudgeBpm(s.bpm, 1) })} testID="metronome-faster" />
+            <RoundButton size="large" glyph="+" label="5 BPM faster" onPress={() => change({ bpm: nudgeBpm(s.bpm, 5) })} onLongPress={() => change({ bpm: nudgeBpm(s.bpm, 1) })} testID="metronome-faster" />
           </View>
           <Body size={13} color={color.muted}>Hold − or + for 1 BPM steps.</Body>
           <View style={styles.dots} accessibilityLabel={running && beat >= 0 ? `Click ${beat + 1} of ${clicks}` : 'Stopped'}>
@@ -124,15 +124,6 @@ export function MetronomeScreen() {
   );
 }
 
-function Round({ label, a11y, onPress, onLong, testID }: { label: string; a11y: string; onPress: () => void; onLong: () => void; testID: string }) {
-  return (
-    <Pressable onPress={onPress} onLongPress={onLong} accessibilityRole="button" accessibilityLabel={a11y} testID={testID}
-      style={({ pressed }) => [styles.round, pressed && styles.pressed]}>
-      <Text style={styles.roundText}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 },
   body: { flex: 1, flexDirection: 'row', gap: 18, alignItems: 'flex-start' },
@@ -140,9 +131,6 @@ const styles = StyleSheet.create({
   tempoRow: { flexDirection: 'row', alignItems: 'center', gap: 28 },
   bpmBox: { alignItems: 'center', minWidth: 190 },
   bpm: { fontSize: 110, fontWeight: '900', color: color.ink, lineHeight: 118 },
-  round: { width: 96, height: 96, borderRadius: 48, borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.pop, alignItems: 'center', justifyContent: 'center' },
-  roundText: { fontSize: 52, fontWeight: '900', color: color.ink, lineHeight: 58 },
-  pressed: { opacity: 0.7 },
   dots: { flexDirection: 'row', gap: 14, marginVertical: 6 },
   dot: { width: 34, height: 34, borderRadius: 17, borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.panel },
   dotOne: { width: 42, height: 42, borderRadius: 21 },

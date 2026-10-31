@@ -8,7 +8,7 @@ import { BigMove, Body, Card, CardTitle, Choice, Display, Panel, Small, StatTile
 import { getHomeServer } from '../../platform/api';
 import { getCoach } from '../coach';
 import { getStorage } from '../../platform/storage';
-import { askFeedback, coachEntry, onCoachEntries, type Feedback } from './coachAsk';
+import { askFeedback, coachEntry, COACH_THINKING, onCoachEntries, type Feedback } from './coachAsk';
 import { JAM_HELP, JAM_STEPS, jamBand, jamLive, jamOffset, jamResultTiles, jamRun, jamStartAt, jamSummary, scoreJamTake, timing } from './modes';
 import type { ModeProps } from './modeProps';
 import { jamKeepsInterrupted } from './interrupt';
@@ -97,7 +97,7 @@ function JamResults({ stats: s, keyId, summary }: { stats: JamStats; keyId: stri
         ))}
       </Panel>
       {!e ? <BigMove testID="song-jam-coach" label="Ask the coach about this jam" emoji="💬" onPress={() => void askFeedback(getHomeServer(), keyId, summary, async () => (await getStorage().coachContext('feedback')).context)} /> : null}
-      {e?.status === 'thinking' ? <Small>🤔 The coach is thinking…</Small> : null}
+      {e?.status === 'thinking' ? <Small>{COACH_THINKING}</Small> : null}
       {e?.status === 'error' ? <Warn>{e.error}</Warn> : null}
       {e?.status === 'done' ? (
         <Panel tone="cream" style={styles.coach}>

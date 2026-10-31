@@ -7,8 +7,7 @@ import type { ChartNote } from '@drum-coach/core/engine/chart';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { NotationView } from '../../notation';
-import { Body, Button } from '../../ui';
-import { useSheetPages } from '../lesson/sheetPages';
+import { Body, Button, useSheetPages } from '../../ui';
 import { Row } from './bits';
 
 export function SheetPart({ notes, timeSignature, fromBar, toBar, title, height = 300, testID = 'song-sheet-part' }: {

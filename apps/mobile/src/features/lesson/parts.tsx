@@ -1,24 +1,13 @@
 // The lesson player's local pieces, drawn as the mockups draw them (docs/mockups/ipad/lesson-*.png) with the UI kit's
-// tokens. StepPills, TempoLadder and TimingLineView are the kit's now (src/ui/lessonBits.tsx), and the keyboard is
+// tokens. StepPills, TempoLadder, TimingLineView, RoundButton and SheetPager are the kit's now (src/ui), and the keyboard is
 // app-wide (modules/drum-keys through the hit bus).
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { refocusKeyboard } from '../../platform/keyboard';
-import { Body, Button, Card, Display, GestureChip, Label, Stars, Strong, color, font, hardShadow, shadow, slopFor, stroke, type, useAppKey } from '../../ui';
+import { Body, Button, Card, Display, GestureChip, Label, Stars, Strong, color, font, hardShadow, shadow, stroke, type, useAppKey } from '../../ui';
 import type { Celebration } from './controller';
 import type { Goal } from './lessonView';
 import type { TakeCard } from './results';
-import type { PagerView } from './sheetPages';
-
-/** A small round icon button in the top bar (back, ⋯). */
-export function RoundButton({ label, glyph, onPress, testID }: { label: string; glyph: string; onPress: () => void; testID: string }) {
-  return (
-    <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={slopFor(40)}
-      style={({ pressed }) => [s.round, pressed && { opacity: 0.7 }]}>
-      <Text style={s.roundGlyph}>{glyph}</Text>
-    </Pressable>
-  );
-}
 
 /** The goal, in words: bold first, then the rest, with the small line under it. */
 export function GoalText({ goal, size = 22 }: { goal: Goal; size?: number }) {
@@ -142,22 +131,7 @@ export function RestCountdown({ seconds }: { seconds: number }) {
 export { GestureChip };
 
 /** Under the results sheet of a long take: ‹ Page 2 of 3 ›. Nothing for a one-page take. */
-export function SheetPager({ v, onPrev, onNext, tone = 'dark', testID }: { v: PagerView; onPrev: () => void; onNext: () => void; tone?: 'dark' | 'light'; testID: string }) {
-  if (!v.show) return null;
-  return (
-    <View style={s.pager} testID={testID}>
-      <Button size="small" label="‹ Earlier" accessibilityLabel="Earlier page of your take" disabled={!v.canPrev} onPress={onPrev} testID={`${testID}-prev`} />
-      <Text accessibilityLiveRegion="polite" style={[s.pagerLabel, tone === 'light' && { color: color.ink }]}>{v.label}</Text>
-      <Button size="small" label="Later ›" accessibilityLabel="Later page of your take" disabled={!v.canNext} onPress={onNext} testID={`${testID}-next`} />
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
-  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 },
-  pagerLabel: { fontSize: 15, fontWeight: '800', color: color.white, minWidth: 110, textAlign: 'center' },
-  round: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.white, borderWidth: 2.5, borderColor: color.ink, alignItems: 'center', justifyContent: 'center' },
-  roundGlyph: { ...font.display, fontSize: 20, color: color.ink, lineHeight: 24 },
   goal: { color: color.ink, fontWeight: '700' },
   boxes: { flexDirection: 'row', gap: 10 },
   box: { width: 50, height: 50, borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.white, alignItems: 'center', justifyContent: 'center' },

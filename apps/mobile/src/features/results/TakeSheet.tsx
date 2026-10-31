@@ -4,10 +4,8 @@ import type { Finished } from '@drum-coach/core/play/take';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { NotationView } from '../../notation';
-import { Body, color, stroke, useAppSettings } from '../../ui';
-import { SheetPager } from '../lesson/parts';
+import { Body, SheetPager, color, stroke, useAppSettings, useSheetPages } from '../../ui';
 import { replayResults, takenChart } from '../lesson/runChart';
-import { useSheetPages } from '../lesson/sheetPages';
 
 export function TakeSheet({ f, height = 300, testID = 'results-sheet' }: { f: Finished; height?: number; testID?: string }) {
   const settings = useAppSettings();
