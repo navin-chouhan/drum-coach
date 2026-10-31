@@ -1,0 +1,21 @@
+/* Reorganisation proposal wireframes (docs/mobile/REORG-PROPOSAL.md). The approved look comes from the mockups'
+   ipad.css; this file adds only the new pieces: the 4-item sidebar, its collapsed icon rail, the slim play bar. */
+@import url("../../mockups/ipad/ipad.css");
+.sb4 .sbItem { height: 58px; font-size: 19px; }
+.sb4 .sbItem .em { font-size: 24px; }
+.sbCollapse { margin-top: auto; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; color: #bbb; font-size: 13px; font-weight: 700; padding: 0 12px; }
+.sbCollapse b { width: 36px; height: 36px; border: 2px solid #777; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 18px; }
+.kitOne { margin: 0 0 40px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: var(--panel); color: var(--text); font-size: 14px; border: 2px solid var(--line); }
+/* The collapsed sidebar: an 84 pt icon rail */
+.rail { position: absolute; z-index: 10; left: 0; top: 0; bottom: 0; width: 84px; background: var(--night); border-right: 3px solid var(--line); box-shadow: 5px 0 0 var(--pop);
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 34px; }
+.rail .logo { width: 18px; height: 18px; border-radius: 50%; background: var(--cyan); border: 3px solid var(--pop); margin-bottom: 14px; }
+.rail i { font-style: normal; width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; font-size: 26px; }
+.rail i.on { background: var(--pop); }
+.rail .exp { margin-top: auto; width: 40px; height: 40px; border: 2px solid #777; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 18px; }
+.rail .kd { margin: 10px 0 40px; width: 40px; height: 40px; border-radius: 50%; background: var(--panel); border: 2px solid var(--line); display: grid; place-items: center; }
+.main.r { left: 90px; }
+.tagNew { position: absolute; z-index: 70; right: 10px; bottom: 10px; background: var(--night); color: var(--pop); font: 900 12px var(--display); padding: 5px 9px; letter-spacing: .05em; }
+.ann { position: absolute; z-index: 70; background: #fff; border: 2px dashed var(--line); font-size: 12.5px; font-weight: 700; padding: 4px 8px; max-width: 280px; box-shadow: 3px 3px 0 rgba(0,0,0,.25); }
+.ann::before { content: "✎ "; }
+.gs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

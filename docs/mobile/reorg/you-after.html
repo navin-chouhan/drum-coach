@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1194">
+<title>You (Progress + Coach plan, after) · reorg proposal</title>
+<link rel="stylesheet" href="reorg.css">
+<style>
+  .row1 { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; }
+  .chart { display: flex; flex-direction: column; gap: 12px; height: 330px; }
+  .bars { flex: 1; display: flex; align-items: flex-end; gap: 10px; }
+  .bars i { flex: 1; background: #A9C4F5; border: 3px solid var(--line); }
+  .bars i.r { background: var(--accent); }
+  .wk { display: flex; flex-direction: column; gap: 10px; height: 330px; }
+  .fire { display: flex; gap: 6px; }
+  .fire i { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--line); display: grid; place-items: center; font-style: normal; font-size: 16px; background: #fff; }
+  .fire i.y { background: #FF9F1C; }
+  .bigN { font: 900 56px/1 var(--display); }
+  .doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+  .door { background: #fff; border: 3px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 12px 14px; display: flex; align-items: center; gap: 12px; min-height: 82px; }
+  .door .em { font-size: 30px; }
+  .door b { font: 900 18px var(--display); display: block; }
+  .door small { font-size: 13.5px; color: var(--muted); font-weight: 700; }
+  .door .chev { margin-left: auto; font-size: 20px; font-weight: 900; }
+</style></head><body>
+<div class="ipad">
+  <div data-sb="you" data-rail></div>
+  <div class="main r">
+    <div class="navbar"><h1>You</h1><span class="sub">Limb Wrangler · Stage 3</span><span class="sp"></span><span class="btn">💬 Talk to the coach</span></div>
+    <div class="row1">
+      <div class="card chart">
+        <div class="coach"><div class="avatar sm">🥁</div><p style="font-size:18px"><b>Getting better.</b> Tuesday 8 in 10 notes landed. Saturday 9 in 10.</p></div>
+        <div class="bars"><i style="height:62%"></i><i style="height:64%"></i><i style="height:60%"></i><i style="height:61%"></i><i style="height:63%"></i><i class="r" style="height:70%"></i><i class="r" style="height:72%"></i><i class="r" style="height:69%"></i><i class="r" style="height:71%"></i><i class="r" style="height:86%"></i></div>
+        <div style="font-size:13px;font-weight:800;color:var(--muted)">notes landed per day you played</div>
+      </div>
+      <div class="card wk">
+        <span class="kicker">This week</span>
+        <div class="fire"><i class="y">🔥</i><i class="y">🔥</i><i></i><i class="y">🔥</i><i class="y">🔥</i><i class="y">🔥</i><i></i></div>
+        <div class="bigN">6 <span style="font-size:20px">days in a row</span></div>
+        <div style="font-size:16px;font-weight:800">108 of 210 minutes</div>
+        <div style="height:14px;border:3px solid var(--line);background:#fff"><div style="width:51%;height:100%;background:var(--good)"></div></div>
+        <div style="font-size:15px;margin-top:auto">🎯 Focus: <b>even hi-hat 8ths</b> <span style="color:var(--muted)">(coach’s plan)</span></div>
+      </div>
+    </div>
+    <div class="doors">
+      <div class="door"><span class="em">🗺️</span><div><b>Path &amp; skills</b><small>3 of 9 · skill map</small></div><span class="chev">›</span></div>
+      <div class="door"><span class="em">🏆</span><div><b>Trophies</b><small>7 earned · next: 10,000 notes</small></div><span class="chev">›</span></div>
+      <div class="door"><span class="em">📚</span><div><b>Your lessons</b><small>28 · ★ 40</small></div><span class="chev">›</span></div>
+      <div class="door"><span class="em">🗓</span><div><b>Coach’s week plan</b><small>Mon–Sun · 6 lessons</small></div><span class="chev">›</span></div>
+      <div class="door"><span class="em">🎤</span><div><b>Show-off &amp; fills</b><small>2 songs · 5 fills</small></div><span class="chev">›</span></div>
+      <div class="door"><span class="em">📝</span><div><b>Reports</b><small>month · for your teacher</small></div><span class="chev">›</span></div>
+    </div>
+  </div>
+  <div class="tagNew">AFTER · PROPOSAL</div>
+</div>
+<script src="sb.js"></script>
+</body></html>
