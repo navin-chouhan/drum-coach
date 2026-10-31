@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   COACH_TIMEOUT_MS, createHomeServer, DEFAULT_TIMEOUT_MS, failureForStatus, safeApiPath, serverStatusOf, TOKEN_KEY, validateServerConfig,
-  type FetchInit, type FetchLike, type SecretStore,
+  type FetchLike, type SecretStore,
 } from './homeServer';
 import { createKv, KV_KEYS } from './kv';
 
@@ -22,7 +22,7 @@ async function setup(fetchImpl: FetchLike = () => reply(200, HEALTH)) {
   const fetch = vi.fn(fetchImpl);
   const server = createHomeServer({ kv, secrets, fetch });
   await server.configure({ url: `${URL_}/`, token: `  ${TOKEN}\n` });
-  return { kv, secrets, fetch, server, init: (n = 0) => fetch.mock.calls[n][1] as FetchInit, url: (n = 0) => fetch.mock.calls[n][0] };
+  return { kv, secrets, fetch, server, init: (n = 0) => fetch.mock.calls[n][1], url: (n = 0) => fetch.mock.calls[n][0] };
 }
 
 afterEach(() => vi.useRealTimers());
@@ -156,7 +156,7 @@ describe('createHomeServer', () => {
     kv.set(KV_KEYS.homeServerUrl, URL_); // URL but no token
     expect(await server.health()).toMatchObject({ ok: false, reason: 'not-configured', detail: expect.stringMatching(/token/) });
     await server.configure({ url: URL_, token: TOKEN });
-    expect(await server.call('GET', '/api//evil.example' as `/api/${string}`)).toMatchObject({ ok: false, reason: 'bad-response' });
+    expect(await server.call('GET', '/api//evil.example')).toMatchObject({ ok: false, reason: 'bad-response' });
     expect(fetch).not.toHaveBeenCalled();
   });
 

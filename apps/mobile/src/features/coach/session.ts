@@ -102,24 +102,24 @@ export type SessionDeps = {
   sayNext?(text: string): void;
   /** Saves a chart the coach wrote (charts.ts) and returns its id. */
   saveChart(chart: Chart): { id: string };
-  exists(chartId: string): boolean;
+  exists: (chartId: string) => boolean;
   nav: { openLesson(id: string): void; openDrill(t: { chartId: string; bpm?: number }): void };
   /** Whether an Anthropic key is in the Keychain (the "no fallback" line); read when a call fails. */
   hasFallbackKey?: FallbackKeyRead;
-  now?(): number;
+  now?: () => number;
   /** Runs `fn` after the current task (queueMicrotask). */
-  later?(fn: () => void): void;
+  later?: (fn: () => void) => void;
 };
 
 export function createCoachSession(deps: SessionDeps) {
-  const now = deps.now ?? Date.now;
+  const now = deps.now ?? (() => Date.now());
   const later = deps.later ?? ((fn: () => void) => { void Promise.resolve().then(fn); });
   let state: CoachState = { status: 'idle', at: 0, thread: [] };
   const listeners = new Set<() => void>();
   const set = (s: Partial<CoachState>) => { state = { ...state, ...s }; listeners.forEach(l => l()); };
   let nextId = 1;
   const push = (...items: NewItem[]) => {
-    const thread = [...state.thread, ...items.map(i => ({ ...i, id: nextId++ }) as ThreadItem)];
+    const thread = [...state.thread, ...items.map(i => ({ ...i, id: nextId++ }))];
     return thread.slice(-MAX_THREAD);
   };
 
@@ -231,7 +231,7 @@ export function createCoachSession(deps: SessionDeps) {
       exercise: playing || !lastOpen.title ? p?.exercise ?? lastTake?.take.chart.title : lastOpen.title,
       bpm: playing || !lastOpen.title ? p?.bpm ?? lastTake?.summary.tempo.bpm : lastOpen.bpm,
       proposed: state.reply?.action, lastTakeAccuracyPct: lastTake?.take.stats.accuracy,
-      lesson: p?.lesson ?? (lastTake?.summary.lesson?.lesson as string | undefined) ?? (lastOpen.id.startsWith('lesson/') ? lastOpen.title : undefined), // the coach's tool switches need a lesson
+      lesson: p?.lesson ?? (lastTake?.summary.lesson?.lesson) ?? (lastOpen.id.startsWith('lesson/') ? lastOpen.title : undefined), // the coach's tool switches need a lesson
     });
   }
 
@@ -282,7 +282,7 @@ export function createCoachSession(deps: SessionDeps) {
 
   return {
     get: () => state,
-    subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    subscribe: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
     onCoachAction, dropCoachAction, canRunAction, runAction, padAction,
     coachEvent, coachTake, coachOpen, say, retry, checkBack,
     /** Drops the waiting question. */

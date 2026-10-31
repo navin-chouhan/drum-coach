@@ -13,6 +13,7 @@ import {
   barAt, beatsPerBarOf, countText, cursorAt, emptyMarks, measureClockOffset, mergeBatch, nextOffset, pageBars, pageCount, pageOf,
   positionFromPerf, sheetGeometry, totalBarsOf, type ResultBatch, type SheetChart, type SheetColors, type SheetMarks,
 } from '../sheetModel';
+import { useLatest } from '../../ui/useLatest';
 
 export type SheetHandle = DOMImperativeFactory & {
   /** New results of the take (a ResultBatch). */
@@ -78,7 +79,7 @@ function useBoxSize(root: RefObject<HTMLDivElement | null>) {
 }
 
 export default function SheetDom(props: SheetDomProps) {
-  const { chart, bpm, zero, latencyMs, colors, hints, leftHanded, scale, displayLeadMs, clockNow, ready } = props;
+  const { chart, bpm, zero, latencyMs, colors, hints, leftHanded, scale, displayLeadMs, clockNow, ready, page, onPages: pagesTo, ref } = props;
   const root = useRef<HTMLDivElement>(null);
   const { w, h } = useBoxSize(root);
   const paper = useRef<HTMLDivElement>(null), pre = useRef<HTMLDivElement>(null), extras = useRef<HTMLDivElement>(null);
@@ -88,19 +89,16 @@ export default function SheetDom(props: SheetDomProps) {
   const marks = useRef<SheetMarks>(emptyMarks(zero));
   // The current page's drawing and a hook to repaint it when results arrive.
   const shown = useRef<{ eng: Engraving; fromBar: number; repaint: (notes: number[] | null, newExtras: { beat: number }[]) => void } | null>(null);
-  const fixedPage = useRef(props.page);
-  fixedPage.current = props.page;
-  const onPages = useRef(props.onPages);
-  onPages.current = props.onPages;
-  const timing = useRef({ zero, beatMs: 60000 / bpm, latencyMs });
-  timing.current = { zero, beatMs: 60000 / bpm, latencyMs };
+  const fixedPage = useLatest(page);
+  const onPages = useLatest(pagesTo);
+  const timing = useLatest({ zero, beatMs: 60000 / bpm, latencyMs });
 
   // Results: merged into the marks, painted on the page if it's showing.
   const apply = useCallback((b: ResultBatch) => {
     const changed = mergeBatch(marks.current, b, timing.current);
     shown.current?.repaint(changed.notes, changed.extras);
-  }, []);
-  useDOMImperativeHandle(props.ref ?? null, () => ({ push: (b: ResultBatch) => apply(b) }) as unknown as SheetHandle, [apply]);
+  }, [timing]);
+  useDOMImperativeHandle(ref ?? null, () => ({ push: (b: ResultBatch) => apply(b) }) as unknown as SheetHandle, [apply]);
 
   // A new take: clear the marks (and the page's colours) and ask for what the take has so far.
   useEffect(() => {
@@ -229,7 +227,7 @@ export default function SheetDom(props: SheetDomProps) {
     fontReady ??= fontOrTimeout(() => document.fonts.load('30px Bravura'), FONT_MS); // a failed or slow font still draws
     void fontReady.then(() => { if (!cancelled) { draw(0); raf = requestAnimationFrame(tick); } });
     return () => { cancelled = true; cancelAnimationFrame(raf); shown.current = null; };
-  }, [chart, w, h, hints, leftHanded, scale, colors, bpm, displayLeadMs]);
+  }, [chart, w, h, hints, leftHanded, scale, colors, bpm, displayLeadMs, fixedPage, onPages, timing]);
 
   const abs: CSSProperties = { position: 'absolute', left: 0, top: 0, pointerEvents: 'none', willChange: 'transform' };
   return (

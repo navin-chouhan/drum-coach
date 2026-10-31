@@ -53,7 +53,7 @@ export function createWeekPlan(deps: { plans: Pick<PlansRepo, 'latest' | 'add' |
     if (!deps.plans) throw new Error('This iPad can’t store the plan (storage unavailable)');
     const p = PlanSchema.safeParse(answer?.plan);
     if (!p.success) throw new Error('The coach’s plan didn’t match the expected format');
-    const id = deps.plans.add(p.data as Record<string, unknown>);
+    const id = deps.plans.add(p.data);
     const checks = answer.checks && typeof answer.checks === 'object' ? answer.checks as Record<string, unknown> : {};
     if (Object.keys(checks).length) deps.plans.setChecks(id, checks);
     await refresh();
@@ -63,7 +63,7 @@ export function createWeekPlan(deps: { plans: Pick<PlansRepo, 'latest' | 'add' |
     refresh,
     get: () => saved,
     loaded: () => loaded,
-    subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+    subscribe: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
     /** The plan the coach wrote for this ISO week, if any. */
     thisWeeks: (now = new Date()) => (saved?.plan.week === isoWeek(now) ? saved.plan : undefined),
     /** Ticks or unticks item `k` ("day.item"). */

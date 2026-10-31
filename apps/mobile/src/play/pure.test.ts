@@ -91,7 +91,8 @@ describe('kit layout', () => {
     expect(partForPad(MINI_KIT, 'floor')).toBe('floor');
   });
   it('keeps pads from overlapping', () => {
-    const circles = TOUCH_KIT.parts.filter(p => p.kind === 'circle') as Extract<(typeof TOUCH_KIT.parts)[number], { kind: 'circle' }>[];
+    type Circle = Extract<(typeof TOUCH_KIT.parts)[number], { kind: 'circle' }>;
+    const circles = TOUCH_KIT.parts.filter((p): p is Circle => p.kind === 'circle');
     for (const a of circles) for (const b of circles) if (a !== b) expect(Math.hypot(a.cx - b.cx, a.cy - b.cy)).toBeGreaterThan(a.r + b.r);
   });
 });

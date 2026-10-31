@@ -30,7 +30,7 @@ export function useJourney(swap: number, asks = 0): { view: JourneyView; loaded:
       if (live) setData({ runs, ai, plan: plan?.plan, songs });
     });
     return () => { live = false; };
-  }, [loads]));
+  }, [loads])); // eslint-disable-line react-hooks/exhaustive-deps -- `loads` changes on reload(): it re-runs the load
   // The minute matters (greeting, today's key); a new render after a take or a settings change is enough.
   const now = new Date();
   const dayHour = `${now.toDateString()} ${now.getHours()}`;
@@ -41,6 +41,6 @@ export function useJourney(swap: number, asks = 0): { view: JourneyView; loaded:
   const view = useMemo(() => {
     const at = new Date();
     return buildJourney({ settings, lessons, readySongs, runs: data?.runs ?? [], now: at, swap, focusIds: planFocus(data?.plan, at), aiLoaded: data !== null, asks, weekFocus: planWeekFocus(data?.plan, at) });
-  }, [settings, data, lessons, readySongs, swap, asks, dayHour]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings, data, lessons, readySongs, swap, asks, dayHour]); // eslint-disable-line react-hooks/exhaustive-deps -- dayHour: rebuilt when the hour changes (the view reads the clock)
   return { view, loaded: data !== null, reload };
 }

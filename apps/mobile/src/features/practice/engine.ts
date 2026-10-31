@@ -41,7 +41,7 @@ export const practiceEngine = {
   get ready() { return audio.available; },
   notReady: 'Playing needs the iPad build with its audio engine.',
   get: () => state,
-  subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+  subscribe: (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; },
   /** After a scored take is saved (Climb and the screen's history read the runs then). */
   onSaved(fn: (f: Finished) => void) { onSaved.add(fn); return () => { onSaved.delete(fn); }; },
   /** Judged notes (index = the take's run note), extra strokes and misses of the take that's playing. */

@@ -13,6 +13,7 @@ import type { PlayResult, Subscribe } from '../play/events';
 import { IPAD_THEME, type PlayTheme } from '../play/theme';
 import SheetDom, { type SheetHandle } from './dom/SheetDom';
 import { createResultLog, sheetColors, type ResultBatch, type SheetChart } from './sheetModel';
+import { useLatest } from '../ui/useLatest';
 
 export type NotationViewProps = {
   chart: ChartLike;
@@ -72,13 +73,11 @@ export function NotationView(props: NotationViewProps) {
     });
   }, [results, log]);
 
-  const nowRef = useRef(now);
-  nowRef.current = now;
-  const clockNow = useCallback(async () => nowRef.current(), []);
+  const nowRef = useLatest(now);
+  const clockNow = useCallback(async () => nowRef.current(), [nowRef]);
   const ready = useCallback(async (take: number) => log.since(take), [log]);
-  const pagesRef = useRef(props.onPages);
-  pagesRef.current = props.onPages;
-  const onPages = useCallback(async (n: number) => { pagesRef.current?.(n); }, []);
+  const pagesRef = useLatest(props.onPages);
+  const onPages = useCallback(async (n: number) => { pagesRef.current?.(n); }, [pagesRef]);
 
   // The same element while nothing the page shows changed: Expo's DOM wrapper re-sends every prop (the whole chart,
   // into the WebView) on each of its renders, so a screen that re-renders often (the lesson player while you play)

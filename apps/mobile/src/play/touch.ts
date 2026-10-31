@@ -42,7 +42,7 @@ export function hihatPad(mode: HiHatMode, pedalHeld: boolean): PadId {
 export function padForPart(part: KitPart, hihat: HiHatMode, pedalHeld: boolean): PadId {
   if (part.id === 'hhPedal') return 'hhPedal';
   if (part.drum === 'hihat') return hihatPad(hihat, pedalHeld);
-  return part.drum as Exclude<PadId, 'hhClosed' | 'hhOpen' | 'hhPedal'>;
+  return part.drum;
 }
 
 /**

@@ -78,11 +78,11 @@ export function createBackingPort(native: DrumAudioApi, log: (message: string, e
     },
     start({ at, offsetMs, rate, durationMs }) {
       lastQueued = null;
-      last = safely('backingStart', { ok: false, reason: 'native call failed' } as BackingStartResult, () => native.backingStart(at, offsetMs, rate, durationMs ?? Number.NaN));
+      last = safely('backingStart', { ok: false, reason: 'native call failed' }, () => native.backingStart(at, offsetMs, rate, durationMs ?? Number.NaN));
       if (!last.ok) log(`drum-audio backing start: ${last.reason}`);
     },
     queue({ at, offsetMs, durationMs }) {
-      lastQueued = safely('backingQueue', { ok: false, reason: 'native call failed' } as BackingQueueResult, () => native.backingQueue(at, offsetMs, durationMs));
+      lastQueued = safely('backingQueue', { ok: false, reason: 'native call failed' }, () => native.backingQueue(at, offsetMs, durationMs));
       if (!lastQueued.ok) log(`drum-audio backing queue: ${lastQueued.reason}`);
     },
     stop() {

@@ -8,7 +8,7 @@ export function SongsScreen() {
   return (
     <Screen testID="screen-songs">
       <TitleBar title="Songs" coach="Learn a real song a few bars at a time, then play it with the band."
-        right={<Button label="Practice" emoji="‹" size="small" onPress={() => router.navigate('/practice' as never)} testID="songs-to-practice" />} />
+        right={<Button label="Practice" emoji="‹" size="small" onPress={() => router.navigate('/practice')} testID="songs-to-practice" />} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <SongsShelf />
       </ScrollView>

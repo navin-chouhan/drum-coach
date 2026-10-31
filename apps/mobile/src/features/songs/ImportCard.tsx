@@ -43,7 +43,7 @@ export function ImportCard() {
     const r = songsWrite(s => {
       const c = s.charts.save(chartToSave(parsed, title), 'import');
       if (audio) {
-        try { s.charts.setAudio(c.id, saveBacking(audio, c.id)); } catch (e) { throw new Error(`Audio upload failed: ${e instanceof Error ? e.message : String(e)}`); }
+        try { s.charts.setAudio(c.id, saveBacking(audio, c.id)); } catch (e) { throw new Error(`Audio upload failed: ${e instanceof Error ? e.message : String(e)}`, { cause: e }); }
       }
       return c;
     });

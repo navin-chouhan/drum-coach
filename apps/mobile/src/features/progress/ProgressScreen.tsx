@@ -30,9 +30,9 @@ import { useStoredData } from './useStoredData';
 
 /** Back to where a row was played: a lesson, an exercise on Practice (a bit above your best clean tempo), or a song. */
 export function openTarget(t: PractiseTarget) {
-  if (t.kind === 'lesson') router.push(lessonHref(t.lessonId) as never);
+  if (t.kind === 'lesson') router.push(lessonHref(t.lessonId));
   else if (t.kind === 'practice') router.push({ pathname: '/practice/play', params: { chartId: t.chartId, ...(t.bpm ? { bpm: String(t.bpm) } : {}) } });
-  else router.push(songHref(t.songId) as never); // a YouTube song: its page, as the web's ProgressView opens it
+  else router.push(songHref(t.songId)); // a YouTube song: its page, as the web's ProgressView opens it
 }
 
 export function ProgressScreen() {
@@ -94,11 +94,11 @@ export function ProgressScreen() {
             {m.showoff.songs.length ? <>
               {m.showoff.songs.map((x, i) => (
                 <ListRow key={x.id} first={i === 0} compact title={x.title} testID={`progress-showoff-${i}`}
-                  value={<Button label="Play it" emoji="▶" size="small" onPress={() => router.push(songHref(x.id) as never)} accessibilityLabel={`Play ${x.title}`} />} />
+                  value={<Button label="Play it" emoji="▶" size="small" onPress={() => router.push(songHref(x.id))} accessibilityLabel={`Play ${x.title}`} />} />
               ))}
               {m.showoff.concert ? (
                 <Button label="Concert: the whole set" emoji="🎤" size="small" testID="progress-concert"
-                  onPress={() => { const first = startConcert(m.showoff.concert!); if (first) router.push(songHref(first.id, first.bars) as never); }} />
+                  onPress={() => { const first = startConcert(m.showoff.concert!); if (first) router.push(songHref(first.id, first.bars)); }} />
               ) : null}
             </> : <Body size={14} color={color.muted} testID="progress-showoff-empty">{m.showoff.empty}</Body>}
           </View>

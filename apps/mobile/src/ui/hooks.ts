@@ -2,7 +2,7 @@
 // screen's moves, the app settings, and the sidebar's status.
 import { createHitBus, type HitBus } from '@drum-coach/core/input/hits';
 import { useIsFocused } from 'expo-router';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { checkCapabilities, getCapabilities } from '../platform/capabilities';
 import { onAppKey, startKeyboard, type AppKey } from '../platform/keyboard';
 import { connectMidiToHitBus, getMidiPort } from '../platform/midi';
@@ -14,6 +14,7 @@ import { sayItAgain } from '../features/coach/voice';
 import { createKitMoveRouter, type KitMoveHandlers } from './kitMoves';
 import { kitDot, statusRows, type KitDot, type StatusRow } from './status';
 import { parseSidebarPref, type SidebarPref } from './nav';
+import { useLatest } from './useLatest';
 
 /** The kit's name as the note map and pad calibration are keyed: the connected input's, else the MPS-150's iOS name. */
 export function kitName(): string {
@@ -62,19 +63,18 @@ export function startAppKeyboard() {
 export function useAppKey(key: AppKey, handler: () => boolean | void, opts: { enabled?: boolean } = {}) {
   const focused = useIsFocused();
   const on = (opts.enabled ?? true) && focused;
-  const latest = useRef(handler);
-  latest.current = handler;
+  const latest = useLatest(handler);
   useEffect(() => {
     if (!on) return;
     startAppKeyboard();
     return onAppKey(k => (k === key ? latest.current() !== false : false));
-  }, [on, key]);
+  }, [on, key, latest]);
 }
 
 /** The app settings; re-renders when any screen saves them. */
 export function useAppSettings() {
   const v = useSyncExternalStore(subscribeSettings, settingsVersion);
-  return useMemo(() => readSettings(getStorage().kv), [v]); // eslint-disable-line react-hooks/exhaustive-deps
+  return useMemo(() => readSettings(getStorage().kv), [v]); // eslint-disable-line react-hooks/exhaustive-deps -- v is the settings' version: re-read on each save
 }
 
 /**
@@ -85,15 +85,14 @@ export function useKitMoves(handlers: KitMoveHandlers, opts: { enabled?: boolean
   const focused = useIsFocused();
   const { padCommands } = useAppSettings();
   const on = (opts.enabled ?? true) && focused && padCommands !== false;
-  const router = useRef(createKitMoveRouter()).current;
   // Voice first (D10): kick × 2 between takes says the coach's last line again, on every screen with kit moves.
-  router.set({ again: sayItAgain, ...handlers });
-  const playing = useRef(false);
-  playing.current = !!opts.playing;
+  const moves = useLatest<KitMoveHandlers>({ again: sayItAgain, ...handlers });
+  const playing = useLatest(!!opts.playing);
   useEffect(() => {
     if (!on) return;
-    return getAppHitBus().onHit(h => { router.hit(h, playing.current); });
-  }, [on, router]);
+    const router = createKitMoveRouter(); // the gesture in progress is this listener's
+    return getAppHitBus().onHit(h => { router.set(moves.current); router.hit(h, playing.current); });
+  }, [on, moves, playing]);
   // …and key G (R is a tom: a pad key)
   useAppKey('g', () => { sayItAgain(); return true; }, { enabled: (opts.enabled ?? true) && !opts.playing });
 }
@@ -129,7 +128,7 @@ const sidebarListeners = new Set<() => void>();
 /** The sidebar's remembered mode (« / » or `\`): 'auto' until the owner picks one, kept in the key-value store. */
 export function useSidebarPref(): [SidebarPref, (p: SidebarPref) => void] {
   const v = useSyncExternalStore(fn => { sidebarListeners.add(fn); return () => { sidebarListeners.delete(fn); }; }, () => sidebarVersion);
-  const pref = useMemo(() => parseSidebarPref(getStorage().kv.get(SIDEBAR_KEY)), [v]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pref = useMemo(() => parseSidebarPref(getStorage().kv.get(SIDEBAR_KEY)), [v]); // eslint-disable-line react-hooks/exhaustive-deps -- v is the sidebar pref's version: re-read on each save
   const set = (p: SidebarPref) => { getStorage().kv.set(SIDEBAR_KEY, p); sidebarVersion++; sidebarListeners.forEach(l => l()); };
   return [pref, set];
 }

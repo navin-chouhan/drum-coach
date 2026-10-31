@@ -56,7 +56,7 @@ export function CoachPanel({ take, takeExtras, onClose, kitMoves = true, nextLab
     const sub = AppState.addEventListener('change', st => { if (st === 'active') check(); });
     const t = s.queued || s.problem?.canQueue ? setInterval(check, CHECK_BACK_MS) : undefined;
     return () => { live = false; sub.remove(); if (t) clearInterval(t); };
-  }, [coach, s.queued, s.problem?.canQueue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [coach, s.queued, s.problem?.canQueue]);
 
   const raw = s.reply?.action;
   const nextStep = raw && !raw.now ? coach.session.screenAction(raw, nextLabel) : undefined;
@@ -172,7 +172,7 @@ function Thinking({ title = THINKING.title }: { title?: string }) {
 /** What failed, Try again and Coach settings (mockup coach-offline). */
 export function ProblemCard({ problem, onRetry }: { problem: CoachProblem; onRetry?: () => void }) {
   const retry = onRetry ?? (() => void getCoach().session.retry());
-  const settingsBtn = <Button size="small" label="Coach settings" testID="coach-settings" onPress={() => router.navigate('/setup' as never)} />;
+  const settingsBtn = <Button size="small" label="Coach settings" testID="coach-settings" onPress={() => router.navigate('/setup')} />;
   return (
     <OfflineCard title={problem.title} lines={problem.lines} host={problem.host}>
       {problem.settingsFirst ? settingsBtn : null}
@@ -212,7 +212,7 @@ export function TakeFeedback({ take, extras }: { take: SessionTake; extras?: Tak
   }
   const play = (t: DrillTarget) => {
     const id = 'chart' in t ? coach.charts.save(t.chart).id : t.chartId;
-    router.push(drillRoute({ chartId: id, bpm: t.bpm }) as never);
+    router.push(drillRoute({ chartId: id, bpm: t.bpm }));
   };
   return (
     <>

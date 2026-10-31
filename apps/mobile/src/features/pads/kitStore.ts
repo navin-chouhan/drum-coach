@@ -30,7 +30,7 @@ export function writeNoteMap(kv: KeyValueStore, kit: string, map: NoteMap): void
 export function readPadCal(kv: Pick<KeyValueStore, 'get'>, kit: string): KitCalibration {
   try {
     const v: unknown = JSON.parse(kv.get(padCalKey(kit)) ?? '{}');
-    return v && typeof v === 'object' && !Array.isArray(v) ? v as KitCalibration : {};
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   } catch { return {}; }
 }
 

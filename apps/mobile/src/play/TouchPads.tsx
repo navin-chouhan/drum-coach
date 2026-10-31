@@ -14,6 +14,7 @@ import { edgeDistance, fitLayout, hitTest, partForPad, toLayout, TOUCH_KIT, type
 import { withoutKitSound } from './kitSounds';
 import { IPAD_THEME, type PlayTheme } from './theme';
 import { padForPart, padSound, strokeTime, touchVelocity, velocityGain, type HiHatMode, type VelocityMode } from './touch';
+import { useLatest } from '../ui/useLatest';
 
 export type TouchPadsProps = {
   /** The hit bus (the web's emitPad): pad, velocity 1–127, Clock ms of the stroke. */
@@ -49,8 +50,7 @@ export function TouchPads(props: TouchPadsProps) {
   const pedalTouches = useRef(new Set<number>());
 
   // The latest props for the touch handler, without re-creating it.
-  const cfg = useRef(props);
-  cfg.current = props;
+  const cfgRef = useLatest(props);
 
   useEffect(() => {
     if (!results) return;
@@ -58,7 +58,7 @@ export function TouchPads(props: TouchPadsProps) {
   }, [results, handles]);
 
   const onTouchStart = useCallback((e: GestureResponderEvent) => {
-    const c = cfg.current, clockNow = now();
+    const c = cfgRef.current, clockNow = now();
     const touches = e.nativeEvent.changedTouches.map(t => {
       const [x, y] = toLayout(t.locationX, t.locationY, fit);
       return { t, x, y, part: hitTest(layout, x, y) };
@@ -76,7 +76,7 @@ export function TouchPads(props: TouchPadsProps) {
       h?.hit(velocity, pad);
       h?.touch(x, y);
     }
-  }, [now, fit, layout, playNow, emitPad, handles]);
+  }, [now, fit, layout, playNow, emitPad, handles, cfgRef]);
 
   const onTouchEnd = useCallback((e: GestureResponderEvent) => {
     for (const t of e.nativeEvent.changedTouches) pedalTouches.current.delete(t.identifier);

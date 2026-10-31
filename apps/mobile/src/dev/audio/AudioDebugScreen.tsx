@@ -85,6 +85,7 @@ export function AudioDebugScreen() {
   const [tone, setTone] = useState<LoadedTone | null>(null);
   const [backingMsg, setBackingMsg] = useState('');
   const drift = useRef<{ rec: DriftRecorder; polling: boolean } | null>(null);
+  const [live, setLive] = useState<{ metro: Metronome['stats'] | null; drift?: ReturnType<DriftRecorder['summary']> }>({ metro: null });
 
   const log = useCallback((line: string) => setEvents(e => [`${new Date().toLocaleTimeString()} ${line}`, ...e].slice(0, 12)), []);
 
@@ -109,7 +110,8 @@ export function AudioDebugScreen() {
       const d = drift.current;
       if (d?.polling) d.polling = d.rec.poll();
     }, 100);
-    const refresh = setInterval(() => setRefresh(n => n + 1), 500);
+    // the refresh snapshots the metronome's and the drift's numbers (refs aren't read while rendering)
+    const refresh = setInterval(() => { setLive({ metro: metro.current ? { ...metro.current.stats } : null, drift: drift.current?.rec.summary() }); setRefresh(n => n + 1); }, 500);
     return () => {
       offRoute();
       offInt();
@@ -238,10 +240,10 @@ export function AudioDebugScreen() {
   const stats = audio.stats();
   const info = audio.debugInfo() ?? {};
   const pools = (info.pools ?? {}) as Record<string, { nodes: number; busy: number }>;
-  const m = metro.current;
+  const m = live.metro ? { stats: live.metro } : null;
   const backingInfo = (info.backing ?? {}) as Record<string, unknown>;
   const lastStart = audio.backing?.lastStart() ?? null;
-  const ds = drift.current?.rec.summary();
+  const ds = live.drift;
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
@@ -249,7 +251,7 @@ export function AudioDebugScreen() {
         <Card title="Engine and route">
           <Row label="Module" value={audio.available ? 'in this build' : 'not in this build'} />
           <View style={styles.buttons}>
-            <Button testID="audio-start" label="Start engine" onPress={start} />
+            <Button testID="audio-start" label="Start engine" onPress={() => void start()} />
             <Button testID="audio-suspend" label="Suspend" tone="plain" onPress={() => { metro.current?.stop(); setMetroOn(false); audio.suspend(); }} />
           </View>
           {error !== '' && <Text style={styles.error}>{error}</Text>}
@@ -287,7 +289,7 @@ export function AudioDebugScreen() {
             ))}
           </View>
           <View style={styles.buttons}>
-            <Button testID="audio-metronome" label={metroOn ? 'Stop' : 'Start metronome'} onPress={toggleMetronome} />
+            <Button testID="audio-metronome" label={metroOn ? 'Stop' : 'Start metronome'} onPress={() => void toggleMetronome()} />
           </View>
           <Row label="Handed / accepted / late" value={m ? `${m.stats.handed} / ${m.stats.accepted} / ${m.stats.late} in ${m.stats.calls} calls` : '–'} />
         </Card>
@@ -304,9 +306,9 @@ export function AudioDebugScreen() {
             ))}
           </View>
           <View style={styles.buttons}>
-            <Button testID="backing-load" label="Load test tone" tone="plain" onPress={loadTone} />
-            <Button testID="backing-start" label="Start on next bar" onPress={() => startBacking()} />
-            <Button testID="backing-loop" label="Loop 1 bar" tone="plain" onPress={() => startBacking(true)} />
+            <Button testID="backing-load" label="Load test tone" tone="plain" onPress={() => void loadTone()} />
+            <Button testID="backing-start" label="Start on next bar" onPress={() => void startBacking()} />
+            <Button testID="backing-loop" label="Loop 1 bar" tone="plain" onPress={() => void startBacking(true)} />
             <Button testID="backing-stop" label="Stop" tone="plain" onPress={stopBacking} />
           </View>
           <Row label="State" value={backingMsg || (audio.backing ? '–' : 'needs the native module')} />
@@ -336,7 +338,7 @@ export function AudioDebugScreen() {
 
         <Card title="Count-in words (AVSpeechSynthesizer)">
           <View style={styles.buttons}>
-            <Button label="Prepare one…four, and" tone="plain" onPress={prepareWords} />
+            <Button label="Prepare one…four, and" tone="plain" onPress={() => void prepareWords()} />
             {COUNT_IN.map(w => <Button key={w} label={w} tone="plain" onPressIn={() => pad(`word.${w}`, w)} />)}
           </View>
           <Row label="Words" value={wordsState} />

@@ -1,7 +1,7 @@
 // The results sheet of a long take, paged through: the sheet (NotationView `page`) shows one page of the whole take
 // with its marks and no cursor, and the pager under it turns the pages (the web's results sheet scrolls through every
 // bar; on the iPad the notation is a page at a time, as it is while playing). pagerView is pure.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export type PagerView = { page: number; pages: number; show: boolean; canPrev: boolean; canNext: boolean; label: string };
 
@@ -15,7 +15,8 @@ export function pagerView(page: number, pages: number): PagerView {
 export function useSheetPages(take: unknown) {
   const [page, setPage] = useState(0);
   const [pages, setPages] = useState(1);
-  useEffect(() => { setPage(0); }, [take]);
+  const [shownTake, setShownTake] = useState(take);
+  if (shownTake !== take) { setShownTake(take); setPage(0); } // a new take starts on page 1
   const v = pagerView(page, pages);
   return { ...v, setPages, prev: () => setPage(v.page - 1), next: () => setPage(v.page + 1) };
 }

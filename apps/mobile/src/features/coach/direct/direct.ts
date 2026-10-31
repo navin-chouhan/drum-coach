@@ -11,7 +11,7 @@ import type { KeyValueStore } from '@drum-coach/core/platform';
 import type { z } from 'zod';
 import type { CoachContext } from '../../../data/coachContext';
 import type { AnthropicClient, ApiMessage, DirectFailureKind } from './anthropic';
-import { contextData, feedbackInput, lessonAnswer, lessonRouteInput, monthInput, planAnswer, planInput, sessionEvent, type PlanBody } from './inputs';
+import { contextData, feedbackInput, lessonAnswer, lessonRouteInput, monthInput, planAnswer, planInput, sessionEvent } from './inputs';
 import { PROMPTS } from './prompts.gen';
 
 export type DirectFailure = { ok: false; kind: DirectFailureKind | 'bad-request'; message: string };
@@ -108,7 +108,7 @@ export function createDirectCoach(deps: DirectDeps) {
       case 'plan': {
         const b = PlanRequestSchema.safeParse(rest);
         if (!b.success) return bad(issue(b.error));
-        const p = planInput(d, b.data as PlanBody, now());
+        const p = planInput(d, b.data, now());
         const r = await ask('plan', PlanSchema, p.input);
         return r.ok ? { ok: true, data: planAnswer(r.data, p.pickable, b.data.week) } : r;
       }

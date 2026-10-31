@@ -4,7 +4,7 @@
 // Per frame nothing goes through React: a Reanimated frame callback (useUiClock) sets the Clock time on the UI thread,
 // the position and scroll are derived from it there, and the renderer's animated styles read them. React renders when
 // the visible pages change (once every few bars) and when a result arrives.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import { useAnimatedReaction, useDerivedValue, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -17,6 +17,7 @@ import {
 import { addMarker, markerFor, type MarkerGlyph } from './markers';
 import { HighwayRenderer, type LaneFlashes } from './render';
 import { IPAD_THEME, type PlayTheme } from './theme';
+import { useLatest } from '../ui/useLatest';
 import { useUiClock } from './useUiClock';
 
 export type NoteHighwayProps = {
@@ -65,8 +66,8 @@ export function NoteHighway(props: NoteHighwayProps) {
   // Timing on the UI thread.
   const zeroSv = useSharedValue(zero), beatMsSv = useSharedValue(beatMs);
   useEffect(() => {
-    zeroSv.value = zero;
-    beatMsSv.value = beatMs;
+    zeroSv.set(zero);
+    beatMsSv.set(beatMs);
   }, [zero, beatMs, zeroSv, beatMsSv]);
   const pos = useDerivedValue(() => positionAt(clock.value, zeroSv.value, beatMsSv.value));
   const nowAt = layout?.nowAt ?? 0, px = layout?.pxPerBeat ?? 1, sign = layout?.sign ?? 1;
@@ -84,31 +85,22 @@ export function NoteHighway(props: NoteHighwayProps) {
     },
     [past, future, span],
   );
-  // Built pages, kept while what they're drawn from stays the same (a new cache in the same render as the change).
-  const pageCache = useMemo(() => new Map<number, PageScene>(), [layout, chart, span, theme, o]);
+  // The pages in view, built when the visible range (or what they're drawn from) changes.
   const pages = useMemo(() => {
     if (!layout) return [];
     const out: PageScene[] = [];
-    for (let p = range[0]; p <= range[1]; p++) {
-      let page = pageCache.get(p);
-      if (!page) {
-        page = buildPage(p, chart, layout, span, theme, o);
-        pageCache.set(p, page);
-      }
-      out.push(page);
-    }
+    for (let p = range[0]; p <= range[1]; p++) out.push(buildPage(p, chart, layout, span, theme, o));
     return out;
-  }, [layout, range, chart, span, theme, o, pageCache]);
+  }, [layout, range, chart, span, theme, o]);
 
   // Results: markers (React, once per result) and now-line flashes (shared values).
   const [markers, setMarkers] = useState<MarkerGlyph[]>([]);
   const flashes = useSharedValue<LaneFlashes>(NO_FLASH(lanes.length));
-  useEffect(() => {
-    setMarkers([]);
-    flashes.value = NO_FLASH(lanes.length);
-  }, [chart, zero, lanes.length, flashes]);
-  const ctx = useRef({ chart, layout, theme, zero, beatMs, latencyMs, lanes });
-  ctx.current = { chart, layout, theme, zero, beatMs, latencyMs, lanes };
+  // a new chart or take: no markers (at render, React's way to reset state on a prop change), no flashes
+  const [markedFor, setMarkedFor] = useState({ chart, zero, n: lanes.length });
+  if (markedFor.chart !== chart || markedFor.zero !== zero || markedFor.n !== lanes.length) { setMarkedFor({ chart, zero, n: lanes.length }); setMarkers([]); }
+  useEffect(() => { flashes.set(NO_FLASH(lanes.length)); }, [chart, zero, lanes.length, flashes]);
+  const ctx = useLatest({ chart, layout, theme, zero, beatMs, latencyMs, lanes });
   useEffect(() => {
     if (!results) return;
     let seq = 0;
@@ -119,13 +111,13 @@ export function NoteHighway(props: NoteHighwayProps) {
       if (m) setMarkers(list => addMarker(list, m));
       const lane = c.lanes.indexOf(r.lane);
       if (lane >= 0 && r.kind === 'judged' && r.judgement !== 'miss' && m) {
-        const f = flashes.value, at = [...f.at], color = [...f.color];
+        const f = flashes.get(), at = [...f.at], color = [...f.color];
         at[lane] = r.at;
         color[lane] = m.fill;
-        flashes.value = { at, color };
+        flashes.set({ at, color });
       }
     });
-  }, [results, flashes]);
+  }, [results, flashes, ctx]);
 
   return (
     <View style={[{ flex: 1, overflow: 'hidden' }, props.style]} onLayout={onLayout} testID={props.testID} accessibilityLabel="Note highway">

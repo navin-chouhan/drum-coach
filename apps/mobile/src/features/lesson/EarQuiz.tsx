@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BigMove, Body, Button, Card, Display, color, getAppHitBus, useAppKey } from '../../ui';
 import { daySeed, PAD_NAME, padAnswer, question, ROUNDS, roundClips, roundOf, summary, verdict } from './earQuiz';
+import { useLatest } from '../../ui/useLatest';
 
 type Play = (c: Chart, then?: () => void) => void;
 
@@ -33,13 +34,12 @@ export function EarQuiz({ kind, chart, play, onDone }: { kind: QuizKind; chart: 
     setSaid(v);
     later(() => { setSaid(undefined); setRound(r => r + 1); }, 1800);
   };
-  const acts = useRef({ playRound, listen, answer });
-  acts.current = { playRound, listen, answer };
-  useEffect(() => { if (round < ROUNDS) acts.current.playRound(); }, [round]); // the verdict is already cleared when a round starts
+  const acts = useLatest({ playRound, listen, answer });
+  useEffect(() => { if (round < ROUNDS) acts.current.playRound(); }, [round, acts]); // the verdict is already cleared when a round starts
   useEffect(() => getAppHitBus().onHit(h => {
     const a = padAnswer(h.pad);
     if (a === 'again') acts.current.listen(); else if (a !== null) acts.current.answer(a);
-  }), []);
+  }), [acts]);
   useAppKey('1', () => answer(0));
   useAppKey('2', () => answer(1));
   useAppKey('3', () => answer(2));

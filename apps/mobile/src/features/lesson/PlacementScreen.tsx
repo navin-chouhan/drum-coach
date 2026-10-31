@@ -26,6 +26,10 @@ import { createSettingsStore } from './settings';
 import { sheetScaleFor } from '../../player/sheetFit';
 import { createTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
+import { useLatest } from '../../ui/useLatest';
+
+/** The Clock's now, one function for the screen's views (Clock.now is a method: called through its port). */
+const clockNow = () => getMidiPort().clock.now();
 
 /** An interruption ended the rung's take: it isn't judged (D6), so the same rung is played again. */
 export const INTERRUPTED_NOTE = 'The take was interrupted, so it doesn’t count: play this one again when you’re ready.';
@@ -63,7 +67,7 @@ export function PlacementScreen() {
   const playing = take.state.phase === 'playing';
 
   // The web's onDone: back to Journey with today's set planned again (rebuildToday), whichever way you leave.
-  const leave = () => { take.stop(); settings.set({ session: undefined }); storage.kv.remove(PLACEMENT_KEY); router.replace('/' as never); };
+  const leave = () => { take.stop(); settings.set({ session: undefined }); storage.kv.remove(PLACEMENT_KEY); router.replace('/'); };
   const finish = (level: number) => {
     take.stop();
     const r = placeAt(level, MILESTONES, settings.get().lessons, byId, todayKey());
@@ -74,8 +78,8 @@ export function PlacementScreen() {
 
   // Each finished take of this rung: passed → the next stage; not → start here.
   const judged = useRef(new WeakSet<object>());
-  const f = take.state.finished;
-  useEffect(() => {
+  const judge = useLatest(() => {
+    const f = take.state.finished;
     if (take.state.phase !== 'done' || !f || judged.current.has(f) || !lesson || !rung || f.chart.title !== rung.step.chart.title) return;
     judged.current.add(f);
     // D6: an interrupted take never moves the ladder (placement saves no runs): this rung is played again.
@@ -83,7 +87,8 @@ export function PlacementScreen() {
     const j = judgePlacement(f.stats, lesson);
     setLast(j.line);
     if (!j.ok) finish(item.level); else if (i + 1 >= ladder.length) finish(Infinity); else setI(i + 1);
-  }, [f, take.state.phase]); // eslint-disable-line react-hooks/exhaustive-deps -- once per finished take
+  });
+  useEffect(() => take.subscribe(() => judge.current()), [take, judge]);
 
   const play = () => {
     if (!rung) return;
@@ -102,7 +107,7 @@ export function PlacementScreen() {
 
   const s = take.state;
   const live = playing ? runChart(s) : undefined;
-  const idle = useMemo(() => (rung ? { chart: idleChart(rung.step.chart), zero: clock.now() + 1e9 } : undefined), [rung?.step]); // eslint-disable-line react-hooks/exhaustive-deps
+  const idle = useMemo(() => (rung ? { chart: idleChart(rung.step.chart), zero: clock.now() + 1e9 } : undefined), [rung?.step]); // eslint-disable-line react-hooks/exhaustive-deps -- one standing sheet per rung (its zero must not move)
   const bpm = rung ? rung.step.bpm.target : 0;
   const activeDrums = rung ? [...new Set((rung.step.activeLanes ?? rung.step.chart.notes.map(n => n.drum)).map(laneDrum))] : [];
 
@@ -128,11 +133,11 @@ export function PlacementScreen() {
         : item && lesson && rung ? { line: rungLine(i, ladder.length, lesson), under: [last ? `✓ ${last}` : '', notice].filter(Boolean).join('\n') || undefined, testID: 'placement-rung' }
         : { line: 'No stages to place you in yet.' }}
       music={rung ? (live && s.options
-        ? <NotationView chart={live} bpm={live.bpm * s.options.speed} zero={s.zero} now={clock.now} latencyMs={app.latencyMs} results={take.results} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" />
-        : idle ? <NotationView chart={idle.chart} bpm={bpm} zero={idle.zero} now={clock.now} latencyMs={0} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" /> : null) : null}
+        ? <NotationView chart={live} bpm={live.bpm * s.options.speed} zero={s.zero} now={clockNow} latencyMs={app.latencyMs} results={take.results} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" />
+        : idle ? <NotationView chart={idle.chart} bpm={bpm} zero={idle.zero} now={clockNow} latencyMs={0} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" /> : null) : null}
       onPaperHeight={setPaperH}
       bottom={rung && !result && !kit ? <TouchPads emitPad={(pad, vel, time) => bus.emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
-        now={clock.now} activeDrums={activeDrums} results={take.results} style={styles.fill} testID="placement-touch-pads" /> : undefined}
+        now={clockNow} activeDrums={activeDrums} results={take.results} style={styles.fill} testID="placement-touch-pads" /> : undefined}
       body={result ? <View style={styles.fill} /> : undefined}
       moves={moves}
       take={playing ? { bar: barCounter(s, pos).text.replace(' of ', ' / '), onStop: () => take.stop() } : undefined}

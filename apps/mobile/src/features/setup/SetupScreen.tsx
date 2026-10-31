@@ -53,7 +53,8 @@ export function SetupScreen() {
   const statusRows = useStatusRows();
   const params = useLocalSearchParams<{ tool?: string }>();
   const [view, setView] = useState<SetupView | null>(() => setupViewOf(params.tool));
-  useEffect(() => { const t = setupViewOf(params.tool); if (t) setView(t); }, [params.tool]);
+  const [askedTool, setAskedTool] = useState(params.tool);
+  if (askedTool !== params.tool) { setAskedTool(params.tool); const t = setupViewOf(params.tool); if (t) setView(t); }
   const [hasKey, setHasKey] = useState(false);
   useEffect(() => { let live = true; void hasApiKey(keychain).then(v => { if (live) setHasKey(v); }, () => {}); return () => { live = false; }; }, [view]);
   const status = kitStatus(conn.midi, conn.connected);
@@ -62,7 +63,7 @@ export function SetupScreen() {
   const pads = checks.find(c => c.id === 'pads')!;
   // QA2 m7: the per-route latencies are re-read only when settings change (every save writes settings too), and the
   // last hit re-renders only its own view, never the whole screen.
-  const byRoute = useMemo(() => readLatencyByRoute(kv()), [s]); // eslint-disable-line react-hooks/exhaustive-deps
+  const byRoute = useMemo(() => readLatencyByRoute(kv()), [s]); // eslint-disable-line react-hooks/exhaustive-deps -- s: re-read when settings are saved (see above)
   const lat = latencyRow(byRoute, route, s);
   const others = otherRoutes(byRoute, route?.key ?? null);
   const clash = conflictText(map);
@@ -236,7 +237,7 @@ function AboutPanel() {
     <View style={styles.panel} testID="setup-about">
       <Group title="About" foot={__DEV__ ? 'Debug build: the debug screens are listed here.' : 'The debug screens are in debug builds only.'}>
         {links.map((l, i) => (
-          <GroupRow key={l.id} first={i === 0} title={l.label} right={<Chevron />} onPress={() => router.push(l.href as never)} testID={`setup-about-${l.id}`} />
+          <GroupRow key={l.id} first={i === 0} title={l.label} right={<Chevron />} onPress={() => router.push(l.href)} testID={`setup-about-${l.id}`} />
         ))}
       </Group>
     </View>
