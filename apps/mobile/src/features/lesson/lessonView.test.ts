@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LESSON_BY_ID } from '@drum-coach/core/content/curriculum';
 import { DEFAULTS } from '@drum-coach/core/input/settings';
 import { startProgress, type LessonProgress } from '@drum-coach/core/engine/lesson';
-import { chartFor, frameOf, goalOf, headerOf, ladderRungs, lessonCardOf, takeOptions, boxesOf, type LessonSetup } from './lessonView';
+import { chartFor, frameOf, goalOf, headerOf, ladderRungs, lessonCardOf, takeOptions, boxesOf, youtubeSearch, type LessonSetup } from './lessonView';
 
 const money = LESSON_BY_ID['money-8ths'];
 const setup: LessonSetup = { lesson: money, hasNext: true };
@@ -72,5 +72,11 @@ describe('lesson view (LessonPlayer derived values)', () => {
     const { freeBars } = chartFor(f.step, 0, 0);
     expect(freeBars).toEqual([2, 4, 6]);
     expect(goalOf({ lesson: trade, hasNext: true }, f, chartFor(f.step, 0, 0).chart, freeBars).bold).toBe('Your bars:');
+  });
+});
+
+describe('a listening step', () => {
+  it('finds the song on YouTube as the web does', () => {
+    expect(youtubeSearch("Moanin' Art Blakey")).toBe("https://www.youtube.com/results?search_query=Moanin'%20Art%20Blakey");
   });
 });

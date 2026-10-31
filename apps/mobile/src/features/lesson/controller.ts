@@ -8,12 +8,13 @@ import type { PadCommand } from '@drum-coach/core/engine/padCommands';
 import { checkpointsOf, studentRead } from '@drum-coach/core/engine/planner';
 import { breakDue } from '@drum-coach/core/engine/health';
 import { takeChart } from '@drum-coach/core/engine/transcribe';
+import { demoFor } from '@drum-coach/core/content/demos';
 import type { CoachReply } from '@drum-coach/core/coach/schemas';
 import type { RunInput } from '../../data/runs';
 import { coachLine, replyFor, screenAction, thinkingAbout, type Act, type CoachSession, type CoachState } from '../coach/session';
 import { judge, type Outcome, type Probe } from './judge';
 import {
-  boxesOf, canProbe, chartFor, frameOf, goalOf, headerOf, introLine, lessonCardOf, myPadsOf, seedBaseOf, takeOptions,
+  boxesOf, canProbe, chartFor, frameOf, goalOf, headerOf, howHint, introLine, lessonCardOf, myPadsOf, seedBaseOf, takeOptions,
   type Frame, type LessonSetup,
 } from './lessonView';
 import { progressOf, saveProgress, resetLesson } from './progress';
@@ -94,6 +95,10 @@ export class LessonController {
   private disposed = false;
   /** A line that stands in for the verdict until the next take (an interruption that left nothing to keep). */
   private notice?: string;
+  /** Step/layer → the tempo its intro slides were shown at (web introShown). */
+  private introShown = new Map<string, number>();
+  /** The intro slides up: which one, and the take they start. */
+  private intro?: { run: () => void; i: number };
 
   constructor(deps: LessonDeps) {
     this.d = deps;
@@ -154,7 +159,10 @@ export class LessonController {
     });
     this.outcomes.set(f, out.outcome);
     this.lastTake = f;
+    // The probe's tempo jump isn't a reason to show slides already seen (key and tempo as the probe left them).
+    const introKey = this.introKey(frame);
     if (out.patch) this.d.settings.set(out.patch);
+    if (out.probed && this.introShown.has(introKey)) this.introShown.set(introKey, this.progress().bpm);
     if (out.probe !== undefined) {
       this.probe = out.probe ?? undefined;
       if (out.probe) (this.d.defer ?? (fn => setTimeout(fn, 0)))(() => this.probeBar());
@@ -177,10 +185,51 @@ export class LessonController {
   // ---------- playing ----------
   /** A take (or a demo, or wait mode) at `atBpm`. A shuffled step picks its next phrase for a real take. */
   play(demo: boolean, atBpm = this.frame().bpm, wait = false) {
-    const f = this.frame(), cur = this.chartOf(f).chart;
-    let chart = cur;
-    if (!demo && !wait && f.step.variants?.length) { this.takeNo++; chart = this.chartOf(f).chart; }
-    this.start(chart, { ...this.options(demo, wait), speed: atBpm / chart.bpm });
+    const run = () => {
+      const f = this.frame();
+      let chart = this.chartOf(f).chart;
+      if (!demo && !wait && f.step.variants?.length) { this.takeNo++; chart = this.chartOf(f).chart; }
+      this.start(chart, { ...this.options(demo, wait), speed: atBpm / chart.bpm });
+    };
+    // Intro slides before the first take of a step or layer, or after a tempo jump of more than 10 BPM (web play()).
+    const key = this.introKey(), seen = this.introShown.get(key);
+    if (!demo && !wait && this.d.settings.get().intro !== false && (seen === undefined || Math.abs(seen - atBpm) > 10)) {
+      this.introShown.set(key, atBpm);
+      this.showIntro(run);
+      return;
+    }
+    run();
+  }
+  /** A clip for an ear-training or transcription step: the chart played by the app at the step's tempo (web play()). */
+  playClip(chart: Chart, repeats: number, then?: () => void) {
+    const f = this.frame();
+    this.start(chart, { ...this.options(true), fromBar: 1, toBar: chart.bars, repeats, speed: f.bpm / chart.bpm, activeLanes: undefined, band: undefined, then });
+  }
+
+  // ---------- intro slides (src/play/IntroSlides.tsx) ----------
+  private quizzing() { const f = this.frame(); return f.resting && !!f.step.quiz; }
+  private introKey(f = this.frame()) { return `${f.stepIdx}/${this.progress().layer ?? 0}`; }
+  private showIntro(run: () => void) { this.intro = { run, i: 0 }; this.notify(); }
+  private introLast() { const f = this.frame(); return demoFor(this.lesson, f.step) ? 3 : 2; }
+  /** Next slide; on the last one the take starts (count-in as usual). */
+  introNext() {
+    const it = this.intro;
+    if (!it) return;
+    if (it.i >= this.introLast()) { this.intro = undefined; this.notify(); it.run(); return; }
+    this.intro = { ...it, i: it.i + 1 };
+    this.notify();
+  }
+  introBack() { if (this.intro) { this.intro = { ...this.intro, i: Math.max(0, this.intro.i - 1) }; this.notify(); } }
+  /** Esc: the slides go, nothing starts. */
+  introClose() { if (this.intro) { this.intro = undefined; this.notify(); } }
+  private introView(f: Frame, chart: Chart, o: Outcome | undefined, s: ReturnType<SettingsStore['get']>) {
+    if (!this.intro) return undefined;
+    const demo = demoFor(this.lesson, f.step), hints = s.hints !== false && !f.step.read;
+    return {
+      i: this.intro.i, last: this.introLast(), title: this.lesson.title, sub: f.step.title, bpm: f.bpm, what: f.step.text,
+      notes: chart.notes.filter(n => !n.auto).map(n => ({ ...n, mine: !f.lanes || f.lanes.includes(n.drum) })),
+      beatsPerBar: beatsPerBar(chart), focus: o?.reason ?? (hints ? howHint(this.lesson) : undefined), demo, leftHanded: !!s.leftHanded,
+    };
   }
   /** Every take starts here: the coach learns what "this" is, an old notice goes. */
   private start(chart: Chart, o: PlayOptions) {
@@ -203,7 +252,12 @@ export class LessonController {
     const f = this.frame(), { chart } = this.chartOf(f);
     this.start(chart, { ...this.options(false), toBar: 1, repeats: 1, speed: (this.probe?.tempo ?? f.bpm) / chart.bpm, countInBars: 1, probe: true, band: undefined });
   }
-  findTempo() { this.probe = { tempo: this.frame().step.bpm.start, accs: [] }; this.probeBar(); }
+  findTempo() {
+    const go = () => { this.probe = { tempo: this.frame().step.bpm.start, accs: [] }; this.probeBar(); };
+    // A first-time step gets its slides before the probe, not after it (the probe's finish then marks them seen).
+    const key = this.introKey();
+    if (this.d.settings.get().intro !== false && !this.introShown.has(key)) { this.introShown.set(key, this.frame().step.bpm.start); this.showIntro(go); } else go();
+  }
   /** Stop (the Stop button, crash × 4, Esc): an endless take keeps its whole bars. */
   stop() { this.d.take.stop('user'); }
   /** D6: a call, Siri, the app in the background, a route change; `at` = when it began (Clock ms), default now. */
@@ -260,6 +314,10 @@ export class LessonController {
    */
   runAction(a: Act | { kind: string; label?: string; bpm?: number; bar?: number }): boolean {
     const f = this.frame(), { chart, freeBars } = this.chartOf(f), step = f.step;
+    // The intro slides have the kit's taps: the coach's "yes" turns a slide, the rest is swallowed (IntroSlides).
+    if (this.intro) { if (a.kind === 'main') this.introNext(); return true; }
+    // An ear quiz answers from the kit: the coach's taps don't move the lesson (EarQuiz's onCoachAction).
+    if (this.quizzing()) return true;
     if (a.kind === 'main') { this.moves()[0].run(); return true; }
     if (a.kind === 'listen') {
       const t = this.shownTake();
@@ -293,7 +351,8 @@ export class LessonController {
   /** A kit gesture (engine/padCommands.ts). 'yes' takes the coach's suggestion, else the big move. */
   padCommand(cmd: PadCommand) {
     if (cmd === 'stop') { if (this.playing) this.stop(); return; }
-    if (this.playing) return;
+    // While the slides are up, or an ear quiz takes its answers from the kit, the gestures do nothing.
+    if (this.playing || this.intro || this.quizzing()) return;
     if (cmd === 'yes') {
       const c = this.coachAct();
       if (c && this.runAction(c)) return;
@@ -335,7 +394,7 @@ export class LessonController {
       breakNow ? { label: '☕ 2-minute break', run: () => { this.onBreak = true; this.notify(); } }
       : setup.arcade ? { label: o ? '⏱ Again, 2 minutes' : '⏱ Start the 2 minutes', run: () => { const { chart } = this.chartOf(f); this.start(chart, { ...this.options(false), endless: true, seconds: 120, speed: f.arcadeBpm / chart.bpm }); } }
       : probeOk ? { label: '🔍 Find my tempo', run: () => this.findTempo() }
-      : f.resting ? { label: '✓ Done, next step', run: () => this.finishRest() }
+      : f.resting ? { label: f.step.listen ? '✓ I listened: next step' : '✓ Done, next step', run: () => this.finishRest() }
       : setup.flow ? { label: '🌊 Flow ▶', run: () => { const { chart } = this.chartOf(f); this.start(chart, { ...this.options(false), endless: true, fadeClick: 8 }); } }
       : o?.stuck === 'latency' && this.d.openLatency ? { label: '⏱ Check my latency', run: () => this.d.openLatency!() }
       : o?.stuck === 'count' ? { label: '🗣 Count with me, one take', run: () => void this.runAction({ kind: 'count', label: 'count' }) }
@@ -412,7 +471,11 @@ export class LessonController {
       } : undefined,
       timeUp: timeUp && !o?.itemDone,
       onBreak: this.onBreak,
-      resting: f.resting ? { step: f.step, seconds: f.step.rest, listen: f.step.listen } : undefined,
+      resting: f.resting ? { step: f.step, seconds: f.step.rest, listen: f.step.listen, quiz: f.step.quiz, transcribe: !!f.step.transcribe, look: !!f.step.look } : undefined,
+      /** How the body moves (R5): every lesson has one (the look step, the intro's 4th slide). */
+      demo: demoFor(this.lesson, f.step),
+      heelUp: this.lesson.level >= 2,
+      intro: this.introView(f, chart, o, s),
       celebration,
       autoNext,
       canReset: !!s.lessons[this.lesson.id] && !f.oneTake,

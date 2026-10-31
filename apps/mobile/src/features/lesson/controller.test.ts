@@ -10,7 +10,7 @@ import { takeFile } from './share';
 
 function setupCtl(lesson: Lesson, progress: Partial<LessonProgress> = {}, extra: Partial<LessonDeps> = {}) {
   const r = rig();
-  r.settings.set({ lessons: { [lesson.id]: { ...startProgress(lesson), ...progress } }, voice: false });
+  r.settings.set({ lessons: { [lesson.id]: { ...startProgress(lesson), ...progress } }, voice: false, intro: false }); // the slides have their own tests below
   const runs: RunInput[] = [];
   const deps: LessonDeps = {
     setup: { lesson, hasNext: true }, take: r.take, settings: r.settings, lessons: () => CURRICULUM, lessonById: id => LESSON_BY_ID[id], milestones: MILESTONES,
@@ -183,5 +183,94 @@ describe('lesson controller (LessonPlayer without React)', () => {
       lessonById: id => LESSON_BY_ID[id], takeNo: 0, probe: { tempo: 60, accs: [] }, explainProbe: true, today: '2026-10-30' });
     expect(out.probe).toEqual({ tempo: 65, accs: [100] });
     expect(out.outcome.say).toBe('Clean! Now 65…');
+  });
+});
+
+describe('intro slides (src/play/IntroSlides.tsx, LessonPlayer play())', () => {
+  const withIntro = (progress: Partial<LessonProgress> = { step: 2, bpm: 70 }) => {
+    const x = setupCtl(money, progress);
+    x.r.settings.set({ intro: true });
+    return x;
+  };
+
+  it('come before the first take of a step: what, who plays what, count it, how it moves; the last Next starts it', () => {
+    const { ctl } = withIntro();
+    ctl.moves()[0].run();
+    expect(ctl.playing).toBe(false);
+    const it = ctl.view().intro!;
+    expect(it).toMatchObject({ i: 0, last: 3, title: money.title, sub: money.steps[2].title, bpm: 70, what: money.steps[2].text, demo: 'rebound' });
+    expect(it.notes.every(n => n.mine)).toBe(true);
+    expect(it.focus).toBe(money.how.split(/(?<=\.)\s/)[0]);
+    ctl.introBack();
+    expect(ctl.view().intro!.i).toBe(0);
+    ctl.introNext(); ctl.introNext(); ctl.introBack(); ctl.introNext(); ctl.introNext();
+    expect(ctl.view().intro!.i).toBe(3);
+    ctl.introNext();
+    expect(ctl.view().intro).toBeUndefined();
+    expect(ctl.playing).toBe(true);
+  });
+
+  it('are shown once per step, again after a tempo jump of more than 10 BPM, never for a demo or wait mode', () => {
+    const { ctl } = withIntro();
+    ctl.play(true);
+    expect(ctl.view().intro).toBeUndefined();
+    ctl.stop();
+    ctl.play(false, 70, true);
+    expect(ctl.view().intro).toBeUndefined();
+    ctl.stop();
+    ctl.play(false, 70);
+    ctl.introClose(); // Esc: the slides go, nothing starts
+    expect(ctl.view().intro).toBeUndefined();
+    expect(ctl.playing).toBe(false);
+    ctl.play(false, 75);
+    expect(ctl.playing).toBe(true); // seen at 70: 75 is no jump
+    ctl.stop();
+    ctl.play(false, 85);
+    expect(ctl.view().intro).toBeDefined();
+  });
+
+  it('take the kit: the gestures and the coach do nothing but "yes" turns a slide', () => {
+    const { ctl, p } = withIntro();
+    ctl.moves()[0].run();
+    ctl.padCommand('slower');
+    expect(p().bpm).toBe(70);
+    expect(ctl.runAction({ kind: 'faster', label: 'Faster' })).toBe(true);
+    expect(p().bpm).toBe(70);
+    ctl.runAction({ kind: 'main' });
+    expect(ctl.view().intro!.i).toBe(1);
+  });
+
+  it('are off with the setting', () => {
+    const { ctl, r } = withIntro();
+    r.settings.set({ intro: false });
+    ctl.moves()[0].run();
+    expect(ctl.playing).toBe(true);
+  });
+});
+
+describe('ear quiz and transcription steps (EarQuiz.tsx, Transcribe.tsx)', () => {
+  it('a quiz step: no gestures or coach moves, its clips play once at the step tempo, done moves on', () => {
+    const lesson = LESSON_BY_ID['ear-steady'];
+    const { r, ctl, p } = setupCtl(lesson);
+    expect(ctl.view().resting).toMatchObject({ quiz: 'steady', transcribe: false });
+    ctl.padCommand('yes');
+    expect(ctl.playing).toBe(false);
+    expect(ctl.runAction({ kind: 'main' })).toBe(true);
+    expect(p().step).toBe(0);
+    const chart = lesson.steps[0].chart, then = vi.fn();
+    ctl.playClip(chart, 1, then);
+    expect(r.take.state.options).toMatchObject({ demo: true, fromBar: 1, toBar: chart.bars, repeats: 1, activeLanes: undefined, band: undefined, then });
+    expect(r.take.state.options!.speed * chart.bpm).toBeCloseTo(70);
+    ctl.stop();
+    ctl.finishRest();
+    expect(p().step).toBe(1);
+  });
+
+  it('a transcription step is resting too; the kit\'s "yes" moves on, as on the web', () => {
+    const lesson = LESSON_BY_ID['write-it'];
+    const { ctl, p } = setupCtl(lesson);
+    expect(ctl.view().resting).toMatchObject({ transcribe: true });
+    ctl.padCommand('yes');
+    expect(p().step).toBe(1);
   });
 });
