@@ -1,6 +1,7 @@
-# Starts the app from a clean state. A Release build has the JS bundle inside and opens straight on the home.
-# A dev-client build opens on the Expo dev launcher instead: pass -e DEV_CLIENT_URL=... (see README.md) and the
-# flow opens that URL, which loads the bundle from Metro.
+# Starts the app from a clean state and lands on Journey. A fresh install opens on the first run (FirstRunGate →
+# /welcome), so the flow finishes it (finish-first-run.yaml) when it shows.
+# A Release build has the JS bundle inside. A dev-client build opens on the Expo dev launcher: pass
+# -e DEV_CLIENT_URL=... (see README.md) and the flow opens that URL, which loads the bundle from Metro.
 appId: com.drumcoach.app
 ---
 - launchApp:
@@ -12,5 +13,14 @@ appId: com.drumcoach.app
       - openLink: ${DEV_CLIENT_URL}
 - extendedWaitUntil:
     visible:
-      id: home-title
+      id: "firstrun-welcome|home-title" # ids are regexes: the first run, or the sidebar's brand
     timeout: 60000 # a dev client's first bundle from Metro takes a while
+- runFlow:
+    when:
+      visible:
+        id: firstrun-welcome
+    file: finish-first-run.yaml
+- extendedWaitUntil:
+    visible:
+      id: screen-journey
+    timeout: 15000

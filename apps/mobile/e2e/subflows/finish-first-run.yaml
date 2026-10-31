@@ -1,0 +1,41 @@
+# The first run on a simulator (no kit): Welcome → Plug in → Your pads → Latency, skipping what the simulator can't
+# do. testIDs: src/features/firstRun/FirstRunScreen.tsx (the body is `firstrun-<step>`), LatencyPanel `<testID>-start`.
+appId: com.drumcoach.app
+---
+- assertVisible:
+    id: firstrun-welcome
+- tapOn:
+    id: firstrun-goal-rock
+- tapOn:
+    text: "25 \\(recommended\\)"
+- tapOn:
+    text: "New to drums" # no placement test afterwards
+- tapOn:
+    id: firstrun-continue
+# 2 · Plug in: no MIDI sources in the simulator, so it keeps looking
+- extendedWaitUntil:
+    visible:
+      id: firstrun-plug
+    timeout: 5000
+- assertVisible:
+    id: firstrun-kit-status
+- tapOn:
+    id: firstrun-plug-continue
+# 3 · Your pads: the wizard waits for a pad; "Pads are fine → latency" moves on
+- extendedWaitUntil:
+    visible:
+      id: firstrun-pads
+    timeout: 5000
+- tapOn:
+    id: firstrun-pads-fine
+# 4 · Latency: the panel is there; skip it (Setup and the sidebar keep nagging, as on the web)
+- extendedWaitUntil:
+    visible:
+      id: firstrun-latency-test-start
+    timeout: 5000
+- tapOn:
+    id: firstrun-skip
+- extendedWaitUntil:
+    visible:
+      id: home-title
+    timeout: 10000
