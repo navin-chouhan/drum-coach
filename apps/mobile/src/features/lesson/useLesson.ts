@@ -26,6 +26,12 @@ import { createTakePort, type CoreTakePort } from './takePort';
 // Celebration flourishes (src/lesson/Celebration.tsx FILL / BIG_FILL): pad, seconds after now.
 const FILL: [PadId, number][] = [['snare', 0], ['snare', 0.12], ['tom1', 0.24], ['tom2', 0.36], ['floor', 0.48], ['kick', 0.6], ['crash', 0.6]];
 const BIG_FILL: [PadId, number][] = [...FILL.slice(0, 5), ['snare', 0.6], ['snare', 0.66], ['snare', 0.72], ['snare', 0.78], ['kick', 0.9], ['crash', 0.9], ['kick', 1.2], ['crash', 1.2]];
+/** Plays the celebration fill on the iPad's drum sounds (the web's flourish; Journey uses it for a new badge). */
+export function playFlourish(big: boolean) {
+  if (!audio.available) return;
+  const at = audio.clock.now() + (audio.route()?.minLeadMs ?? 100) + 50;
+  audio.schedule((big ? BIG_FILL : FILL).map(([pad, dt]) => ({ kind: 'sound' as const, at: at + dt * 1000, sound: `drum.${pad}` as const, gain: 110 / 127 })));
+}
 
 /** Whether the e-Drum is connected right now (else the touch pads show). */
 export function useKitConnected(): boolean {
@@ -72,15 +78,11 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     const exists = (id: string) => !!findLesson(lessons, id);
     const next = drill ? undefined : nextItem(settings.get().session, params.item, today, exists);
     const deps: LessonDeps = {
-      setup: { lesson, role: it?.role, minutes: it?.minutes, hasNext: !!next, flow: params.mode === 'flow', arcade: params.mode === 'arcade', drill: !!drill },
+      setup: { lesson, role: it?.role ?? params.role, minutes: it?.minutes, hasNext: !!next, flow: params.mode === 'flow', arcade: params.mode === 'arcade', drill: !!drill },
       take, settings, lessons: () => lessons, lessonById: id => findLesson(lessons, id), milestones: MILESTONES, today: todayKey,
       saveRun: run => storage.runs.add(run), coach: coach.session,
       say: text => sayNow(text.replace(/[🏆✓★]/gu, '').trim()),
-      flourish: big => {
-        if (!audio.available) return;
-        const at = audio.clock.now() + (audio.route()?.minLeadMs ?? 100) + 50;
-        audio.schedule((big ? BIG_FILL : FILL).map(([pad, dt]) => ({ kind: 'sound' as const, at: at + dt * 1000, sound: `drum.${pad}` as const, gain: 110 / 127 })));
-      },
+      flourish: playFlourish,
       requestCoachLesson: (key, struggle) => coach.requestLesson(key, struggle),
       drillExists: id => coach.exists(id),
       openDrill: a => coach.session.runAction(a),
@@ -91,7 +93,7 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
     };
     return new LessonController(deps);
     // one controller per lesson and item; the lesson list only fills in coach lessons
-  }, [lesson?.id, params.item, params.mode, take]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lesson?.id, params.item, params.mode, params.role, take]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!ctl || !lesson) return;

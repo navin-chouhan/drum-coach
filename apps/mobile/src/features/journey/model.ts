@@ -5,12 +5,13 @@
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
 import { greeting } from '@drum-coach/core/engine/greeting';
 import { dayAdvice, soreActive } from '@drum-coach/core/engine/health';
-import { dayKey, isProven, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
+import { addDays, dayKey, isProven, recordTarget, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
 import { buildSession, checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
-import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, type RunRow } from '@drum-coach/core/engine/progress';
+import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, weekTheme, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillMap } from '@drum-coach/core/engine/skills';
 import { stageSong } from '@drum-coach/core/engine/stageSong';
 import type { Session, Settings } from '@drum-coach/core/input/settings';
+import { TOOL_LABEL } from '../lesson/lessonView';
 import { groovePreview, type GroovePreview } from './preview';
 
 export const ROLE: Record<SessionRole, string> = { stretch: 'Stretch', warmup: 'Warm-up', review: 'Review', skill: 'New skill', groove: 'Groove', record: 'Beat your best' };
@@ -30,6 +31,10 @@ export type JourneyInput = {
   swap?: number;
   /** This week's lessons from the coach's plan (R6), when there is one. */
   focusIds?: string[];
+  /** This week's focus from the coach's plan, when there is one for this week. */
+  weekFocus?: { focus: string; why?: string };
+  /** "Ask the coach" presses: each is a new lesson request (the web's `asks`, the last part of the keys). */
+  asks?: number;
   /** The coach's lessons are read from storage (until then, "no coach lesson" isn't known: the web's aiLessonsLoaded). */
   aiLoaded?: boolean;
 };
@@ -48,6 +53,8 @@ export type HeroView = {
   what: string;
   preview: GroovePreview | null;
   coachWrote: boolean;
+  /** A coach lesson's "why this one?" (its focus). */
+  why?: string;
 };
 
 export type SetItemView = { index: number; lessonId: string; title: string; detail?: string; value: string; stars?: number; state: 'done' | 'current' | 'todo' };
@@ -64,7 +71,22 @@ export type JourneyView = {
   healthLine: string | null;
   hero: HeroView | null;
   /** The main move: Start (today's set), Next lesson (set done), Jam (nothing left), or none. */
-  main: { label: string; lessonId: string; item: number; emoji: string } | null;
+  main: { label: string; lessonId: string; item: number; emoji: string; challenge?: boolean } | null;
+  /** Every stage passed: the "All stages done" card (coach challenge, Flow, 2-minute challenge, Beat your best, songs). */
+  pathDone: boolean;
+  /** The coach's unfinished lessons for this stage (the web's "Lessons written for you"). */
+  coachLessons: { lessonId: string; title: string }[];
+  /**
+   * "This week": the coach plan's focus (with its why), else the live tip that came most this week, with a coach lesson
+   * for that habit (`habit`: its key and the reason sent as the struggle).
+   */
+  week: { words: string; why?: string; habit?: { key: string; reason: string } } | null;
+  /** The coach challenge's key (asked when there's no open one). */
+  challengeKey: string;
+  /** The coach's open challenge lesson at the last stage, if one is written. */
+  challenge: { lessonId: string; title: string } | null;
+  /** Flow: the newest finished groove (else the jam), played along with no score. */
+  flow: { lessonId: string; title: string } | null;
   somethingElse: boolean;
   /** The lesson Just jam opens (no score, with the band). */
   jamLessonId: string | null;
@@ -80,6 +102,12 @@ export type JourneyView = {
   coachKey: string;
   /** Ask the coach for a lesson now (once a day per stage: the key); null when not. */
   coachAsk: string | null;
+  /** The setup nudge (pads and latency not checked, "Not now" not pressed): the web's notice with two buttons. */
+  setupNudge: boolean;
+  /** The weekly wrists check-in ("All good" / "A bit sore"), after three days of playing. */
+  askSore: boolean;
+  /** Finished the old path (stages 1–7, the swing / shuffle songs) with nothing at the new stages yet: say once (R3). */
+  newStages: boolean;
   /** Make sure there's a plan for this week (the web's ensureWeekPlan: played, coach on, onboarded). */
   weekPlanDue: boolean;
   /** The ear tip is showing this week: the screen marks it seen after a minute (the web's hearingTipWeek). */
@@ -88,10 +116,25 @@ export type JourneyView = {
   recap: string | null;
   /** Badges earned and not announced yet (Settings.badges keeps the announced ones). */
   newBadges: string[];
-  /** After today's set: the 2-minute challenge on the newest finished drill groove (the web's arcade move). */
+  /** Today's set is done and the trail's next lesson leads: the 2-minute challenge and Beat your best join the moves. */
+  afterSet: boolean;
+  /** The 2-minute challenge on the newest finished drill groove (the web's arcade move and tile). */
   arcade: { lessonId: string; title: string; sub: string } | null;
+  /** Beat your best: a finished lesson played longest ago with a record left to beat (opened with role=record). */
+  record: { lessonId: string; title: string; sub: string } | null;
 };
 
+export const SETUP_NUDGE = 'Two minutes to check your pads and latency makes every timing score fair.';
+export const SORE_ASK = 'Quick check: anything sore after drumming (wrists, forearms, back)?';
+/** "A bit sore": lighter days for three days (the web's addDays(today, 3)). */
+export const sorePatch = (today: string, wk: string): Partial<Settings> => ({ soreAskedWeek: wk, soreUntil: addDays(today, 3) });
+function weekLine(focus: JourneyInput['weekFocus'], runs: RunRow[], now: Date): JourneyView['week'] {
+  if (focus) return { words: focus.focus, ...(focus.why && { why: focus.why }) };
+  const theme = weekTheme(runs, now);
+  return theme ? { words: theme.words, habit: { key: `theme-${now.toDateString()}`, reason: `This week's habit to work on: ${theme.words} (the live tip came ${theme.count} times).` } } : null;
+}
+
+export const NEW_STAGES = '🎉 New stages open: Groove at tempo, Linear and odd and Solo voice.';
 export const HEARING_TIP = 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.';
 export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id === id)?.name ?? id).join(', ');
 
@@ -100,7 +143,9 @@ export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id
  * there's none waiting for this stage (with no takes yet, the built-in first lessons are the right start), unless the
  * student is flying through. The key is the web's (`lesson-<day>-<stage>-<asks>`; the iPad has no "ask again" here).
  */
-export const coachLessonKey = (now: Date, level: number | undefined) => `lesson-${now.toDateString()}-${level}-0`;
+export const coachLessonKey = (now: Date, level: number | undefined, asks = 0) => `lesson-${now.toDateString()}-${level}-${asks}`;
+/** After the whole path: the coach's review / stretch lesson at the last stage (the web's challengeKey). */
+export const challengeKey = (now: Date, asks = 0) => `challenge-${now.toDateString()}-${asks}`;
 
 const stepOf = (l: Lesson, s: Settings) => l.steps[Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1)];
 const stepIndex = (l: Lesson, s: Settings) => Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1);
@@ -147,7 +192,7 @@ export function trailStops(trail: Lesson[], current: Lesson | undefined, song: L
 
 const hoursOf = (d: Date) => d.getHours();
 
-export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false }: JourneyInput): JourneyView {
+export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false, asks = 0, weekFocus }: JourneyInput): JourneyView {
   const today = dayKey(now);
   const dash = dashboard(runs, now);
   const lessonById = (id: string) => lessons.find(l => l.id === id);
@@ -175,7 +220,10 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
   const others = trail.filter(l => !done(l.id) && l !== fromSet)
     .sort((a, b) => Number(toolOf(a.steps[0]) === toolOf(fromSet?.steps[0] ?? a.steps[0])) - Number(toolOf(b.steps[0]) === toolOf(fromSet?.steps[0] ?? b.steps[0])));
-  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0];
+  // After the whole path: the coach's review / stretch lessons at the last stage are what's next.
+  const pathDone = !milestone && path.length > 0, lastStage = path[path.length - 1];
+  const challenges = pathDone ? lessons.filter(l => l.source === 'ai' && l.level === lastStage.level && !done(l.id)) : [];
+  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0] ?? challenges[0];
   const heroItem = hero && hero === fromSet ? firstUndone : -1;
   const afterSet = !!hero && heroItem < 0 && setDone && !swap;
   const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
@@ -198,12 +246,17 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     heroView = {
       lessonId: hero.id, item: heroItem, icon: iconOf(hero), kicker, title: `${prove ? 'Prove it: ' : ''}${hero.title.replace(/^Song: /, '')}`,
       step: hero.steps.length > 1 ? `Step ${si + 1} of ${hero.steps.length} · ${st.title}` : st.title,
-      meta: [`${minutes} min`, ...(bpm !== undefined ? [`${bpm}${target !== bpm ? ` → ${target}` : ''} BPM`] : [])].join(' · '),
+      meta: [TOOL_LABEL[toolOf(hero.steps[0])], `${minutes} min`, ...(bpm !== undefined ? [`${bpm}${target !== bpm ? ` → ${target}` : ''} BPM`] : [])].join(' · '),
       what: hero.what, preview: groovePreview(st, s.lessons[hero.id], si > 0 ? hero.steps[si - 1] : undefined), coachWrote: hero.source === 'ai',
+      ...(hero.source === 'ai' && hero.focus && { why: hero.focus }),
     };
   }
-  const main = hero ? { label: afterSet ? 'Next lesson' : 'Start', lessonId: hero.id, item: heroItem, emoji: '▶' }
+  const main: JourneyView['main'] = hero ? { label: afterSet ? 'Next lesson' : 'Start', lessonId: hero.id, item: heroItem, emoji: '▶' }
+    : pathDone ? { label: 'Coach challenge', lessonId: '', item: -1, emoji: '🎯', challenge: true }
     : jam ? { label: 'Jam', lessonId: jam.id, item: -1, emoji: '🎸' } : null;
+  // Flow on the newest finished groove (the highest stage, the latest finished), not the first jam forever.
+  const flowLesson = visible.filter(l => done(l.id) && l.kind === 'groove')
+    .sort((a, b) => b.level - a.level || s.lessons[b.id].completedAt!.localeCompare(s.lessons[a.id].completedAt!))[0] ?? jam;
 
   // You: rank, streak, notes landed, minutes
   const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
@@ -233,7 +286,14 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const lastPlayed = (l: Lesson) => dash.charts.filter(c => c.chartId.startsWith(`lesson/${l.id}/`)).flatMap(c => c.points.map(p => p.date)).sort().at(-1) ?? '';
   const arcadeLesson = visible.filter(l => done(l.id) && l.kind === 'groove' && toolOf(l.steps[l.steps.length - 1]) === 'drill')
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
-  const coachKey = coachLessonKey(now, milestone?.level);
+  // Beat your best (improvising tools have no record; a streak record as long as the whole take has nothing left).
+  const lastStep = (l: Lesson) => l.steps[l.steps.length - 1];
+  const maxedOut = (l: Lesson) => { const t = recordTarget(lastStep(l), s.lessons[l.id]); return t !== undefined && t <= (s.lessons[l.id].bestStreak ?? 0); };
+  const recordLesson = visible.filter(l => done(l.id) && l.level <= (milestone?.level ?? 99) && !['jam', 'trade', 'free', 'copy'].includes(toolOf(lastStep(l))) && !maxedOut(l))
+    .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
+  const recordT = recordLesson && recordTarget(lastStep(recordLesson), s.lessons[recordLesson.id]);
+  const recordGoal = recordLesson && (recordT ? `${recordT} in a row` : s.lessons[recordLesson.id]?.bestBpm ? `${s.lessons[recordLesson.id].bestBpm + 5} BPM` : 'one take');
+  const coachKey = coachLessonKey(now, milestone?.level, asks);
   const coachAsk = s.liveCoach && s.profile.onboarded && dash.totalRuns > 0 && milestone && aiLoaded && !coachOpen.length
     && studentRead(s.lessons, runs).pace !== 'flying' ? coachKey : null;
 
@@ -275,10 +335,19 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
       stops: trailStops(trail, hero, builtinSong, s, isCheckpoint),
     } : null,
     coachKey, coachAsk,
+    setupNudge: !s.setupDone && !s.setupNudged,
+    newStages: !s.newStagesSeen && ['song-swing', 'song-shuffle'].some(id => done(id)) && !Object.keys(s.lessons).some(id => (lessonById(id)?.level ?? 0) >= 7),
+    askSore: played && daysPlayed >= 3 && s.soreAskedWeek !== wk && !sore,
     weekPlanDue: played && s.liveCoach && s.profile.onboarded,
     hearingTipDue: played && s.hearingTipWeek !== wk,
     recap, newBadges,
-    arcade: afterSet && arcadeLesson ? {
+    coachLessons: coachOpen.map(l => ({ lessonId: l.id, title: l.title })),
+    week: weekLine(weekFocus, runs, now),
+    afterSet, pathDone, challengeKey: challengeKey(now, asks),
+    challenge: challenges[0] ? { lessonId: challenges[0].id, title: challenges[0].title } : null,
+    flow: flowLesson ? { lessonId: flowLesson.id, title: flowLesson.title } : null,
+    record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}` } : null,
+    arcade: arcadeLesson ? {
       lessonId: arcadeLesson.id, title: arcadeLesson.title,
       sub: `${arcadeLesson.title} · ${s.arcade?.[arcadeLesson.id] ? `beat ${s.arcade[arcadeLesson.id] + 2} clean bars` : 'how many clean bars?'}`,
     } : null,

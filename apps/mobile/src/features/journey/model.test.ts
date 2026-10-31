@@ -1,10 +1,10 @@
 import { CURRICULUM, LESSON_BY_ID, MILESTONES } from '@drum-coach/core/content/curriculum';
-import { startProgress, type LessonProgress } from '@drum-coach/core/engine/lesson';
+import { startProgress, toolOf, type LessonProgress } from '@drum-coach/core/engine/lesson';
 import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import { currentMilestone } from '@drum-coach/core/engine/planner';
 import { describe, expect, it } from 'vitest';
-import { badgeNames, buildJourney, currentSession, HEARING_TIP } from './model';
+import { badgeNames, buildJourney, challengeKey, currentSession, HEARING_TIP, sorePatch } from './model';
 import { countWords, groovePreview, slotsPerBeat } from './preview';
 
 const NOW = new Date(2026, 9, 30, 19, 42); // Fri 30 Oct, evening
@@ -77,7 +77,7 @@ describe('Journey three weeks in (journey.png)', () => {
   it('up next is the money beat at step 3, + snare, 70 → 90 BPM, a checkpoint', () => {
     expect(moneyIdx).toBeGreaterThan(0);
     expect(v.hero).toMatchObject({ lessonId: 'money-8ths', title: 'The money beat', step: 'Step 3 of 4 · + snare' });
-    expect(v.hero?.meta).toMatch(/^\d+ min · 70 → 100 BPM$/);
+    expect(v.hero?.meta).toMatch(/^Practice · \d+ min · 70 → 100 BPM$/); // the web's tool pill first
     expect(v.hero?.kicker).toMatch(/^Up next · \d of \d today · ★ checkpoint$/);
     expect(v.hero?.preview?.caption).toBe('One bar · you play all three');
     expect(v.hero?.preview?.newLabel).toBe('new: snare');
@@ -216,7 +216,7 @@ describe('the rest of the web TodayView: week plan, ear tip, recap, badges, 2-mi
     expect(buildJourney({ settings: { ...settings, badges: v.newBadges }, lessons: CURRICULUM, runs, now: NOW }).newBadges).toEqual([]);
   });
   it('the 2-minute challenge only after the set, on a finished drill groove', () => {
-    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).arcade).toBeNull();
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).afterSet).toBe(false);
     const today = currentSession(settings, CURRICULUM, '2026-10-30');
     const doneSet = { ...settings, session: { ...today, done: today.items.map((_, i) => i) } };
     const v = buildJourney({ settings: doneSet, lessons: CURRICULUM, runs, now: NOW });
@@ -225,6 +225,83 @@ describe('the rest of the web TodayView: week plan, ear tip, recap, badges, 2-mi
       expect(v.arcade?.sub).toMatch(/ · how many clean bars\?$/);
       const best = { ...doneSet, arcade: { [v.arcade!.lessonId]: 6 } };
       expect(buildJourney({ settings: best, lessons: CURRICULUM, runs, now: NOW }).arcade?.sub).toMatch(/beat 8 clean bars$/);
+      expect(v.afterSet).toBe(true);
+      // Beat your best: a finished lesson with a record left (no improvising tools), with its goal
+      expect(v.record?.sub).toMatch(/ · (\d+ in a row|\d+ BPM|one take)$/);
+      expect(['jam', 'trade', 'free', 'copy']).not.toContain(toolOf(LESSON_BY_ID[v.record!.lessonId].steps.at(-1)!));
     }
+  });
+});
+
+describe('the notice strip (web TodayView: setup nudge, wrists check-in)', () => {
+  const { settings, runs } = threeWeeksIn();
+  it('nudges a kit check until it is done or "Not now"', () => {
+    expect(buildJourney({ settings: fresh(), lessons: CURRICULUM, runs: [], now: NOW }).setupNudge).toBe(true);
+    expect(buildJourney({ settings: { ...fresh(), setupNudged: true }, lessons: CURRICULUM, runs: [], now: NOW }).setupNudge).toBe(false);
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).setupNudge).toBe(false);
+  });
+  it('asks about sore wrists once a week after three days of playing, not while easy days run', () => {
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).askSore).toBe(true);
+    expect(buildJourney({ settings: { ...settings, soreAskedWeek: isoWeek(NOW) }, lessons: CURRICULUM, runs, now: NOW }).askSore).toBe(false);
+    expect(buildJourney({ settings: { ...settings, ...sorePatch('2026-10-30', 'x') }, lessons: CURRICULUM, runs, now: NOW }).askSore).toBe(false);
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs: runs.slice(-2), now: NOW }).askSore).toBe(false);
+    expect(sorePatch('2026-10-30', '2026-W44')).toEqual({ soreAskedWeek: '2026-W44', soreUntil: '2026-11-02' });
+  });
+});
+
+describe('after the whole path (web TodayView: All stages done)', () => {
+  const all: Record<string, LessonProgress> = {};
+  for (const l of CURRICULUM) all[l.id] = finished(l.id);
+  const base = { ...fresh(), lessons: all, setupDone: true };
+  const day = currentSession(base, CURRICULUM, '2026-10-30');
+  const settings = { ...base, session: { ...day, done: day.items.map((_, i) => i) } }; // today's set is done
+  const runs = threeWeeksIn().runs;
+  it('the main move asks the coach for a challenge; Flow, the 2-minute challenge and Beat your best are there', () => {
+    const v = buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW });
+    expect(v.pathDone).toBe(true);
+    expect(v.hero).toBeNull();
+    expect(v.main).toMatchObject({ label: 'Coach challenge', challenge: true });
+    expect(v.challengeKey).toBe(challengeKey(NOW));
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW, asks: 2 }).challengeKey).toBe(`challenge-${NOW.toDateString()}-2`);
+    expect(v.flow).not.toBeNull();
+    expect(v.trail).toBeNull();
+  });
+  it("the coach's open challenge at the last stage leads", () => {
+    const last = Math.max(...MILESTONES.filter(m => m.checkpoints.length).map(m => m.level));
+    const lesson = CURRICULUM.find(l => l.level === last)!;
+    const ai = { ...lesson, id: 'ai-stretch', title: 'Stretch it', source: 'ai' as const };
+    const v = buildJourney({ settings, lessons: [...CURRICULUM, ai], runs, now: NOW });
+    expect(v.challenge).toEqual({ lessonId: 'ai-stretch', title: 'Stretch it' });
+    expect(v.hero?.lessonId).toBe('ai-stretch');
+  });
+});
+
+describe("This week and the coach's lessons (web TodayView)", () => {
+  const { settings, runs } = threeWeeksIn();
+  it("the coach plan's focus leads; else the most-given live tip, with a lesson for that habit", () => {
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW, weekFocus: { focus: 'Even eighths', why: 'They rush.' } }).week)
+      .toEqual({ words: 'Even eighths', why: 'They rush.' });
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).week).toBeNull();
+    const tipped = runs.map(r => ({ ...r, tips: ['rushing'] }));
+    const w = buildJourney({ settings, lessons: CURRICULUM, runs: tipped, now: NOW }).week;
+    expect(w?.habit?.key).toBe(`theme-${NOW.toDateString()}`);
+    expect(w?.habit?.reason).toMatch(/^This week's habit to work on: .+ \(the live tip came 6 times\)\.$/);
+  });
+  it("lists the coach's unfinished lessons for this stage", () => {
+    const level = currentMilestone(MILESTONES, CURRICULUM, settings.lessons, settings.profile)!.level;
+    const base = CURRICULUM.find(l => l.level === level)!;
+    const ai = { ...base, id: 'ai-x', title: 'Coach x', source: 'ai' as const };
+    expect(buildJourney({ settings, lessons: [...CURRICULUM, ai], runs, now: NOW }).coachLessons).toEqual([{ lessonId: 'ai-x', title: 'Coach x' }]);
+  });
+});
+
+describe('new stages open (web R3)', () => {
+  it('after the swing or shuffle song, with nothing at stage 8+ yet, until seen', () => {
+    const base = { ...fresh(), lessons: { 'song-swing': finished('song-swing') } };
+    expect(buildJourney({ settings: base, lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(true);
+    expect(buildJourney({ settings: { ...base, newStagesSeen: true }, lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
+    const later = CURRICULUM.find(l => l.level >= 7)!;
+    expect(buildJourney({ settings: { ...base, lessons: { ...base.lessons, [later.id]: finished(later.id) } }, lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
+    expect(buildJourney({ settings: fresh(), lessons: CURRICULUM, runs: [], now: NOW }).newStages).toBe(false);
   });
 });

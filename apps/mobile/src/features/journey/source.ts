@@ -20,6 +20,12 @@ export function planFocus(plan: Record<string, unknown> | undefined, now: Date):
   return plan.lessonIds.filter((x): x is string => typeof x === 'string');
 }
 
+/** This week's focus from the coach's plan (the web's thisWeeksPlan().focus and why), when it's this week's. */
+export function planWeekFocus(plan: Record<string, unknown> | undefined, now: Date): { focus: string; why?: string } | undefined {
+  if (!plan || plan.week !== isoWeek(now) || typeof plan.focus !== 'string' || !plan.focus) return undefined;
+  return { focus: plan.focus, ...(typeof plan.why === 'string' && plan.why && { why: plan.why }) };
+}
+
 /** Starting an item freezes today's set (the web's startSession) so later progress doesn't reshuffle it. */
 export const startSessionPatch = (session: Session): Partial<Settings> => ({ session });
 
