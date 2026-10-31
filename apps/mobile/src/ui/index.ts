@@ -18,5 +18,5 @@ export { ringAngles, ratio, trailGeometry, type TrailGeometry } from './layout';
 export { statusRows, type StatusRow, type StatusInput, type Dot } from './status';
 export { readSettings, writeSettings, subscribeSettings, settingsVersion, SETTINGS_KEY } from './appSettings';
 export { createKitMoveRouter, type KitMoveHandlers, type KitMoveRouter } from './kitMoves';
-export { getAppHitBus, useAppSettings, useKitMoves, useStatusRows, kitName } from './hooks';
+export { getAppHitBus, startAppKeyboard, useAppKey, useAppSettings, useKitMoves, useStatusRows, kitName } from './hooks';
 export { NAV, type NavKey } from './nav';

@@ -6,6 +6,7 @@ import { createHitBus, type HitBus } from '@drum-coach/core/input/hits';
 import { useIsFocused } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { checkCapabilities, getCapabilities } from '../platform/capabilities';
+import { onAppKey, startKeyboard, type AppKey } from '../platform/keyboard';
 import { connectMidiToHitBus, getMidiPort } from '../platform/midi';
 import { getStorage, KV_KEYS } from '../platform/storage';
 import { readSettings, settingsVersion, subscribeSettings } from './appSettings';
@@ -40,6 +41,30 @@ export function getAppHitBus(): HitBus {
   connectMidiToHitBus(port, bus);
   g.__drumAppHitBus = bus;
   return bus;
+}
+
+/**
+ * The hardware keyboard plays pads on the app's hit bus (CLAUDE.md keys), once per app; app/_layout.tsx mounts it.
+ * Idempotent: screens may call it too.
+ */
+export function startAppKeyboard() {
+  return startKeyboard(getAppHitBus());
+}
+
+/**
+ * Esc or Enter from a hardware keyboard runs `handler` while this screen is focused (the newest screen first).
+ * Return false from the handler to let an older listener have the key too.
+ */
+export function useAppKey(key: AppKey, handler: () => boolean | void, opts: { enabled?: boolean } = {}) {
+  const focused = useIsFocused();
+  const on = (opts.enabled ?? true) && focused;
+  const latest = useRef(handler);
+  latest.current = handler;
+  useEffect(() => {
+    if (!on) return;
+    startAppKeyboard();
+    return onAppKey(k => (k === key ? latest.current() !== false : false));
+  }, [on, key]);
 }
 
 /** The app settings; re-renders when any screen saves them. */
