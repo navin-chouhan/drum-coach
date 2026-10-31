@@ -192,16 +192,14 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "technique-kick": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [
-      "text \"The beater comes back off the pad by itself.\"",
-      "text \"✗ Wrong:\""
-    ],
+    "cut": [],
     "errors": 0
   },
   "flow": {
@@ -239,13 +237,7 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [
-      "text \"One stick low (3 cm), one high (30 cm). Both drop \"",
-      "text \"Two heights before every flam: 3 cm and 30 cm.\"",
-      "text \"The hand that played loud stays down; the soft one\"",
-      "text \"Two notes, very close: \"fla-am\".\"",
-      "text \"✗ Wrong:\""
-    ],
+    "cut": [],
     "errors": 0
   },
   "lesson-intro-1": {
@@ -270,6 +262,7 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
+    "cut": [],
     "errors": 0
   },
   "lesson-celebration": {
