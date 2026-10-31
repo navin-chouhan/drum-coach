@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createSongClock, PLAYING, YT_STATE } from './songClock';
-import { createYtController, nearestRate, ytErrorText, ytPlayerVars, measureOffset, type YtCommand } from './ytController';
+import { createYtController, isRefused, nearestRate, watchUrl, ytErrorText, ytPlayerVars, measureOffset, type YtCommand } from './ytController';
 
 // A synthetic player: the video advances at `rate` from `start` (Clock ms), and getCurrentTime() only updates every
 // `stepMs` (YouTube's postMessage granularity), with the poll every 50 ms.
@@ -133,6 +133,19 @@ describe('YouTube controller', () => {
     expect(changes).toBe(3);
     expect(ytErrorText({ code: 999 })).toBe('YouTube error 999');
     expect(ytErrorText({ code: 101 })).toBe(ytErrorText({ code: 150 }));
+  });
+
+  it('a refused video (101, 150, 152, 153): the web wording, its code, and the watch URL for "Open in YouTube"', () => {
+    const { yt } = make();
+    yt.handle({ type: 'ready', raw: 0, rate: 1, duration: 1, title: '', rates: [1] });
+    yt.handle({ type: 'error', code: 153 });
+    expect(yt.error).toBe("The owner doesn't allow this video to be embedded. Try another upload of the song.");
+    expect(yt.errorCode).toBe(153);
+    expect([101, 150, 152, 153].every(isRefused)).toBe(true);
+    expect(isRefused(100) || isRefused(undefined)).toBe(false);
+    expect(watchUrl('dQw4w9WgXcQ')).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    yt.load('abc');
+    expect(yt.errorCode).toBeUndefined();
   });
 
   it('playerVars: playsinline, origin only when real', () => {
