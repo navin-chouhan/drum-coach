@@ -1,0 +1,117 @@
+# The lesson steps that used to say "coming to the iPad later" (G3), by deep link, without a kit:
+# 1. Ear quiz ("Steady or rushed?", ear-steady step 1): four rounds, answered by touch (kit: hi-hat / snare / floor
+#    × 1, keys 1–3; tom 2 or R hears it again), the summary, Done → the lesson's next (playable) step.
+# 2. Transcription ("Write what you hear", write-it step 1): tap a box, Check it twice, Show me fills the answer,
+#    Check it passes, Done → step 2 (another transcription).
+# 3. A look step ("The flam", step 1): the animated How it moves, one move (Done).
+# testIDs: src/features/lesson/EarQuiz.tsx, Transcribe.tsx, LessonScreen.tsx.
+appId: com.drumcoach.app
+name: Ear quiz, transcription and look steps
+tags:
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+
+# 1 · Ear quiz
+- openLink: drumcoach://lesson/ear-steady
+- extendedWaitUntil:
+    visible:
+      id: lesson-quiz
+    timeout: 10000
+- assertNotVisible:
+    id: lesson-main-move # the quiz has its own answers, no moves
+- takeScreenshot: lesson-quiz
+- tapOn:
+    id: lesson-quiz-again # hear it again
+- repeat:
+    times: 4
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: lesson-quiz-answer-0
+          timeout: 5000
+      - tapOn:
+          id: lesson-quiz-answer-0
+      - extendedWaitUntil:
+          visible:
+            id: lesson-quiz-said # "✓ Right!" or "Not quite: …"
+          timeout: 3000
+      - extendedWaitUntil:
+          notVisible:
+            id: lesson-quiz-said # 1.8 s later the next round starts
+          timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: lesson-quiz-summary
+    timeout: 5000
+- assertVisible:
+    text: ".* of 4 right.*"
+- takeScreenshot: lesson-quiz-done
+- tapOn:
+    id: lesson-quiz-done
+- extendedWaitUntil:
+    visible:
+      id: lesson-main-move # step 2 "Now you play it steady"
+    timeout: 10000
+- assertNotVisible:
+    id: lesson-quiz
+- tapOn:
+    id: lesson-back
+
+# 2 · Transcription
+- openLink: drumcoach://lesson/write-it
+- extendedWaitUntil:
+    visible:
+      id: lesson-transcribe
+    timeout: 10000
+- tapOn:
+    id: lesson-transcribe-again # hear it (twice through)
+- tapOn:
+    id: lesson-transcribe-hihat-0
+- tapOn:
+    id: lesson-transcribe-check
+- assertVisible:
+    id: lesson-transcribe-said
+- tapOn:
+    id: lesson-transcribe-check # a second check: "Show me" appears
+- extendedWaitUntil:
+    visible:
+      id: lesson-transcribe-show
+    timeout: 3000
+- tapOn:
+    id: lesson-transcribe-show
+- tapOn:
+    id: lesson-transcribe-check
+- assertVisible:
+    text: "100% right.*"
+- takeScreenshot: lesson-transcribe-checked
+- tapOn:
+    id: lesson-transcribe-done
+- extendedWaitUntil:
+    visible:
+      id: lesson-transcribe-check # step 2 "A new kick": a fresh grid
+    timeout: 10000
+- assertNotVisible:
+    id: lesson-transcribe-said
+- tapOn:
+    id: lesson-back
+
+# 3 · A look step
+- openLink: drumcoach://lesson/flam
+- extendedWaitUntil:
+    visible:
+      id: lesson-look
+    timeout: 10000
+- assertVisible:
+    id: lesson-main-move # "✓ Done, next step" only
+- assertNotVisible:
+    id: lesson-listen
+- takeScreenshot: lesson-look
+- tapOn:
+    id: lesson-main-move
+- extendedWaitUntil:
+    notVisible:
+      id: lesson-look
+    timeout: 10000
+- tapOn:
+    id: lesson-back

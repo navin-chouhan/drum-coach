@@ -186,7 +186,7 @@ export function ProgressScreen() {
                   <Button label="Concert: the whole set" emoji="🎤" size="small" testID="progress-concert"
                     onPress={() => { const first = startConcert(m.showoff.concert!); if (first) router.push(songHref(first.id, first.bars) as never); }} />
                 ) : null}
-              </> : <Body size={13} color={color.muted}>{m.showoff.empty}</Body>}
+              </> : <Body size={13} color={color.muted} testID="progress-showoff-empty">{m.showoff.empty}</Body>}
             </View>
             <View testID="progress-fills">
               <Body weight="900">🥁 Your fills</Body>

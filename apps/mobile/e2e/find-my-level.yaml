@@ -1,0 +1,47 @@
+# Journey's "Find my level" (the placement test, web PlacementTest): a rung with its sheet and the touch pads, Play it
+# / Stop, then "Start at this stage" back to Journey. testIDs: src/features/journey/JourneyScreen.tsx,
+# src/features/lesson/PlacementScreen.tsx.
+appId: com.drumcoach.app
+name: Find my level
+tags:
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+- scrollUntilVisible:
+    element:
+      id: journey-find-level
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: journey-find-level
+- extendedWaitUntil:
+    visible:
+      id: screen-placement
+    timeout: 10000
+- assertVisible:
+    id: placement-rung
+- assertVisible:
+    id: placement-touch-pads # no kit: the touch pads
+- takeScreenshot: placement-rung
+- tapOn:
+    id: placement-play
+- extendedWaitUntil:
+    visible:
+      id: placement-stop
+    timeout: 10000
+- tapOn:
+    id: placement-stop
+- extendedWaitUntil:
+    visible:
+      id: "placement-play|placement-result"
+    timeout: 10000
+- tapOn:
+    id: placement-here
+    optional: true # gone when the stopped take already ended the test
+- tapOn:
+    id: placement-start-there
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: screen-journey
+    timeout: 10000

@@ -1,0 +1,76 @@
+# The intro slides before a first take (web src/play/IntroSlides.tsx): 4 slides (what, who plays what, count it, how
+# it moves), Next / Back, the last Next starts the take. Opened by deep link on "The money beat" (no kit needed: the
+# slides are turned by touch here; on the kit hi-hat × 1 / snare × 1, on a keyboard → / ← / Enter / Esc).
+# testIDs: src/features/lesson/IntroSlides.tsx, LessonScreen.tsx.
+appId: com.drumcoach.app
+name: Intro slides before a first take
+tags:
+  - v1
+---
+- runFlow: subflows/open-app.yaml
+- openLink: drumcoach://lesson/money-8ths
+- extendedWaitUntil:
+    visible:
+      id: lesson-main-move
+    timeout: 10000
+- tapOn:
+    id: lesson-main-move
+- extendedWaitUntil:
+    visible:
+      id: lesson-intro
+    timeout: 5000
+- assertVisible:
+    id: lesson-intro-page
+    text: "1 / 4"
+- assertNotVisible:
+    id: lesson-intro-back # no Back on the first slide
+- takeScreenshot: intro-what
+- tapOn:
+    id: lesson-intro-next
+- assertVisible:
+    id: lesson-intro-page
+    text: "2 / 4"
+- takeScreenshot: intro-who-plays-what
+- tapOn:
+    id: lesson-intro-back
+- assertVisible:
+    id: lesson-intro-page
+    text: "1 / 4"
+- tapOn:
+    id: lesson-intro-next
+- tapOn:
+    id: lesson-intro-next
+- assertVisible:
+    id: lesson-intro-page
+    text: "3 / 4"
+- takeScreenshot: intro-count-it
+- tapOn:
+    id: lesson-intro-next
+- assertVisible:
+    id: lesson-intro-demo # 4 · How it moves (the DOM demo)
+- takeScreenshot: intro-how-it-moves
+- tapOn:
+    id: lesson-intro-next # "Ready ▶": the take starts
+- extendedWaitUntil:
+    visible:
+      id: lesson-stop
+    timeout: 10000
+- assertNotVisible:
+    id: lesson-intro
+- tapOn:
+    id: lesson-stop
+# Once seen, the next take at the same tempo starts without them
+- extendedWaitUntil:
+    visible:
+      id: lesson-main-move
+    timeout: 10000
+- tapOn:
+    id: lesson-main-move
+- extendedWaitUntil:
+    visible:
+      id: lesson-stop
+    timeout: 5000
+- assertNotVisible:
+    id: lesson-intro
+- tapOn:
+    id: lesson-stop

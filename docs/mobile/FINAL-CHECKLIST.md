@@ -1,6 +1,6 @@
 # Final checklist: the iPad app at the kit, in one sitting (owner)
 
-About 2½ hours. The Mac builds and installs; the Linux laptop runs the home server (and Metro if you like); you sit at
+About 3 hours. The Mac builds and installs; the Linux laptop runs the home server (and Metro if you like); you sit at
 the MPS-150 with the iPad. Tick each box, write the numbers in the blanks, and paste back section 12.
 
 What's already known (so you don't need to report it again):
@@ -100,7 +100,7 @@ Sidebar → Dev row → **Audio**. Section 0 (compile) is done by the cloud buil
 - [ ] **Latency:** 16 hits with the click → the delay and how steady → Save → Journey.
 - [ ] Sidebar pills afterwards: kit green, latency ____ ms, coach (green if section 3 is done).
 
-## 7. Every screen — 50 min
+## 7. Every screen — 70 min
 Kit gestures everywhere: hi-hat pedal × 3 or crash × 2 = yes / the big move, tom 2 × 2 = listen, floor × 2 = slower,
 tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 
@@ -109,6 +109,12 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
       Today's set with the minute bar, Stage song, the trail. Everything fits without scrolling.
 - [ ] **Start** by hi-hat pedal × 3 opens today's item; ride × 2 = Something else; tom 2 × 2 = Hear it.
 - [ ] Skill map and Full path open Progress on those views.
+- [ ] **Find my level:** a rung with its sheet; **Play it** (hi-hat pedal × 3) → a take; a clean one moves up a rung,
+      a rough one ends the test with "Start there"; **Start at this stage** goes back to Journey on that stage.
+- [ ] **More ways to play → 🌊 Flow:** the player opens on your newest finished groove (the jam lesson if none), the
+      big move is **Flow ▶**; the groove loops, the click fades out, nothing passes or fails; crash × 4 stops.
+- [ ] **More ways to play → 🥢 Stick technique:** every movement (grip, full stroke … kick); ✓ Right / ✗ Wrong,
+      1× ½× ¼×, the tempo 40–100; "Talk me through it" speaks (not during a take); ← Journey (or Esc) goes back.
 
 **Lesson player** (open a groove with a tempo ladder, e.g. Stage 1–3)
 - [ ] Full screen, **no grey header bar above the black bar** **(M1)**; Sheet is the default, Highway switches (left to right).
@@ -125,6 +131,19 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
       Again after 1 bar: dropped with a short notice.
 - [ ] Unplug the kit: the player switches to the **touch pads**; two fingers = hi-hat + kick together; a take with
       touch pads scores; plug back in: the kit view returns.
+- [ ] **Intro slides** (a step's first take): 4 slides (what · who plays what · count it · how it moves). Hi-hat × 1
+      forward, snare × 1 back (on a keyboard → / Enter, ←, Esc closes); "Ready ▶" starts the count-in. The other
+      gestures do nothing while they're up. Next take at the same tempo: no slides; 15 BPM faster: slides again.
+- [ ] **Ear quiz** (Full path → Stage 0 "Steady or rushed?"): A then B play; answer hi-hat (A) or snare (B) (keys 1–2),
+      tom 2 × 1 (R) hears it again; ✓ Right / Not quite after each, 4 rounds, "N of 4 right", **Done** → step 2.
+      "Where's the kick?" (Stage 2): three answers with hi-hat / snare / floor (keys 1–3).
+- [ ] **Transcription** (Stage 2 "Write what you hear"): the groove plays twice; tap boxes, **Check it** marks right /
+      ✕ extra / ? missing; after two checks **Show me** fills it; 80 % passes → **Done**.
+- [ ] **Look step** (Stage 3 "The flam", step 1): the animated How it moves, one move (Done = hi-hat pedal × 3).
+      **Listen step** (Stage 2 "Listen: the money beat"): **▶ Find it on YouTube** opens the search, "✓ I listened: next step".
+- [ ] ⋯ More → **🤸 How it moves** opens the full-size demo for this lesson; Esc or ✕ closes it.
+- [ ] Hardware keyboard: H hints, B band, Esc stops a take / closes More, the coach panel and the celebration;
+      Enter on the celebration is its main button.
 
 **Practice**
 - [ ] Pick up where you left off, the warm-up card (tom 1 × 2 starts it), For you cards with the yellow ring (ride × 2
@@ -132,6 +151,9 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Play screen: − / + tempo with best clean, loop bars, times round, Climb (2 clean takes → +5), How it plays chips,
       your takes here; a take saves (it shows in Progress).
 - [ ] Unplug the kit: touch pads on the play screen **(M2)**. Home mid-take: the take stops **(M3)**.
+- [ ] An exercise's first take shows the intro slides (not for the warm-up, Hear it or wait mode); hi-hat × 1 turns them.
+- [ ] After a take: **📊 Details and history** shows accuracy, timing and dynamics;
+      **Play again** plays, **Back** returns to the take card. Esc stops a take.
 - [ ] Metronome (🔔): change the tempo and its options; steady clicks in the module's headphones. Play a tom fill
       while it runs: the tempo must not change **(QA2 M3)**.
 
@@ -141,6 +163,8 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
       on a song row opens the song **(M4)**. This month's report (needs the server).
 - [ ] Trophies: "Show-off song" counts the bars of a song you played at 85 % or better (____ / 16 bars) **(QA2 m2)**.
       Optional: a song checked by ear with 16+ bars all ready lands in the **Show-off set** with **▶ Play it**.
+- [ ] **Show-off set:** empty, it says how a song gets there; with two or more ready songs, **🎤 Concert: the whole
+      set** opens the first song of the set.
 
 **Songs** (home server on)
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
@@ -165,6 +189,8 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Latency: the current route's value and the other routes measured (unplug the hub audio: it switches to the
       speaker's value, plug back: the hub's value).
 - [ ] Sound levels, which hand leads, live tips, kit gestures off → gestures do nothing anywhere; on again.
+- [ ] Hardware keyboard in the tools: Hit each pad once ← goes back a pad, Esc stops; Sound levels → Check from the
+      kit answers with keys 1 / 2 / 3; Esc closes any tool.
 
 ## 8. Offline — 5 min
 Wi-Fi off (Control Center).
@@ -195,6 +221,8 @@ cd apps/mobile && npx expo run:ios --device --configuration Release
 ## 11. Maestro on the simulator (optional, Mac) — 10 min
 `maestro test apps/mobile/e2e` against a Release simulator build (apps/mobile/e2e/README.md).
 - [ ] launch / lesson-to-progress / setup / songs-offline: pass or the failing step: ____
+- [ ] intro-slides / lesson-steps / technique-flow / practice-details / find-my-level / progress-showoff: pass or the
+      failing step: ____
 
 ## 12. Paste back
 - Section 2–3: hub model, route name, server test line.

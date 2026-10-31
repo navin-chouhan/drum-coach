@@ -59,6 +59,7 @@ tags:
 - takeScreenshot: lesson-ready
 - tapOn:
     id: lesson-main-move
+- runFlow: subflows/through-intro.yaml # a first take: the intro slides come first (G3)
 - extendedWaitUntil:
     visible:
       id: lesson-stop
