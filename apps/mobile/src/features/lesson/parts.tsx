@@ -3,7 +3,8 @@
 // app-wide (modules/drum-keys through the hit bus).
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Body, Button, Card, Display, GestureChip, Label, Stars, Strong, color, font, hardShadow, shadow, slopFor, stroke, type } from '../../ui';
+import { refocusKeyboard } from '../../platform/keyboard';
+import { Body, Button, Card, Display, GestureChip, Label, Stars, Strong, color, font, hardShadow, shadow, slopFor, stroke, type, useAppKey } from '../../ui';
 import type { Celebration } from './controller';
 import type { Goal } from './lessonView';
 import type { TakeCard } from './results';
@@ -80,8 +81,11 @@ export function TakeCardView({ card, head }: { card: TakeCard; head: string }) {
 
 /** The moment after a lesson: stars, the stage, what's next (src/lesson/Celebration.tsx). */
 export function CelebrationModal({ c, onNext, onAgain, onClose }: { c: Celebration; onNext: () => void; onAgain: () => void; onClose: () => void }) {
+  // Keys: Enter is the main move (the web autofocuses it), Esc stays on this lesson (closes the sheet).
+  useAppKey('enter', onNext);
+  useAppKey('escape', onClose);
   return (
-    <Modal transparent animationType="fade" supportedOrientations={['landscape']} onRequestClose={onClose}>
+    <Modal transparent animationType="fade" supportedOrientations={['landscape']} onRequestClose={onClose} onShow={refocusKeyboard} onDismiss={refocusKeyboard}>
       <View style={s.scrim}>
         <Card tone="pop" elevation={8} style={s.celebrate} testID="lesson-celebration">
           <Display size={44} style={{ textAlign: 'center' }}>{c.title}</Display>
@@ -109,8 +113,9 @@ export function CelebrationModal({ c, onNext, onAgain, onClose }: { c: Celebrati
 
 /** ⋯ More: the lesson card, help from the coach, reset, the keys. */
 export function MoreSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
+  useAppKey('escape', onClose, { enabled: open }); // a hardware keyboard's Esc closes it
   return (
-    <Modal visible={open} transparent animationType="fade" supportedOrientations={['landscape']} onRequestClose={onClose}>
+    <Modal visible={open} transparent animationType="fade" supportedOrientations={['landscape']} onRequestClose={onClose} onShow={refocusKeyboard} onDismiss={refocusKeyboard}>
       <Pressable style={s.scrimRight} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
         <Pressable onPress={() => {}} style={{ width: 460, maxHeight: '86%' }}>
           <Card style={{ maxHeight: '100%' }} testID="lesson-more">

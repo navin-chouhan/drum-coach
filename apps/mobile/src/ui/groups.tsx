@@ -4,7 +4,9 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { refocusKeyboard } from '../platform/keyboard';
 import { Button, slopFor } from './controls';
+import { useAppKey } from './hooks';
 import { stepBounds, stepValue } from './kitMath';
 import { DottedGround } from './Screen';
 import { Body, Display, MAX_FONT_SCALE, tabular } from './Text';
@@ -103,12 +105,15 @@ export function Stepper({ label, value, onChange, min, max, step = 1, format = S
 
 /**
  * A full-screen tool (the pad wizard, soft then loud, latency, sound check, note map, kit test): the black bar with
- * the title and Close, on the dotted ground, without the sidebar.
+ * the title and Close, on the dotted ground, without the sidebar. A hardware keyboard's Esc closes it (the web's sheets);
+ * the keys are taken back when it shows and when it goes.
  */
 export function ToolFrame({ visible, title, onClose, children, testID, right }: { visible: boolean; title: string; onClose: () => void; children: ReactNode; testID?: string; right?: ReactNode }) {
   const insets = useSafeAreaInsets();
+  useAppKey('escape', onClose, { enabled: visible });
   return (
-    <Modal visible={visible} animationType="fade" presentationStyle="fullScreen" supportedOrientations={['landscape', 'landscape-left', 'landscape-right']} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" presentationStyle="fullScreen" supportedOrientations={['landscape', 'landscape-left', 'landscape-right']} onRequestClose={onClose}
+      onShow={refocusKeyboard} onDismiss={refocusKeyboard}>
       <DottedGround>
         <View style={[styles.bar, { paddingTop: Math.max(insets.top, 20), paddingLeft: insets.left + 26, paddingRight: insets.right + 24 }]}>
           <Display size={22} color={color.white} accessibilityRole="header" style={styles.barTitle} numberOfLines={1}>{title}</Display>
