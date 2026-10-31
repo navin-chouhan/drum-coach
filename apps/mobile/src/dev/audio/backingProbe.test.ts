@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createDriftRecorder, nextBarAt, toneBpm } from './backingProbe';
+import { createDriftRecorder, loopDriftMs, loopSegments, nextBarAt, toneBpm } from './backingProbe';
 
 describe('nextBarAt', () => {
   it('the first bar line at or after now + lead', () => {
@@ -15,6 +15,30 @@ describe('toneBpm', () => {
   it('writes the tone slower for slower rates so its beats stay on the click', () => {
     expect(toneBpm(120, 1)).toBe(120);
     expect(toneBpm(120, 0.5)).toBe(240);
+  });
+});
+
+describe('a looped bar (F2)', () => {
+  const req = { at: 1e9, offsetMs: 0, rate: 0.5, durationMs: 1000 }; // a 1 s bar of file, heard over 2 s
+  it('queues the next bars on the same line', () => {
+    expect(loopSegments(req, 2000, 3)).toEqual([1, 2, 3].map(k => ({ at: 1e9 + k * 2000, offsetMs: 0, durationMs: 1000 })));
+    expect(loopSegments({ at: 0, offsetMs: 0, rate: 1 }, 500, 1)).toEqual([{ at: 500, offsetMs: 0, durationMs: 500 }]);
+    expect(loopSegments(req, 2000, -1)).toEqual([]);
+  });
+  it('reads the drift against the repeat the anchor is in', () => {
+    expect(loopDriftMs(req, 2000, { at: 1e9 + 4000 + 1.5, fileMs: 0 })).toBeCloseTo(1.5, 9); // repeat 2, 1.5 ms late
+    expect(loopDriftMs(req, 2000, { at: 1e9 + 2000 - 0.5, fileMs: 0 })).toBeCloseTo(-0.5, 9); // repeat 1, early
+    expect(loopDriftMs(req, 2000, { at: 1e9 + 100, fileMs: 50 })).toBeCloseTo(0, 9);
+    expect(loopDriftMs(req, undefined, { at: 1e9 + 4000, fileMs: 0 })).toBe(4000); // not looped: the single line
+  });
+  it('a recorder of a loop keeps reading through the seams', () => {
+    let a: { at: number; fileMs: number } | null = { at: 1e9 + 1999, fileMs: 999.5 };
+    const rec = createDriftRecorder({ anchor: () => a }, req, 10_000, 2000);
+    rec.poll();
+    a = { at: 1e9 + 2001, fileMs: 0.5 };
+    rec.poll();
+    expect(rec.summary().minMs).toBeCloseTo(0, 9);
+    expect(rec.summary().maxMs).toBeCloseTo(0, 9);
   });
 });
 

@@ -11,7 +11,7 @@ import { summarizeTiming, type TimingSummary } from '../../../modules/drum-audio
 import { available as midiAvailable, nowMs as midiNowMs } from '../../../modules/drum-midi';
 import { audio } from '../../platform/audio';
 import { colors } from '../../theme';
-import { createDriftRecorder, nextBarAt, toneBpm, DRIFT_WINDOW_MS, type DriftRecorder } from './backingProbe';
+import { createDriftRecorder, loopSegments, nextBarAt, toneBpm, DRIFT_WINDOW_MS, type DriftRecorder } from './backingProbe';
 import { createMetronome, type Metronome, type MetronomeSpec } from './metronome';
 
 const PADS: { id: PadId; label: string }[] = [
@@ -168,7 +168,8 @@ export function AudioDebugScreen() {
     }
   };
 
-  const startBacking = async () => {
+  /** `loop`: the tone's first bar, then the same bar queued again and again for the drift window (F2's seams). */
+  const startBacking = async (loop = false) => {
     const b = audio.backing;
     if (!b || !tone) return setBackingMsg('load the test tone first');
     if (tone.rate !== backingRate || tone.bpm !== toneBpm(spec.bpm, backingRate) || tone.beatsPerBar !== spec.beatsPerBar) {
@@ -183,12 +184,19 @@ export function AudioDebugScreen() {
     const lead = Math.max(300, (audio.route()?.minLeadMs ?? 0) + 100);
     const m = metro.current;
     const barMs = (spec.beatsPerBar * 60_000) / spec.bpm;
-    const req = { at: m?.running ? nextBarAt(m.zero, barMs, now, lead) : now + lead, offsetMs: 0, rate: backingRate };
+    const at = m?.running ? nextBarAt(m.zero, barMs, now, lead) : now + lead;
+    const req = loop ? { at, offsetMs: 0, rate: backingRate, durationMs: barMs * backingRate } : { at, offsetMs: 0, rate: backingRate };
     b.start(req);
     const s = b.lastStart();
     if (s && !s.ok) return setBackingMsg(`not started: ${s.reason}`);
-    drift.current = { rec: createDriftRecorder(b, req), polling: true };
-    setBackingMsg(m?.running ? `starts on the next bar (in ${fmt(req.at - now, 0)} ms)` : 'started (metronome off: no click to line up with)');
+    if (loop) {
+      for (const seg of loopSegments(req, barMs, Math.ceil(DRIFT_WINDOW_MS / barMs) + 1)) b.queue(seg);
+      const q = b.lastQueue();
+      if (q && !q.ok) return setBackingMsg(`loop not queued: ${q.reason}`);
+    }
+    drift.current = { rec: createDriftRecorder(b, req, DRIFT_WINDOW_MS, loop ? barMs : undefined), polling: true };
+    const what = loop ? 'loops bar 1' : 'starts';
+    setBackingMsg(m?.running ? `${what} on the next bar (in ${fmt(req.at - now, 0)} ms)` : `${what} now (metronome off: no click to line up with)`);
   };
 
   const stopBacking = () => {
@@ -297,7 +305,8 @@ export function AudioDebugScreen() {
           </View>
           <View style={styles.buttons}>
             <Button testID="backing-load" label="Load test tone" tone="plain" onPress={loadTone} />
-            <Button testID="backing-start" label="Start on next bar" onPress={startBacking} />
+            <Button testID="backing-start" label="Start on next bar" onPress={() => startBacking()} />
+            <Button testID="backing-loop" label="Loop 1 bar" tone="plain" onPress={() => startBacking(true)} />
             <Button testID="backing-stop" label="Stop" tone="plain" onPress={stopBacking} />
           </View>
           <Row label="State" value={backingMsg || (audio.backing ? '–' : 'needs the native module')} />
@@ -309,7 +318,7 @@ export function AudioDebugScreen() {
           <Row label="Drift min / max" value={ds && ds.n > 0 ? `${fmt(ds.minMs, 3)} / ${fmt(ds.maxMs, 3)} ms` : '–'} />
           <Row label="Slope" value={ds && ds.n > 1 ? `${fmt(ds.slopeMsPerMin, 3)} ms per minute` : '–'} />
           <Row label="Readings" value={ds ? `${ds.n} over ${fmt(ds.elapsedMs / 1000, 0)} of ${DRIFT_WINDOW_MS / 1000} s${ds.done ? ' (done)' : ''}` : '–'} />
-          <Row label="Native" value={`starts ${fmt(backingInfo.starts, 0)}, late joins ${fmt(backingInfo.lateJoins, 0)}, re-anchors ${fmt(backingInfo.reanchors, 0)}, playing ${String(backingInfo.playing ?? '–')}`} />
+          <Row label="Native" value={`starts ${fmt(backingInfo.starts, 0)}, late joins ${fmt(backingInfo.lateJoins, 0)}, re-anchors ${fmt(backingInfo.reanchors, 0)}, queued ${fmt(backingInfo.queued, 0)} (gaps ${fmt(backingInfo.queueGaps, 0)}, skips ${fmt(backingInfo.queueSkips, 0)}), playing ${String(backingInfo.playing ?? '–')}`} />
           <Row label="Native error" value={typeof backingInfo.lastError === 'string' && backingInfo.lastError !== '' ? backingInfo.lastError : '–'} />
         </Card>
 

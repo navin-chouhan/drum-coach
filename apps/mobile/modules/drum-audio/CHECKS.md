@@ -63,6 +63,7 @@ bus. The card's test tone is 44.1 kHz on purpose (the backing mixer converts it 
 | B4 | During B1, connect and disconnect Bluetooth (or wired) headphones | Events show the route; Native "re-anchors" goes up; the tone keeps playing on the new output on its line (the metronome stops, as in T7-5; restart it to compare by ear). |
 | B5 | During B1: Home and back; Siri; Suspend | The tone stops with the engine ("playing false"); **Start on next bar** works again. |
 | B6 | Start with the metronome off, **Stop** after 10 s, **Start** again | Starts at once; no crash; "Native error" `–`. |
+| B7 | Seamless loops (F2): at 100 %, then 75 %, **Load test tone**, **Loop 1 bar**; listen 2 minutes | Every bar starts with the 880 Hz blip on the click's bar 1, evenly, with no gap, double blip or stumble at the seam. Native: "queued" ≈ bars in 2 min, gaps 0, skips 0. Drift rows as in B2/B3 (no step at the seams). Paste the rows. |
 
 ## 4. Robustness (§7.2 T7, on the debug screen now; repeat in a take after part 2)
 

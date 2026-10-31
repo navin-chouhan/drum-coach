@@ -130,6 +130,31 @@ this is an intentional improvement and not a parity item. Seeking means stop + s
 host time. v1 (D5) has no Songs, so A4 builds `backing` only if time allows. The interface and the drift handling
 (§6) are in place now so Songs (A8) doesn't change the contract.
 
+**Seamless loops (F2).** A looped section must not restart the file: `start()` cuts what plays at once, so a take that
+started each repeat with its own `start()` played the next one early (I1 measured a 100–150 ms seam). The contract
+(`packages/core/src/play/audioPort.ts`) therefore has:
+
+- `start({ at, offsetMs, rate, durationMs? })`: as before, plus an optional length (ms of the line, file ms from
+  `offsetMs`; a negative offset's lead counts in it). Without it the file plays to its end, as before.
+- `queue({ at, offsetMs, durationMs })`: a segment after the last one started or queued, at the same rate, without
+  cutting anything. `at` is on the start's line. Native puts it on the same `AVAudioPlayerNode` with
+  `scheduleSegment(at: nil)`: right after the previous segment, sample-accurate, through the same time-pitch unit, so
+  the seam has no gap or overlap. Within a frame of the previous end it goes exactly there, and its first file frame
+  moves by that frame, so a section that isn't a whole number of frames never creeps off the line. Due later (a
+  negative offset's lead), it waits at an explicit player sample time; due earlier (an overlap, or queued after the
+  previous one already ran out), it starts later and skips as far into the file, so what is heard stays on its line.
+- The anchor: the player's own timeline (frames since `play(at:)`) has no seams, so native maps it through the list of
+  segments (`anchorInSegments`). Core reads each anchor against the line of the repeat it sits closest to.
+- Re-anchoring after a route or engine change puts back the segment playing now (from the last anchor, to its end) and
+  queues the ones after it again, moved by the same drift.
+
+The take (`take.ts`) starts repeat 0 with the section's length and keeps the next repeat queued (one ahead), so the
+web's per-repeat sources and the iPad's segments start and end at the same heard times (web-parity checks both ends to
+1e-6 ms). The pure math is `modules/drum-audio/src/backing.ts` (`planBackingQueue`, `anchorInSegments`,
+`reanchorPlan`) and its line-by-line Swift mirror `BackingMath.swift`, with the same vectors in both test suites.
+Unverified on the device: an explicit player sample time behind the time-pitch unit (only gaps use it), and the
+seam by ear (CHECKS.md B7).
+
 ### 1.5 Dependencies (the owner's rule in CLAUDE.md, enforced by `scripts/check-deps.mjs`)
 
 Rule: stable releases only (direct dependencies major ≥ 1, no prereleases), at least 7 days old, from the npm
@@ -194,10 +219,13 @@ export type AudioInterruption =
 
 export interface BackingPort {
   load(uri: string): Promise<{ durationMs: number; sampleRate: number }>;
-  /** Heard from Clock time `at`, starting `offsetMs` into the file, at `rate` (pitch kept). */
-  start(o: { at: number; offsetMs: number; rate: number }): void;
+  /** Heard from Clock time `at`, starting `offsetMs` into the file, at `rate` (pitch kept). Cuts what plays and drops
+   *  what is queued; plays `durationMs` of the line, or to the file's end without it (§1.4, seamless loops). */
+  start(o: { at: number; offsetMs: number; rate: number; durationMs?: number }): void;
+  /** A segment right after the last one, on the same line and rate, without cutting it (§1.4). */
+  queue(o: { at: number; offsetMs: number; durationMs: number }): void;
   stop(): void;
-  /** The file position heard at Clock time `at`, read from the render clock. Null when not playing. */
+  /** The file position heard at Clock time `at`, read from the render clock. Null when not playing (or between segments). */
   anchor(): { at: number; fileMs: number } | null;
 }
 
