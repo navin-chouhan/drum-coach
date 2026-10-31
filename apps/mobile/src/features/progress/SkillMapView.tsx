@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { Lesson, LessonProgress } from '@drum-coach/core/engine/lesson';
 import { Body, Button, Card, CardTitle, Dots, Track, color } from '../../ui';
-import { lessonHref } from '../journey/JourneyScreen';
+import { lessonHref } from '../lesson/route';
 import { dayKey } from './dates';
 import { SKILL_MAP_INTRO, skillMapModel } from './skillMap';
 

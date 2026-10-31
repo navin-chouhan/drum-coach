@@ -9,16 +9,11 @@ import {
   color, gesturesFor, ratio, readSettings, tabular, type, useKitMoves, writeSettings,
 } from '../../ui';
 import { getStorage } from '../../platform/storage';
+import { lessonHref } from '../lesson/route';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
 import { useJourney } from './useJourney';
 import type { JourneyView } from './model';
-
-/** The lesson player's route (built by the player's agent): /lesson/<id>?item=<today's set index>&mode=play|hear|jam. */
-export function lessonHref(lessonId: string, opts: { item?: number; mode?: 'play' | 'hear' | 'jam' } = {}): string {
-  const q = [opts.item !== undefined && opts.item >= 0 ? `item=${opts.item}` : '', opts.mode && opts.mode !== 'play' ? `mode=${opts.mode}` : ''].filter(Boolean).join('&');
-  return `/lesson/${encodeURIComponent(lessonId)}${q ? `?${q}` : ''}`;
-}
 
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
@@ -26,7 +21,7 @@ export function JourneyScreen() {
 
   const open = (lessonId: string, item = -1, mode: 'play' | 'hear' | 'jam' = 'play') => {
     if (item >= 0 && mode === 'play' && v.session.date !== readSessionDate()) writeSettings(getStorage().kv, startSessionPatch(v.session));
-    router.push(lessonHref(lessonId, { item, mode }) as never);
+    router.push(lessonHref(lessonId, item, mode) as never);
   };
   const start = v.main ? () => open(v.main!.lessonId, v.main!.item, v.main!.label === 'Jam' ? 'jam' : 'play') : undefined;
   const other = v.somethingElse ? () => setSwap(n => n + 1) : undefined;
