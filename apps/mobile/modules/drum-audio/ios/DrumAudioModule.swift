@@ -101,10 +101,16 @@ public final class DrumAudioModule: Module {
       return try self.host.backingLoad(uri)
     }
 
-    /// Heard from Clock time `at`, `offsetMs` into the file, at `rate` (pitch kept). Returns the plan ({ok: true, …})
-    /// or {ok: false, reason}.
-    Function("backingStart") { (at: Double, offsetMs: Double, rate: Double) -> [String: Any] in
-      return self.host.backingStart(at: at, offsetMs: offsetMs, rate: rate)
+    /// Heard from Clock time `at`, `offsetMs` into the file, at `rate` (pitch kept), for `durationMs` of the line (NaN:
+    /// to the file's end). Cuts what plays and drops what is queued. Returns the plan ({ok: true, …}) or {ok: false, reason}.
+    Function("backingStart") { (at: Double, offsetMs: Double, rate: Double, durationMs: Double) -> [String: Any] in
+      return self.host.backingStart(at: at, offsetMs: offsetMs, rate: rate, durationMs: durationMs)
+    }
+
+    /// Queues a segment right after the last one, on the same line and player node (seamless loops). Returns the
+    /// segment ({ok: true, playerFrame, …}) or {ok: false, reason}.
+    Function("backingQueue") { (at: Double, offsetMs: Double, durationMs: Double) -> [String: Any] in
+      return self.host.backingQueue(at: at, offsetMs: offsetMs, durationMs: durationMs)
     }
 
     Function("backingStop") {

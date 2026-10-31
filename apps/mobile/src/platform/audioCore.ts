@@ -5,7 +5,7 @@
 import type { Clock } from '@drum-coach/core/platform';
 import type { AudioEvent, AudioInterruption, AudioPort, AudioRoute, BackingPort, SoundId } from '@drum-coach/core/play/audioPort';
 import { backingFilePath } from '../../modules/drum-audio/src/backing';
-import type { BackingStartResult, BusVolumes, DrumAudioApi, NativeRoute, TimingProbeResult } from '../../modules/drum-audio/src/DrumAudio.types';
+import type { BackingQueueResult, BackingStartResult, BusVolumes, DrumAudioApi, NativeRoute, TimingProbeResult } from '../../modules/drum-audio/src/DrumAudio.types';
 import { packEvents, soundIndex, wordKey } from '../../modules/drum-audio/src/packing';
 
 type Level = 'click' | 'drums' | 'band' | 'voice' | 'backing';
@@ -46,6 +46,8 @@ export function toAudioRoute(r: Partial<NativeRoute> | null | undefined): AudioR
 export interface DrumBackingPort extends BackingPort {
   /** What native planned for the last start (or why it didn't play); null before the first. */
   lastStart(): BackingStartResult | null;
+  /** What native planned for the last queued segment (or why it wasn't queued); null before the first (and after a start). */
+  lastQueue(): BackingQueueResult | null;
   /** Writes the debug test tone (4-bar beat blips, 44.1 kHz) for `seconds` or more and resolves its file:// URI. */
   testTone(bpm: number, beatsPerBar: number, seconds: number): Promise<string>;
 }
@@ -59,6 +61,7 @@ export const LOCAL_FILES_ONLY = 'Backing audio plays local files only (file:// o
  */
 export function createBackingPort(native: DrumAudioApi, log: (message: string, error?: unknown) => void): DrumBackingPort {
   let last: BackingStartResult | null = null;
+  let lastQueued: BackingQueueResult | null = null;
   const safely = <T>(what: string, fallback: T, f: () => T): T => {
     try {
       return f();
@@ -73,9 +76,14 @@ export function createBackingPort(native: DrumAudioApi, log: (message: string, e
       const r = await native.backingLoad(uri);
       return { durationMs: r.durationMs, sampleRate: r.sampleRate };
     },
-    start({ at, offsetMs, rate }) {
-      last = safely('backingStart', { ok: false, reason: 'native call failed' } as BackingStartResult, () => native.backingStart(at, offsetMs, rate));
+    start({ at, offsetMs, rate, durationMs }) {
+      lastQueued = null;
+      last = safely('backingStart', { ok: false, reason: 'native call failed' } as BackingStartResult, () => native.backingStart(at, offsetMs, rate, durationMs ?? Number.NaN));
       if (!last.ok) log(`drum-audio backing start: ${last.reason}`);
+    },
+    queue({ at, offsetMs, durationMs }) {
+      lastQueued = safely('backingQueue', { ok: false, reason: 'native call failed' } as BackingQueueResult, () => native.backingQueue(at, offsetMs, durationMs));
+      if (!lastQueued.ok) log(`drum-audio backing queue: ${lastQueued.reason}`);
     },
     stop() {
       safely('backingStop', undefined, () => native.backingStop());
@@ -86,6 +94,7 @@ export function createBackingPort(native: DrumAudioApi, log: (message: string, e
       return { at: a.at, fileMs: a.fileMs };
     },
     lastStart: () => last,
+    lastQueue: () => lastQueued,
     testTone: (bpm, beatsPerBar, seconds) => native.backingTestTone(bpm, beatsPerBar, seconds),
   };
 }

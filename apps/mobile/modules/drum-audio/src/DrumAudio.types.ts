@@ -48,6 +48,18 @@ export type BackingStartResult =
     }
   | { ok: false; reason: string };
 
+/** backingQueue: the queued segment (src/backing.ts planBackingQueue) or why nothing was queued. */
+export type BackingQueueResult =
+  | {
+      ok: true; playerFrame: number; startFrame: number; frameCount: number; fileStartMs: number; heardAtMs: number;
+      skippedFrames: number;
+      /** Scheduled at an explicit player time (a gap before it) instead of right after the previous segment. */
+      explicitTime: boolean;
+      /** Segments on the player's timeline now, this one included. */
+      segments: number;
+    }
+  | { ok: false; reason: string };
+
 /** backingAnchor: the file position heard at Clock time `at`, from the render clock. */
 export type NativeBackingAnchor = { playing: true; at: number; fileMs: number } | { playing: false };
 
@@ -74,7 +86,10 @@ export interface DrumAudioApi {
   startTimingProbe(): boolean;
   stopTimingProbe(): TimingProbeResult;
   backingLoad(uri: string): Promise<BackingLoadResult>;
-  backingStart(at: number, offsetMs: number, rate: number): BackingStartResult;
+  /** `durationMs`: ms of the line to play; NaN = to the file's end. */
+  backingStart(at: number, offsetMs: number, rate: number, durationMs: number): BackingStartResult;
+  /** Queues a segment behind the last one on the same line (src/backing.ts planBackingQueue). */
+  backingQueue(at: number, offsetMs: number, durationMs: number): BackingQueueResult;
   backingStop(): void;
   backingAnchor(): NativeBackingAnchor;
   backingTestTone(bpm: number, beatsPerBar: number, seconds: number): Promise<string>;

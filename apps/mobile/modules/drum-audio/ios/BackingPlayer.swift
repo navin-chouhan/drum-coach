@@ -13,11 +13,16 @@ import Foundation
 ///   `play(at:)` at the plan's schedule time. At rate 1 the time-pitch unit is bypassed and the start is a host time,
 ///   exactly like the clicks. At other rates the player's node timeline runs at sampleRate × rate, but AVFoundation
 ///   turns host times into node time at sampleRate, so the start is given as a node sample time instead.
-/// - Anchor: `playerTime(forNodeTime: lastRenderTime)` = segment frames rendered when the latest render cycle began, at
-///   that cycle's host time; heard heardOffset (+ the time-pitch latency) later. Core reads it from `tick` and corrects
-///   drift against it (the song is the master).
+/// - Queue (seamless loops): further segments go on the same player with `scheduleSegment(at: nil)`, which plays them
+///   right after the previous one, sample-accurate and through the same time-pitch unit, so a loop seam has no gap
+///   (BackingMath.planQueue; a gap before one, e.g. a negative offset's lead, is an explicit player sample time).
+///   `start` cuts what plays and drops what is queued; nothing else does.
+/// - Anchor: `playerTime(forNodeTime: lastRenderTime)` = frames the player had rendered since `play(at:)` when the
+///   latest render cycle began, at that cycle's host time; heard heardOffset (+ the time-pitch latency) later. That
+///   timeline has no seams, so BackingMath.anchorInSegments maps it through the segment list. Core reads the anchor
+///   from `tick` and corrects drift against it (the song is the master).
 /// - Route and engine changes: `reanchorLine()` takes the line the file is on (the last anchor, which is what core has
-///   corrected against), and `restart(on:)` puts the file back on it with the new route's numbers.
+///   corrected against) and the segments queued after it; `restart(on:)` puts them back with the new route's numbers.
 ///
 /// Threads: start/stop/anchor come from the JS thread; graph changes (attach, detach, install) run on the host's
 /// loopQueue. Everything here is under `lock`. Lock order: the host's lock → this lock (never the other way). No
@@ -29,6 +34,8 @@ final class BackingPlayer {
     var timing: BackingTiming
     var fileFrames: Int64
     var nodeTimeStart: Bool
+    /// Every segment scheduled on the player since the start (the first is the plan's), in player-timeline order.
+    var segments: [BackingSegmentPlan]
   }
 
   /// A file opened off the loop queue, installed on it.
@@ -54,6 +61,9 @@ final class BackingPlayer {
   private var lateJoins = 0
   private var reanchors = 0
   private var nodeTimeStarts = 0
+  private var queued = 0
+  private var queueGaps = 0
+  private var queueSkips = 0
   private var lastError: String?
 
   // MARK: - Graph (loopQueue)
@@ -190,6 +200,8 @@ final class BackingPlayer {
       }
       if attempt > 0 { p.stop() }
       let count = AVAudioFrameCount(min(plan.frameCount, Int64(UInt32.max)))
+      var first = BackingMath.firstSegment(plan)
+      first.frameCount = Int64(count)
       p.scheduleSegment(f, startingFrame: AVAudioFramePosition(plan.startFrame), frameCount: count, at: nil, completionHandler: nil)
       p.prepare(withFrameCount: min(count, AVAudioFrameCount(sampleRate)))
       // Reading the first second may take a while on a cold file: if the start is no longer placeable, plan again.
@@ -200,7 +212,7 @@ final class BackingPlayer {
       }
       let (when, asNodeTime) = startTimeLocked(plan, player: p, engine: e, timing: t)
       p.play(at: when)
-      playing = Playing(request: req, plan: plan, timing: t, fileFrames: frames, nodeTimeStart: asNodeTime)
+      playing = Playing(request: req, plan: plan, timing: t, fileFrames: frames, nodeTimeStart: asNodeTime, segments: [first])
       starts += 1
       if plan.joinedLateMs > 0 { lateJoins += 1 }
       if asNodeTime { nodeTimeStarts += 1 }
@@ -208,6 +220,7 @@ final class BackingPlayer {
         "ok": true,
         "rate": plan.rate,
         "startFrame": Double(plan.startFrame),
+        "frameCount": Double(count),
         "fileStartMs": plan.fileStartMs,
         "heardAtMs": plan.heardAtMs,
         "scheduleMs": plan.scheduleMs,
@@ -234,6 +247,46 @@ final class BackingPlayer {
     return (AVAudioTime(sampleTime: AVAudioFramePosition(s), atRate: last.sampleRate), true)
   }
 
+  /// Queues `req` right after the last segment on the playing line, without cutting it (BackingMath.planQueue).
+  /// Returns what was planned ({ok: true, …}) or why not ({ok: false, reason}).
+  func queue(_ req: BackingQueueRequest) -> [String: Any] {
+    lock.lock()
+    defer { lock.unlock() }
+    return queueLocked(req)
+  }
+
+  private func queueLocked(_ req: BackingQueueRequest) -> [String: Any] {
+    guard var pl = playing, let last = pl.segments.last else { return failLocked("backing queue() with nothing playing") }
+    guard let f = file, let e = engine, e.isRunning, let p = player else { return failLocked("backing queue() while the engine isn't running") }
+    let sampleRate = f.processingFormat.sampleRate
+    guard let q = BackingMath.planQueue(req, lineHeardAtMs: pl.plan.heardAtMs, lineRate: pl.plan.rate, prevEnd: last.playerFrame + last.frameCount,
+                                        nowMs: HostClock.nowMs(), pl.timing, fileSampleRate: sampleRate, fileFrames: pl.fileFrames) else {
+      return failLocked("backing: nothing of the queued segment is left to play")
+    }
+    var seg = q.segment
+    let count = AVAudioFrameCount(min(seg.frameCount, Int64(UInt32.max)))
+    seg.frameCount = Int64(count)
+    // nil: right after the previous segment, sample-accurate. A sample time: on the player's own timeline.
+    let when: AVAudioTime? = q.explicitTime ? AVAudioTime(sampleTime: AVAudioFramePosition(seg.playerFrame), atRate: sampleRate) : nil
+    p.scheduleSegment(f, startingFrame: AVAudioFramePosition(seg.startFrame), frameCount: count, at: when, completionHandler: nil)
+    pl.segments.append(seg)
+    playing = pl
+    queued += 1
+    if q.explicitTime { queueGaps += 1 }
+    if q.skippedFrames > 1 { queueSkips += 1 }
+    return [
+      "ok": true,
+      "playerFrame": Double(seg.playerFrame),
+      "startFrame": Double(seg.startFrame),
+      "frameCount": Double(seg.frameCount),
+      "fileStartMs": seg.fileStartMs,
+      "heardAtMs": seg.heardAtMs,
+      "skippedFrames": Double(q.skippedFrames),
+      "explicitTime": q.explicitTime,
+      "segments": pl.segments.count,
+    ]
+  }
+
   func stop() {
     lock.lock()
     defer { lock.unlock() }
@@ -258,9 +311,8 @@ final class BackingPlayer {
     guard let nodeTime = p.lastRenderTime, nodeTime.isSampleTimeValid, let pt = p.playerTime(forNodeTime: nodeTime) else { return nil }
     let playerHost: Double? = nodeTime.isHostTimeValid ? HostClock.ticksToMs(nodeTime.hostTime) : nil
     guard let host = BackingMath.renderHostMs(player: playerHost, output: Self.outputHostMs(e), ioBufferMs: pl.timing.ioBufferMs) else { return nil }
-    guard let a = BackingMath.anchor(plan: pl.plan, playerSampleTime: Double(pt.sampleTime), playerSampleRate: pt.sampleRate, hostMs: host,
-                                     heardOffsetMs: pl.timing.heardOffsetMs, pitchLatencyMs: pl.timing.pitchLatencyMs,
-                                     fileFrames: pl.fileFrames) else { return nil }
+    guard let a = BackingMath.anchorInSegments(pl.segments, playerSampleTime: Double(pt.sampleTime), playerSampleRate: pt.sampleRate, hostMs: host,
+                                               heardOffsetMs: pl.timing.heardOffsetMs, pitchLatencyMs: pl.timing.pitchLatencyMs) else { return nil }
     lastAnchor = a
     return a
   }
@@ -272,21 +324,32 @@ final class BackingPlayer {
 
   // MARK: - Re-anchoring (loopQueue)
 
-  /// The line the file is on now, or nil when nothing plays. Call before the route's numbers change (the engine may
-  /// already have stopped: then the last anchor read, else the plan's line).
-  func reanchorLine() -> BackingStartRequest? {
+  /// The line the file is on now and the segments queued after the one playing, or nil when nothing plays. Call
+  /// before the route's numbers change (the engine may already have stopped: then the last anchor read, else the
+  /// first segment's line).
+  func reanchorLine() -> BackingReanchor? {
     lock.lock()
     defer { lock.unlock() }
-    guard let pl = playing else { return nil }
-    return BackingMath.reanchorRequest(last: anchorLocked() ?? lastAnchor, plan: pl.plan)
+    guard let pl = playing, let f = file else { return nil }
+    return BackingMath.reanchorPlan(last: anchorLocked() ?? lastAnchor, segments: pl.segments, rate: pl.plan.rate,
+                                    sampleRate: f.processingFormat.sampleRate)
   }
 
-  /// Puts the file back on `line` with the new route's numbers (it joins late, so what is heard stays on the line).
-  func restart(on line: BackingStartRequest, timing: BackingTiming) {
+  /// Puts the file back on `line` with the new route's numbers (it joins late, so what is heard stays on the line),
+  /// then queues the segments after it again. A start with nothing left (its segment ended meanwhile) moves on to the
+  /// next segment.
+  func restart(on line: BackingReanchor, timing: BackingTiming) {
     lock.lock()
     defer { lock.unlock() }
     reanchors += 1
-    _ = startLocked(line, base: timing)
+    var start = line.start
+    var rest = line.queue[...]
+    while (startLocked(start, base: timing)["ok"] as? Bool) != true {
+      guard let next = rest.first else { return }
+      rest = rest.dropFirst()
+      start = BackingStartRequest(at: next.at, offsetMs: next.offsetMs, rate: line.start.rate, durationMs: next.durationMs)
+    }
+    for q in rest { _ = queueLocked(q) }
   }
 
   // MARK: - Debug
@@ -303,6 +366,9 @@ final class BackingPlayer {
       "lateJoins": lateJoins,
       "reanchors": reanchors,
       "nodeTimeStarts": nodeTimeStarts,
+      "queued": queued,
+      "queueGaps": queueGaps,
+      "queueSkips": queueSkips,
       "lastError": lastError ?? "",
     ]
     if let f = file {
@@ -318,8 +384,9 @@ final class BackingPlayer {
       d["fileStartMs"] = pl.plan.fileStartMs
       d["joinedLateMs"] = pl.plan.joinedLateMs
       d["nodeTimeStart"] = pl.nodeTimeStart
+      d["segments"] = pl.segments.count
     }
-    if let a = lastAnchor { d["lastAnchor"] = ["at": a.at, "fileMs": a.fileMs] }
+    if let a = lastAnchor { d["lastAnchor"] = ["at": a.at, "fileMs": a.fileMs, "segment": a.segment] }
     return d
   }
 

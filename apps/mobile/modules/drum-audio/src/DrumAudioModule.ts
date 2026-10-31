@@ -2,7 +2,7 @@ import { NativeModule, requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 
 import type {
-  BackingLoadResult, BackingStartResult, BusVolumes, DrumAudioApi, DrumAudioEvents, NativeBackingAnchor, NativeRoute, NativeStats,
+  BackingLoadResult, BackingQueueResult, BackingStartResult, BusVolumes, DrumAudioApi, DrumAudioEvents, NativeBackingAnchor, NativeRoute, NativeStats,
   PreparedWords, ScheduleResult, TimingProbeResult,
 } from './DrumAudio.types';
 
@@ -21,7 +21,8 @@ declare class DrumAudioNative extends NativeModule<DrumAudioEvents> implements D
   startTimingProbe(): boolean;
   stopTimingProbe(): TimingProbeResult;
   backingLoad(uri: string): Promise<BackingLoadResult>;
-  backingStart(at: number, offsetMs: number, rate: number): BackingStartResult;
+  backingStart(at: number, offsetMs: number, rate: number, durationMs: number): BackingStartResult;
+  backingQueue(at: number, offsetMs: number, durationMs: number): BackingQueueResult;
   backingStop(): void;
   backingAnchor(): NativeBackingAnchor;
   backingTestTone(bpm: number, beatsPerBar: number, seconds: number): Promise<string>;

@@ -15,8 +15,8 @@ function fakeNative(over: Partial<DrumAudioApi> = {}) {
   const listeners: { [K in keyof DrumAudioEvents]: DrumAudioEvents[K][] } = { onRoute: [], onInterruption: [] };
   const calls: {
     schedule: number[][]; cancel: (number | null)[]; volumes: unknown[]; playNow: [number, number][];
-    backingLoad: string[]; backingStart: [number, number, number][]; backingStop: number;
-  } = { schedule: [], cancel: [], volumes: [], playNow: [], backingLoad: [], backingStart: [], backingStop: 0 };
+    backingLoad: string[]; backingStart: [number, number, number, number][]; backingQueue: [number, number, number][]; backingStop: number;
+  } = { schedule: [], cancel: [], volumes: [], playNow: [], backingLoad: [], backingStart: [], backingQueue: [], backingStop: 0 };
   let now = 1e9;
   let anchor: NativeBackingAnchor = { playing: false };
   const api: DrumAudioApi = {
@@ -46,9 +46,13 @@ function fakeNative(over: Partial<DrumAudioApi> = {}) {
       calls.backingLoad.push(uri);
       return { durationMs: 8000, sampleRate: 44100, frames: 352800, channels: 1 };
     },
-    backingStart: (at, offsetMs, rate) => {
-      calls.backingStart.push([at, offsetMs, rate]);
+    backingStart: (at, offsetMs, rate, durationMs) => {
+      calls.backingStart.push([at, offsetMs, rate, durationMs]);
       return { ok: true, rate, startFrame: 0, fileStartMs: offsetMs, heardAtMs: at, scheduleMs: at - 5.7, joinedLateMs: 0, pitchLatencyMs: 0, nodeTime: false };
+    },
+    backingQueue: (at, offsetMs, durationMs) => {
+      calls.backingQueue.push([at, offsetMs, durationMs]);
+      return { ok: true, playerFrame: 88_200, startFrame: 0, frameCount: 88_200, fileStartMs: offsetMs, heardAtMs: at, skippedFrames: 0, explicitTime: false, segments: 2 };
     },
     backingStop: () => void calls.backingStop++,
     backingAnchor: () => anchor,
@@ -242,10 +246,36 @@ describe('backing (BackingPort)', () => {
     const port = createAudioPort(f.api, { log });
     port.backing!.start({ at: 1e9 + 2000, offsetMs: 500, rate: 0.75 });
     port.backing!.stop();
-    expect(f.calls.backingStart).toEqual([[1e9 + 2000, 500, 0.75]]);
+    expect(f.calls.backingStart).toEqual([[1e9 + 2000, 500, 0.75, Number.NaN]]); // no length: NaN = to the file's end
     expect(f.calls.backingStop).toBe(1);
     expect(port.backing!.lastStart()).toMatchObject({ ok: true, heardAtMs: 1e9 + 2000 });
     expect(log).not.toHaveBeenCalled();
+  });
+
+  it('a start with a length and queued segments reach native; a start clears lastQueue', () => {
+    const log = vi.fn();
+    const f = fakeNative();
+    const port = createAudioPort(f.api, { log });
+    expect(port.backing!.lastQueue()).toBeNull();
+    port.backing!.start({ at: 1e9 + 2000, offsetMs: 500, rate: 0.75, durationMs: 2400 });
+    port.backing!.queue({ at: 1e9 + 5200, offsetMs: 500, durationMs: 2400 });
+    expect(f.calls.backingStart).toEqual([[1e9 + 2000, 500, 0.75, 2400]]);
+    expect(f.calls.backingQueue).toEqual([[1e9 + 5200, 500, 2400]]);
+    expect(port.backing!.lastQueue()).toMatchObject({ ok: true, playerFrame: 88_200, explicitTime: false });
+    port.backing!.start({ at: 1e9 + 9000, offsetMs: 0, rate: 1 });
+    expect(port.backing!.lastQueue()).toBeNull();
+    expect(log).not.toHaveBeenCalled();
+  });
+
+  it('a failed or throwing queue is logged, never thrown', () => {
+    const log = vi.fn();
+    const failing = createAudioPort(fakeNative({ backingQueue: () => ({ ok: false, reason: 'backing queue() with nothing playing' }) }).api, { log });
+    failing.backing!.queue({ at: 1, offsetMs: 0, durationMs: 1000 });
+    expect(failing.backing!.lastQueue()).toEqual({ ok: false, reason: 'backing queue() with nothing playing' });
+    expect(log).toHaveBeenCalledOnce();
+    const throwing = createAudioPort(fakeNative({ backingQueue: () => { throw new Error('boom'); } }).api, { log });
+    expect(() => throwing.backing!.queue({ at: 1, offsetMs: 0, durationMs: 1000 })).not.toThrow();
+    expect(throwing.backing!.lastQueue()).toMatchObject({ ok: false, reason: 'native call failed' });
   });
 
   it('a failed or throwing start is logged, never thrown; a throwing anchor is null', () => {
