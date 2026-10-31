@@ -4,6 +4,8 @@ import type { RunRow } from '@drum-coach/core/engine/progress';
 import { createDataStore, type AppStorage } from '../data/store';
 import type { AiLesson, AiLessonsRepo, PlansRepo } from '../data/records';
 import type { RunsRepo } from '../data/runs';
+import type { ChartsRepo, SongsRepo } from '../data/songs';
+import type { Grid, YtSong } from '@drum-coach/core/youtube/schemas';
 import { harnessState, seedFor } from '../dev/harness/seeds';
 import { KV_KEYS } from '../data/kv';
 
@@ -29,8 +31,39 @@ export function getStorage(): AppStorage {
     replace: (l, ids) => { ai = [...ai.filter(x => x.id !== l.id && !ids.includes(x.id)), l]; },
   };
   const plans: PlansRepo = { latest: async () => (seed.plan ? { id: 1, plan: seed.plan, checks: {} } as never : null), add: () => 1, setChecks: () => true };
-  instance = { ...base, runs: runsRepo, aiLessons, plans };
+  instance = { ...base, runs: runsRepo, aiLessons, plans, ...(seed.songs && { songs: memorySongs(seed.songs), charts: noCharts, openError: null }) };
   return instance;
+}
+
+/** No imported files in the harness (the Songs states): an empty charts table that refuses writes. */
+const noCharts: ChartsRepo = {
+  list: () => [], get: () => null, save: () => { throw new Error('web harness: no imports'); },
+  setSyncOffset: () => false, setAudio: () => false, remove: () => null, restore: () => false,
+};
+
+/** The Songs library in memory (the `songs` state): enough of SongsRepo for the screens to list, open and edit. */
+function memorySongs(seeded: YtSong[]): SongsRepo {
+  let songs = seeded.map(s => ({ ...s }));
+  const grids: Record<string, Grid> = Object.assign({}, ...songs.map(s => s.grids));
+  const withGrids = (s: YtSong): YtSong => ({ ...s, grids: Object.fromEntries([s.originalId, s.drumlessId, s.coverId].flatMap(v => (v && grids[v] ? [[v, grids[v]]] : []))) });
+  return {
+    list: () => songs.map(withGrids),
+    get: id => { const s = songs.find(x => x.id === id); return s ? withGrids(s) : null; },
+    add: input => {
+      const old = songs.find(x => x.originalId === input.originalId);
+      if (old) return withGrids(old);
+      const s: YtSong = { id: `yt-${input.originalId}`, title: input.title, originalId: input.originalId, drumlessId: input.drumlessId ?? null, coverId: input.coverId ?? null, timeSignature: [4, 4], notes: [], grids: {} };
+      songs = [s, ...songs];
+      return withGrids(s);
+    },
+    patch: (id, p) => {
+      songs = songs.map(x => (x.id === id ? { ...x, ...(p as Partial<YtSong>) } : x));
+      const s = songs.find(x => x.id === id);
+      return s ? withGrids(s) : null;
+    },
+    remove: id => { songs = songs.filter(x => x.id !== id); },
+    saveGrid: (videoId, g) => { grids[videoId] = g; },
+  };
 }
 
 export type { AppStorage } from '../data/store';
