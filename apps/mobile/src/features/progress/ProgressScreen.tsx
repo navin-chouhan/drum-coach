@@ -10,6 +10,7 @@ import {
   color, stroke, tabular, useAppSettings,
 } from '../../ui';
 import { lessonHref } from '../journey/JourneyScreen';
+import { songHref } from '../songs/songsModel';
 import { Bars, Track } from '../practice/parts';
 import { MonthReportView } from './MonthReportView';
 import { progressViewOf, type ProgressViewId } from './path';
@@ -18,11 +19,11 @@ import { progressModel, type PractiseTarget } from './progress';
 import { SkillMapView } from './SkillMapView';
 import { useStoredData } from './useStoredData';
 
-/** Back to where a row was played: a lesson, or an exercise on Practice (a bit above your best clean tempo). */
+/** Back to where a row was played: a lesson, an exercise on Practice (a bit above your best clean tempo), or a song. */
 export function openTarget(t: PractiseTarget) {
   if (t.kind === 'lesson') router.push(lessonHref(t.lessonId) as never);
   else if (t.kind === 'practice') router.push({ pathname: '/practice/play', params: { chartId: t.chartId, ...(t.bpm ? { bpm: String(t.bpm) } : {}) } });
-  // songs come after v1 (D5): nothing on the iPad plays them yet
+  else router.push(songHref(t.songId) as never); // a YouTube song: its page, as the web's ProgressView opens it
 }
 
 export function ProgressScreen() {

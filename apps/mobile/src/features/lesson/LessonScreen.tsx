@@ -229,7 +229,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
         <Label>Why and how</Label>
         <Body size={14}>{v.lessonCard.why}</Body>
         <Body size={14}>{v.lessonCard.how}</Body>
-        {v.needsLatency ? <Body size={14} color={color.bad}>This lesson is judged in milliseconds. Run the latency test first (⚙ Setup → Your kit → Latency), or "behind the beat" may just be your speakers.</Body> : null}
+        {v.needsLatency ? <Body size={14} color={color.bad}>This lesson is judged in milliseconds. Run the latency test first (⚙ Setup → Latency → Measure), or "behind the beat" may just be your speakers.</Body> : null}
         {v.results?.latencyHint ? <Body size={14} color={color.bad}>{v.results.latencyHint}</Body> : null}
         {v.results?.canHearRight ? <Button emoji="👂" label="Hear it right" onPress={() => { setMore(false); ctl.play(true); }} /> : null}
         {v.results?.helpKey ? <Button emoji="🧑‍🏫" label="Ask the coach for something different" onPress={() => { setMore(false); ctl.askHelp(); }} /> : null}
