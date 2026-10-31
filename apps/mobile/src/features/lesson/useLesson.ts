@@ -15,6 +15,7 @@ import { getCoach, setCoachPlaying } from '../coach';
 import { sayNow } from '../coach/voice';
 import { allLessons } from '../journey/source';
 import { LessonController, type LessonDeps } from './controller';
+import { saveCoachLesson } from './coachLesson';
 import { drillLesson, findDrillChart } from './drill';
 import { todayKey } from './progress';
 import { findLesson, itemDonePatch, lessonHref, nextItem, setItemOf, type LessonParams } from './route';
@@ -79,7 +80,9 @@ export function useLesson(params: LessonParams, drill?: { chartId: string; bpm?:
         audio.schedule((big ? BIG_FILL : FILL).map(([pad, dt]) => ({ kind: 'sound' as const, at: at + dt * 1000, sound: `drum.${pad}` as const, gain: 110 / 127 })));
       },
       requestCoachLesson: (key, struggle) => {
-        void coach.asks.ask(key, 'lesson', { struggle }, (l: unknown) => { if (l && typeof l === 'object' && 'id' in l) { storage.aiLessons?.put(l as never); coach.refreshLessons(); } });
+        void coach.asks.ask(key, 'lesson', { struggle }, (l: unknown, meta) => {
+          if (saveCoachLesson(storage.aiLessons, l, meta, id => !!settings.get().lessons[id])) coach.refreshLessons();
+        });
       },
       drillExists: id => coach.exists(id),
       openDrill: a => coach.session.runAction(a),

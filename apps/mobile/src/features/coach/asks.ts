@@ -20,6 +20,10 @@ export type Entry<T> = {
   cached?: boolean;
 };
 
+/** What came with an answer besides its data: the server's note, whether it was cached, and for a coach lesson asked
+ * with the iPad's context the coach's unstarted lessons of that stage it `replaces` (server/index.ts /api/coach/lesson). */
+export type AnswerMeta = { note?: string; cached?: boolean; replaces?: string[] };
+
 /** The routes the panel asks (POST /api/coach/<path>). */
 export type AskPath = 'feedback' | 'plan' | 'tips' | 'lesson' | 'month';
 const CONTEXT_ROUTES: Partial<Record<AskPath, CoachRoute>> = { feedback: 'feedback', plan: 'plan', lesson: 'lesson', month: 'month' };
@@ -47,7 +51,7 @@ export function createCoachAsks(deps: CoachAsksDeps) {
    * Asks once per key; `again` asks anew even after an answer (not while one is on its way). Resolves when the entry
    * is settled (screens don't need to wait: they read the entry).
    */
-  async function ask<T>(key: string, path: AskPath, body: Record<string, unknown> = {}, onDone?: (data: T) => void | Promise<void>, again = false): Promise<void> {
+  async function ask<T>(key: string, path: AskPath, body: Record<string, unknown> = {}, onDone?: (data: T, meta: AnswerMeta) => void | Promise<void>, again = false): Promise<void> {
     const e = entries.get(key);
     if (e && (e.status === 'thinking' || (e.status === 'done' && !again))) return;
     entries.set(key, { status: 'thinking' });
@@ -66,10 +70,11 @@ export function createCoachAsks(deps: CoachAsksDeps) {
         entries.set(key, { status: 'error', error: problem.lines[0] ?? problem.title, problem });
         return;
       }
-      const j = (r.data ?? {}) as { data?: T; note?: string; cached?: boolean };
+      const j = (r.data ?? {}) as { data?: T; note?: string; cached?: boolean; replaces?: unknown };
       const data = (j.data ?? j) as T;
       entries.set(key, { status: 'done', data, note: j.note, cached: j.cached });
-      try { await onDone?.(data); } catch (err) { entries.set(key, { status: 'error', error: err instanceof Error ? err.message : String(err) }); }
+      const replaces = Array.isArray(j.replaces) ? j.replaces.filter((id): id is string => typeof id === 'string') : undefined;
+      try { await onDone?.(data, { note: j.note, cached: j.cached, ...(replaces && { replaces }) }); } catch (err) { entries.set(key, { status: 'error', error: err instanceof Error ? err.message : String(err) }); }
     } finally {
       notify();
     }
