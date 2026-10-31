@@ -61,6 +61,9 @@ session. The decisions it needs are D1–D5, below.
 | I3 Lesson + Practice integration | running | `features/{lesson,practice}/**`, `app/{lesson,practice}/**`, `features/coach/asks.ts` | [briefs/I3.md](briefs/I3.md) | backlog items |
 | A10 QA | **done, merged** (6ed44da) | `docs/mobile/QA-*.md`, `docs/mobile/FINAL-CHECKLIST.md`, `apps/mobile/e2e/**` | [briefs/A10.md](briefs/A10.md) | findings + owner checklist |
 
+| F1 Minor QA fixes | running | per brief (setup, not-found, journey/progress/coach route imports, coach charts → table, debug replay export) | [briefs/F1.md](briefs/F1.md) | m4, m6, m7, m8, m9 |
+| F2 Seamless backing loops | running | `audioPort.ts` (granted), `modules/drum-audio/**`, `src/platform/audio*`, core take backing | [briefs/F2.md](briefs/F2.md) | no gap at loop seams |
+
 **The orchestrator owns** the root `package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, this
 board, the briefs and the contracts. Root lint and Vitest now ignore `spikes/`, so the probe app can't change web
 results.
