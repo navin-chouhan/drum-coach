@@ -1,6 +1,7 @@
 // The coach: the round teal drum mascot 🥁 and a comic speech bubble (ipad.css .avatar, .bubble).
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { openCoachChat } from './coachChat';
 import { MAX_FONT_SCALE } from './Text';
 import { color, hardShadow, shadow, stroke } from './tokens';
 
@@ -30,21 +31,30 @@ export type CoachLineProps = {
   testID?: string;
 };
 
-/** The coach says one thing: the mascot and its bubble. VoiceOver reads it as "Coach: …" and announces changes. */
-export function CoachLine({ children, size = 20, mascot = 'md', singleLine = false, lines, style, testID }: CoachLineProps) {
-  return (
-    <View testID={testID} style={[styles.row, style]}>
-      <Mascot size={mascot} />
-      <View style={styles.bubble}>
-        <Text
-          maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityLiveRegion="polite" accessibilityLabel={undefined}
-          numberOfLines={lines ?? (singleLine ? 1 : undefined)} adjustsFontSizeToFit={singleLine || !!lines} minimumFontScale={0.8}
-          style={[styles.text, { fontSize: size, lineHeight: Math.round(size * 1.3) }]}
-        >
-          {children}
-        </Text>
-      </View>
+/**
+ * The coach says one thing: the mascot and its bubble. VoiceOver reads it as "Coach: …" and announces changes. A tap
+ * opens the chat with the coach (D10: the chat lives behind the bubble on every screen); `chat={false}` turns that off
+ * (inside the chat itself).
+ */
+export function CoachLine({ children, size = 20, mascot = 'md', singleLine = false, lines, style, testID, chat = true }: CoachLineProps & { chat?: boolean }) {
+  const body = <>
+    <Mascot size={mascot} />
+    <View style={styles.bubble}>
+      <Text
+        maxFontSizeMultiplier={MAX_FONT_SCALE} accessibilityLiveRegion="polite" accessibilityLabel={undefined}
+        numberOfLines={lines ?? (singleLine ? 1 : undefined)} adjustsFontSizeToFit={singleLine || !!lines} minimumFontScale={0.8}
+        style={[styles.text, { fontSize: size, lineHeight: Math.round(size * 1.3) }]}
+      >
+        {children}
+      </Text>
     </View>
+  </>;
+  if (!chat) return <View testID={testID} style={[styles.row, style]}>{body}</View>;
+  return (
+    <Pressable testID={testID} onPress={openCoachChat} accessibilityHint="Opens the chat with your coach"
+      style={({ pressed }) => [styles.row, style, pressed && styles.pressed]}>
+      {body}
+    </Pressable>
   );
 }
 
@@ -56,4 +66,5 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 16, boxShadow: hardShadow(shadow.card),
   },
   text: { fontWeight: '700', color: color.ink },
+  pressed: { opacity: 0.85 },
 });

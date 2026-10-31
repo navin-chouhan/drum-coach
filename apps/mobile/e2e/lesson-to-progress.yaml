@@ -97,7 +97,7 @@ tags:
 
 # 3 · Progress lists the take (runs → Your lessons)
 - tapOn:
-    id: nav-progress
+    id: nav-you # D10: Progress is You
 - extendedWaitUntil:
     visible:
       id: screen-progress

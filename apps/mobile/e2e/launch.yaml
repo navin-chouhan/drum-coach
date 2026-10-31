@@ -14,14 +14,47 @@ tags:
     id: journey-next
 - assertVisible:
     id: journey-set
+# D10: four sections (Songs is in Practice, Progress is You, the coach chat opens from its bubble)
 - assertVisible:
-    id: nav-songs
+    id: nav-journey
 - assertVisible:
     id: nav-practice
 - assertVisible:
-    id: nav-progress
-- assertVisible:
-    id: nav-coach
+    id: nav-you
 - assertVisible:
     id: nav-setup
+- assertNotVisible:
+    id: nav-songs
+- assertVisible:
+    id: sidebar-expanded # Journey opens with the sidebar expanded
+- assertVisible:
+    id: sidebar-kit # the one kit dot
 - takeScreenshot: launch-journey
+# Other sections fold it to the icon rail; « / » flips it and the choice sticks
+- tapOn:
+    id: nav-practice
+- assertVisible:
+    id: sidebar-rail
+- tapOn:
+    id: sidebar-toggle
+- assertVisible:
+    id: sidebar-expanded
+- tapOn:
+    id: nav-journey
+- assertVisible:
+    id: sidebar-expanded
+- tapOn:
+    id: sidebar-toggle
+- assertVisible:
+    id: sidebar-rail
+# The coach chat: a tap on the coach's bubble opens it as a sheet; ✕ closes it
+- tapOn:
+    id: title-coach
+- extendedWaitUntil:
+    visible:
+      id: coach-chat
+    timeout: 5000
+- tapOn:
+    id: coach-close
+- assertNotVisible:
+    id: coach-chat

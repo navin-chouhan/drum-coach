@@ -7,6 +7,7 @@ import { keepAwake, keepAwakeWhileForeground } from '../src/platform/keepAwake';
 import { refocusKeyboard } from '../src/platform/keyboard';
 import { colors, navigationTheme } from '../src/theme';
 import { startAppKeyboard, useKitSounds } from '../src/ui';
+import { CoachChatSheet } from '../src/features/coach/CoachChatSheet';
 
 // Expo's DOM bridge answers a DOM component (and sends it its props) by injecting JavaScript into its WebView, and
 // drops the promise. When the view isn't registered at that moment (just mounting under the new architecture, where
@@ -32,6 +33,9 @@ export default function RootLayout() {
       <ThemeProvider value={navigationTheme}>
         <StatusBar style="light" />
         <Stack
+          // D10: the coach chat opens from the coach's bubble on any screen, as a sheet over it (one per screen,
+          // drawn inside it so it knows whether that screen is the one showing).
+          screenLayout={({ children }) => <>{children}<CoachChatSheet /></>}
           screenOptions={{
             headerStyle: { backgroundColor: colors.surface },
             headerTintColor: colors.primary,
