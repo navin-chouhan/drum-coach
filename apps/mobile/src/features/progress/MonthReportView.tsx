@@ -1,13 +1,15 @@
 // "This month's report" (the web's YouVsYou): you a month ago against you now, month by month, and the coach's monthly
 // report. The first two work offline; the report needs the home server, and says so clearly when it can't be reached.
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { getHomeServer } from '../../platform/api';
 import { getStorage } from '../../platform/storage';
 import { Body, Button, Card, CardTitle, Notice, Strong, color, stroke, tabular } from '../../ui';
 import { practiceEngine } from '../practice/engine';
-import { askMonthReport, historyModel, keptReport, MONTH_REPORT_KEY, type MonthReport } from './monthReport';
+import { readPlayOptions } from '../practice/play';
+import { askMonthReport, historyModel, keptReport, keptTakeChart, MONTH_REPORT_KEY, NO_TAKE_KEPT, type MonthReport } from './monthReport';
 
 export function MonthReportView({ runs }: { runs: RunRow[] }) {
   const [now] = useState(() => Date.now());
@@ -27,7 +29,22 @@ export function MonthReportView({ runs }: { runs: RunRow[] }) {
       keep: v => storage.settings?.put(MONTH_REPORT_KEY, v),
     }, again).then(r => { if (r.ok) setReport(r.report); else setErr(r.message); }).finally(() => setBusy(false));
   };
-  const hear = () => setNotice(practiceEngine.ready ? '' : 'Hearing a kept take plays with the player once it is in this build.');
+  // Hear it (the web's hear()): the kept take's own hits, played as drums at its tempo; again stops it.
+  const eng = useSyncExternalStore(practiceEngine.subscribe, practiceEngine.get);
+  const hearing = eng.demo && (eng.phase === 'playing' || eng.phase === 'starting') && eng.chartId?.startsWith('take-') ? eng.chartId : undefined;
+  useFocusEffect(useCallback(() => () => { if (practiceEngine.get().chartId?.startsWith('take-')) practiceEngine.stop(); }, []));
+  const hear = (runId: number | undefined, title: string) => {
+    if (hearing) { practiceEngine.stop(); if (hearing === `take-${runId}`) return; }
+    if (runId == null) { setNotice(NO_TAKE_KEPT); return; }
+    void getStorage().runs.take(String(runId)).then(t => {
+      if (!t) { setNotice(NO_TAKE_KEPT); return; }
+      const chart = keptTakeChart(t, runId, title);
+      if (!chart) { setNotice(NO_TAKE_KEPT); return; }
+      const ok = practiceEngine.start({ chart, options: { ...readPlayOptions(getStorage().kv), chartId: chart.id, speed: 1, metronome: true, subdivision: 1, countInBars: 1, wait: false },
+        section: null, demo: true, repeats: 1 });
+      setNotice(ok ? '' : practiceEngine.notReady);
+    }, () => setNotice(NO_TAKE_KEPT));
+  };
 
   return (
     <ScrollView style={styles.fill} contentContainerStyle={styles.cols}>
@@ -37,7 +54,8 @@ export function MonthReportView({ runs }: { runs: RunRow[] }) {
           {h.pair ? <>
             <Body weight="700">{h.pair.line}</Body>
             <Table head={['', 'On time', 'Spread', 'Tempo', '']} rows={h.pair.rows.map(r => [r.label, r.accuracy, r.spread, r.tempo,
-              <Button key="hear" label="Hear it" emoji="🎧" size="small" onPress={hear} accessibilityLabel={`Hear ${r.title}`} />])} />
+              <Button key="hear" label={hearing === `take-${r.runId}` ? 'Stop' : 'Hear it'} emoji={hearing === `take-${r.runId}` ? '■' : '🎧'} size="small"
+                onPress={() => hear(r.runId, r.title)} accessibilityLabel={`Hear ${r.title}`} />])} />
             <Body size={13} color={color.muted}>Listen to both: steadier spacing is the thing to hear. Lower spread = steadier.</Body>
           </> : <Body color={color.muted}>Keep playing: once a take is a month old, you can hear "you a month ago" against "you now" here.</Body>}
           {notice ? <Notice text={notice} onClose={() => setNotice('')} /> : null}

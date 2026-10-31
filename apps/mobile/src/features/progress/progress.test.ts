@@ -7,7 +7,7 @@ import { createDataStore } from '../../data/store';
 import { openTestDb } from '../../data/nodeSqlite.testutil';
 import { ago, dayKey, minutesWords, shortDate, thousands } from './dates';
 import { allLessons, loadStoredData } from './data';
-import { askMonthReport, coachUnavailable, historyModel, keptReport } from './monthReport';
+import { askMonthReport, coachUnavailable, historyModel, keptReport, keptTakeChart } from './monthReport';
 import { lessonWords, practiseTarget, progressModel, starString } from './progress';
 import { skillMapModel } from './skillMap';
 
@@ -146,6 +146,15 @@ describe('skill map', () => {
 
 describe("this month's report", () => {
   const report = { headline: 'A steadier month', better: ['Even 8ths'], next: ['The kick'], note: 'Keep it short and daily.' };
+  it('turns a kept take into a chart of your own hits at its tempo (web YouVsYou hear)', () => {
+    const take = { beatMs: 500, beats: 8, beatsPerBar: 4, timeSignature: [4, 4], hits: [[0, 'kick', 100], [500, 'snare', 120], [1000, 'bogus', 90], [750, 'hhClosed', 30], [4100, 'snare', 90]] };
+    const c = keptTakeChart(take, 7, 'You, 3 Oct');
+    expect(c).toMatchObject({ id: 'take-7', title: 'You, 3 Oct', bpm: 120, bars: 2, timeSignature: [4, 4] });
+    expect(c!.notes.map(n => [n.t, n.drum, !!n.accent, !!n.ghost])).toEqual([[0, 'kick', false, false], [1, 'snare', true, false], [1.5, 'hihat', false, true]]);
+    expect(keptTakeChart(null, 7, 'x')).toBeNull();
+    expect(keptTakeChart({ beatMs: -1 }, 7, 'x')).toBeNull();
+  });
+
   it('reads a kept report only for this month', () => {
     expect(keptReport({ month: '2026-10', report }, NOW)).toEqual(report);
     expect(keptReport({ month: '2026-09', report }, NOW)).toBeUndefined();
