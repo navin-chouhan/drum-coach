@@ -9,6 +9,8 @@ import { clampBpm, clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readM
 import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
   PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
+  moreCard, yourTakeCard,
+  introSlides,
 } from './play';
 
 describe('section chart', () => {
@@ -262,5 +264,31 @@ describe('Practice\'s saved charts and ?chartId=', () => {
     expect(requestedChart(all, ['my-song-abcde'])?.id).toBe('my-song-abcde');
     expect(requestedChart(all, 'gone')).toBeUndefined();
     expect(requestedChart(all, undefined)).toBeUndefined();
+  });
+});
+
+describe('after a take (the web PlayView side)', () => {
+  const stats = { total: 20, miss: 2, accuracy: 90, streak: 12, recoveries: 1 } as unknown as Parameters<typeof yourTakeCard>[0]['stats'];
+  it('the Your take card', () => {
+    const c = yourTakeCard({ stats, cues: [{ text: 'Relax' }, { text: 'Steady the kick' }] as never, results: [], options: { wait: false } as never });
+    expect(c).toEqual({ landed: 18, total: 20, pass: true, small: '12 in a row · 1 comebacks', tip: 'Steady the kick', latency: undefined });
+    const late = Array.from({ length: 10 }, () => ({ judgement: 'good', offset: -55 }));
+    expect(yourTakeCard({ stats, cues: [], results: late as never, options: { wait: false } as never }).latency).toMatch(/^Almost every stroke landed about 55 ms early\./);
+  });
+  it('More: latency correction and Song sync', () => {
+    expect(moreCard(0, {})).toEqual({ latency: '', sync: '' });
+    expect(moreCard(-12, { hasAudio: true, syncOffsetMs: 40 })).toEqual({ latency: 'Latency correction: -12 ms', sync: 'Song sync: 40 ms. If the notes arrive before the music, increase it.' });
+  });
+});
+
+describe('intro slides (the web IntroSlides)', () => {
+  it('who plays what and the count of the first bar', () => {
+    const notes = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map(t => ({ t, drum: 'hihat' as const }))
+      .concat([{ t: 0, drum: 'kick' as never }, { t: 1, drum: 'snare' as never }, { t: 2, drum: 'kick' as never }, { t: 3, drum: 'snare' as never }, { t: 4, drum: 'kick' as never }]);
+    const v = introSlides(notes, 4, false);
+    expect(v.plan.map(p => p.limb)).toEqual(['R', 'L', 'K']);
+    expect(v.firstBar.map(h => h.count)).toEqual(['1', '&', '2', '&', '3', '&', '4', '&']);
+    expect(v.pedalDown).toBe(true);
+    expect(introSlides(notes, 4, true).plan[0].limb).toBe('R');
   });
 });
