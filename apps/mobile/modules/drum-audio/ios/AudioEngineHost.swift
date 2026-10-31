@@ -612,14 +612,25 @@ final class AudioEngineHost {
     return loopQueue.sync { backing.install(opened) }
   }
 
-  func backingStart(at: Double, offsetMs: Double, rate: Double) -> [String: Any] {
+  /// `durationMs`: ms of the line to play; NaN (or any non-finite value) = to the file's end.
+  func backingStart(at: Double, offsetMs: Double, rate: Double, durationMs: Double) -> [String: Any] {
     lock.lock()
     let isRunning = running
     let timing = backingTimingLocked()
     if !isRunning { lastError = "backing start() before start()" }
     lock.unlock()
     guard isRunning else { return ["ok": false, "reason": "backing start() before start()"] }
-    return backing.start(BackingStartRequest(at: at, offsetMs: offsetMs, rate: rate), timing: timing)
+    let length: Double? = durationMs.isFinite ? durationMs : nil
+    return backing.start(BackingStartRequest(at: at, offsetMs: offsetMs, rate: rate, durationMs: length), timing: timing)
+  }
+
+  /// Queues a segment right after the last one on the playing line (seamless loops; BackingMath.planQueue).
+  func backingQueue(at: Double, offsetMs: Double, durationMs: Double) -> [String: Any] {
+    lock.lock()
+    let isRunning = running
+    lock.unlock()
+    guard isRunning else { return ["ok": false, "reason": "backing queue() before start()"] }
+    return backing.queue(BackingQueueRequest(at: at, offsetMs: offsetMs, durationMs: durationMs))
   }
 
   func backingStop() {

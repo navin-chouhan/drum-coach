@@ -60,6 +60,42 @@ describe('the fake backing player', () => {
     expect(b.starts.map(s => s.now)).toEqual([1000, 2100]);
   });
 
+  it('queues segments behind the last one without cutting it: back to back, a lead waits, an overlap skips into the file', () => {
+    const clock = createFakeClock(0), b = createFakeBackingPort(clock, { durationMs: 10_000 });
+    b.queue({ at: 0, offsetMs: 0, durationMs: 1000 }); // nothing started: ignored
+    expect(b.heard()).toEqual([]);
+    b.start({ at: 100, offsetMs: 2000, rate: 0.5, durationMs: 1000 }); // heard 100…2100
+    b.queue({ at: 2100, offsetMs: 2000, durationMs: 1000 }); // exactly where it ends
+    b.queue({ at: 4100, offsetMs: -250, durationMs: 1000 }); // waits 500 ms, then file 0…750
+    b.queue({ at: 5500, offsetMs: 3000, durationMs: 1000 }); // due 600 ms before the last ends: skips 300 file ms
+    b.queue({ at: 7500, offsetMs: 9900, durationMs: 1000 }); // only 100 ms of file left
+    b.queue({ at: 9000, offsetMs: 20_000, durationMs: 1000 }); // past the end: nothing
+    b.queue({ at: 7200, offsetMs: 0, durationMs: 100 }); // overlapped entirely: nothing
+    expect(b.queues).toHaveLength(7);
+    expect(b.heard()).toEqual([
+      { at: 100, offsetMs: 2000, rate: 0.5, until: 2100 },
+      { at: 2100, offsetMs: 2000, rate: 0.5, until: 4100 },
+      { at: 4600, offsetMs: 0, rate: 0.5, until: 6100 },
+      { at: 6100, offsetMs: 3300, rate: 0.5, until: 7500 },
+      { at: 7500, offsetMs: 9900, rate: 0.5, until: 7700 },
+    ]);
+    expect(b.heardAt(2099)).toBeCloseTo(2999.5, 9);
+    expect(b.heardAt(2100)).toBe(2000);
+    expect(b.heardAt(4300)).toBeNull(); // the lead
+    expect(b.heardAt(4700)).toBe(50);
+    expect(b.heardAt(7700)).toBeNull(); // after the last segment
+    expect(b.starts[0]).toEqual({ now: 0, at: 100, offsetMs: 2000, rate: 0.5 });
+    clock.set(3000);
+    b.start({ at: 3100, offsetMs: 0, rate: 1 }); // a start cuts the queued ones too
+    expect(b.heardAt(4700)).toBe(1600);
+    expect(b.heard().slice(1, 3).map(h => h.until)).toEqual([3000, 3000]);
+    expect(b.starts[1]).toEqual({ now: 3000, at: 3100, offsetMs: 0, rate: 1 });
+    b.start({ at: 4000, offsetMs: 12_000, rate: 1 }); // past the file's end: nothing plays…
+    b.queue({ at: 4500, offsetMs: 500, durationMs: 200 }); // …and a queued segment still finds its place on the line
+    expect(b.heardAt(4100)).toBeNull();
+    expect(b.heardAt(4550)).toBe(550);
+  });
+
   it('a rate error makes the file run fast or slow against the Clock', () => {
     const clock = createFakeClock(0), b = createFakeBackingPort(clock, { ppm: 100, durationMs: 2e6 });
     b.start({ at: 0, offsetMs: 0, rate: 1 });
