@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
 import { getStorage } from '../../platform/storage';
-import { BigMove, Body, Button, Card, Display, Group, GroupRow, Stepper, Toggle, color, getAppHitBus, readSettings, useAppSettings, writeSettings } from '../../ui';
+import { BigMove, Body, Button, Card, Display, Group, GroupRow, Stepper, Toggle, color, getAppHitBus, readSettings, useAppKey, useAppSettings, writeSettings } from '../../ui';
 import {
   LEVEL_LABEL, LEVEL_STEP, SOUND_INTRO, THRONE_ANSWERS, THRONE_STEPS, THRONE_VOICE_LINE, VOICE_TEST, answerForPad, busLevels, clampLevel, levelOf,
   loopEvents, throneAnswer, throneAsk, throneTitle, type LevelKey,
@@ -101,6 +101,10 @@ function ThroneCheck({ onDone }: { onDone: () => void }) {
     const off = getAppHitBus().onHit(h => { const a = answerForPad(h.pad); if (a !== null) answerRef.current(a); });
     return () => { off(); stopLoop.current(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once; answers read the step through the ref
+  // Keys 1, 2, 3 answer too (web SoundCheckCard), as the buttons say.
+  useAppKey('1', () => answerRef.current(0));
+  useAppKey('2', () => answerRef.current(1));
+  useAppKey('3', () => answerRef.current(2));
   const st = THRONE_STEPS[step];
   if (!st) return null;
   return (

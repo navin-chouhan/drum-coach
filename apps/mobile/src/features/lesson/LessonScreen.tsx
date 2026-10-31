@@ -58,6 +58,11 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   }, { playing: v.playing, enabled: !more && !coachOpen && !v.celebration });
   // A hardware keyboard's Esc stops the take (the app-wide keyboard, ui/useAppKey; its drum keys go to the hit bus).
   useAppKey('escape', () => { if (!v.playing) return false; ctl.stop(); return true; });
+  // The web's lesson keys (src/lesson/LessonPlayer.tsx): H hints, B the band on / off. (C, check yourself with the
+  // camera, has no iPad screen.) Esc closes the coach panel over the results.
+  useAppKey('h', () => ctl.toggleHints());
+  useAppKey('b', () => ctl.toggleBand());
+  useAppKey('escape', () => { if (!coachOpen) return false; setCoachOpen(false); return true; }, { enabled: coachOpen });
 
   const s = take.state, pos = v.playing ? take.position(now) : 0;
   const bpb = s.run?.beatsPerBar ?? beatsPerBar(v.chart);

@@ -1,6 +1,9 @@
 /** One hardware key going down or up. */
 export type KeyEvent = {
-  /** The key as the web's KeyboardEvent.key spells the ones the app uses: "s", " " (Space), "Escape", "Enter". */
+  /**
+   * The key as the web's KeyboardEvent.key spells the ones the app uses: "s", "h", "1", " " (Space), "Escape", "Enter",
+   * "ArrowLeft" / "ArrowRight" / "ArrowUp" / "ArrowDown". Pad keys and command keys are told apart in TypeScript.
+   */
   key: string;
   /** Its USB HID usage (UIKeyboardHIDUsage). */
   code: number;

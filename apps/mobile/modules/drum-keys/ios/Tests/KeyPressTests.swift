@@ -17,9 +17,24 @@ final class KeyPressTests: XCTestCase {
     XCTAssertEqual(KeyPress.name(hidUsage: KeyPress.hidKeypadEnter, charactersIgnoringModifiers: "\r"), "Enter")
     XCTAssertEqual(KeyPress.name(hidUsage: 0x16, charactersIgnoringModifiers: "S"), "s")
     XCTAssertEqual(KeyPress.name(hidUsage: 0x14, charactersIgnoringModifiers: "q"), "q")
-    // an arrow key: UIKit's private-use character
-    XCTAssertEqual(KeyPress.name(hidUsage: 0x52, charactersIgnoringModifiers: "\u{F700}"), "")
+    XCTAssertEqual(KeyPress.name(hidUsage: 0x0B, charactersIgnoringModifiers: "h"), "h") // a command letter (hints)
+    XCTAssertEqual(KeyPress.name(hidUsage: 0x1E, charactersIgnoringModifiers: "1"), "1")
     XCTAssertEqual(KeyPress.name(hidUsage: 0x00, charactersIgnoringModifiers: ""), "")
+    // a function key (F1): UIKit's private-use character
+    XCTAssertEqual(KeyPress.name(hidUsage: 0x3A, charactersIgnoringModifiers: "\u{F704}"), "")
+  }
+
+  func testArrowNames() {
+    // the arrows' characters are UIKit's private-use strings: named by HID usage, as the web's KeyboardEvent.key
+    XCTAssertEqual(KeyPress.name(hidUsage: KeyPress.hidLeftArrow, charactersIgnoringModifiers: "\u{F702}"), "ArrowLeft")
+    XCTAssertEqual(KeyPress.name(hidUsage: KeyPress.hidRightArrow, charactersIgnoringModifiers: "\u{F703}"), "ArrowRight")
+    XCTAssertEqual(KeyPress.name(hidUsage: KeyPress.hidUpArrow, charactersIgnoringModifiers: "\u{F700}"), "ArrowUp")
+    XCTAssertEqual(KeyPress.name(hidUsage: KeyPress.hidDownArrow, charactersIgnoringModifiers: "\u{F701}"), "ArrowDown")
+    XCTAssertEqual(KeyPress.hidLeftArrow, 0x50)
+    XCTAssertEqual(KeyPress.hidRightArrow, 0x4F)
+    XCTAssertEqual(KeyPress.hidUpArrow, 0x52)
+    XCTAssertEqual(KeyPress.hidDownArrow, 0x51)
+    XCTAssertFalse(KeyPress.passesThrough(hidUsage: KeyPress.hidLeftArrow, command: false, control: false))
   }
 
   func testPassThrough() {

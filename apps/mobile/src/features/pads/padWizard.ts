@@ -5,6 +5,7 @@ import { CALIBRATION_ORDER, back, calibrate, initialCal, skip, type CalState } f
 import { PAD_INFO, padForNote, type NoteMap, type PadId } from '@drum-coach/core/engine/kit';
 import { dayKey } from '@drum-coach/core/engine/lesson';
 import type { Settings } from '@drum-coach/core/input/settings';
+import type { AppKey } from '../../platform/keyboardCore';
 import { MODULE_HELP } from './kitStore';
 
 export { CALIBRATION_ORDER, initialCal, type CalState };
@@ -112,7 +113,7 @@ export function wizardSave(s: WizardState, map: NoteMap, now = new Date()): { ma
   return { map: { ...map, ...s.cal.captured }, settings: { padsCheckedAt: dayKey(now) } };
 }
 
-/** Hardware-keyboard keys while the big wizard runs (web: ← back, Esc stop). */
-export function wizardKey(key: string): 'back' | 'stop' | null {
-  return key === 'ArrowLeft' ? 'back' : key === 'Escape' ? 'stop' : null;
+/** Hardware-keyboard command keys (platform/keyboard AppKey names) while the big wizard runs (web: ← back, Esc stop). */
+export function wizardKey(key: AppKey): 'back' | 'stop' | null {
+  return key === 'left' ? 'back' : key === 'escape' ? 'stop' : null;
 }
