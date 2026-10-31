@@ -3,7 +3,7 @@
 // Skip / Stop. Hitting the pad is the answer. Used by Setup → Pads and by the first run's step 3.
 import { useEffect, useReducer, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { BigMove, Body, Card, Group, GroupRow, MAX_FONT_SCALE, PadMap, color, font, getAppHitBus, hardShadow, stroke, tabular, useAppKey, writeSettings } from '../../ui';
+import { BigMove, Body, Card, Group, GroupRow, MAX_FONT_SCALE, PadMap, Sticker, color, font, getAppHitBus, hardShadow, stroke, tabular, useAppKey, writeSettings } from '../../ui';
 import { getStorage } from '../../platform/storage';
 import { writeNoteMap } from './kitStore';
 import { startWizard, wizardKey, wizardReduce, wizardSave, wizardView, type WizardAction, type WizardState } from './padWizard';
@@ -42,7 +42,7 @@ export function PadWizardView({ kit, map, onSaved, onStop, testID = 'pads' }: Pr
     <View style={styles.wrap} testID={testID} accessibilityLiveRegion="polite">
       <View style={styles.cols}>
         <Card tone="night" elevation={6} style={styles.stage}>
-          <View style={styles.kicker}><Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.kickerText}>{v.kicker.toUpperCase()}</Text></View>
+          <Sticker text={v.kicker.toUpperCase()} letterSpacing={0.7} />
           <Text maxFontSizeMultiplier={1.1} style={styles.big} testID={`${testID}-prompt`} accessibilityRole="header">
             {v.padWord ? <>Hit <Text style={styles.bigPad}>{v.padWord}</Text></> : v.title}
           </Text>
@@ -79,8 +79,6 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, gap: 14 },
   cols: { flex: 1, flexDirection: 'row', gap: 26 },
   stage: { flex: 1.9, alignItems: 'center', paddingTop: 14, gap: 4 },
-  kicker: { backgroundColor: color.pop, paddingHorizontal: 10, paddingVertical: 2 },
-  kickerText: { ...font.display, fontSize: 14, letterSpacing: 0.7, color: color.ink },
   big: { ...font.display, fontSize: 64, lineHeight: 70, color: color.white, textAlign: 'center' },
   bigPad: { color: color.pop },
   center: { textAlign: 'center' },

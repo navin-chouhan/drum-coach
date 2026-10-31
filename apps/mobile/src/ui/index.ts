@@ -26,6 +26,8 @@ export { Group, GroupHead, GroupRow, Chevron, Stepper, ToolFrame, type SymTone, 
 export { Field, CheckRow, Choice, Small, Warn, Tabs, type FieldProps, type ChoiceOption, type TabItem } from './forms';
 export { Notice, Bars, Track, Dots, type Bar } from './charts';
 export { StepPills, TempoLadder, TimingLineView, type StepPill, type LadderRung, type TimingLine } from './lessonBits';
+export { RoundButton, SheetPager, Sticker } from './round';
+export { pagerView, useSheetPages, type PagerView } from './sheetPages';
 export { PadMap, spotOfPart, type PadSpot, type PadSpotState } from './PadMap';
 export { SpeechBubble, OfflineCard, KeepsWorkingCard, HostText } from './coachBits';
 export { stepValue, stepBounds, digitsOnly, barHeight, percent, dotPositions, rungLooks, splitHost, type RungLook } from './kitMath';

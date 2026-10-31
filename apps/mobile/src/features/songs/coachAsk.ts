@@ -45,4 +45,7 @@ export const askGroove = (server: HomeServer, key: string, body: object, again =
 export const askFeedback = (server: HomeServer, key: string, summary: Record<string, unknown>, context: () => Promise<unknown>) =>
   ask(key, async () => call(server, '/api/coach/feedback', { summary, context: await context() })(), FeedbackSchema, false);
 
+/** While a Songs coach call is on its way (Learn by ear's groove, the jam's feedback). */
+export const COACH_THINKING = '🤔 The coach is thinking…';
+
 export const COACH_CANT_HEAR = "The coach can't hear the recording: treat this as a starting point and check it by ear.";

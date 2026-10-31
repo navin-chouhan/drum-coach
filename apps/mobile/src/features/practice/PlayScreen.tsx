@@ -16,14 +16,12 @@ import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Pill, Screen, Toggle,
   color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppKey, useAppSettings, useKitMoves, writeSettings,
-  CheckRow, Dots, KIT_SOUNDS_LABEL, Notice, Stepper, TempoLadder, TimingLineView,
+  CheckRow, Dots, KIT_SOUNDS_LABEL, Notice, RoundButton, SheetPager, Stepper, useSheetPages, TempoLadder, TimingLineView,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
 import { studentRead } from '@drum-coach/core/engine/planner';
 import { getCoach, replyFor, setCoachPlaying, thinkingAbout, useCoachSession, type Act } from '../coach';
-import { SheetPager } from '../lesson/parts';
 import { replayResults, runChart, takenChart } from '../lesson/runChart';
-import { useSheetPages } from '../lesson/sheetPages';
 import { ResultsDetails } from '../results/ResultsDetails';
 import { SYNC_NUDGES, backingFor, nudgeSync, prepareBacking } from '../songs/backing';
 import { takeMarks, timingLine } from '../lesson/results';
@@ -251,9 +249,9 @@ export function PlayScreen() {
           <Body size={13} color={color.pop} weight="700">{`${kindIcon(chart)} ${chart.kind ?? 'exercise'}${chart.source === 'ai' ? ' · ✍ by your coach' : ''}${warm ? ` · warm-up ${warm.i + 1} of ${warm.ids.length}` : ''}`}</Body>
         </View>
         <View style={styles.tempo} testID="practice-tempo">
-          {!playing ? <Step label="−" a11y="5 BPM slower" onPress={() => set({ speed: speedFor(m.bpm - 5, chart.bpm) })} testID="practice-slower" /> : null}
+          {!playing ? <RoundButton size="medium" glyph="−" label="5 BPM slower" onPress={() => set({ speed: speedFor(m.bpm - 5, chart.bpm) })} testID="practice-slower" /> : null}
           <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.bpm, tabular]} accessibilityLabel={`${m.bpm} BPM`}>{m.bpm}<Text style={styles.bpmUnit}> BPM</Text></Text>
-          {!playing ? <Step label="+" a11y="5 BPM faster" onPress={() => set({ speed: speedFor(m.bpm + 5, chart.bpm) })} testID="practice-faster" /> : null}
+          {!playing ? <RoundButton size="medium" glyph="+" label="5 BPM faster" onPress={() => set({ speed: speedFor(m.bpm + 5, chart.bpm) })} testID="practice-faster" /> : null}
           {m.best > 0 ? <Body size={13} color={color.white} weight="700">{`best clean here: ${m.best} BPM`}</Body> : null}
         </View>
         <Button label="Hints" emoji="💡" size="small" tone={hints ? 'pop' : 'white'} onPress={() => flip('hints')} accessibilityLabel={`Hints ${hints ? 'on' : 'off'}`} testID="practice-hints" />
@@ -391,15 +389,6 @@ export function PlayScreen() {
   );
 }
 
-function Step({ label, a11y, onPress, testID }: { label: string; a11y: string; onPress: () => void; testID: string }) {
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} testID={testID} hitSlop={slopFor(44)}
-      style={({ pressed }) => [styles.step, pressed && styles.pressed]}>
-      <Text style={styles.stepText}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function Chip({ on, label, onPress, a11y }: { on: boolean; label: string; onPress: () => void; a11y?: string }) {
   return (
     <Pressable onPress={onPress} hitSlop={slopFor(34)} accessibilityRole="button" accessibilityLabel={a11y ?? (label.match(/^\d+$/) ? `Bar ${label}` : label)}
@@ -415,9 +404,6 @@ const styles = StyleSheet.create({
   tempo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   bpm: { fontSize: 34, fontWeight: '900', color: color.white, minWidth: 70, textAlign: 'center' },
   bpmUnit: { fontSize: 13, color: color.pop },
-  step: { width: 52, height: 52, borderRadius: 26, borderWidth: stroke.card, borderColor: color.ink, backgroundColor: color.pop, alignItems: 'center', justifyContent: 'center' },
-  stepText: { fontSize: 30, fontWeight: '900', color: color.ink, lineHeight: 34 },
-  pressed: { opacity: 0.7 },
   coachRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
   playingRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 },
   stop: { width: 260, minHeight: 88 },

@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { refocusKeyboard } from '../../platform/keyboard';
 import { introContent, introTap } from '../../play/introSlides';
-import { BigMove, Body, Display, DottedGround, MAX_FONT_SCALE, color, font, getAppHitBus, hardShadow, stroke, useAppKey } from '../../ui';
+import { BigMove, Body, Display, DottedGround, MAX_FONT_SCALE, Sticker, color, font, getAppHitBus, hardShadow, stroke, useAppKey } from '../../ui';
 import type { LessonView } from './controller';
 import { HowItMoves } from './HowItMoves';
 
@@ -38,12 +38,12 @@ export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro:
         <View style={styles.slide} testID="lesson-intro" accessibilityViewIsModal accessibilityLabel={`About to play: ${intro.title}`} accessibilityLiveRegion="polite">
           <Text style={styles.pg} testID="lesson-intro-page">{i + 1} / {last + 1}</Text>
           {i === 0 ? <>
-            <Kicker text={c.kicker} />
+            <Sticker tone="night" size={24} text={c.kicker} />
             <Display size={64} style={styles.center} numberOfLines={2}>{c.big}</Display>
             <Body size={28} weight="700" style={[styles.center, styles.wide]}>{intro.what}</Body>
           </> : null}
           {i === 1 ? <>
-            <Kicker text="WHO PLAYS WHAT" />
+            <Sticker tone="night" size={24} text="WHO PLAYS WHAT" />
             <View style={styles.limbs}>
               {c.plan.map(p => (
                 <View key={p.limb} style={styles.limb} accessible accessibilityLabel={`${p.name}: ${p.drums.join(' and ')}, ${p.when}`}>
@@ -56,7 +56,7 @@ export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro:
             {c.pedalDown ? <Body size={22} weight="700">Left foot: keep the hi-hat pedal down.</Body> : null}
           </> : null}
           {i === 2 ? <>
-            <Kicker text="COUNT IT LIKE THIS" />
+            <Sticker tone="night" size={24} text="COUNT IT LIKE THIS" />
             <View style={styles.countBar}>
               {c.firstBar.map(h => (
                 <View key={h.t} style={[styles.countCell, h.beat && { backgroundColor: color.pop }]}>
@@ -68,7 +68,7 @@ export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro:
             {intro.focus ? <Body size={24} weight="700" style={[styles.center, styles.wide]}>💡 {intro.focus}</Body> : null}
           </> : null}
           {i === 3 && intro.demo ? <>
-            <Kicker text="HOW IT MOVES" />
+            <Sticker tone="night" size={24} text="HOW IT MOVES" />
             <HowItMoves id={intro.demo} bpm={intro.bpm} compact heelUp={heelUp} style={styles.demo} testID="lesson-intro-demo" />
           </> : null}
           <View style={styles.nav}>
@@ -81,10 +81,6 @@ export function IntroSlides({ intro, heelUp, onNext, onBack, onClose }: { intro:
   );
 }
 
-function Kicker({ text }: { text: string }) {
-  return <View style={styles.kicker}><Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.kickerText}>{text}</Text></View>;
-}
-
 const styles = StyleSheet.create({
   ground: { padding: 30, justifyContent: 'center' },
   slide: {
@@ -92,8 +88,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 22, padding: 36, paddingBottom: 130,
   },
   pg: { position: 'absolute', top: 16, left: 22, ...font.display, fontSize: 20, color: color.ink },
-  kicker: { backgroundColor: color.night, paddingHorizontal: 14, paddingVertical: 4 },
-  kickerText: { ...font.display, fontSize: 24, color: color.pop },
   center: { textAlign: 'center' },
   wide: { maxWidth: 980 },
   limbs: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 20 },
