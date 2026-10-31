@@ -5,7 +5,7 @@
 // cursor runs on requestAnimationFrame from performance.now() + a measured Clock offset (sheetModel.ts).
 //
 // Text is set with textContent / React; VexFlow builds SVG nodes. No HTML strings.
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref, type RefObject } from 'react';
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from 'expo/dom';
 import { engrave, paintHead, type Engraving } from './engrave';
 import {
@@ -49,20 +49,35 @@ let fontReady: Promise<unknown> | null = null;
 const SMALL_COUNT: Partial<CSSStyleDeclaration> = { left: 'auto', right: `${PAD + 6}px`, top: `${PAD + 4}px`, fontSize: '22px', padding: '1px 12px', transform: 'none' };
 const BIG_COUNT: Partial<CSSStyleDeclaration> = { left: '50%', right: 'auto', top: '45%', fontSize: '90px', padding: '6px 30px', transform: 'translate(-50%,-50%)' };
 
-function useViewSize() {
+// In the app the page is the WebView (window.ReactNativeWebView is injected there) and the sheet fills it: 100vw ×
+// 100vh, so its box is the view's. Rendered inline (react-native-web, the layout harness) the window is the whole
+// page: the sheet then fills its parent instead.
+const inWebView = typeof window !== 'undefined' && !!(window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView;
+const ROOT_SIZE: CSSProperties = inWebView ? { width: '100vw', height: '100vh' } : { width: '100%', height: '100%' };
+
+/** The sheet's own box (its root element, ResizeObserver), with the window's size for the first paint. */
+function useBoxSize(root: RefObject<HTMLDivElement | null>) {
   const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
-    const on = () => setSize(s => (s.w === window.innerWidth && s.h === window.innerHeight ? s : { w: window.innerWidth, h: window.innerHeight }));
-    window.addEventListener('resize', on);
-    on();
-    return () => window.removeEventListener('resize', on);
-  }, []);
+    const el = root.current;
+    const set = (w: number, h: number) => setSize(s => (s.w === w && s.h === h ? s : { w, h }));
+    const measure = () => { if (el) set(el.clientWidth, el.clientHeight); else set(window.innerWidth, window.innerHeight); };
+    measure();
+    if (el && typeof ResizeObserver === 'function') {
+      const ro = new ResizeObserver(measure);
+      ro.observe(el);
+      return () => ro.disconnect();
+    }
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [root]);
   return size;
 }
 
 export default function SheetDom(props: SheetDomProps) {
   const { chart, bpm, zero, latencyMs, colors, hints, leftHanded, scale, displayLeadMs, clockNow, ready } = props;
-  const { w, h } = useViewSize();
+  const root = useRef<HTMLDivElement>(null);
+  const { w, h } = useBoxSize(root);
   const paper = useRef<HTMLDivElement>(null), pre = useRef<HTMLDivElement>(null), extras = useRef<HTMLDivElement>(null);
   const cursor = useRef<HTMLDivElement>(null), barHi = useRef<HTMLDivElement>(null), count = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
@@ -214,7 +229,7 @@ export default function SheetDom(props: SheetDomProps) {
 
   const abs: CSSProperties = { position: 'absolute', left: 0, top: 0, pointerEvents: 'none', willChange: 'transform' };
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: `${colors.paper} radial-gradient(${colors.dots} 1.2px, transparent 1.3px) 0 0/9px 9px`, fontFamily: '-apple-system, system-ui, sans-serif' }}>
+    <div ref={root} style={{ position: 'relative', ...ROOT_SIZE, overflow: 'hidden', background: `${colors.paper} radial-gradient(${colors.dots} 1.2px, transparent 1.3px) 0 0/9px 9px`, fontFamily: '-apple-system, system-ui, sans-serif' }}>
       <div ref={barHi} aria-hidden style={{ ...abs, opacity: 0, background: colors.barTint, mixBlendMode: 'multiply' }} />
       <div ref={paper} role="img" aria-label={`Drum notation${chart.title ? ` for ${chart.title}` : ''}, with a cursor at the current beat`} style={{ position: 'absolute', left: PAD, top: PAD }} />
       <div ref={extras} aria-hidden />
