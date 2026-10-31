@@ -90,7 +90,7 @@ export function LatencyPanel({ onSaved, firstRun = false, testID = 'latency' }: 
         </View>
         <View style={styles.readout}>
           <StatTile value={readout?.hits.split(' ')[0] ?? '0'} unit={` of ${CLICKS}`} label="hits so far" testID={`${testID}-hits`} />
-          <StatTile value={readout?.average ?? '–'} label="after the click, on average" testID={`${testID}-average`} />
+          <StatTile value={readout?.average ?? '–'} label={`${readout?.when ?? 'after'} the click, on average`} testID={`${testID}-average`} />
           <StatTile value={readout?.steady ?? '–'} label={readout?.steadyOk ? 'steady: a good measurement' : 'how steady'} testID={`${testID}-steady`} />
         </View>
         {verdict ? <Body size={16} weight="700" color={verdict.warn ? color.bad : color.ink} style={styles.center} testID={`${testID}-verdict`}>{verdict.text}</Body> : null}

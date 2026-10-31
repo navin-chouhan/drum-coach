@@ -293,14 +293,40 @@ export function computeStats(run: Run, results: NoteResult[], extra: number, bea
   };
 }
 
-/** Median offset of taps against the nearest click (taps more than 200 ms off are ignored). Null if fewer than 6 usable taps. */
-export function estimateLatency(clicks: number[], taps: number[]): { latencyMs: number; spread: number; n: number } | null {
-  const diffs = taps.flatMap(t => {
-    const d = clicks.reduce((best, c) => (Math.abs(t - c) < Math.abs(best) ? t - c : best), Infinity);
-    return Math.abs(d) <= 200 ? [d] : [];
-  }).sort((a, b) => a - b);
+/** Taps further than this from every click aren't playing along with it. */
+export const LATENCY_WINDOW_MS = 200;
+
+const medianOf = (sorted: number[]) => {
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+/**
+ * Each click's offset: the tap closest to it within ±LATENCY_WINDOW_MS, one per click. A second tap on the same click
+ * (a double hit, a flam, a pad retrigger the bounce filter let through) is the same stroke, not another measurement:
+ * counting it pulled the spread up and gave more taps than clicks (17 of 16 on the iPad's first run).
+ */
+export function latencyOffsets(clicks: readonly number[], taps: readonly number[]): number[] {
+  const best = new Map<number, number>();
+  for (const t of taps) {
+    let k = -1, d = Infinity;
+    clicks.forEach((c, i) => { if (Math.abs(t - c) < Math.abs(d)) { d = t - c; k = i; } });
+    if (k < 0 || Math.abs(d) > LATENCY_WINDOW_MS) continue;
+    const prev = best.get(k);
+    if (prev === undefined || Math.abs(d) < Math.abs(prev)) best.set(k, d);
+  }
+  return [...best.values()].sort((a, b) => a - b);
+}
+
+/**
+ * Median offset of the taps against their clicks (latencyOffsets: one per click, ±200 ms). Null if fewer than 6.
+ * `spread` is how steady they were, robustly: 1.4826 × the median absolute deviation (the standard deviation for
+ * normally spread taps, but one stray tap 190 ms off no longer makes a steady player "not steady enough").
+ */
+export function estimateLatency(clicks: readonly number[], taps: readonly number[]): { latencyMs: number; spread: number; n: number } | null {
+  const diffs = latencyOffsets(clicks, taps);
   if (diffs.length < 6) return null;
-  const mid = diffs.length >> 1;
-  const median = diffs.length % 2 ? diffs[mid] : (diffs[mid - 1] + diffs[mid]) / 2;
-  return { latencyMs: Math.round(median), spread: r1(std(diffs)), n: diffs.length };
+  const median = medianOf(diffs);
+  const mad = medianOf(diffs.map(d => Math.abs(d - median)).sort((a, b) => a - b));
+  return { latencyMs: Math.round(median), spread: r1(1.4826 * mad), n: diffs.length };
 }
