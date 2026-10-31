@@ -63,8 +63,9 @@ export type PlayerFrameProps = {
   onBack: () => void;
   /** ⋯: the screen opens its PlayerSheet. */
   onMore?: () => void;
-  /** The coach's line (ready / results), and a small pill beside it ("Coach is listening back…"). */
-  coach?: { line: string; under?: string; pill?: string };
+  /** The coach's line (ready / results), and a small pill beside it ("Coach is listening back…"). testID: default
+   * `${testID}-coach-line`. */
+  coach?: { line: string; under?: string; pill?: string; testID?: string };
   /** The music (a NotationView or NoteHighway, or a work area such as a quiz); the frame gives it the room. */
   music: ReactNode;
   /** Above the music, inside its black panel: "Your bar · + snare", the legend. */
@@ -105,9 +106,11 @@ export function PlayerFrame(p: PlayerFrameProps) {
       {playing ? (
         <View style={[styles.takeTop, side, { paddingTop: Math.max(insets.top, 20) + 8 }]} testID={`${p.testID}-take-top`}>
           <View style={styles.barBadge}><Display size={26} numberOfLines={1}>{p.take?.bar ?? ''}</Display></View>
-          <View style={styles.tip} accessibilityLiveRegion="polite" testID={`${p.testID}-tip`}>
-            {p.take?.tip ? <Display size={24} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{p.take.tip}</Display> : null}
-          </View>
+          {p.take?.tip ? (
+            <View style={styles.tip} accessibilityLiveRegion="polite" testID={`${p.testID}-tip`}>
+              <Display size={24} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{p.take.tip}</Display>
+            </View>
+          ) : <View style={styles.flex} />}
           {p.bpm !== undefined ? <View style={styles.bpmBadge}><Display size={26}>{p.bpm}</Display></View> : null}
         </View>
       ) : (
@@ -134,7 +137,7 @@ export function PlayerFrame(p: PlayerFrameProps) {
       <View style={[styles.body, side, { paddingBottom: Math.max(insets.bottom, 12) + 10 }]}>
         {!playing && p.coach ? (
           <View style={styles.coachRow}>
-            <CoachLine size={22} style={styles.flexShrink} testID={`${p.testID}-coach-line`}>{p.coach.line}{p.coach.under ? `\n${p.coach.under}` : ''}</CoachLine>
+            <CoachLine size={22} style={styles.flexShrink} testID={p.coach.testID ?? `${p.testID}-coach-line`}>{p.coach.line}{p.coach.under ? `\n${p.coach.under}` : ''}</CoachLine>
             {p.coach.pill ? <View style={styles.pill}><Body size={13} weight="800">{p.coach.pill}</Body></View> : null}
           </View>
         ) : null}

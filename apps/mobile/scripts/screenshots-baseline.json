@@ -195,7 +195,6 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "placement": {
@@ -209,21 +208,18 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "lesson-quiz-said": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "lesson-transcribe": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "lesson-look": {
@@ -243,35 +239,30 @@
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "lesson-intro-2": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "lesson-intro-3": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "lesson-intro-4": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "lesson-celebration": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],
-    "cut": [],
     "errors": 0
   },
   "practice-details": {
@@ -485,6 +476,20 @@
     "errors": 0
   },
   "practice-search": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "lesson-take": {
+    "scrollW": 1194,
+    "scrollH": 834,
+    "spill": [],
+    "cut": [],
+    "errors": 0
+  },
+  "placement-take": {
     "scrollW": 1194,
     "scrollH": 834,
     "spill": [],

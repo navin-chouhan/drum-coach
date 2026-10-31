@@ -129,25 +129,28 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] **Start** by hi-hat pedal × 3 opens today's item; ride × 2 = Something else; tom 2 × 2 = Hear it.
 - [ ] With the voice on, a visit says the notice (recap, kit check, sore question, badge) and then "Up next: …" once.
 - [ ] **⋯** holds Just jam, Flow, the stage song (hear / play), Learn a new song, Ask the coach, This week's focus (a
-      lesson for it), the coach's lessons, Find my level, Skill map, Full path, Check my kit (until set up), Stick technique.
 - [ ] Skill map (⋯) and Full path open **You** on those views (old /progress links land there too).
-- [ ] **Find my level** (⋯): a rung with its sheet; **Play it** (hi-hat pedal × 3) → a take; a clean one moves up a rung,
+- [ ] **Find my level** (⋯ → the shared player: the bar, the rung as the coach line, the sheet): **Play it** (hi-hat pedal × 3) → a take; a clean one moves up a rung,
       a rough one ends the test with "Start there"; **Start at this stage** goes back to Journey on that stage.
 - [ ] **More ways to play → 🌊 Flow:** the player opens on your newest finished groove (the jam lesson if none), the
       big move is **Flow ▶**; the groove loops, the click fades out, nothing passes or fails; crash × 4 stops.
 - [ ] **More ways to play → 🥢 Stick technique:** every movement (grip, full stroke … kick); ✓ Right / ✗ Wrong,
       1× ½× ¼×, the tempo 40–100; "Talk me through it" speaks (not during a take); ← Journey (or Esc) goes back.
 
-**Lesson player** (open a groove with a tempo ladder, e.g. Stage 1–3)
-- [ ] Full screen, **no grey header bar above the black bar** **(M1)**; Sheet is the default, Highway switches (left to right).
-- [ ] Before: coach line, moves (Play / Hear it / Slower / Skip) with gestures, the goal with tick boxes, the kit view
-      lights on each hit. Hints (H) and Band (B) toggle.
-- [ ] Count-in: one bar with the big number on the beat; then the take: cursor on the sheet, notes turn green /
-      orange (+ms sticker) / red dashed MISS / red ✕ extra; one live tip at a time; **crash × 4 stops**.
-- [ ] Results: verdict line, the whole take on the notes, timing line ("on average N ms late"), take card (count, stars,
-      best run, extras), one thing to fix with **Fix bar N**, Ask the coach.
+**Lesson player** (open a groove with a tempo ladder, e.g. Stage 1–3) — the shared player (D10, R2)
+- [ ] Full screen, **no sidebar and no grey header bar** **(M1)**. The slim black bar: ‹, the title + "Step 3 of 4",
+      **□□ 2 clean → 75**, the BPM, ⋯. Sheet is the default; ⋯ → Sheet / Highway switches (left to right).
+- [ ] Before: the coach line (spoken), the music across the full width, one row of moves (Play / Hear it / Slower /
+      Next) with gestures. With the kit plugged in there's **no kit drawing** (⋯ → Show the kit drawing brings it back);
+      without it the touch pads sit under the music. Hints (H) and Band (B) toggle (also in ⋯).
+- [ ] Count-in: the big number on the beat over the music; then the take: **no bar** — only "Bar 1 / 4", one live
+      tip, the BPM, the music (cursor; green / orange +ms / red dashed MISS / red ✕), the ■ Stop corner. **crash × 4**,
+      **Esc** or ■ Stop stop it. Not playing, **Esc** or ‹ leaves the lesson.
+- [ ] Results: the verdict line (spoken), the take on the notes (up to 4 bars a page), the score card (**46/48**, stars,
+      one fix line with **🔁 Fix bar N**, **Ask the coach ›**), "→ 75 next" in the bar when the tempo went up. ⋯ holds
+      the legend, timing line, Keep fill N, Share take, Hear it right, the lesson's why, How it moves, Reset, the keys.
 - [ ] Two clean takes → the tempo goes up 5 (ladder), Journey's set ticks the item done.
-- [ ] **Hear your take**, **Share take** (share sheet with `<title> <UTC stamp>.mid`, e.g. `Rock beat 2026-10-31-14-05.mid`,
+- [ ] **Hear your take**, ⋯ → **Share take** (share sheet with `<title> <UTC stamp>.mid`, e.g. `Rock beat 2026-10-31-14-05.mid`,
       the web's name; AirDrop it to the Mac and open it).
 - [ ] **Interrupted take (D6):** start a take, press Home after ≥ 2 bars → back: kept and flagged, not on the ladder.
       Again after 1 bar: dropped with a short notice.

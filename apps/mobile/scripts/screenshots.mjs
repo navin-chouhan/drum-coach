@@ -111,6 +111,9 @@ const SHOTS = [
 function W2_SHOTS() {
   const take = [{ click: 'lesson-main-move' }, { through: 'lesson-intro-next' }, { waitFor: 'lesson-take-card', ms: 60_000 }];
   return [
+    // the max screen during a take (D10): the bar, one tip, the music, the touch pads, ■ Stop; then placement's
+    ['lesson-take', '/lesson/money-8ths?h=sore', [{ click: 'lesson-main-move' }, { through: 'lesson-intro-next' }, { waitFor: 'lesson-stop', ms: 10_000 }, { wait: 4000 }]],
+    ['placement-take', '/lesson/placement?h=sore', [{ click: 'placement-play' }, { waitFor: 'placement-stop', ms: 10_000 }, { wait: 4000 }]],
     ['lesson-results', '/lesson/money-8ths?h=sore', take],
     ['lesson-results-more', '/lesson/money-8ths?h=sore', [...take, { click: 'lesson-more-button' }, { waitFor: 'lesson-more' }]],
     ['lesson-results-coach', '/lesson/money-8ths?h=sore', [...take, { click: 'lesson-ask-coach' }, { waitFor: 'coach-inspector' }]],
