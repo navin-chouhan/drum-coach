@@ -136,6 +136,18 @@ swift_tests() {
   [ "$failed" -eq 0 ]
 }
 
+# Xcode 27.1 sometimes crashes after the tests, while copying the simulator's diagnostics into the result bundle:
+# "CASTreeDataStructure/Importer.swift:131: Fatal error: FIXME: Unable to write data for …testmanagerd.log due to
+# resourceChanged" (testmanagerd is still writing its log). Seen in runs 24 and 46 with every test passed. Only that
+# exact case counts as a pass: the log must say "** TEST SUCCEEDED **", have no failed test case and no other error.
+xcresult_race_only() {
+  local log=$1
+  grep -q '^\*\* TEST SUCCEEDED \*\*' "$log" || return 1
+  grep -q 'CASTreeDataStructure/Importer.swift:[0-9]*: Fatal error: .*Unable to write data for .*Diagnostics.* due to resourceChanged' "$log" || return 1
+  if grep -E "Test Case .* failed|error: |\*\* TEST (FAILED|EXECUTE FAILED|BUILD FAILED)" "$log" | grep -vq 'CASTreeDataStructure/Importer.swift'; then return 1; fi
+  echo "::warning::$(basename "$log"): every test passed; xcodebuild then crashed writing the result bundle (Xcode's diagnostics race), counted as a pass"
+}
+
 pod_tests() {
   # The podspecs' test_specs are only installed with `use_expo_modules!(includeTests: true)` (see the header of
   # modules/drum-midi/ios/Tests/BatchPolicyTests.swift). ios/ is generated and never committed, so patch it here.
@@ -195,7 +207,7 @@ pod_tests() {
       -resultBundlePath "$LOG_DIR/$scheme.xcresult" \
       COMPILER_INDEX_STORE_ENABLE=NO \
       CODE_SIGNING_ALLOWED=NO \
-      test </dev/null || { failed=$((failed + 1)); failed_schemes="$failed_schemes $scheme"; }
+      test </dev/null || xcresult_race_only "$LOG_DIR/xcodebuild-$scheme.log" || { failed=$((failed + 1)); failed_schemes="$failed_schemes $scheme"; }
   done <<< "$schemes"
   # Repeat what failed at the very end: the API that serves job logs only keeps the last 5000 lines.
   echo "== pod tests: $(wc -l <<< "$schemes" | tr -d ' ') scheme(s), $failed failed${failed_schemes:+:$failed_schemes}"
