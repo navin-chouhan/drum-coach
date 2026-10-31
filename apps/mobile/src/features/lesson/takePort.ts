@@ -5,7 +5,7 @@ import type { Cue } from '@drum-coach/core/engine/liveCoach';
 import { WINDOWS } from '@drum-coach/core/engine/scoring';
 import type { Hit } from '@drum-coach/core/input/hits';
 import type { AudioPort } from '@drum-coach/core/play/audioPort';
-import { createTake, type Take, type TakeSettings } from '@drum-coach/core/play/take';
+import { createTake, type Take, type TakeOptions, type TakeSettings, type TakeState as CoreTakeState } from '@drum-coach/core/play/take';
 import type { Clock } from '@drum-coach/core/platform';
 import { laneOf, PAD_DRUM } from '../../play/chartLike';
 import { createStream, type PlayResult } from '../../play/events';
@@ -32,37 +32,48 @@ export type CoreTakePort = TakePort & {
 
 const IDLE: TakeState = { phase: 'idle', zero: 0, beatMs: 500, results: [], feedback: [], auto: [], extraBeats: [] };
 
+/**
+ * A take's results as events (core keeps them in arrays): the notes each stroke judged, the extra strokes, and misses
+ * once a note's window has passed. The lesson player's TakePort and Practice's engine both feed the play surfaces
+ * (highway, sheet, kit view) with it. Call reset at each new take, afterHit after core has judged a stroke, and
+ * misses on each tick.
+ */
+export function createResultsFeed(latencyMs: () => number) {
+  const stream = createStream<PlayResult>();
+  let snapshot: unknown[] = [], extrasSeen = 0, missAt = 0;
+  return {
+    subscribe: stream.subscribe,
+    reset(s: Pick<CoreTakeState, 'results'>) { snapshot = s.results.slice(); extrasSeen = 0; missAt = 0; },
+    /** After each stroke: the notes it judged and the extra it made, as events. */
+    afterHit<O extends TakeOptions>(s: CoreTakeState<O> | undefined, h: Hit) {
+      if (!s || s.phase !== 'playing') return;
+      s.results.forEach((r, i) => {
+        if (r === snapshot[i]) return;
+        snapshot[i] = r;
+        if (r.judgement === 'miss' && r.off === undefined) return;
+        stream.emit({ kind: 'judged', index: i, lane: laneOf(s.run.notes[i].drum), judgement: r.judgement, offsetMs: r.offset ?? r.off, at: h.time, pad: r.pad });
+      });
+      for (; extrasSeen < s.extraBeats.length; extrasSeen++) if (h.pad) stream.emit({ kind: 'extra', lane: PAD_DRUM[h.pad], at: h.time, pad: h.pad });
+    },
+    /** Notes nobody played: missed once their window has passed. */
+    misses<O extends TakeOptions>(s: CoreTakeState<O> | undefined, now: number) {
+      if (!s || s.phase !== 'playing' || s.options.wait || s.options.demo) return;
+      const latency = latencyMs();
+      for (; missAt < s.run.notes.length && s.zero + s.run.notes[missAt].t * s.beatMs + WINDOWS.near < now - latency; missAt++) {
+        const r = s.results[missAt];
+        if (!s.auto[missAt] && r.judgement === 'miss' && r.off === undefined) stream.emit({ kind: 'judged', index: missAt, lane: laneOf(s.run.notes[missAt].drum), judgement: 'miss', at: now });
+      }
+    },
+  };
+}
+
 export function createTakePort(deps: TakePortDeps): CoreTakePort {
   let take: Take<PlayOptions> | undefined;
   let offs: (() => void)[] = [];
   let lastEnd: CoreTakePort['lastEnd'];
-  let snapshot: unknown[] = [], extrasSeen = 0, missAt = 0;
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach(l => l());
-  const stream = createStream<PlayResult>();
-
-  /** After each stroke: the notes it judged and the extra it made, as events. */
-  function diff(h: Hit) {
-    const s = take?.state;
-    if (!s || s.phase !== 'playing') return;
-    s.results.forEach((r, i) => {
-      if (r === snapshot[i]) return;
-      snapshot[i] = r;
-      if (r.judgement === 'miss' && r.off === undefined) return;
-      stream.emit({ kind: 'judged', index: i, lane: laneOf(s.run.notes[i].drum), judgement: r.judgement, offsetMs: r.offset ?? r.off, at: h.time, pad: r.pad });
-    });
-    for (; extrasSeen < s.extraBeats.length; extrasSeen++) if (h.pad) stream.emit({ kind: 'extra', lane: PAD_DRUM[h.pad], at: h.time, pad: h.pad });
-  }
-  /** Notes nobody played: missed once their window has passed. */
-  function misses(now: number) {
-    const s = take?.state;
-    if (!s || s.phase !== 'playing' || s.options.wait || s.options.demo) return;
-    const latency = deps.settings().latencyMs;
-    for (; missAt < s.run.notes.length && s.zero + s.run.notes[missAt].t * s.beatMs + WINDOWS.near < now - latency; missAt++) {
-      const r = s.results[missAt];
-      if (!s.auto[missAt] && r.judgement === 'miss' && r.off === undefined) stream.emit({ kind: 'judged', index: missAt, lane: laneOf(s.run.notes[missAt].drum), judgement: 'miss', at: now });
-    }
-  }
+  const feed = createResultsFeed(() => deps.settings().latencyMs);
 
   const view = (): TakeState => {
     const s = take?.state;
@@ -85,10 +96,10 @@ export function createTakePort(deps: TakePortDeps): CoreTakePort {
       lastEnd = undefined;
       const t = createTake<PlayOptions>({
         clock: deps.clock, audio: deps.audio, settings: deps.settings, wording: deps.wording, wallClock: deps.wallClock,
-        onHit: fn => deps.onHit(h => { fn(h); diff(h); }),
+        onHit: fn => deps.onHit(h => { fn(h); feed.afterHit(take?.state, h); }),
       }, chart, options);
       take = t;
-      snapshot = t.state.results.slice(); extrasSeen = 0; missAt = 0;
+      feed.reset(t.state);
       offs = [
         t.onChange(notify),
         t.onCue(c => { deps.onCue?.(c); notify(); }),
@@ -110,8 +121,8 @@ export function createTakePort(deps: TakePortDeps): CoreTakePort {
       if (t.state.phase === 'idle') notify();
     },
     position(now = deps.clock.now()) { return take ? take.position(now) : 0; },
-    tick(now = deps.clock.now()) { take?.tick(now); misses(now); },
+    tick(now = deps.clock.now()) { take?.tick(now); feed.misses(take?.state, now); },
     subscribe(fn) { listeners.add(fn); return () => { listeners.delete(fn); }; },
-    results: stream.subscribe,
+    results: feed.subscribe,
   };
 }

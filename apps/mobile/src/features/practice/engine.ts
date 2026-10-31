@@ -2,21 +2,35 @@
 // hit bus and the AudioPort, ticked ~10×/s, and a finished take saved to Storage in the web's run shape (the web's
 // src/play/Results.tsx saveRun). Kept outside React so a take survives a re-render; screens subscribe.
 import { createTake, type Finished, type Take } from '@drum-coach/core/play/take';
+import { AppState } from 'react-native';
 import { audio } from '../../platform/audio';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { getAppHitBus, readSettings } from '../../ui';
+import { createResultsFeed } from '../lesson/takePort';
 import { runRecord, takeOptions, type TakeRequest } from './takeRecord';
 
 export type { TakeRequest };
 
-export type EngineState = { phase: 'idle' | 'starting' | 'playing' | 'done'; demo: boolean; chartId?: string; take?: Take; finished?: Finished; error?: string };
+export type EngineState = {
+  phase: 'idle' | 'starting' | 'playing' | 'done'; demo: boolean; chartId?: string; take?: Take; finished?: Finished; error?: string;
+  /** An interruption ended the last take (D6): 'kept' with its whole bars (flagged, not for Climb), or 'dropped' under 2. */
+  interrupted?: 'kept' | 'dropped';
+};
+
+/** What Practice says after an interrupted take (D6). */
+export const interruptedNote = (i: EngineState['interrupted']) =>
+  i === 'dropped' ? 'The take was interrupted before 2 whole bars, so it wasn\u2019t kept.'
+    : i === 'kept' ? 'The take was interrupted: its whole bars are kept, marked interrupted (Climb ignores it).' : '';
 
 let state: EngineState = { phase: 'idle', demo: false };
 const listeners = new Set<() => void>();
 const set = (s: Partial<EngineState>) => { state = { ...state, ...s }; listeners.forEach(l => l()); };
 let timer: ReturnType<typeof setInterval> | undefined;
 const onSaved = new Set<(f: Finished) => void>();
+const latencyMs = () => readSettings(getStorage().kv).latencyMs;
+// The take's results as events, for the sheet's colours (NotationView `results`, as in the lesson player).
+const feed = createResultsFeed(latencyMs);
 
 export const practiceEngine = {
   /** The take engine plays wherever the audio module is in the build. */
@@ -26,24 +40,34 @@ export const practiceEngine = {
   subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
   /** After a scored take is saved (Climb and the screen's history read the runs then). */
   onSaved(fn: (f: Finished) => void) { onSaved.add(fn); return () => { onSaved.delete(fn); }; },
+  /** Judged notes (index = the take's run note), extra strokes and misses of the take that's playing. */
+  results: feed.subscribe,
   start(req: TakeRequest): boolean {
     if (!audio.available) return false;
     practiceEngine.stop();
     const clock = getMidiPort().clock;
     const take = createTake({
-      clock, audio, onHit: fn => getAppHitBus().onHit(fn),
+      clock, audio, onHit: fn => getAppHitBus().onHit(h => { fn(h); feed.afterHit(take.state, h); }),
       settings: () => { const s = readSettings(getStorage().kv); return { latencyMs: s.latencyMs, countIn: s.countIn, liveTips: s.liveTips, chattiness: s.chattiness }; },
     }, req.chart, takeOptions(req));
+    feed.reset(take.state);
     take.onChange(() => set({ phase: take.state.phase }));
     take.onFinish(f => {
       const rec = runRecord(f, req.chart.id);
       set({ finished: f });
       if (rec) void getStorage().runs.add(rec).then(() => onSaved.forEach(l => l(f))).catch(() => set({ error: 'This take could not be saved.' }));
     });
-    take.onEnd(() => { clearInterval(timer); timer = undefined; set({ phase: 'done' }); });
-    set({ phase: 'starting', demo: !!req.demo, chartId: req.chart.id, take, finished: undefined, error: undefined });
-    timer = setInterval(() => take.tick(clock.now()), 100);
-    take.start().catch(e => { clearInterval(timer); set({ phase: 'idle', error: `The take could not start: ${e instanceof Error ? e.message : 'audio error'}` }); });
+    // D6: a call, Siri, an alarm or the app going to the background ends the take at its last whole bar.
+    const interrupt = () => { if (take.state.phase === 'playing' || take.state.phase === 'starting') take.stop('interrupted'); };
+    const offAudio = audio.onInterruption(e => { if (e.type === 'began' || e.type === 'engine-stopped') interrupt(); });
+    const offApp = AppState.addEventListener('change', st => { if (st !== 'active') interrupt(); });
+    take.onEnd(e => {
+      clearInterval(timer); timer = undefined; offAudio(); offApp.remove();
+      set({ phase: 'done', ...(e.reason === 'interrupted' && !req.demo && { interrupted: e.finished ? 'kept' as const : 'dropped' as const }) });
+    });
+    set({ phase: 'starting', demo: !!req.demo, chartId: req.chart.id, take, finished: undefined, error: undefined, interrupted: undefined });
+    timer = setInterval(() => { const n = clock.now(); take.tick(n); feed.misses(take.state, n); }, 100);
+    take.start().catch(e => { clearInterval(timer); offAudio(); offApp.remove(); set({ phase: 'idle', error: `The take could not start: ${e instanceof Error ? e.message : 'audio error'}` }); });
     return true;
   },
   stop() {

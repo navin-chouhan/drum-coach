@@ -1,5 +1,6 @@
 // Practice's take options and the run a finished take saves (the web's start() options and Results.saveRun body). Pure.
-import type { Finished, TakeOptions } from '@drum-coach/core/play/take';
+import { bandStyle, DEFAULT_CHORDS } from '@drum-coach/core/engine/band';
+import type { Finished, TakeBacking, TakeOptions } from '@drum-coach/core/play/take';
 import type { RunInput } from '../../data/runs';
 import { summarizeTake } from '../coach/summary';
 import type { PracticeChart } from './catalog';
@@ -14,6 +15,10 @@ export type TakeRequest = {
   /** Times round, for the warm-up (about a minute). */
   repeats?: number;
   hints?: boolean;
+  /** The chart's own backing audio (features/songs prepareBacking), loaded; none: no file or it didn't load. */
+  backing?: TakeBacking;
+  /** The band setting (Settings.band, default on). */
+  band?: boolean;
 };
 
 /** The take's options from Practice's (the web's start(c, { ...o, speed, fromBar, toBar, … })). */
@@ -24,6 +29,9 @@ export function takeOptions(req: TakeRequest): TakeOptions {
     fromBar: from, toBar: to, repeats: req.repeats ?? o.repeats, speed: o.speed,
     metronome: o.metronome, subdivision: o.subdivision === 2 ? 2 : o.subdivision === 4 ? 4 : 1, countInBars: o.countInBars,
     wait: req.demo ? false : o.wait, demo: !!req.demo, guide: !!o.guide,
+    // The web's go(): the band under grooves and songs, but not under a chart's own backing audio.
+    ...(req.backing ? { backing: req.backing } : req.band !== false && (req.chart.kind === 'groove' || req.chart.kind === 'song')
+      ? { band: { style: bandStyle(req.chart), chords: DEFAULT_CHORDS[bandStyle(req.chart)] } } : {}),
   };
 }
 

@@ -12,14 +12,15 @@ import { KitView, NoteHighway, TouchPads, type PadHit, type Subscribe } from '..
 import type { DrumId } from '../../play/chartLike';
 import {
   Body, BigMove, Button, Card, CoachLine, Display, DottedGround, Label, Pill, Segmented, Strong, color, gesturesFor, hardShadow, shadow, stroke,
-  useAppSettings, useKitMoves, getAppHitBus,
+  StepPills, TempoLadder, TimingLineView, useAppKey, useAppSettings, useKitMoves, getAppHitBus,
 } from '../../ui';
 import { CoachInspector } from '../coach';
 import type { LessonController, MoveView } from './controller';
 import { barCounter, countInAt, flowMeter, liveTip } from './live';
 import {
-  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, KeyboardKit, MoreSheet, RestCountdown, RoundButton, StepPills, TakeCardView, TempoLadder, TimingLineView,
+  Banner, Boxes, CelebrationModal, CountInBadge, GoalText, MoreSheet, RestCountdown, RoundButton, SheetPager, TakeCardView,
 } from './parts';
+import { useSheetPages } from './sheetPages';
 import { laneName } from './lessonView';
 import { idleChart, replayResults, runChart, takenChart } from './runChart';
 import { shareTake } from './shareTake';
@@ -55,6 +56,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
     yes: () => ctl.padCommand('yes'), slower: () => ctl.padCommand('slower'), faster: () => ctl.padCommand('faster'),
     next: () => ctl.padCommand('next'), listen: () => ctl.padCommand('listen'), stop: () => ctl.padCommand('stop'),
   }, { playing: v.playing, enabled: !more && !coachOpen && !v.celebration });
+  // A hardware keyboard's Esc stops the take (the app-wide keyboard, ui/useAppKey; its drum keys go to the hit bus).
+  useAppKey('escape', () => { if (!v.playing) return false; ctl.stop(); return true; });
 
   const s = take.state, pos = v.playing ? take.position(now) : 0;
   const bpb = s.run?.beatsPerBar ?? beatsPerBar(v.chart);
@@ -64,6 +67,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const takeChart = v.playing ? runChart(s) : undefined;
   const idle = useMemo(() => ({ chart: idleChart(v.chart), zero: clock.now() + 1e9 }), [v.chart]); // eslint-disable-line react-hooks/exhaustive-deps
   const done = useMemo(() => (f ? { chart: takenChart(f), results: replayResults(f) } : undefined), [f]);
+  const pager = useSheetPages(f); // a long take's results sheet: every page, one at a time
   const activeDrums = useMemo(() => [...new Set(v.myPads.map(laneDrum))], [v.myPads.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const music = (() => {
@@ -79,7 +83,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
       const bpm = f.chart.bpm * f.options.speed, frozen = () => f.zero;
       return highway
         ? <NoteHighway now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} testID="lesson-highway" />
-        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded} testID="lesson-sheet" />;
+        : <NotationView now={frozen} style={styles.musicInner} chart={done.chart} bpm={bpm} zero={f.zero} latencyMs={0} results={done.results} hints={v.hints} leftHanded={!!settings.leftHanded}
+          page={pager.page} onPages={pager.setPages} testID="lesson-sheet" />;
     }
     const bpm = v.frame.bpm;
     return highway
@@ -99,9 +104,6 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
 
   return (
     <DottedGround>
-      <KeyboardKit emitPad={(pad, vel) => bus.emitPad(pad, vel)} onKey={k => {
-        if (k === 'h') ctl.toggleHints(); else if (k === 'b') ctl.toggleBand(); else if (k === 'escape') ctl.stop();
-      }} />
       {/* The black top bar */}
       <View style={[styles.bar, { paddingTop: Math.max(insets.top, 20) + 6, paddingLeft: insets.left + 24, paddingRight: insets.right + 24 }]}>
         {!v.playing ? <RoundButton label="Back to Journey" glyph="‹" onPress={() => ctl.back()} testID="lesson-back" /> : null}
@@ -173,6 +175,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
                 {countIn !== undefined ? <CountInBadge n={countIn} /> : null}
                 <View style={styles.musicPaper}>{music}</View>
               </View>
+              {v.results && v.playView !== 'highway' ? <SheetPager v={pager} onPrev={pager.prev} onNext={pager.next} testID="lesson-sheet-pages" /> : null}
               {v.results?.timing ? <TimingLineView line={v.results.timing} /> : null}
             </View>
 
@@ -225,7 +228,7 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
         <Label>Why and how</Label>
         <Body size={14}>{v.lessonCard.why}</Body>
         <Body size={14}>{v.lessonCard.how}</Body>
-        {v.needsLatency ? <Body size={14} color={color.bad}>This lesson is judged in milliseconds. Run the latency test first (⚙ Setup → Your kit → Latency), or "behind the beat" may just be your speakers.</Body> : null}
+        {v.needsLatency ? <Body size={14} color={color.bad}>This lesson is judged in milliseconds. Run the latency test first (⚙ Setup → Latency → Measure), or "behind the beat" may just be your speakers.</Body> : null}
         {v.results?.latencyHint ? <Body size={14} color={color.bad}>{v.results.latencyHint}</Body> : null}
         {v.results?.canHearRight ? <Button emoji="👂" label="Hear it right" onPress={() => { setMore(false); ctl.play(true); }} /> : null}
         {v.results?.helpKey ? <Button emoji="🧑‍🏫" label="Ask the coach for something different" onPress={() => { setMore(false); ctl.askHelp(); }} /> : null}

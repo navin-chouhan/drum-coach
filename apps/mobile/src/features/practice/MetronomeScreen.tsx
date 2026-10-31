@@ -10,9 +10,9 @@ import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, Display, MAX_FONT_SCALE, Screen, Segmented,
   color, gesturesFor, stroke, tabular, useAppSettings, useKitMoves,
+  Notice,
 } from '../../ui';
-import { METERS, nudgeBpm, readMetronome, SUBDIVISIONS, tapTempo, writeMetronome, type MetronomeSettings } from './metronome';
-import { Notice } from './parts';
+import { clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readMetronome, SUBDIVISIONS, tapTempo, writeMetronome, type MetronomeSettings } from './metronome';
 
 export function MetronomeScreen() {
   const kv = getStorage().kv;
@@ -31,7 +31,7 @@ export function MetronomeScreen() {
     try {
       await audio.start();
       audio.setLevels({ click: settings.clickVolume });
-      const m = createMetronome({ clock: audio.clock, audio }, { bpm: spec.bpm, timeSignature: [spec.beatsPerBar, 4], subdivision: spec.subdivision });
+      const m = createMetronome({ clock: audio.clock, audio }, { bpm: spec.bpm, timeSignature: spec.timeSignature, subdivision: spec.subdivision });
       await m.start();
       metro.current = m;
       setRunning(true); setError('');
@@ -57,12 +57,12 @@ export function MetronomeScreen() {
       if (!m) return;
       const n = audio.clock.now();
       m.tick(n);
-      const b = Math.floor(m.position(n));
-      setBeat(b < 0 ? -1 : b % s.beatsPerBar);
+      setBeat(clickInBar(s.timeSignature, m.position(n)));
     }, 50);
     return () => clearInterval(t);
   }, [running, s]);
   useEffect(() => () => { metro.current?.stop(); }, []);
+  const clicks = clicksPerBar(s.timeSignature);
   useKitMoves({ yes: toggle, faster: () => change({ bpm: nudgeBpm(s.bpm, 5) }), slower: () => change({ bpm: nudgeBpm(s.bpm, -5) }) });
 
   return (
@@ -84,8 +84,8 @@ export function MetronomeScreen() {
             <Round label="+" a11y="5 BPM faster" onPress={() => change({ bpm: nudgeBpm(s.bpm, 5) })} onLong={() => change({ bpm: nudgeBpm(s.bpm, 1) })} testID="metronome-faster" />
           </View>
           <Body size={13} color={color.muted}>Hold − or + for 1 BPM steps.</Body>
-          <View style={styles.dots} accessibilityLabel={running && beat >= 0 ? `Beat ${beat + 1} of ${s.beatsPerBar}` : 'Stopped'}>
-            {Array.from({ length: s.beatsPerBar }, (_, i) => (
+          <View style={styles.dots} accessibilityLabel={running && beat >= 0 ? `Click ${beat + 1} of ${clicks}` : 'Stopped'}>
+            {Array.from({ length: clicks }, (_, i) => (
               <View key={i} style={[styles.dot, i === 0 && styles.dotOne, running && beat === i && styles.dotOn]} />
             ))}
           </View>
@@ -100,13 +100,14 @@ export function MetronomeScreen() {
           {error ? <Notice text={error} onClose={() => setError('')} testID="metronome-error" /> : null}
         </Card>
         <Card style={styles.setCard}>
-          <CardTitle size={18}>Clicks per bar</CardTitle>
-          <Segmented testID="metronome-meter" accessibilityLabel="Clicks per bar" value={String(s.beatsPerBar)} onChange={v => change({ beatsPerBar: Number(v) })}
-            options={METERS.map(n => ({ value: String(n), label: String(n) }))} />
+          <CardTitle size={18}>Meter</CardTitle>
+          <Segmented testID="metronome-meter" accessibilityLabel="Meter" value={meterLabel(s.timeSignature)}
+            onChange={v => change({ timeSignature: METERS.find(m => meterLabel(m) === v) ?? s.timeSignature })}
+            options={METERS.map(m => ({ value: meterLabel(m), label: meterLabel(m) }))} />
           <CardTitle size={18}>Clicks per beat</CardTitle>
           <Segmented testID="metronome-subdivision" accessibilityLabel="Clicks per beat" value={String(s.subdivision)} onChange={v => change({ subdivision: Number(v) as 1 | 2 | 4 })}
             options={SUBDIVISIONS.map(x => ({ value: String(x.value), label: x.label }))} />
-          <Body size={13} color={color.muted}>The first click of each bar is higher. The click's volume is in Setup → Sound.</Body>
+          <Body size={13} color={color.muted}>The first click of each bar is higher; 7/8 clicks every 8th (2+2+3). The click's volume is in Setup → Sound.</Body>
         </Card>
       </View>
     </Screen>

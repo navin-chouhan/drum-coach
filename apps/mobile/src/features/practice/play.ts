@@ -35,10 +35,10 @@ export const climbCap = (c: Pick<PracticeChart, 'id' | 'bpm'>, runs: RunRow[]) =
 
 /**
  * Climb, once the take is saved: 2 clean takes at this tempo move it up 5, up to 5 above your best. `runs` include the
- * take just played. Returns the new speed, or undefined to stay.
+ * take just played; interrupted takes (D6) are left out. Returns the new speed, or undefined to stay.
  */
-export function climbAfterTake(c: PracticeChart, runs: RunRow[], speed: number): number | undefined {
-  const mine = runs.filter(r => r.chartId === c.id);
+export function climbAfterTake(c: PracticeChart, runs: (RunRow & { interrupted?: true })[], speed: number): number | undefined {
+  const mine = runs.filter(r => r.chartId === c.id && !r.interrupted); // an interrupted take never counts (D6)
   if (!mine.length) return undefined;
   const sg = suggestNext(mine, [{ id: c.id, title: c.title, bpm: c.bpm, level: c.level }]);
   const cap = Math.max(c.bpm, ...mine.filter(r => r.accuracy >= 90).map(r => Math.round(r.bpm))) + 5;

@@ -1,20 +1,20 @@
 // Practice (docs/mockups/ipad/practice.html): pick up where you left off, the warm-up, For you with the yellow ring
 // (ride × 2 moves it, hi-hat pedal × 3 plays it), and the library by kind with your best clean tempo. Choosing opens
 // the play screen (app/practice/play). The rules are in chooser.ts and catalog.ts.
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { getStorage } from '../../platform/storage';
-import { getCoach } from '../coach';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, Display, GestureChip, Label, ListRow, MAX_FONT_SCALE, Panel, Pill, Screen, Segmented, TitleBar,
   color, gesturesFor, hardShadow, shadow, stroke, type, useAppSettings, useKitMoves,
+  Notice,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
-import { chartRow, listFor, practiceCharts, type ChartRow, type TabId } from './catalog';
+import { chartRow, listFor, requestedChart, type ChartRow, type TabId } from './catalog';
+import { loadPracticeCharts } from './charts';
 import { chooserModel, focusedRow, initialFocus, playLabel, stepFocus } from './chooser';
 import { practiceEngine } from './engine';
-import { Notice } from './parts';
 import { readPlayOptions, speedFor } from './play';
 
 const openPlay = (id: string, extra: Record<string, string> = {}) => router.push({ pathname: '/practice/play', params: { chartId: id, ...extra } });
@@ -22,7 +22,15 @@ const openPlay = (id: string, extra: Record<string, string> = {}) => router.push
 export function PracticeScreen() {
   const settings = useAppSettings();
   const { data } = useStoredData();
-  const charts = useMemo(() => practiceCharts(getCoach().charts.list()), [data]); // eslint-disable-line react-hooks/exhaustive-deps -- re-read with the runs
+  const charts = useMemo(() => loadPracticeCharts(), [data]); // eslint-disable-line react-hooks/exhaustive-deps -- re-read with the runs
+  // `?chartId=` (Songs' Play, as the web's pending chart): open that exercise's play screen, once per request.
+  const params = useLocalSearchParams<{ chartId?: string; bpm?: string }>();
+  useEffect(() => {
+    const c = requestedChart(charts, params.chartId);
+    if (!params.chartId) return;
+    router.setParams({ chartId: undefined, bpm: undefined });
+    if (c) openPlay(c.id, params.bpm ? { bpm: params.bpm } : {});
+  }, [params.chartId]); // eslint-disable-line react-hooks/exhaustive-deps -- once per request
   const m = useMemo(() => chooserModel({ charts, runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, lessons: data?.lessons ?? [] }),
     [charts, data, settings.lessons, settings.profile]);
   const [picked, setFocus] = useState<number>();

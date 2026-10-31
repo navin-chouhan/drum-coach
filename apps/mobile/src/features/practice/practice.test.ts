@@ -3,9 +3,9 @@ import { CURRICULUM } from '@drum-coach/core/content/curriculum';
 import { DEFAULTS } from '@drum-coach/core/input/settings';
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { describe, expect, it } from 'vitest';
-import { bestClean, chartRow, listFor, practiceCharts, segments, startOf, type PracticeChart } from './catalog';
+import { bestClean, chartRow, listFor, practiceCharts, requestedChart, savedCharts, segments, startOf, type PracticeChart } from './catalog';
 import { CHOOSER_GESTURES, chooserModel, focusedRow, initialFocus, playLabel, stepFocus, warmRepeats } from './chooser';
-import { clampBpm, nudgeBpm, readMetronome, tapTempo, writeMetronome } from './metronome';
+import { clampBpm, clickInBar, clicksPerBar, METERS, meterLabel, nudgeBpm, readMetronome, tapTempo, writeMetronome } from './metronome';
 import {
   barPickKind, clampRepeats, climbAfterTake, climbCap, flipChip, historyLine, howItPlays, needsIntro, nextChartId, pickBar,
   PLAY_DEFAULTS, playGesture, playModel, readPlayOptions, sectionChart, sectionRange, speedFor, writePlayOptions,
@@ -160,6 +160,9 @@ describe('play screen', () => {
     expect(climbAfterTake(c, [run('singles', 95, 70), run('singles', 92, 70)], 1)).toBeCloseTo(75 / 70);
     expect(climbAfterTake(c, [run('singles', 95, 70), run('singles', 70, 70)], 1)).toBeUndefined();
     expect(climbAfterTake(c, [], 1)).toBeUndefined();
+    // D6: an interrupted take is kept but never counts towards the 2 clean takes
+    expect(climbAfterTake(c, [run('singles', 95, 70), { ...run('singles', 96, 70), interrupted: true as const }], 1)).toBeUndefined();
+    expect(climbAfterTake(c, [run('singles', 95, 70), { ...run('singles', 96, 70), interrupted: true as const }, run('singles', 93, 70)], 1)).toBeCloseTo(75 / 70);
     expect(climbCap(c, [run('singles', 95, 80)])).toBe(85);
     expect(climbCap(c, [])).toBe(75);
   });
@@ -215,15 +218,49 @@ describe('metronome mode', () => {
   it('keeps the tempo in range and remembers its settings', () => {
     expect([clampBpm(10), clampBpm(400), nudgeBpm(80, 5)]).toEqual([40, 240, 85]);
     const kv = memKv();
-    expect(readMetronome(kv)).toEqual({ bpm: 80, beatsPerBar: 4, subdivision: 1 });
-    writeMetronome(kv, { bpm: 120, beatsPerBar: 3, subdivision: 2 });
-    expect(readMetronome(kv)).toEqual({ bpm: 120, beatsPerBar: 3, subdivision: 2 });
-    kv.set('drumcoach.metronome', '{"bpm":9999,"beatsPerBar":99,"subdivision":3}');
-    expect(readMetronome(kv)).toEqual({ bpm: 240, beatsPerBar: 4, subdivision: 1 });
+    expect(readMetronome(kv)).toEqual({ bpm: 80, timeSignature: [4, 4], subdivision: 1 });
+    writeMetronome(kv, { bpm: 120, timeSignature: [6, 8], subdivision: 2 });
+    expect(readMetronome(kv)).toEqual({ bpm: 120, timeSignature: [6, 8], subdivision: 2 });
+    kv.set('drumcoach.metronome', '{"bpm":9999,"timeSignature":[9,7],"subdivision":3}');
+    expect(readMetronome(kv)).toEqual({ bpm: 240, timeSignature: [4, 4], subdivision: 1 });
+    kv.set('drumcoach.metronome', '{"bpm":90,"beatsPerBar":3}'); // saved before the /8 meters
+    expect(readMetronome(kv).timeSignature).toEqual([3, 4]);
   });
   it('taps a tempo', () => {
     expect(tapTempo([0, 500])).toBeUndefined();
     expect(tapTempo([0, 500, 1000, 1510])).toBe(120);
     expect(tapTempo([0, 500, 5000, 5500])).toBeUndefined(); // a long pause starts over
+  });
+});
+
+describe('the metronome\'s meters (the web\'s TempoMode list)', () => {
+  it('offers the web\'s simple, compound and odd meters', () => {
+    expect(METERS.map(meterLabel)).toEqual(['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '12/8']);
+  });
+  it('counts the clicks of a bar as core\'s planner clicks them', () => {
+    expect(clicksPerBar([4, 4])).toBe(4);
+    expect(clicksPerBar([6, 8])).toBe(3); // quarter beats, as a 6/8 lesson clicks
+    expect(clicksPerBar([12, 8])).toBe(6);
+    expect(clicksPerBar([7, 8])).toBe(7); // every 8th
+    expect(clickInBar([6, 8], -0.5)).toBe(-1);
+    expect(clickInBar([6, 8], 3.2)).toBe(0);
+    expect(clickInBar([7, 8], 1.5)).toBe(3);
+    expect(clickInBar([7, 8], 3.5)).toBe(0);
+  });
+});
+
+describe('Practice\'s saved charts and ?chartId=', () => {
+  const ch = (id: string, source: 'import' | 'ai' = 'import'): PracticeChart => ({ ...LIBRARY[0], id, title: id, source });
+  it('lists Storage\'s charts oldest first, then the coach\'s kv drills (newest first there) it lacks', () => {
+    const saved = savedCharts({ stored: () => [ch('song-a'), ch('drill-x', 'ai')], coach: () => [ch('drill-new', 'ai'), ch('drill-x', 'ai'), ch('drill-old', 'ai')] });
+    expect(saved.map(c => c.id)).toEqual(['song-a', 'drill-x', 'drill-old', 'drill-new']);
+    expect(savedCharts({ stored: () => { throw new Error('db'); }, coach: () => [ch('d', 'ai')] }).map(c => c.id)).toEqual(['d']);
+  });
+  it('finds an imported song by the id Songs\' Play pushes', () => {
+    const all = practiceCharts(savedCharts({ stored: () => [ch('my-song-abcde')] }));
+    expect(requestedChart(all, 'my-song-abcde')?.source).toBe('import');
+    expect(requestedChart(all, ['my-song-abcde'])?.id).toBe('my-song-abcde');
+    expect(requestedChart(all, 'gone')).toBeUndefined();
+    expect(requestedChart(all, undefined)).toBeUndefined();
   });
 });
