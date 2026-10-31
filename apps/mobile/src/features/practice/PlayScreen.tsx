@@ -41,7 +41,7 @@ export function PlayScreen() {
   const kv = getStorage().kv;
   const settings = useAppSettings();
   const { data, reload } = useStoredData();
-  const charts = useMemo(() => loadPracticeCharts(), []);
+  const charts = useMemo(() => loadPracticeCharts(), [params.chartId]); // read anew per request (a chart saved since)
   const [o, setO] = useState<PracticeOptions>(() => readPlayOptions(kv));
   const set = (patch: Partial<PracticeOptions>) => setO(prev => writePlayOptions(kv, prev, patch));
   const [section, setSection] = useState<Section>(null);

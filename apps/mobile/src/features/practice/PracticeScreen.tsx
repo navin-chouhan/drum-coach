@@ -26,8 +26,9 @@ export function PracticeScreen() {
   // `?chartId=` (Songs' Play, as the web's pending chart): open that exercise's play screen, once per request.
   const params = useLocalSearchParams<{ chartId?: string; bpm?: string }>();
   useEffect(() => {
-    const c = requestedChart(charts, params.chartId);
     if (!params.chartId) return;
+    // read anew: a song imported since this tab was last shown isn't in `charts` yet (they follow the runs)
+    const c = requestedChart(loadPracticeCharts(), params.chartId);
     router.setParams({ chartId: undefined, bpm: undefined });
     if (c) openPlay(c.id, params.bpm ? { bpm: params.bpm } : {});
   }, [params.chartId]); // eslint-disable-line react-hooks/exhaustive-deps -- once per request
