@@ -1,5 +1,7 @@
 import type { KeyValueStore } from '@drum-coach/core/platform';
 import type { AudioRoute } from '@drum-coach/core/play/audioPort';
+import { DEFAULT_NOTE_MAP } from '@drum-coach/core/engine/kit';
+import { createHitBus } from '@drum-coach/core/input/hits';
 import { describe, expect, it } from 'vitest';
 import { clearRouteLatency, latencyRow, otherRoutes, readLatencyByRoute, routeLabel, saveRouteLatency, syncToRoute } from './latencyByRoute';
 import { CLICKS, COUNT_IN, addTap, outputNote, planTapTest, startTapTest, tapEstimate, tapReadout, tapTestOver, trustworthy, verdictText } from './tapTest';
@@ -34,6 +36,18 @@ describe('tap test', () => {
     expect(verdictText(e).text).toMatch(/^You hit on average 31 ms after the click \(16 taps, spread ±\d/);
     expect(tapTestOver(t, p.endsAt - 1)).toBe(false);
     expect(tapTestOver(t, p.endsAt)).toBe(true);
+  });
+
+  it('the tiles and the verdict agree (QA: "10 ms after" on the tile, "10 ms before" in the line, 17 taps of 16)', () => {
+    const p = planTapTest(0, speaker);
+    let t = startTapTest(p);
+    p.clicks.forEach((c, i) => { t = addTap(t, c - 10 + (i % 3) - 1); });
+    t = addTap(t, p.clicks[7] + 60); // a double hit on one click
+    const r = tapReadout(t), e = tapEstimate(t)!;
+    expect(r).toMatchObject({ hits: '16 of 16', average: '10 ms', when: 'before', steadyOk: true });
+    expect(e.n).toBe(16);
+    expect(verdictText(e).text).toMatch(/^You hit on average 10 ms before the click \(16 taps, spread ±/);
+    expect(trustworthy(e)).toBe(true);
   });
 
   it('refuses too few or scattered taps', () => {
@@ -78,5 +92,37 @@ describe('latency per route', () => {
     const kv = memKv();
     kv.set('drumcoach.latencyByRoute', 'nope');
     expect(readLatencyByRoute(kv)).toEqual({});
+  });
+});
+
+describe('the tap test end to end on the host clock (kit strokes through the real hit bus)', () => {
+  // The iPad's numbers: clicks planned as heard times on the host clock (~1e9 ms after boot), MIDI strokes stamped on
+  // the same clock, through the app's hit bus (note map, Note On only, velocity 0 = off, bounce filter).
+  function run(offsets: (i: number) => number[], start = 1e9) {
+    const p = planTapTest(start, speaker);
+    let t = startTapTest(p);
+    const bus = createHitBus({ now: () => start, getNoteMap: () => DEFAULT_NOTE_MAP, getPadCal: () => ({}) });
+    bus.onHit(h => { t = addTap(t, h.time); });
+    p.clicks.forEach((c, i) => offsets(i).forEach((d, k) => {
+      bus.receiveMidi([0x99, 38, k ? 60 : 100], c + d); // snare, channel 10; a retrigger is softer
+      bus.receiveMidi([0x99, 38, 0], c + d + 30); // the module's Note Off as velocity 0
+    }));
+    return { t, e: tapEstimate(t)! };
+  }
+
+  it('a steady player 25 ms late reads 25 ms after, steady', () => {
+    const { e, t } = run(i => [25 + [-2, -1, 0, 1, 2][i % 5]]);
+    expect(e).toMatchObject({ latencyMs: 25, n: 16 });
+    expect(e.spread).toBeLessThan(10);
+    expect(tapReadout(t)).toMatchObject({ hits: '16 of 16', when: 'after' });
+  });
+
+  it('pad retriggers and double hits count once per click', () => {
+    // a soft retrigger 40 ms on (the bounce filter drops it) and a full second stroke 80 ms on (it doesn't)
+    const { e, t } = run(i => (i === 4 ? [-12, 28] : i === 9 ? [-8, 72] : [-10]));
+    expect(t.taps.length).toBe(17); // the bus let one double through
+    expect(e).toMatchObject({ latencyMs: -10, n: 16 });
+    expect(e.spread).toBeLessThan(5);
+    expect(verdictText(e).warn).toBe(false);
   });
 });
