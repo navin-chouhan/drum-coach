@@ -31,5 +31,8 @@ Pod::Spec.new do |s|
   s.test_spec 'Tests' do |test_spec|
     test_spec.source_files = 'Tests/**/*.swift'
     test_spec.frameworks = 'XCTest'
+    # ExpoModulesCore is C++ inside: without libc++ the test bundle fails to link (std::terminate, operator new…),
+    # as the cloud iOS build showed. The app target gets it from React Native; the bare test bundle doesn't.
+    test_spec.pod_target_xcconfig = { 'OTHER_LDFLAGS' => '$(inherited) -lc++' }
   end
 end
