@@ -15,6 +15,8 @@ import { getCoach, useCoachEntry, useWeekPlan } from '../coach/coach';
 import { sayNow } from '../coach/voice';
 import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
+import { playFlourish } from '../lesson/useLesson';
+import { audio } from '../../platform/audio';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
 import { MoreSheet } from './MoreSheet';
@@ -63,7 +65,10 @@ export function JourneyScreen() {
   if (v.newBadges.length && v.newBadges.join() !== badges.join()) setBadges(v.newBadges);
   useEffect(() => {
     const kv = getStorage().kv, kept = readSettings(kv).badges ?? [], add = badges.filter(id => !kept.includes(id));
-    if (add.length) writeSettings(kv, { badges: [...kept, ...add] });
+    if (!add.length) return;
+    writeSettings(kv, { badges: [...kept, ...add] });
+    // the web's flourish(false); Journey isn't a play screen, so the engine may be suspended: start it first
+    if (audio.available) audio.start().then(() => playFlourish(false), () => {});
   }, [badges]);
   // New stages open (R3): said on this visit, then remembered.
   const [newStages] = useState(() => v.newStages);
