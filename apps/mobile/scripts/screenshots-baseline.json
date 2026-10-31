@@ -208,9 +208,7 @@
   "metronome": {
     "scrollW": 1194,
     "scrollH": 834,
-    "spill": [
-      "metronome-meter \"2/43/44/45/46/87/812/8\""
-    ],
+    "spill": [],
     "errors": 0
   },
   "technique": {
