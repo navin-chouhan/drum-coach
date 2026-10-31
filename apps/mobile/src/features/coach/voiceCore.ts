@@ -14,7 +14,7 @@ export const RATE = 1.05; // the web's browser voice rate
 /** Let go of the engine this long after a sentence started, if the synthesizer never says it's done. */
 export const HOLD_MAX_MS = 30_000;
 
-export type SpeakOptions = { rate: number; volume: number; onDone: () => void; onStopped: () => void; onError: () => void };
+export type SpeakOptions = { rate: number; volume: number; voice?: string; onDone: () => void; onStopped: () => void; onError: () => void };
 
 export type VoiceDeps = {
   speak(text: string, o: SpeakOptions): void;
@@ -25,6 +25,8 @@ export type VoiceDeps = {
   hold(): () => void;
   /** The "Coach voice volume" setting now. */
   volume(): number | undefined;
+  /** The installed voice to speak with (voicePick.ts), or undefined for the system default. */
+  voiceId?(): string | undefined;
   setTimer(fn: () => void, ms: number): unknown;
   clearTimer(t: unknown): void;
 };
@@ -39,7 +41,8 @@ export function createVoice(d: VoiceDeps) {
     const end = () => { if (done) return; done = true; d.clearTimer(timer); release(); };
     const timer = d.setTimer(end, HOLD_MAX_MS);
     try {
-      d.speak(text, { rate: RATE, volume: speechVolume(d.volume()), onDone: end, onStopped: end, onError: end });
+      const voice = d.voiceId?.();
+      d.speak(text, { rate: RATE, volume: speechVolume(d.volume()), ...(voice && { voice }), onDone: end, onStopped: end, onError: end });
     } catch {
       end(); // no voice in this build: the words are on screen
     }

@@ -10,6 +10,8 @@ import { audio } from '../../platform/audio';
 import { NoteHighway } from '../../play';
 import { getStorage } from '../../platform/storage';
 import { getCoach } from '../coach';
+import { scoreMoment } from '../coach/moments';
+import { speakMoment } from '../coach/voice';
 import { playFlourish } from '../../play/flourish';
 import { canShare } from '../lesson/share';
 import { shareTake } from '../lesson/shareTake';
@@ -43,6 +45,7 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
     }, chart, opts);
     t.onFinish(r => {
       setDone(r); setTake(null);
+      speakMoment(scoreMoment(r.stats)); // voice first: the score after every take (D10)
       void getStorage().runs.add(songRun(r, song.title, song.id)).catch(() => {});
     });
     setTake(t);
