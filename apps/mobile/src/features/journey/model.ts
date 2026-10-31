@@ -143,6 +143,26 @@ export const NEW_STAGES = '🎉 New stages open: Groove at tempo, Linear and odd
 export const HEARING_TIP = 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.';
 export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id === id)?.name ?? id).join(', ');
 
+export type NoticeKind = 'recap' | 'setup' | 'sore' | 'note';
+/**
+ * The title bar's coach line (D9: one notice at a time, the web's slim strip; QA3 M1): the weekly recap first, then the
+ * setup nudge, the wrists check-in, then a new badge / new stages / the health line or ear tip. A notice is said on its
+ * own (the greeting comes back when there's none), so the longest one (about 150 characters) fits the title bar's
+ * three fitted lines (NOTICE_MAX). `kind` is undefined for the plain greeting.
+ */
+export function journeyNotice(x: {
+  coachLine: string; recap?: string | null; setupNudge?: boolean; askSore?: boolean;
+  badges?: string[]; newStages?: boolean; healthLine?: string | null;
+}): { kind?: NoticeKind; text: string } {
+  if (x.recap) return { kind: 'recap', text: x.recap };
+  if (x.setupNudge) return { kind: 'setup', text: `🛠 ${SETUP_NUDGE}` };
+  if (x.askSore) return { kind: 'sore', text: `🩹 ${SORE_ASK}` };
+  const note = x.badges?.length ? `🏅 New badge: ${badgeNames(x.badges)}!` : x.newStages ? NEW_STAGES : x.healthLine;
+  return note ? { kind: 'note', text: note } : { text: x.coachLine };
+}
+/** What the title bar's coach line holds in three fitted lines at 1194×834 (~156 characters at full size). */
+export const NOTICE_MAX = 156;
+
 /**
  * The web's TodayView: with "coach automatically" on, once you've played something, ask once a day for a lesson when
  * there's none waiting for this stage (with no takes yet, the built-in first lessons are the right start), unless the

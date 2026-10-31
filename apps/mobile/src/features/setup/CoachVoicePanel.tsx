@@ -6,7 +6,7 @@ import { getHomeServer } from '../../platform/api';
 import { getMidiPort } from '../../platform/midi';
 import { getStorage } from '../../platform/storage';
 import { Body, Button, Group, GroupRow, Segmented, Toggle, color, useAppSettings, writeSettings } from '../../ui';
-import { sayNow, setVoiceVolume } from '../coach/voice';
+import { sayNow } from '../coach/voice';
 import { COACH_GOALS, COACH_MINUTES, COACH_VOICE_LINES as L, VOICE_TEST_LINE, coachStatusLine, minutesPatch, toggleGoalPatch } from './coachVoice';
 import { testConnection, type TestResult } from './coachServer';
 import { CHATTINESS } from './whilePlaying';
@@ -37,7 +37,7 @@ export function CoachVoicePanel() {
           {sw('voice', true)}
           {sw('countIn')}
           <GroupRow title="Test the voice" sub={`${L.voiceVolume.title}: Setup → Sound levels.`}
-            right={<Button size="small" label="Test the voice" emoji="▶" onPress={() => { setVoiceVolume(s.voiceVolume); sayNow(VOICE_TEST_LINE); }} testID="coachvoice-test" />} />
+            right={<Button size="small" label="Test the voice" emoji="▶" onPress={() => sayNow(VOICE_TEST_LINE)} testID="coachvoice-test" />} />
         </Group>
         <Group title="While you play">
           <GroupRow first title={L.chattiness.title} sub={L.chattiness.sub}

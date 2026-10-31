@@ -2,8 +2,8 @@
 // groove and four moves (kit gestures: hi-hat pedal × 3 or crash × 2 = Start, ride × 2 = Something else, tom 2 × 2 =
 // Hear it); You, Today's set and the stage song in one row; the stage trail, with "Find my level" (the web's placement
 // link under the path, there whether or not the first run's test was taken) and Full path. One screen, no scrolling.
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import {
   BigMove, Body, Button, Card, CoachLine, Display, Label, ListRow, Panel, Ring, Screen, Stars, StatTile, Tick, TitleBar, Trail,
@@ -23,7 +23,7 @@ import { startSessionPatch } from './source';
 import { MoreSheet } from './MoreSheet';
 import { LinkText, Tile } from './Tiles';
 import { useJourney } from './useJourney';
-import { NEW_STAGES, SETUP_NUDGE, SORE_ASK, badgeNames, sorePatch, type JourneyView } from './model';
+import { journeyNotice, sorePatch, type JourneyView } from './model';
 
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
@@ -38,6 +38,9 @@ export function JourneyScreen() {
   // "Ask the coach for a different lesson": a new key each time (the web's askNew).
   const askNew = () => { getCoach().requestLesson(v.coachKey.replace(/-\d+$/, `-${asks + 1}`), undefined, reload); setAsks(a => a + 1); };
   const [more, setMore] = useState(false);
+  // "why?" answers (a system alert over Journey): the kit's gestures wait until it's closed, as behind the More sheet.
+  const [explaining, setExplaining] = useState(false);
+  const explain = (title: string, text?: string) => { setExplaining(true); Alert.alert(title, text, [{ text: 'OK', onPress: () => setExplaining(false) }], { cancelable: true, onDismiss: () => setExplaining(false) }); };
   const habitEntry = useCoachEntry(v.week?.habit?.key ?? null);
   const askHabit = () => { const h = v.week?.habit; if (h) getCoach().requestLesson(h.key, { lessonId: 'week', step: 1, reason: h.reason, run: {} }, reload); };
   // The coach's week plan (the web's refreshWeekPlan + ensureWeekPlan): read it, ask for this week's once when you've
@@ -72,13 +75,15 @@ export function JourneyScreen() {
     if (audio.available) audio.start().then(() => playFlourish(audio, false), () => {});
   }, [badges]);
   // New stages open (R3): said on this visit, then remembered.
-  const [newStages] = useState(() => v.newStages);
+  const [newStages, setNewStages] = useState(() => v.newStages);
   useEffect(() => { if (newStages) writeSettings(getStorage().kv, { newStagesSeen: true }); }, [newStages]);
+  // A visit ends when Journey loses focus, as the web's TodayView unmounts on a tab change (QA3 m3): the recap, the
+  // new badge and the new stages lines were said and go (the settings already remember them).
+  useFocusEffect(useCallback(() => () => { setRecap(undefined); setBadges([]); setNewStages(false); }, []));
   // D9: one notice at a time (the web's slim strip; the weekly recap first, then the setup nudge, the wrists check-in,
-  // the health line). Here it takes the coach's line in the title bar, its buttons in the bar's right slot.
-  const kind = recap ? 'recap' : v.setupNudge ? 'setup' : v.askSore ? 'sore' : undefined;
-  const extra = badges.length ? `🏅 New badge: ${badgeNames(badges)}!` : newStages ? NEW_STAGES : v.healthLine;
-  const coachText = kind === 'recap' ? recap : kind === 'setup' ? `🛠 ${SETUP_NUDGE}` : kind === 'sore' ? `🩹 ${SORE_ASK}` : extra ? `${v.coachLine} ${extra}` : v.coachLine;
+  // a badge / new stages / the health line), said whole in the title bar's coach line (three fitted lines, QA3 M1);
+  // its buttons in the bar's right slot.
+  const { kind, text: coachText } = journeyNotice({ coachLine: v.coachLine, recap, setupNudge: v.setupNudge, askSore: v.askSore, badges, newStages, healthLine: v.healthLine });
   const set = (patch: Parameters<typeof writeSettings>[1]) => writeSettings(getStorage().kv, patch);
   const titleRight = kind === 'setup' ? <View style={styles.noticeBtns}>
       <Button size="small" tone="pop" label="Check my kit ▶" testID="journey-notice-setup" onPress={() => { set({ setupNudged: true }); router.navigate('/setup' as never); }} />
@@ -99,19 +104,19 @@ export function JourneyScreen() {
   const start = v.main ? () => (v.main!.challenge ? askChallenge() : open(v.main!.lessonId, v.main!.item, v.main!.label === 'Jam' ? 'jam' : 'play')) : undefined;
   const other = v.somethingElse ? () => setSwap(n => n + 1) : undefined;
   const hear = v.hero ? () => open(v.hero!.lessonId, v.hero!.item, 'hear') : undefined;
-  useKitMoves({ yes: start, next: other, listen: hear });
+  useKitMoves({ yes: start, next: other, listen: hear }, { enabled: !more && !explaining }); // not behind the More sheet or an alert (QA3 M2)
 
   return (
     <Screen testID="screen-journey">
       <TitleBar
         title="Journey"
         coach={coachText}
-        coachLines={2}
+        coachLines={3}
         right={titleRight}
       />
 
       <Card elevation={6} style={styles.next} testID="journey-next">
-        {v.hero ? <Hero v={v} writing={writing} /> : (
+        {v.hero ? <Hero v={v} writing={writing} explain={explain} /> : (
           <Panel tone="pop" style={styles.nextTop}>
             <View style={styles.heroText}>
               <Display size={type.hero}>🎉 Every stage done</Display>
@@ -136,7 +141,7 @@ export function JourneyScreen() {
       </Card>
 
       <View style={styles.rowB}>
-        <You v={v} habit={habitEntry?.status} onHabit={askHabit} />
+        <You v={v} habit={habitEntry?.status} onHabit={askHabit} explain={explain} />
         <TodaysSet v={v} onOpen={(id, item) => open(id, item)} />
         <StageSong v={v} onHear={id => open(id, -1, 'hear')} onPlay={id => open(id)} />
       </View>
@@ -207,7 +212,7 @@ function doneTiles(v: JourneyView, d: {
 
 const readSessionDate = () => readSettings(getStorage().kv).session?.date;
 
-function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
+function Hero({ v, writing, explain }: { v: JourneyView; writing: boolean; explain: (title: string, text?: string) => void }) {
   const h = v.hero!;
   return (
     <Panel tone="pop" style={styles.nextTop}>
@@ -215,7 +220,7 @@ function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
       <View style={styles.heroText}>
         <View style={styles.kickerRow}>
           <Label style={styles.flexShrink}>{h.kicker}{h.coachWrote ? ' · ✍ your coach wrote it' : ''}</Label>
-          {h.why ? <LinkText label="why this one?" testID="journey-why" onPress={() => Alert.alert('Why this one?', h.why)} /> : null}
+          {h.why ? <LinkText label="why this one?" testID="journey-why" onPress={() => explain('Why this one?', h.why)} /> : null}
         </View>
         <Display size={type.hero} style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} accessibilityRole="header">{h.title}</Display>
         <Text style={styles.step} numberOfLines={1}>{h.step} <Text style={styles.stepMeta}>· {h.meta}</Text></Text>
@@ -229,7 +234,7 @@ function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
   );
 }
 
-function You({ v, habit, onHabit }: { v: JourneyView; habit?: string; onHabit: () => void }) {
+function You({ v, habit, onHabit, explain }: { v: JourneyView; habit?: string; onHabit: () => void; explain: (title: string, text?: string) => void }) {
   const y = v.you;
   return (
     <Card style={[styles.colYou, styles.you]} testID="journey-you">
@@ -250,7 +255,7 @@ function You({ v, habit, onHabit }: { v: JourneyView; habit?: string; onHabit: (
       {v.week ? (
         <View style={styles.week} testID="journey-week">
           <Body size={13} numberOfLines={1} style={styles.flexShrink}>🎯 This week: <Text style={styles.b}>{v.week.words}</Text></Body>
-          {v.week.why ? <LinkText label="why?" accessibilityLabel="Why this week's focus" onPress={() => Alert.alert('This week', v.week!.why)} /> : null}
+          {v.week.why ? <LinkText label="why?" accessibilityLabel="Why this week's focus" onPress={() => explain('This week', v.week!.why)} /> : null}
           {v.week.habit ? (habit === 'thinking' ? <Body size={12} color={color.muted} numberOfLines={1}>your coach is on it…</Body>
             : habit === 'done' ? <Body size={12} color={color.muted} numberOfLines={1}>lesson ready on your trail</Body>
             : <LinkText label="lesson for this" size={12} testID="journey-week-lesson" onPress={onHabit} />) : null}

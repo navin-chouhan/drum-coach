@@ -23,7 +23,7 @@ import { createContextFor } from './context';
 import { createSpeakOnce } from './feedback';
 import { createCoachSession } from './session';
 import { createTipsCache } from './tips';
-import { hush, sayNext, sayNow, setVoiceVolume } from './voice';
+import { hush, sayNext, sayNow } from './voice';
 import { createAnthropicClient } from './direct/anthropic';
 import { createDirectCoach } from './direct/direct';
 import { withDirectFallback } from './direct/fallback';
@@ -61,7 +61,7 @@ function build() {
   refreshLessons();
   const exists = (chartId: string) => targetExists(chartId, { coachCharts: charts, aiLessonIds });
   const contextFor = createContextFor(storage);
-  const voiceOn = () => { const s = settings(); setVoiceVolume(s.voiceVolume); return s.voice; };
+  const voiceOn = () => settings().voice; // the volume is read by voice.ts as each sentence is said
 
   // Setup → Coach · fallback API key, read from the Keychain (async) when a call fails, so it's never stale.
   const hasFallbackKey = () => hasApiKey(keychain);

@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { audio } from '../../platform/audio';
+import { sayNow } from '../coach/voice';
 import { useAudioEngine, useAudioInterruptions } from '../../platform/useAudio';
 import { getStorage } from '../../platform/storage';
 import { BigMove, Body, Button, Card, Display, Group, GroupRow, KIT_SOUNDS_LABEL, Stepper, Toggle, color, getAppHitBus, readSettings, useAppKey, useAppSettings, writeSettings } from '../../ui';
@@ -31,13 +32,6 @@ async function startLoop(kind: 'click' | 'band'): Promise<() => void> {
   return () => { clearInterval(t); audio.cancel(); };
 }
 
-async function say(text: string) {
-  try {
-    await audio.start();
-    await audio.prepareWords([text]);
-    audio.playNow(`word.${text}`, 1);
-  } catch { /* no audio in this build */ }
-}
 
 /** An interruption stopped the looping click or band (its queued sounds are gone). */
 export const SOUND_STOPPED = 'The sound stopped (a call, the app in the background or a new audio output). Press it again.';
@@ -74,7 +68,8 @@ export function SoundPanel() {
       <View style={styles.row}>
         {clicking ? <Button label="Stop click" emoji="■" onPress={stopClick} testID="sound-click" />
           : <Button tone="blue" label="Play click" emoji="▶" onPress={() => void playClick()} testID="sound-click" />}
-        <Button label="Test coach voice" emoji="🗣" onPress={() => void say(VOICE_TEST)} testID="sound-voice" />
+        {/* the coach's real voice (expo-speech) at the voice volume above (QA3 m4), not a DrumAudio word */}
+        <Button label="Test coach voice" emoji="🗣" onPress={() => sayNow(VOICE_TEST)} testID="sound-voice" />
         <Button tone="pop" label="Check from the kit" emoji="🥁" onPress={() => { stopClick(); setThrone(true); }} testID="sound-throne" />
       </View>
       {error ? <Body size={14} color={color.bad} weight="700">{error}</Body> : null}
@@ -96,7 +91,7 @@ function ThroneCheck({ onDone }: { onDone: () => void }) {
     stopLoop.current(); stopLoop.current = () => {};
     const st = THRONE_STEPS[k];
     if (!st) return;
-    if (st.key === 'voiceVolume') { void say(THRONE_VOICE_LINE); return; }
+    if (st.key === 'voiceVolume') { sayNow(THRONE_VOICE_LINE); return; } // the coach's real voice, as the test button
     try { stopLoop.current = await startLoop(st.key === 'clickVolume' ? 'click' : 'band'); } catch { /* no audio */ }
   };
   const answer = (a: number) => {

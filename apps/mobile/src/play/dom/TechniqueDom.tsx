@@ -2,7 +2,8 @@
 // "How it moves" (R5) as an Expo DOM component: the web's src/ui/TechniqueDemo.tsx, copied (the drawing is SVG built
 // each frame with createElementNS, so it runs unchanged inside the WebView), with the web's CSS as inline styles.
 // What differs: the settings arrive as props (left-handed, voice, playing) and the coach's voice is a native action.
-// Text is set with textContent / React. No HTML strings. Keep in step with the web file.
+// Text is set with textContent / React. One constant-markup exception: demoArt.ts ensureArtDefs sets its gradient and
+// filter <defs> with innerHTML (no data in it, as the web file; a targeted lint exception). Keep in step with the web file.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { DOMProps } from 'expo/dom';
 import { DEMOS, poseAt, type DemoId } from '@drum-coach/core/content/demos';
