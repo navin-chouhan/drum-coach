@@ -103,8 +103,10 @@ tags:
       id: screen-progress
     timeout: 10000
 - tapOn:
-    id: progress-back # Progress opened on the path view (view=path); back to the main view
+    id: progress-back # You opened on the path view (view=path); back to You
     optional: true
+- tapOn:
+    id: you-door-lessons # D10: Your lessons is a door on You
 - extendedWaitUntil:
     visible:
       id: progress-lesson-0

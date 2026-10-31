@@ -10,7 +10,7 @@ What's already known (so you don't need to report it again):
   below check that they stay fixed. The hardware keyboard works (I2), and Practice lists imported MIDI files.
 - The second QA pass ([QA2-2026-10-31.md](QA2-2026-10-31.md): 4 major, 9 minor) is being fixed in the next wave.
   Steps marked **(QA2 …)** check those fixes; if one fails, note the build's commit (`git log --oneline -1`).
-- New: the API-key coach fallback (Setup → Coach server · API key). With the home server off and a key saved, the coach still answers (feedback, plan, tips, lessons, month, live session; not the Songs groove/show-off asks).
+- New: the API-key coach fallback (Setup → Coach connection → API key). With the home server off and a key saved, the coach still answers (feedback, plan, tips, lessons, month, live session; not the Songs groove/show-off asks).
 
 The cloud iOS build (`.github/workflows/ios.yml`, Xcode 27.1) already compiles the whole app, all Swift included, and
 the SwiftPM tests pass, so a compile error on your Mac would be a local setup problem, not new code.
@@ -41,7 +41,7 @@ has one. Headphones on the module. Metro: on the Mac (`npx expo start --dev-clie
 ## 3. Home server (Linux) — 10 min
 Follow [HOME-SERVER.md](HOME-SERVER.md): `.env` with `APP_HOST=0.0.0.0`, `APP_TOKEN` (≥ 24 chars), `ALLOWED_HOSTS`;
 firewall port 8787 on the Wi-Fi interface; `npm run server`.
-- [ ] Setup → Coach · home server: URL `http://<linux-ip>:8787`, paste the token → **Save and test** →
+- [ ] Setup → Coach connection → Coach · home server: URL `http://<linux-ip>:8787`, paste the token → **Save and test** →
       "✓ Connected · ____ ms". The token field shows 🔒 afterwards (Keychain); Setup's coach status turns green.
 - [ ] A wrong token says the server refused it; a wrong URL says it didn't answer. Then fix it again.
 
@@ -76,7 +76,7 @@ Sidebar → Dev row → **MIDI** (`/dev/midi`). These replace the probe's M4–M
   - [ ] `compare.mjs` prints **SAME** or **SAME within tolerance** (paste its output); median ____ max |____| ms.
   - [ ] **Back to the kit (QA2 M4):** switch **Network MIDI session** off. The app falls back to the e-Drum by itself
         within a few seconds (Devices: e-Drum · connected). If it doesn't, **Select** e-Drum under Devices (or press
-        **Auto-select e-Drum**, or Setup → MIDI input → **Use this**). Check the sidebar's kit dot is green before
+        **Auto-select e-Drum**, or Setup → Pads → MIDI input → **Use this**). Check the sidebar's kit dot is green before
         section 5: the rest of the session needs the kit.
 
 ## 5. Audio checks (`apps/mobile/modules/drum-audio/CHECKS.md`) — 25 min
@@ -180,14 +180,16 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] Metronome (🔔): change the tempo and its options; steady clicks in the module's headphones. Play a tom fill
       while it runs: the tempo must not change **(QA2 M3)**.
 
-**You** (was Progress)
-- [ ] Getting better (landed per day), This week, skill map, trophies, Your time, Your lessons in plain words, with
-      today's takes in them. "Practise" on a lesson row opens it; on an exercise opens Practice at best + 5;
-      on a song row opens the song **(M4)**. This month's report (needs the server).
+**You** (was Progress, D10)
+- [ ] Getting better (landed per day, the coach's line) and This week (days, streak, minutes, the focus; "(coach's
+      plan)" when the week plan set it). Six doors, each opening its page with **‹ You** back: Path & skills (Your
+      path / Skill map), Trophies, Your lessons, Coach's week plan, Show-off & fills, Reports (month, teacher).
+- [ ] Your lessons: today's takes in plain words. "Practise" on a lesson row opens it; on an exercise opens Practice
+      at best + 5; on a song row opens the song **(M4)**. Reports → This month's report (needs the server).
 - [ ] Trophies: "Show-off song" counts the bars of a song you played at 85 % or better (____ / 16 bars) **(QA2 m2)**.
       Optional: a song checked by ear with 16+ bars all ready lands in the **Show-off set** with **▶ Play it**.
-- [ ] **Show-off set:** empty, it says how a song gets there; with two or more ready songs, **🎤 Concert: the whole
-      set** opens the first song of the set.
+- [ ] **Show-off & fills:** empty, it says how a song gets there; with two or more ready songs, **🎤 Concert: the
+      whole set** opens the first song of the set.
 
 **Songs** (home server on)
 - [ ] Search "artist + title" → results → **Learn this** → the song opens full screen with the YouTube player
@@ -203,22 +205,25 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
       in the player; the week plan's items open their lesson/drill/song.
 - [ ] Results → Ask the coach → feedback and a drill for that take.
 - [ ] Server off: the offline card (what failed, Try again, Coach settings, what keeps working); the question waits.
-- [ ] Voice: live tips "voice" in Setup → tips are spoken between takes, never during one.
+- [ ] Voice: live tips "+ spoken" in Setup → Coach's voice → tips are spoken between takes, never during one.
 
-**Setup**
-- [ ] Kit row (name, Medeli, connected), last hit live, MIDI input picker. Kit test says "No kit? Keys: Space kick ·
+**Setup** (D10: three status cards and six rows)
+- [ ] Kit card (name, green dot, "last hit: snare 38 · v96" live). Kit test says "No kit? Keys: Space kick ·
       S snare …" **(QA2 m3)**, and those keys play the kit on a hardware keyboard.
-- [ ] Hit each pad once (10 of 10), Soft then loud (velocity calibration ✓ done), **Note map**: change the snare to
-      another note and back; hits follow the map at once (Kit test shows it).
-- [ ] Latency: the current route's value and the other routes measured (unplug the hub audio: it switches to the
-      speaker's value, plug back: the hub's value).
-- [ ] Sound levels, which hand leads, live tips, kit gestures off → gestures do nothing anywhere; on again.
+- [ ] Pads → Hit each pad once (10 of 10), Soft then loud (velocity calibration ✓ done), **Note map**: change the
+      snare to another note and back; hits follow the map at once (Kit test shows it); MIDI input picker. Close in a
+      tool goes back to Pads.
+- [ ] Latency card: the current route's value and the other routes measured (unplug the hub audio: it switches to the
+      speaker's value, plug back: the hub's value). Coach card: Home server and its host, or the one fix.
+- [ ] Sound; Coach's voice (verdicts, count-in, live tips, how much the coach says, test); While you play (which hand
+      leads, autopilot, kit gestures off → gestures do nothing anywhere; on again); Coach connection; About (Build info
+      and, in the debug build, the debug screens).
 - [ ] Hardware keyboard in the tools: Hit each pad once ← goes back a pad, Esc stops; Sound levels → Check from the
       kit answers with keys 1 / 2 / 3; Esc closes any tool.
 
 ## 8. Offline — 5 min
 Wi-Fi off (Control Center).
-- [ ] Journey, a lesson take, Practice, Progress, Setup all work; Setup's coach status goes grey; Coach and Songs search
+- [ ] Journey, a lesson take, Practice, You, Setup all work; Setup's coach status goes grey; Coach and Songs search
       show their offline states; nothing hangs.
 
 ## 9. Timing comparison with the web (Linux, Chrome, same day, same kit) — 15 min
