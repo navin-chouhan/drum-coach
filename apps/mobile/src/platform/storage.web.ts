@@ -2,7 +2,7 @@
 // fake data for the state in the URL (src/dev/harness/seeds.ts). Metro picks this file for `--platform web` only.
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { createDataStore, type AppStorage } from '../data/store';
-import type { AiLesson, AiLessonsRepo, PlansRepo } from '../data/records';
+import type { AiLesson, AiLessonsRepo, PlansRepo, SettingsRepo } from '../data/records';
 import type { RunsRepo } from '../data/runs';
 import type { ChartsRepo, SongsRepo } from '../data/songs';
 import type { Grid, YtSong } from '@drum-coach/core/youtube/schemas';
@@ -31,7 +31,10 @@ export function getStorage(): AppStorage {
     replace: (l, ids) => { ai = [...ai.filter(x => x.id !== l.id && !ids.includes(x.id)), l]; },
   };
   const plans: PlansRepo = { latest: async () => (seed.plan ? { id: 1, plan: seed.plan, checks: {} } as never : null), add: () => 1, setChecks: () => true };
-  instance = { ...base, runs: runsRepo, aiLessons, plans, ...(seed.songs && { songs: memorySongs(seed.songs), charts: noCharts, openError: null }) };
+  // Progress's show-off set and the teacher page read the settings rows; the Songs library uses the in-memory songs
+  const rows: Record<string, unknown> = { ...seed.rows };
+  const settings: SettingsRepo = { get: k => rows[k], put: (k, v) => { rows[k] = v; }, all: () => ({ ...rows }) };
+  instance = { ...base, runs: runsRepo, aiLessons, plans, settings, ...(seed.songs && { songs: memorySongs(seed.songs), charts: noCharts, openError: null }) };
   return instance;
 }
 

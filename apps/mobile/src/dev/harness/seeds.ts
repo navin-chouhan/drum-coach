@@ -8,11 +8,13 @@ import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import type { YtSong } from '@drum-coach/core/youtube/schemas';
 import { currentSession } from '../../features/journey/model';
 
-export type HarnessState = 'fresh' | 'recap' | 'sore' | 'week' | 'alldone' | 'writing' | 'songs' | 'coach' | 'firstrun';
+export type HarnessState = 'fresh' | 'recap' | 'sore' | 'week' | 'alldone' | 'writing' | 'songs' | 'coach' | 'firstrun' | 'busy';
 export type Seed = {
   settings: Settings; runs: RunRow[]; ai: unknown[]; plan?: Record<string, unknown>; coachHangs?: boolean;
-  /** YouTube songs in the Songs library (`songs`). */
+  /** Saved YouTube songs (Songs library, Progress's show-off set, the teacher page). */
   songs?: YtSong[];
+  /** The settings table's rows (teacherNotes, monthReport), for Progress and the teacher page. */
+  rows?: Record<string, unknown>;
   /** The home server answers: health, and the coach with a canned reply (`coach`). */
   coachAnswers?: boolean;
 };
@@ -56,6 +58,44 @@ function threeWeeksIn(tips?: string[]): { settings: Settings; runs: RunRow[] } {
   return { settings: { ...base(), lessons, setupDone: true, badges: ['first-3star', 'notes-1k'] }, runs };
 }
 
+/**
+ * A long-time student, for Progress with everything in it: two months of takes on many lessons and exercises (long
+ * titles), two songs ready for the show-off set, kept fills, the teacher's notes, a month report; some skills due.
+ */
+function busy(): Seed {
+  const t = threeWeeksIn(['rushing', 'dragging']);
+  const lessons: Record<string, LessonProgress> = { ...t.settings.lessons };
+  const ids = CURRICULUM.filter(l => l.kind !== 'song').slice(0, 24).map(l => l.id);
+  ids.forEach((id, i) => {
+    const old = new Date(Date.now() - (40 + i) * 86_400_000);
+    lessons[id] = i % 5 === 4 ? { ...startProgress(LESSON_BY_ID[id]), step: 1, bpm: 64 }
+      : { ...finished(id, 1 + (i % 3)), bestBpm: LESSON_BY_ID[id].steps[LESSON_BY_ID[id].steps.length - 1].bpm.target, completedAt: day(old), reviewDue: i % 4 === 0 ? day(new Date(Date.now() - 2 * 86_400_000)) : undefined };
+  });
+  const runs: RunRow[] = [];
+  for (let d = 60; d >= 0; d--) {
+    if (d % 7 === 3) continue; // a rest day a week
+    const at = new Date(); at.setDate(at.getDate() - d); at.setHours(18, 0, 0, 0);
+    const id = ids[d % ids.length], l = LESSON_BY_ID[id];
+    runs.push({ id: 1000 - d, chartId: `lesson/${id}/1`, chartTitle: `${l.title} · ${l.steps[0].title}`, startedAt: at.toISOString(), durationS: 900 + (d % 4) * 300,
+      bpm: 60 + (d % 30), speed: 1, accuracy: 70 + (d % 25), meanOffset: 8, spread: 18, notes: 120 });
+    if (d % 3 === 0) runs.push({ chartId: d % 2 ? 'singles' : 'paradiddle-16ths-around-the-kit-long-title', chartTitle: d % 2 ? 'Single strokes (16ths)' : 'Paradiddles around the kit with accents on the toms (16ths)',
+      startedAt: new Date(at.getTime() + 3_600_000).toISOString(), durationS: 300, bpm: 80, speed: 1, accuracy: 88, meanOffset: 4, spread: 12, notes: 64 });
+  }
+  const notes = Array.from({ length: 20 * 8 }, (_, i) => ({ t: i / 2, drum: (i % 4 === 2 ? 'snare' : i % 4 === 0 ? 'kick' : 'hihat') as 'snare' | 'kick' | 'hihat' }));
+  const song = (id: string, title: string): YtSong => ({ id, title, originalId: id.slice(3), drumlessId: null, coverId: null, timeSignature: [4, 4], notes, grids: {}, verifiedAt: day(new Date()) });
+  const songs = [song('yt-aaaaaaaaaaa', 'Seven Nation Army (Official Music Video)'), song('yt-bbbbbbbbbbb', 'Billie Jean (Official Video)')];
+  for (const s of songs) runs.push({ chartId: s.id, chartTitle: s.title, startedAt: new Date().toISOString(), durationS: 240, bpm: 100, speed: 1, accuracy: 92, meanOffset: 3, spread: 10, notes: 160, fromBar: 1, toBar: 20 });
+  runs.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  const fills = Array.from({ length: 5 }, (_, i) => ({ id: `f${i}`, at: new Date(Date.now() - i * 3 * 86_400_000).toISOString(), bpm: 80 + i * 5, notes: notes.slice(0, 6 + i) }));
+  const wk = isoWeek(today());
+  return {
+    settings: { ...t.settings, lessons, fills, badges: ['first-3star', 'notes-1k', 'streak-7', 'showoff'], lastRecapWeek: wk, soreAskedWeek: wk, hearingTipWeek: wk, leftHanded: true,
+      profile: { goals: ['rock', 'funk'], minutesPerDay: 30, onboarded: true } },
+    runs, ai: [], songs,
+    rows: { teacherNotes: [{ date: day(new Date(Date.now() - 20 * 86_400_000)), text: 'Left wrist is stiff: slow singles with the left hand only.' }, { date: day(new Date()), text: 'Heel down on the kick for soft notes.' }] },
+  };
+}
+
 export function seedFor(state: string): Seed {
   const wk = isoWeek(today());
   switch (state as HarnessState) {
@@ -85,6 +125,7 @@ export function seedFor(state: string): Seed {
       return { settings: { ...t.settings, lastRecapWeek: wk, soreAskedWeek: wk, hearingTipWeek: wk, liveCoach: true, voice: false }, runs: t.runs, ai: [], plan: fakePlan(wk), coachAnswers: true };
     }
     case 'firstrun': return { settings: { ...base(), profile: { goals: [], minutesPerDay: 25, onboarded: false } }, runs: [], ai: [] };
+    case 'busy': return busy();
     default: return { settings: base(), runs: [], ai: [] }; // fresh: day one, the setup nudge
   }
 }
