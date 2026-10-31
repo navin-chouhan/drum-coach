@@ -10,7 +10,7 @@ What's already known (so you don't need to report it again):
   below check that they stay fixed. The hardware keyboard works (I2), and Practice lists imported MIDI files.
 - The second QA pass ([QA2-2026-10-31.md](QA2-2026-10-31.md): 4 major, 9 minor) is being fixed in the next wave.
   Steps marked **(QA2 …)** check those fixes; if one fails, note the build's commit (`git log --oneline -1`).
-- Still not built: the API-key coach fallback (Setup says so).
+- New: the API-key coach fallback (Setup → Coach server · API key). With the home server off and a key saved, the coach still answers (feedback, plan, tips, lessons, month, live session; not the Songs groove/show-off asks).
 
 The cloud iOS build (`.github/workflows/ios.yml`, Xcode 27.1) already compiles the whole app, all Swift included, and
 the SwiftPM tests pass, so a compile error on your Mac would be a local setup problem, not new code.
