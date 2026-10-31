@@ -19,8 +19,10 @@ export type DirectAnswer = { ok: true; data: unknown } | DirectFailure;
 export type DirectPath = 'feedback' | 'plan' | 'tips' | 'lesson' | 'month';
 export const DIRECT_PATHS: readonly DirectPath[] = ['feedback', 'plan', 'tips', 'lesson', 'month'];
 
-export const COACH_CACHE_KEY = 'drumcoach.coachCache';
-const CACHE_MAX = 60;
+/** The cache (QA4 m6): one key-value row per answer (`<prefix>.<hash>`) and a small index of the hashes, newest last. */
+export const COACH_CACHE_PREFIX = 'drumcoach.coachCache';
+export const COACH_CACHE_INDEX = `${COACH_CACHE_PREFIX}.index`;
+export const CACHE_MAX = 60;
 /** The server's live-session limits (server/ai/session.ts): a fresh conversation after 40 turns or 30 idle minutes. */
 const MAX_TURNS = 40, IDLE_MS = 30 * 60_000;
 
@@ -46,14 +48,17 @@ export type DirectDeps = { client: AnthropicClient; kv: KeyValueStore; model(): 
 
 export function createDirectCoach(deps: DirectDeps) {
   const now = () => deps.now?.() ?? new Date();
-  const readCache = (): Record<string, unknown> => { try { const v = JSON.parse(deps.kv.get(COACH_CACHE_KEY) ?? '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
+  const rowKey = (k: string) => `${COACH_CACHE_PREFIX}.${k}`;
+  const readIndex = (): string[] => { try { const v = JSON.parse(deps.kv.get(COACH_CACHE_INDEX) ?? '[]'); return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []; } catch { return []; } };
+  const readCached = (key: string): unknown => { try { const v = deps.kv.get(rowKey(key)); return v == null ? undefined : JSON.parse(v); } catch { return undefined; } };
   const writeCache = (key: string, value: unknown) => {
-    const all = readCache();
-    delete all[key];
-    all[key] = value; // newest last; the oldest go first
-    const keys = Object.keys(all);
-    for (const k of keys.slice(0, Math.max(0, keys.length - CACHE_MAX))) delete all[k];
-    try { deps.kv.set(COACH_CACHE_KEY, JSON.stringify(all)); } catch { /* a full store: just not cached */ }
+    try {
+      deps.kv.remove(COACH_CACHE_PREFIX); // the old one-blob cache (before QA4 m6), if any
+      deps.kv.set(rowKey(key), JSON.stringify(value));
+      const index = [...readIndex().filter(k => k !== key), key]; // newest last; the oldest go first
+      for (const old of index.slice(0, Math.max(0, index.length - CACHE_MAX))) deps.kv.remove(rowKey(old));
+      deps.kv.set(COACH_CACHE_INDEX, JSON.stringify(index.slice(-CACHE_MAX)));
+    } catch { /* a full store: just not cached */ }
   };
 
   /** server/ai/coach.ts ask(): system + task prompt, the input as JSON, cached, validated. */
@@ -62,7 +67,7 @@ export function createDirectCoach(deps: DirectDeps) {
     const system = `${PROMPTS.system}\n\n${PROMPTS[kind]}`;
     const user = JSON.stringify(input);
     const key = hash53([`anthropic-api:${deps.model()}`, system, user].join('\0'));
-    const hit = noCache ? undefined : readCache()[key];
+    const hit = noCache ? undefined : readCached(key);
     if (hit !== undefined) { const p = schema.safeParse(hit); if (p.success) return { ok: true, data: p.data, cached: true }; }
     const r = await deps.client.complete(system, [{ role: 'user', content: user }]);
     if (!r.ok) return r;
@@ -127,15 +132,15 @@ export function createDirectCoach(deps: DirectDeps) {
     if (!b.success) return { ok: false, kind: 'bad-request', message: issue(b.error) };
     const t = now().getTime();
     if (turns >= MAX_TURNS || (lastUsed && t - lastUsed > IDLE_MS)) { history = []; turns = 0; }
-    turns++; lastUsed = t;
     const msg: ApiMessage = { role: 'user', content: JSON.stringify(sessionEvent(contextData(context ?? {}), b.data, now())) };
-    const r = await deps.client.complete(PROMPTS.session, [...history, msg], 2000);
+    const r = await deps.client.complete(PROMPTS.session, [...history, msg], 2000, { fallbacks: false }); // as the server's ApiSession (QA4 m5)
     if (!r.ok) return r; // the failed turn isn't kept: the next one doesn't carry it
     let json: unknown;
     try { json = extractJson(r.text); } catch (e) { return { ok: false, kind: 'failed', message: (e as Error).message }; }
     const p = CoachReplySchema.safeParse(json);
     if (!p.success) return { ok: false, kind: 'failed', message: "The coach's answer didn't match the expected format." };
     history = [...history, msg, { role: 'assistant', content: r.text }];
+    turns++; lastUsed = t; // only a good turn counts toward the 40-turn reset (QA4 m5)
     onSay(p.data.say);
     return { ok: true, reply: p.data };
   }
