@@ -5,6 +5,8 @@
 // The tables are schema migration 2 (SONGS_MIGRATION below, MIGRATIONS[1] in schema.ts). A8 owns this file.
 import { ChartSchema, type Chart } from '@drum-coach/core/engine/chart';
 import { GridSchema, YtSongCreateSchema, YtSongPatchSchema, type Grid, type YtSong } from '@drum-coach/core/youtube/schemas';
+import type { KeyValueStore } from '@drum-coach/core/platform';
+import { KV_KEYS } from './kv';
 import type { SqlDb } from './sql';
 
 /** Migration 2 (schema.ts): server/db.ts's charts, yt_songs (with verified_at) and yt_grids, unchanged. */
@@ -101,6 +103,8 @@ export type ChartsRepo = {
   setAudio(id: string, file: string | null): boolean;
   /** DELETE /api/charts/:id. Returns the audio file the caller must delete, or null. */
   remove(id: string): { audioFile: string | null } | null;
+  /** Inserts a chart under the id it already has (migrateCoachCharts); false when that id is taken or the chart is invalid. */
+  restore(chart: Chart & { id: string }, source: 'import' | 'ai', createdAt?: string | null): boolean;
 };
 
 export function createChartsRepo(db: SqlDb, random: () => number = Math.random): ChartsRepo {
@@ -131,5 +135,41 @@ export function createChartsRepo(db: SqlDb, random: () => number = Math.random):
       db.runSync('DELETE FROM charts WHERE id = ?', [id]);
       return { audioFile: r.audio_file };
     },
+    restore(input, source, createdAt) {
+      const p = ChartSchema.safeParse(input);
+      if (!p.success || !input.id) return false;
+      const kind = p.data.kind ?? (source === 'import' ? 'song' : 'exercise');
+      return db.runSync("INSERT OR IGNORE INTO charts (id, json, source, created_at) VALUES (?, ?, ?, COALESCE(?, datetime('now')))",
+        [input.id, JSON.stringify({ ...p.data, id: undefined, kind }), source, createdAt ?? null]).changes > 0;
+    },
   };
+}
+
+/** An ISO time ('2026-10-30T19:00:00.000Z') as SQLite's datetime('now') writes it ('2026-10-30 19:00:00'), so they sort together. */
+export function sqliteTime(iso: unknown): string | null {
+  if (typeof iso !== 'string') return null;
+  const t = new Date(iso);
+  return Number.isNaN(t.getTime()) ? null : t.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/**
+ * QA m8, once: the coach's exercises used to live in the key-value store (`drumcoach.coachCharts`, newest first, each
+ * `{ ...chart, id, source: 'ai', savedAt }`). They move into the `charts` table with source 'ai' (the web's POST
+ * /api/charts), keeping their ids (drills and plan items name them) and times; then the key is removed.
+ * Returns how many moved.
+ */
+export function migrateCoachCharts(kv: KeyValueStore, charts: Pick<ChartsRepo, 'restore'>): number {
+  const text = kv.get(KV_KEYS.coachCharts);
+  if (text == null) return 0;
+  let list: unknown;
+  try { list = JSON.parse(text); } catch { list = []; }
+  let moved = 0;
+  if (Array.isArray(list)) {
+    for (const x of [...list].reverse()) { // oldest first, so the table's order (created_at, rowid) stays theirs
+      const { id, savedAt } = (x ?? {}) as { id?: unknown; savedAt?: unknown };
+      if (typeof id === 'string' && charts.restore({ ...(x as Chart), id }, 'ai', sqliteTime(savedAt))) moved++;
+    }
+  }
+  kv.remove(KV_KEYS.coachCharts);
+  return moved;
 }

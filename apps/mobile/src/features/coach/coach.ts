@@ -13,6 +13,7 @@ import { useSyncExternalStore } from 'react';
 import { getHomeServer } from '../../platform/api';
 import { getStorage } from '../../platform/storage';
 import { readSettings } from '../../ui';
+import { lessonHref } from '../lesson/route';
 import { createCoachAsks, type Entry } from './asks';
 import { createCoachCharts, targetExists } from './charts';
 import { createContextFor } from './context';
@@ -22,11 +23,9 @@ import { createTipsCache } from './tips';
 import { hush, sayNext, sayNow, setVoiceVolume } from './voice';
 import { createWeekPlan } from './weekPlan';
 
-/** The lesson player's route for a lesson (A7a's Journey lessonHref). */
-export const lessonRoute = (id: string) => `/lesson/${encodeURIComponent(id)}`;
 /**
  * The lesson player's route for one chart (a drill, a plan item): `/lesson/chart?chartId=…&bpm=…`. The chart is in
- * the library (core LIBRARY) or saved by the coach (createCoachCharts(kv).byId).
+ * the library (core LIBRARY) or saved in the charts table (findStoredChart).
  */
 export const drillRoute = (t: { chartId: string; bpm?: number }) =>
   `/lesson/chart?chartId=${encodeURIComponent(t.chartId)}${t.bpm ? `&bpm=${Math.round(t.bpm)}` : ''}`;
@@ -47,12 +46,12 @@ function build() {
   const storage = getStorage();
   const kv = storage.kv;
   const settings = () => readSettings(kv);
-  const charts = createCoachCharts(kv);
+  const charts = createCoachCharts(storage);
   let aiLessonIds = new Set<string>();
   const refreshLessons = () => { void storage.aiLessons?.list().then(ls => { aiLessonIds = new Set(ls.map(l => l.id)); }).catch(() => {}); };
   refreshLessons();
   const exists = (chartId: string) => targetExists(chartId, { coachCharts: charts, aiLessonIds });
-  const contextFor = createContextFor(storage, charts);
+  const contextFor = createContextFor(storage);
   const voiceOn = () => { const s = settings(); setVoiceVolume(s.voiceVolume); return s.voice; };
 
   const asks = createCoachAsks({ server, context: contextFor });
@@ -60,7 +59,7 @@ function build() {
     server, context: () => contextFor('session'), settings, isPlaying: () => playing, playing: () => nowPlaying,
     sayNext: text => { if (voiceOn()) sayNext(text); },
     saveChart: chart => charts.save(chart), exists,
-    nav: { openLesson: id => router.push(lessonRoute(id) as never), openDrill: t => router.push(drillRoute(t) as never) },
+    nav: { openLesson: id => router.push(lessonHref(id) as never), openDrill: t => router.push(drillRoute(t) as never) },
   });
   const tips = createTipsCache({ kv, asks, settings });
   const weekPlan = createWeekPlan({ plans: storage.plans, asks });

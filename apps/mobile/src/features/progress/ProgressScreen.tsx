@@ -10,7 +10,7 @@ import {
   color, stroke, tabular, useAppSettings,
   Bars, Track,
 } from '../../ui';
-import { lessonHref } from '../journey/JourneyScreen';
+import { lessonHref } from '../lesson/route';
 import { songHref } from '../songs/songsModel';
 import { MonthReportView } from './MonthReportView';
 import { progressViewOf, type ProgressViewId } from './path';

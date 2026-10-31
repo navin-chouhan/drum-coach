@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Lesson, LessonProgress, Profile } from '@drum-coach/core/engine/lesson';
 import { Body, Card, CardTitle, Display, MAX_FONT_SCALE, color, slopFor, stroke } from '../../ui';
-import { lessonHref } from '../journey/JourneyScreen';
+import { lessonHref } from '../lesson/route';
 import { PATH_NOTE, pathModel, type PathChip } from './path';
 
 export function PathView({ lessons, progress, profile }: { lessons: Lesson[]; progress: Record<string, LessonProgress>; profile: Profile }) {
