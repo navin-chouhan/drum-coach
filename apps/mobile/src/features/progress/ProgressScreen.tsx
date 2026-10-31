@@ -1,6 +1,6 @@
 // Progress (docs/mockups/ipad/progress.html): getting better (notes landed per day played, with the coach's line), this
 // week against your goal, the skill map, trophies and the closest, your time against the daily goal, and your lessons
-// in plain words. "This month's report", the full skill map and your path open in place, as /progress?view=month,
+// in plain words, with the web's show-off set (ready songs, ▶ Play it, a concert of the set). "This month's report", the full skill map and your path open in place, as /progress?view=month,
 // /progress?view=skills and /progress?view=path (Journey's Skill map and Full path buttons). The numbers are in progress.ts.
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
@@ -11,7 +11,7 @@ import {
   Bars, Track,
 } from '../../ui';
 import { lessonHref } from '../lesson/route';
-import { songHref } from '../songs/songsModel';
+import { songHref, startConcert } from '../songs/songsModel';
 import { MonthReportView } from './MonthReportView';
 import { progressViewOf, type ProgressViewId } from './path';
 import { PathView } from './PathView';
@@ -32,7 +32,7 @@ export function ProgressScreen() {
   const params = useLocalSearchParams<{ view?: string }>();
   const view = progressViewOf(params.view);
   const setView = (v: ProgressViewId) => router.setParams({ view: v === 'main' ? undefined : v });
-  const m = useMemo(() => progressModel({ runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, badges: settings.badges, lessons: data?.lessons ?? [], plan: data?.plan }),
+  const m = useMemo(() => progressModel({ runs: data?.runs ?? [], progress: settings.lessons, profile: settings.profile, badges: settings.badges, lessons: data?.lessons ?? [], plan: data?.plan, songs: data?.songs }),
     [data, settings.lessons, settings.profile, settings.badges]);
 
   const head = (
@@ -151,6 +151,21 @@ export function ProgressScreen() {
             bars={m.time.days.map(d => ({ key: d.date, value: d.minutes, title: d.title, fill: d.atGoal ? color.good : '#A8DDBE' }))} />
           <View style={styles.timeFoot}><Body size={11} color={color.muted}>{m.time.from}</Body><Body size={11} color={color.muted}>today</Body></View>
         </Card>
+        <Card style={styles.showoff} testID="progress-showoff">
+          <View style={styles.cardHead}><CardTitle size={18}>Show-off set</CardTitle><Text style={styles.medalEmoji}>🎤</Text></View>
+          {m.showoff.songs.length ? (
+            <ScrollView style={styles.grow}>
+              {m.showoff.songs.map((x, i) => (
+                <ListRow key={x.id} first={i === 0} compact title={x.title} testID={`progress-showoff-${i}`}
+                  value={<Button label="Play it" emoji="▶" size="small" onPress={() => router.push(songHref(x.id) as never)} accessibilityLabel={`Play ${x.title}`} />} />
+              ))}
+              {m.showoff.concert ? (
+                <Button label="Concert: the whole set" emoji="🎤" size="small" testID="progress-concert"
+                  onPress={() => { const first = startConcert(m.showoff.concert!); if (first) router.push(songHref(first.id, first.bars) as never); }} />
+              ) : null}
+            </ScrollView>
+          ) : <Body size={13} color={color.muted}>{m.showoff.empty}</Body>}
+        </Card>
         <Card style={styles.lessons} testID="progress-lessons">
           <View style={styles.cardHead}><CardTitle size={18}>Your lessons</CardTitle><Body size={13} color={color.muted}>newest first</Body></View>
           {m.lessons.length || m.exercises.length ? (
@@ -213,6 +228,7 @@ const styles = StyleSheet.create({
   proven: { fontSize: 11.5, fontWeight: '800', color: color.good },
   close: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   time: { width: 300, gap: 6 },
+  showoff: { width: 260, gap: 6 },
   timeFoot: { flexDirection: 'row', justifyContent: 'space-between' },
   lessons: { flex: 1, minWidth: 0, gap: 4 },
   rowEnd: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' },
