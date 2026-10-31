@@ -1,7 +1,8 @@
 // The keyboard fallback (CLAUDE.md: Space kick, S snare, A/Q hi-hat closed/open, Z pedal, E/R/F toms, W crash,
 // T ride), the same rules as the web's src/input/keyboard.ts: Shift = accent (127), Option/Alt = flam (a soft grace,
-// then the main stroke 25 ms later), ⌘/⌃ combinations are never seen (native passes them through). Esc and Enter go
-// to the screens. Pure (no React Native): keyboard.ts wires the DrumKeys module (modules/drum-keys).
+// then the main stroke 25 ms later), ⌘/⌃ combinations are never seen (native passes them through). Command
+// keys (Esc, Enter, arrows, letters and digits that aren't pad keys: H hints, B band, 1–3 answers) go to the screens.
+// Pure (no React Native): keyboard.ts wires the DrumKeys module (modules/drum-keys).
 import type { PadId } from '@drum-coach/core/engine/kit';
 import type { HitBus } from '@drum-coach/core/input/hits';
 
@@ -29,12 +30,33 @@ export function strokesFor(e: KeyEventLike): Stroke[] {
   return [{ pad, velocity, time: e.timeMs }];
 }
 
-export type AppKey = 'escape' | 'enter';
+/** Named command keys as the web's KeyboardEvent.key spells them (DrumKeys sends these names) → the app's names. */
+const NAMED: ReadonlyMap<string, NamedKey> = new Map([
+  ['Escape', 'escape'], ['Enter', 'enter'], ['ArrowLeft', 'left'], ['ArrowRight', 'right'], ['ArrowUp', 'up'], ['ArrowDown', 'down'],
+]);
+export type NamedKey = 'escape' | 'enter' | 'left' | 'right' | 'up' | 'down';
 
-/** Esc and Enter (on key down) for the screens; null for anything else. */
+/** Letters and digits that are commands: every one that isn't a pad key, so a command key never becomes a hit. */
+export const COMMAND_CHARS = [
+  'b', 'c', 'd', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'u', 'v', 'y',
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+] as const;
+export type CommandChar = (typeof COMMAND_CHARS)[number];
+
+/** A key the screens may use: Esc, Enter, an arrow, or a non-pad letter / digit (web: `e.key === 'h'`, `'1'`). */
+export type AppKey = NamedKey | CommandChar;
+
+const CHARS: ReadonlySet<string> = new Set(COMMAND_CHARS);
+
+/**
+ * The command a key down is; null for pad keys, key ups and anything else. Letters and digits count only without
+ * Shift or Option, as the web compares `e.key` (Shift+H is "H" there); Esc, Enter and the arrows with any modifier.
+ */
 export function appKeyFor(e: KeyEventLike): AppKey | null {
   if (!e.down) return null;
-  return e.key === 'Escape' ? 'escape' : e.key === 'Enter' ? 'enter' : null;
+  const named = NAMED.get(e.key);
+  if (named) return named;
+  return CHARS.has(e.key) && !e.shift && !e.alt ? (e.key as CommandChar) : null;
 }
 
 export type KeysApi = {
@@ -44,7 +66,7 @@ export type KeysApi = {
 };
 
 export type KeyboardLink = {
-  /** Esc / Enter listeners (the newest first gets it; return true to stop it there). Returns an unsubscribe. */
+  /** Command-key listeners (the newest first gets it; return true to stop it there). Returns an unsubscribe. */
   onAppKey: (fn: (key: AppKey) => boolean | void) => () => void;
   stop: () => void;
   readonly counters: { keys: number; strokes: number; repeatsDropped: number };

@@ -4,7 +4,7 @@ import type { HitBus } from '@drum-coach/core/input/hits';
 import * as DrumKeys from '../../modules/drum-keys';
 import { connectKeysToHitBus, type AppKey, type KeyboardLink } from './keyboardCore';
 
-export { KEYMAP, strokesFor, appKeyFor, type AppKey, type KeyboardLink, type Stroke } from './keyboardCore';
+export { KEYMAP, COMMAND_CHARS, strokesFor, appKeyFor, type AppKey, type CommandChar, type NamedKey, type KeyboardLink, type Stroke } from './keyboardCore';
 
 // One link per JS runtime, kept across Fast Refresh (a second link would play every key twice).
 type G = { __drumKeyboard?: KeyboardLink };
@@ -15,7 +15,10 @@ export function startKeyboard(bus: Pick<HitBus, 'emitPad'>): KeyboardLink {
   return (g.__drumKeyboard ??= connectKeysToHitBus(DrumKeys, bus));
 }
 
-/** Esc / Enter from the hardware keyboard; the newest listener first, `true` stops it there. Returns an unsubscribe. */
+/**
+ * Command keys from the hardware keyboard (Esc, Enter, arrows, letters / digits that aren't pads); the newest listener
+ * first, `true` stops it there. Returns an unsubscribe.
+ */
 export function onAppKey(fn: (key: AppKey) => boolean | void): () => void {
   return g.__drumKeyboard ? g.__drumKeyboard.onAppKey(fn) : () => {};
 }

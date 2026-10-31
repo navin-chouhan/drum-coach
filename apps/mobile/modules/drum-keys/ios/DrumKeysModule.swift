@@ -2,7 +2,7 @@ import ExpoModulesCore
 
 /// Drum Coach's hardware-keyboard module. JS name: "DrumKeys". iOS only.
 ///
-/// Contract: native code forwards key down / up with the key's name ("s", " ", "Escape", "Enter"), its HID usage,
+/// Contract: native code forwards key down / up with the key's name ("s", "h", " ", "Escape", "Enter", "ArrowLeft"), its HID usage,
 /// Shift and Option, and the press time on HostClock ms (mach host time, the same base as DrumMidi's nowMs(), so a
 /// key stroke and a pad hit are directly comparable). The key map (CLAUDE.md keys) lives in TypeScript.
 public final class DrumKeysModule: Module {

@@ -9,14 +9,23 @@ enum KeyPress {
   static let hidTab = 0x2B
   static let hidSpace = 0x2C
   static let hidKeypadEnter = 0x58
+  static let hidRightArrow = 0x4F
+  static let hidLeftArrow = 0x50
+  static let hidDownArrow = 0x51
+  static let hidUpArrow = 0x52
 
-  /// "Escape", "Enter", " " (Space), or the key's character without modifiers, lower-cased ("s", "q"); "" for
-  /// anything else (arrows, function keys: their characters are UIKit's private-use strings).
+  /// "Escape", "Enter", " " (Space), "ArrowLeft" / "ArrowRight" / "ArrowUp" / "ArrowDown", or the key's character
+  /// without modifiers, lower-cased ("s", "q", "h", "1"); "" for anything else (function keys and the like: their
+  /// characters are UIKit's private-use strings). Which names are pads and which are commands is TypeScript's.
   static func name(hidUsage: Int, charactersIgnoringModifiers chars: String) -> String {
     switch hidUsage {
     case hidEscape: return "Escape"
     case hidReturn, hidKeypadEnter: return "Enter"
     case hidSpace: return " "
+    case hidLeftArrow: return "ArrowLeft"
+    case hidRightArrow: return "ArrowRight"
+    case hidUpArrow: return "ArrowUp"
+    case hidDownArrow: return "ArrowDown"
     default:
       guard chars.count == 1, let scalar = chars.unicodeScalars.first, scalar.value >= 0x20, scalar.value < 0xE000 else { return "" }
       return chars.lowercased()
