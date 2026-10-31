@@ -216,9 +216,9 @@ function Versions({ songId, version, onVersion }: { songId: string; version: Ver
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  videoTop: { alignItems: 'center', gap: 10 },
-  videoStacked: { width: 560 },
-  transportStacked: { alignSelf: 'center' },
+  videoTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 16 },
+  videoStacked: { width: 420 },
+  transportStacked: { alignSelf: 'flex-start' },
   grow: { flex: 1, minWidth: 0 },
   cols: { flex: 1, flexDirection: 'row', gap: 18 },
   left: { width: 470, flexGrow: 0 },
