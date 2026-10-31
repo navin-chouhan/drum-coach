@@ -4,7 +4,7 @@ import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import { currentMilestone } from '@drum-coach/core/engine/planner';
 import { describe, expect, it } from 'vitest';
-import { badgeNames, buildJourney, currentSession, HEARING_TIP, sorePatch } from './model';
+import { badgeNames, buildJourney, challengeKey, currentSession, HEARING_TIP, sorePatch } from './model';
 import { countWords, groovePreview, slotsPerBeat } from './preview';
 
 const NOW = new Date(2026, 9, 30, 19, 42); // Fri 30 Oct, evening
@@ -246,5 +246,32 @@ describe('the notice strip (web TodayView: setup nudge, wrists check-in)', () =>
     expect(buildJourney({ settings: { ...settings, ...sorePatch('2026-10-30', 'x') }, lessons: CURRICULUM, runs, now: NOW }).askSore).toBe(false);
     expect(buildJourney({ settings, lessons: CURRICULUM, runs: runs.slice(-2), now: NOW }).askSore).toBe(false);
     expect(sorePatch('2026-10-30', '2026-W44')).toEqual({ soreAskedWeek: '2026-W44', soreUntil: '2026-11-02' });
+  });
+});
+
+describe('after the whole path (web TodayView: All stages done)', () => {
+  const all: Record<string, LessonProgress> = {};
+  for (const l of CURRICULUM) all[l.id] = finished(l.id);
+  const base = { ...fresh(), lessons: all, setupDone: true };
+  const day = currentSession(base, CURRICULUM, '2026-10-30');
+  const settings = { ...base, session: { ...day, done: day.items.map((_, i) => i) } }; // today's set is done
+  const runs = threeWeeksIn().runs;
+  it('the main move asks the coach for a challenge; Flow, the 2-minute challenge and Beat your best are there', () => {
+    const v = buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW });
+    expect(v.pathDone).toBe(true);
+    expect(v.hero).toBeNull();
+    expect(v.main).toMatchObject({ label: 'Coach challenge', challenge: true });
+    expect(v.challengeKey).toBe(challengeKey(NOW));
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW, asks: 2 }).challengeKey).toBe(`challenge-${NOW.toDateString()}-2`);
+    expect(v.flow).not.toBeNull();
+    expect(v.trail).toBeNull();
+  });
+  it("the coach's open challenge at the last stage leads", () => {
+    const last = Math.max(...MILESTONES.filter(m => m.checkpoints.length).map(m => m.level));
+    const lesson = CURRICULUM.find(l => l.level === last)!;
+    const ai = { ...lesson, id: 'ai-stretch', title: 'Stretch it', source: 'ai' as const };
+    const v = buildJourney({ settings, lessons: [...CURRICULUM, ai], runs, now: NOW });
+    expect(v.challenge).toEqual({ lessonId: 'ai-stretch', title: 'Stretch it' });
+    expect(v.hero?.lessonId).toBe('ai-stretch');
   });
 });

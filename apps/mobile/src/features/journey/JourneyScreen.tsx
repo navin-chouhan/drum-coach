@@ -17,16 +17,20 @@ import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
+import { Tile } from './Tiles';
 import { useJourney } from './useJourney';
 import { SETUP_NUDGE, SORE_ASK, badgeNames, sorePatch, type JourneyView } from './model';
 
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
-  const { view: v, reload } = useJourney(swap);
+  const [asks, setAsks] = useState(0); // each "Ask the coach" is a new request (the web's asks)
+  const { view: v, reload } = useJourney(swap, asks);
   // "Coach automatically": once a day, a lesson for this stage when none is waiting (the web's TodayView). Never blocks
   // playing; a server that can't be reached is skipped silently here (the asks entry keeps the error, as the web).
   useEffect(() => { if (v.coachAsk) getCoach().requestLesson(v.coachAsk, undefined, reload); }, [v.coachAsk, reload]);
-  const writing = useCoachEntry(v.coachKey)?.status === 'thinking';
+  const coachEntry = useCoachEntry(v.coachKey), challengeEntry = useCoachEntry(v.challengeKey);
+  const writing = coachEntry?.status === 'thinking' || challengeEntry?.status === 'thinking';
+  const askChallenge = () => getCoach().requestLesson(v.challengeKey, undefined, reload);
   // The coach's week plan (the web's refreshWeekPlan + ensureWeekPlan): read it, ask for this week's once when you've
   // played, the coach is on and the first run is done; offline is skipped silently. A new plan re-plans the view.
   useEffect(() => { void getCoach().weekPlan.refresh(); }, []);
@@ -77,7 +81,7 @@ export function JourneyScreen() {
     if (item >= 0 && mode === 'play' && v.session.date !== readSessionDate()) writeSettings(getStorage().kv, startSessionPatch(v.session));
     router.push(lessonHref(lessonId, item, mode, role) as never);
   };
-  const start = v.main ? () => open(v.main!.lessonId, v.main!.item, v.main!.label === 'Jam' ? 'jam' : 'play') : undefined;
+  const start = v.main ? () => (v.main!.challenge ? askChallenge() : open(v.main!.lessonId, v.main!.item, v.main!.label === 'Jam' ? 'jam' : 'play')) : undefined;
   const other = v.somethingElse ? () => setSwap(n => n + 1) : undefined;
   const hear = v.hero ? () => open(v.hero!.lessonId, v.hero!.item, 'hear') : undefined;
   useKitMoves({ yes: start, next: other, listen: hear });
@@ -91,7 +95,15 @@ export function JourneyScreen() {
       />
 
       <Card elevation={6} style={styles.next} testID="journey-next">
-        {v.hero ? <Hero v={v} writing={writing} /> : <Panel tone="pop" style={styles.nextTop}><Display size={type.hero}>🎉 Every stage done</Display></Panel>}
+        {v.hero ? <Hero v={v} writing={writing} /> : (
+          <Panel tone="pop" style={styles.nextTop}>
+            <View style={styles.heroText}>
+              <Display size={type.hero}>🎉 Every stage done</Display>
+              {writing ? <Body size={13} weight="700" testID="journey-coach-writing" accessibilityLiveRegion="polite">{WRITING}</Body>
+                : challengeEntry?.status === 'error' ? <Body size={13} weight="700" color={color.bad} testID="journey-challenge-error">{challengeEntry.error}</Body> : null}
+            </View>
+          </Panel>
+        )}
         <View style={styles.moves}>
           {v.main ? (
             <BigMove testID="journey-start" tone="go" emoji={v.main.emoji} label={v.main.label} gestures={gesturesFor('yes')} onPress={start} style={styles.moveMain} />
@@ -113,6 +125,22 @@ export function JourneyScreen() {
         <StageSong v={v} onHear={id => open(id, -1, 'hear')} onPlay={id => open(id)} />
       </View>
 
+      {v.pathDone ? (
+        <Card style={styles.trail} testID="journey-all-done">
+          <Label>All stages done</Label>
+          <View style={styles.tiles}>
+            <Tile tone="pop" emoji="🎯" title="Coach challenge" testID="journey-tile-challenge"
+              sub={v.challenge ? v.challenge.title : challengeEntry?.status === 'thinking' ? 'your coach is writing it…' : challengeEntry?.status === 'error' ? challengeEntry.error : 'a review or stretch lesson aimed at your weakest spot'}
+              onPress={challengeEntry?.status === 'thinking' ? undefined : () => (v.challenge ? open(v.challenge.lessonId) : askChallenge())} />
+            {v.flow ? <Tile emoji="🌊" title="Flow" sub={v.flow.title} testID="journey-tile-flow" onPress={() => open(v.flow!.lessonId, -1, 'flow')} /> : null}
+            {v.arcade ? <Tile emoji="⏱" title="2-minute challenge" testID="journey-tile-arcade" sub={v.arcade.sub} onPress={() => open(v.arcade!.lessonId, -1, 'arcade')} /> : null}
+            {v.record ? <Tile emoji="🏆" title="Beat your best" testID="journey-tile-record" sub={v.record.title} onPress={() => open(v.record!.lessonId, -1, 'play', 'record')} /> : null}
+            <Tile emoji="🎵" title="Learn a new song" sub="from YouTube, a few bars at a time" testID="journey-tile-song" onPress={() => router.navigate('/songs' as never)} />
+            <Tile emoji="🎤" title="Show-off set" sub="your ready songs, on Progress" testID="journey-tile-showoff" onPress={() => router.navigate('/progress' as never)} />
+          </View>
+        </Card>
+      ) : null}
+
       {v.trail ? (
         <Card style={styles.trail} testID="journey-trail">
           <View style={styles.trailHead}>
@@ -131,6 +159,7 @@ export function JourneyScreen() {
 }
 
 // The stored session's date, read at tap time (the view may be a render old).
+const WRITING = '✍ Your coach is writing your next lesson… this can take a minute. You can keep playing; the answer will wait here.';
 const readSessionDate = () => readSettings(getStorage().kv).session?.date;
 
 function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
@@ -145,7 +174,7 @@ function Hero({ v, writing }: { v: JourneyView; writing: boolean }) {
         <Body size={15} numberOfLines={writing ? 1 : 2} style={styles.what}>{h.what}</Body>
         {/* the web's <Thinking>, in the what's second line so the card keeps its height */}
         {writing ? <Body size={13} weight="700" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} testID="journey-coach-writing" accessibilityLiveRegion="polite">
-          {'✍ Your coach is writing your next lesson… this can take a minute. You can keep playing; the answer will wait here.'}</Body> : null}
+          {WRITING}</Body> : null}
       </View>
       {h.preview ? <GroovePreview preview={h.preview} /> : <View style={styles.previewSpace} />}
     </Panel>
@@ -230,6 +259,7 @@ function StageSong({ v, onHear, onPlay }: { v: JourneyView; onHear: (id: string)
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   noticeBtns: { flexDirection: 'row', gap: 8 },
+  tiles: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 8 },
   flexShrink: { flexShrink: 1, minWidth: 0 },
   b: { fontWeight: '800' },
   next: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 16, gap: 14 },

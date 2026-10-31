@@ -30,6 +30,8 @@ export type JourneyInput = {
   swap?: number;
   /** This week's lessons from the coach's plan (R6), when there is one. */
   focusIds?: string[];
+  /** "Ask the coach" presses: each is a new lesson request (the web's `asks`, the last part of the keys). */
+  asks?: number;
   /** The coach's lessons are read from storage (until then, "no coach lesson" isn't known: the web's aiLessonsLoaded). */
   aiLoaded?: boolean;
 };
@@ -64,7 +66,15 @@ export type JourneyView = {
   healthLine: string | null;
   hero: HeroView | null;
   /** The main move: Start (today's set), Next lesson (set done), Jam (nothing left), or none. */
-  main: { label: string; lessonId: string; item: number; emoji: string } | null;
+  main: { label: string; lessonId: string; item: number; emoji: string; challenge?: boolean } | null;
+  /** Every stage passed: the "All stages done" card (coach challenge, Flow, 2-minute challenge, Beat your best, songs). */
+  pathDone: boolean;
+  /** The coach challenge's key (asked when there's no open one). */
+  challengeKey: string;
+  /** The coach's open challenge lesson at the last stage, if one is written. */
+  challenge: { lessonId: string; title: string } | null;
+  /** Flow: the newest finished groove (else the jam), played along with no score. */
+  flow: { lessonId: string; title: string } | null;
   somethingElse: boolean;
   /** The lesson Just jam opens (no score, with the band). */
   jamLessonId: string | null;
@@ -112,7 +122,9 @@ export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id
  * there's none waiting for this stage (with no takes yet, the built-in first lessons are the right start), unless the
  * student is flying through. The key is the web's (`lesson-<day>-<stage>-<asks>`; the iPad has no "ask again" here).
  */
-export const coachLessonKey = (now: Date, level: number | undefined) => `lesson-${now.toDateString()}-${level}-0`;
+export const coachLessonKey = (now: Date, level: number | undefined, asks = 0) => `lesson-${now.toDateString()}-${level}-${asks}`;
+/** After the whole path: the coach's review / stretch lesson at the last stage (the web's challengeKey). */
+export const challengeKey = (now: Date, asks = 0) => `challenge-${now.toDateString()}-${asks}`;
 
 const stepOf = (l: Lesson, s: Settings) => l.steps[Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1)];
 const stepIndex = (l: Lesson, s: Settings) => Math.min(s.lessons[l.id]?.step ?? 0, l.steps.length - 1);
@@ -159,7 +171,7 @@ export function trailStops(trail: Lesson[], current: Lesson | undefined, song: L
 
 const hoursOf = (d: Date) => d.getHours();
 
-export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false }: JourneyInput): JourneyView {
+export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusIds, aiLoaded = false, asks = 0 }: JourneyInput): JourneyView {
   const today = dayKey(now);
   const dash = dashboard(runs, now);
   const lessonById = (id: string) => lessons.find(l => l.id === id);
@@ -187,7 +199,10 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
   const fromSet = firstUndone >= 0 ? lessonById(session.items[firstUndone].lessonId) : undefined;
   const others = trail.filter(l => !done(l.id) && l !== fromSet)
     .sort((a, b) => Number(toolOf(a.steps[0]) === toolOf(fromSet?.steps[0] ?? a.steps[0])) - Number(toolOf(b.steps[0]) === toolOf(fromSet?.steps[0] ?? b.steps[0])));
-  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0];
+  // After the whole path: the coach's review / stretch lessons at the last stage are what's next.
+  const pathDone = !milestone && path.length > 0, lastStage = path[path.length - 1];
+  const challenges = pathDone ? lessons.filter(l => l.source === 'ai' && l.level === lastStage.level && !done(l.id)) : [];
+  const hero = swap && others.length ? others[(swap - 1) % others.length] : fromSet ?? others[0] ?? challenges[0];
   const heroItem = hero && hero === fromSet ? firstUndone : -1;
   const afterSet = !!hero && heroItem < 0 && setDone && !swap;
   const jam = [...visible].reverse().find(l => l.level <= (milestone?.level ?? 99) && l.steps.some(st => st.jam));
@@ -214,8 +229,12 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
       what: hero.what, preview: groovePreview(st, s.lessons[hero.id], si > 0 ? hero.steps[si - 1] : undefined), coachWrote: hero.source === 'ai',
     };
   }
-  const main = hero ? { label: afterSet ? 'Next lesson' : 'Start', lessonId: hero.id, item: heroItem, emoji: '▶' }
+  const main: JourneyView['main'] = hero ? { label: afterSet ? 'Next lesson' : 'Start', lessonId: hero.id, item: heroItem, emoji: '▶' }
+    : pathDone ? { label: 'Coach challenge', lessonId: '', item: -1, emoji: '🎯', challenge: true }
     : jam ? { label: 'Jam', lessonId: jam.id, item: -1, emoji: '🎸' } : null;
+  // Flow on the newest finished groove (the highest stage, the latest finished), not the first jam forever.
+  const flowLesson = visible.filter(l => done(l.id) && l.kind === 'groove')
+    .sort((a, b) => b.level - a.level || s.lessons[b.id].completedAt!.localeCompare(s.lessons[a.id].completedAt!))[0] ?? jam;
 
   // You: rank, streak, notes landed, minutes
   const passed = MILESTONES.filter(m => { const c = checkpointsOf(m, lessons, s.profile); return c.length > 0 && c.every(l => done(l.id)); });
@@ -252,7 +271,7 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     .sort((a, b) => b.level - a.level || lastPlayed(a).localeCompare(lastPlayed(b)))[0];
   const recordT = recordLesson && recordTarget(lastStep(recordLesson), s.lessons[recordLesson.id]);
   const recordGoal = recordLesson && (recordT ? `${recordT} in a row` : s.lessons[recordLesson.id]?.bestBpm ? `${s.lessons[recordLesson.id].bestBpm + 5} BPM` : 'one take');
-  const coachKey = coachLessonKey(now, milestone?.level);
+  const coachKey = coachLessonKey(now, milestone?.level, asks);
   const coachAsk = s.liveCoach && s.profile.onboarded && dash.totalRuns > 0 && milestone && aiLoaded && !coachOpen.length
     && studentRead(s.lessons, runs).pace !== 'flying' ? coachKey : null;
 
@@ -299,7 +318,9 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
     weekPlanDue: played && s.liveCoach && s.profile.onboarded,
     hearingTipDue: played && s.hearingTipWeek !== wk,
     recap, newBadges,
-    afterSet,
+    afterSet, pathDone, challengeKey: challengeKey(now, asks),
+    challenge: challenges[0] ? { lessonId: challenges[0].id, title: challenges[0].title } : null,
+    flow: flowLesson ? { lessonId: flowLesson.id, title: flowLesson.title } : null,
     record: recordLesson ? { lessonId: recordLesson.id, title: recordLesson.title, sub: `${recordLesson.title} · ${recordGoal}` } : null,
     arcade: arcadeLesson ? {
       lessonId: arcadeLesson.id, title: arcadeLesson.title,
