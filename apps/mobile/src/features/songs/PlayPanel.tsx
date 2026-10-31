@@ -14,6 +14,7 @@ import { PLAY_EMPTY, STAGE_LABEL, playHelp, songPart, songTakeOptions } from './
 import type { ModeProps } from './modeProps';
 import { concert, songHref } from './songsModel';
 import { createSongTake, songRun, type SongTake, type SongTakeResult } from './songTake';
+import { useInterruptions } from './useInterruptions';
 
 export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: ModeProps & { onStage: (on: boolean) => void }) {
   const grid = song.grids[videoId];
@@ -44,6 +45,8 @@ export function PlayPanel({ song, videoId, yt, rate, bars, bus, now, onStage }: 
   }
   const stop = () => { take?.stop(); setTake(null); };
   const playing = !!take;
+  // D6: a call or the app leaving the foreground ends the take; ≥ 2 whole bars are kept, flagged (onFinish saves it)
+  useInterruptions(playing, at => { take?.interrupt(at); setTake(null); });
   useKitMoves({ yes: () => (playing ? undefined : go()), stop: () => (playing ? stop() : undefined) }, { playing });
 
   // The highway runs on the song: its clock is the take's run ms, beat 0 at 0.
