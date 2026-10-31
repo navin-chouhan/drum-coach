@@ -1,7 +1,7 @@
 // A fake AudioPort and Clock for tests (core, and the apps' own take tests): it records what was handed over, drops
 // events that are already too late (heard before now + minLeadMs) as native does, and keeps them per heard time.
 import type { Clock } from '../platform.ts';
-import type { AudioEvent, AudioInterruption, AudioPort, AudioRoute } from './audioPort.ts';
+import type { AudioEvent, AudioInterruption, AudioPort, AudioRoute, BackingPort } from './audioPort.ts';
 
 export type FakeClock = Clock & { t: number; set(t: number): void; advance(ms: number): void };
 
@@ -25,7 +25,71 @@ export type FakeAudioPort = AudioPort & {
   emitInterruption(e: AudioInterruption): void;
 };
 
-export function createFakeAudioPort(clock: Clock, route: AudioRoute | null = SPEAKER): FakeAudioPort {
+export type BackingStart = { now: number; at: number; offsetMs: number; rate: number };
+
+export type FakeBackingPort = BackingPort & {
+  loads: string[];
+  starts: BackingStart[];
+  /** Clock times of every stop(). */
+  stops: number[];
+  /** Makes load() reject with this message. */
+  fail?: string;
+  /** The device's rate error: the file plays (1 + ppm × 1e-6) × faster than the Clock says (AUDIO-DESIGN §6). */
+  ppm: number;
+  /** The file position heard at Clock time t (null when nothing is heard then): the true song line. */
+  heardAt(t: number): number | null;
+};
+
+/**
+ * A fake backing player, as native's BackingPlayer behaves: a start replaces what's playing at once and is heard from
+ * `at` (a negative offset waits −offset / rate first), the file then plays at rate × (1 + ppm) until its end or a
+ * stop. `anchor()` reads the heard position at the Clock's now (null before the start is heard or after the end).
+ */
+type Line = { at: number; offsetMs: number; rate: number; from: number; until: number };
+
+export function createFakeBackingPort(clock: Clock, o: { durationMs?: number; ppm?: number } = {}): FakeBackingPort {
+  const durationMs = o.durationMs ?? 600_000;
+  const past: Line[] = []; // every start's line, `until` the next start or stop replaced it
+  let line: Line | null = null;
+  const b: FakeBackingPort = {
+    loads: [], starts: [], stops: [], ppm: o.ppm ?? 0,
+    load(uri) {
+      b.loads.push(uri);
+      return b.fail ? Promise.reject(new Error(b.fail)) : Promise.resolve({ durationMs, sampleRate: 44100 });
+    },
+    start({ at, offsetMs, rate }) {
+      const now = clock.now();
+      b.starts.push({ now, at, offsetMs, rate });
+      if (line) line.until = Math.min(line.until, now);
+      const lead = Math.max(0, -offsetMs) / rate;
+      line = { at: at + lead, offsetMs: Math.max(0, offsetMs), rate, from: now, until: Infinity };
+      past.push(line);
+    },
+    stop() {
+      const now = clock.now();
+      b.stops.push(now);
+      if (line) line.until = Math.min(line.until, now);
+      line = null;
+    },
+    heardAt(t) {
+      for (let i = past.length - 1; i >= 0; i--) {
+        const l = past[i];
+        if (t < l.from || t >= l.until) continue;
+        if (t < l.at) return null;
+        const fileMs = l.offsetMs + (t - l.at) * l.rate * (1 + b.ppm * 1e-6);
+        return fileMs < durationMs ? fileMs : null;
+      }
+      return null;
+    },
+    anchor() {
+      const now = clock.now(), fileMs = b.heardAt(now);
+      return fileMs === null ? null : { at: now, fileMs };
+    },
+  };
+  return b;
+}
+
+export function createFakeAudioPort(clock: Clock, route: AudioRoute | null = SPEAKER, backing: BackingPort | null = null): FakeAudioPort {
   let current: AudioRoute | null = null;
   const routeFns = new Set<(r: AudioRoute) => void>(), interruptFns = new Set<(e: AudioInterruption) => void>();
   const totals = { scheduled: 0, late: 0, dropped: 0, engineStarts: 0 };
@@ -57,7 +121,7 @@ export function createFakeAudioPort(clock: Clock, route: AudioRoute | null = SPE
     },
     playNow: () => clock.now(),
     setLevels() { /* not time-critical */ },
-    backing: null,
+    backing,
     onRouteChange(fn) { routeFns.add(fn); return () => { routeFns.delete(fn); }; },
     onInterruption(fn) { interruptFns.add(fn); return () => { interruptFns.delete(fn); }; },
     emitInterruption(e) { interruptFns.forEach(f => f(e)); },

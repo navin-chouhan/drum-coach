@@ -4,7 +4,7 @@
 // relative to each take's zero) and score the same: results, stats, extras, hits, live tips.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AudioEvent } from './audioPort.ts';
-import { createFakeAudioPort, createFakeClock } from './fakeAudio.ts';
+import { createFakeAudioPort, createFakeBackingPort, createFakeClock, SPEAKER, type BackingStart } from './fakeAudio.ts';
 import { COUNT_WORDS } from './plan.ts';
 import { createTake, type Finished, type TakeOptions, type TakeSettings } from './take.ts';
 import { DRUM_PAD, type Chart, type ChartDrum, type ChartNote } from '../engine/chart.ts';
@@ -19,6 +19,8 @@ const web = vi.hoisted(() => ({
   settings: {},
   missing: new Set<string>(),
   now: 0,
+  /** The web's backing sources (playBuffer): heard-time ms, file ms, and when each was stopped. */
+  backing: [] as { at: number; offsetMs: number; durMs: number; rate: number; stoppedAt?: number }[],
 }));
 
 vi.mock('../../../../src/play/audio', () => ({
@@ -28,7 +30,11 @@ vi.mock('../../../../src/play/audio', () => ({
   click: (t: number, level: 0 | 1 | 2, volume = 1) => { web.events.push({ kind: 'sound', at: t * 1000, sound: ['click.bar', 'click.beat', 'click.sub'][level], gain: volume } as AudioEvent); },
   playDrum: (pad: string, vel: number, at: number) => { web.events.push({ kind: 'sound', at: at * 1000, sound: `drum.${pad}`, gain: vel / 127 } as AudioEvent); },
   playBand: (n: { part: string; midi: number[]; vel: number }, at: number, seconds: number) => { web.events.push({ kind: 'band', at: at * 1000, part: n.part, midi: n.midi, durMs: seconds * 1000, vel: n.vel } as AudioEvent); },
-  playBuffer: () => ({ stop() { /* no backing in these takes */ } }),
+  playBuffer: (_b: unknown, when: number, offset: number, duration: number, rate: number) => {
+    const src: (typeof web.backing)[number] = { at: when * 1000, offsetMs: offset * 1000, durMs: duration * 1000, rate };
+    web.backing.push(src);
+    return { stop() { src.stoppedAt ??= web.now; } };
+  },
 }));
 vi.mock('../../../../src/voice/voice', async () => ({
   NUMBERS: (await import('./plan.ts')).COUNT_WORDS,
@@ -94,7 +100,9 @@ const sloppy = (seed: number, bias = 0, sigma = 12): NonNullable<Script['strokes
   return out;
 };
 
-type Outcome = { zero: number; events: AudioEvent[]; finished?: Finished; endPhase: string; feedback: { lane: string; judgement: string; time: number }[]; extraBeats: number[]; cues: string[] };
+/** A stretch of the backing file heard: from `at` (Clock ms), file ms `offsetMs` on, at `rate`, until `until`. */
+type Segment = { at: number; offsetMs: number; rate: number; until: number };
+type Outcome = { zero: number; events: AudioEvent[]; finished?: Finished; endPhase: string; feedback: { lane: string; judgement: string; time: number }[]; extraBeats: number[]; cues: string[]; backing: Segment[] };
 
 const T = 5000; // both clocks start here; web and core zeros differ (150 vs 300 ms lead), so everything is compared relative to zero
 
@@ -118,7 +126,7 @@ function drive(step: (now: number) => void, zero: () => number, playing: () => b
 }
 
 function runWeb(chart: Chart, o: TakeOptions, s: Script = {}, settings = SETTINGS): Outcome {
-  web.events = []; web.now = T; web.ctx.currentTime = T / 1000; web.settings = { ...settings }; web.hitFns.clear(); web.interval = null;
+  web.events = []; web.now = T; web.ctx.currentTime = T / 1000; web.settings = { ...settings }; web.hitFns.clear(); web.interval = null; web.backing = [];
   let finished: Finished | undefined;
   player.start(chart, o as Parameters<typeof player.start>[1]);
   const zero = player.player.zero, cues: string[] = [];
@@ -128,12 +136,16 @@ function runWeb(chart: Chart, o: TakeOptions, s: Script = {}, settings = SETTING
     () => zero, () => player.player.phase === 'playing', strokes,
     h => { web.now = Math.max(web.now, h.time); web.hitFns.forEach(f => f(h)); }, s, settings.latencyMs, () => player.stop());
   offCue();
-  if (player.player.phase === 'done') finished = player.player.finished;
-  return { zero, events: web.events, finished, endPhase: player.player.phase, feedback: [...player.player.feedback], extraBeats: [...player.player.extraBeats], cues };
+  // (the web's Finished carries its AudioBuffer backing; the core's a file: the shapes differ only there)
+  if (player.player.phase === 'done') finished = player.player.finished as unknown as Finished;
+  const endPhase = player.player.phase;
+  player.stop(); // (a finished take has already stopped its sources; this only clears the player)
+  const backing = web.backing.map(b => ({ at: b.at, offsetMs: b.offsetMs, rate: b.rate, until: Math.min(b.at + b.durMs / b.rate, b.stoppedAt ?? Infinity) }));
+  return { zero, events: web.events, finished, endPhase, feedback: [...player.player.feedback], extraBeats: [...player.player.extraBeats], cues, backing };
 }
 
 async function runCore(chart: Chart, o: TakeOptions, s: Script = {}, settings = SETTINGS, t0 = T): Promise<Outcome> {
-  const clock = createFakeClock(t0), port = createFakeAudioPort(clock);
+  const clock = createFakeClock(t0), song = createFakeBackingPort(clock), port = createFakeAudioPort(clock, SPEAKER, song);
   port.missing = new Set(web.missing);
   const fns = new Set<(h: Hit) => void>();
   const take = createTake({ clock, audio: port, onHit: fn => { fns.add(fn); return () => { fns.delete(fn); }; }, settings: () => settings }, chart, o);
@@ -144,7 +156,17 @@ async function runCore(chart: Chart, o: TakeOptions, s: Script = {}, settings = 
   const strokes = strokesFor(chart, o, s, take.state.run, take.state.auto, take.state.beatMs);
   drive(now => { clock.set(now + shift); take.tick(now + shift); }, () => zero - shift, () => take.state.phase === 'playing', strokes,
     h => { clock.set(Math.max(clock.t, h.time + shift)); fns.forEach(f => f({ ...h, time: h.time + shift })); }, s, settings.latencyMs, () => take.stop('user'));
-  return { zero, events: port.events, finished: take.state.phase === 'done' ? take.state.finished : undefined, endPhase: take.state.phase, feedback: [...take.state.feedback], extraBeats: [...take.state.extraBeats], cues };
+  expect(take.state.backingError).toBeUndefined();
+  expect(take.state.driftMs).toBe(0); // the fake song plays exactly on its line
+  return { zero, events: port.events, finished: take.state.phase === 'done' ? take.state.finished : undefined, endPhase: take.state.phase, feedback: [...take.state.feedback], extraBeats: [...take.state.extraBeats], cues, backing: segments(song.starts, song.stops) };
+}
+
+/** The core's backing starts as heard segments (a negative offset is heard after −offset / rate), each cut by the next start or a stop. */
+function segments(starts: BackingStart[], stops: number[]): Segment[] {
+  return starts.map((s, i) => {
+    const cut = Math.min(starts[i + 1]?.now ?? Infinity, ...stops.filter(t => t >= s.now));
+    return { at: s.at + Math.max(0, -s.offsetMs) / s.rate, offsetMs: Math.max(0, s.offsetMs), rate: s.rate, until: cut };
+  });
 }
 
 const rel = (o: Outcome) => o.events.map(e => ({ ...e, at: e.at - o.zero })).sort((a, b) => Math.round(a.at * 1e4) - Math.round(b.at * 1e4) || key(a).localeCompare(key(b)));
@@ -219,7 +241,30 @@ async function expectParity(chart: Chart, o: Partial<TakeOptions>, s: Script = {
   expect(Math.abs(c.zero - w.zero)).toBeLessThan(1e-9);
   expectSameScore(w, c);
   expectSameScore(w, far);
+  expectSameBacking(w, c);
+  expectSameBacking(w, far);
   return { w, c };
+}
+
+/**
+ * The same stretches of the file at the same heard times (to 1e-6 ms, relative to zero). The web gives each source
+ * its length; the core's BackingPort has none, so a repeat is cut by the next repeat's start (called up to the
+ * route's minLeadMs + 60 ms and a tick early) or by the stop at the end (up to a tick late).
+ */
+function expectSameBacking(w: Outcome, c: Outcome) {
+  // the web starts every repeat up front and a stop cancels those not yet heard; the core starts each when it's due
+  const heard = (o: Outcome) => o.backing.filter(b => b.until > b.at);
+  const wb = heard(w), cb = heard(c);
+  expect(cb.length).toBe(wb.length);
+  wb.forEach((a, i) => {
+    const b = cb[i];
+    expect(Math.abs(b.at - c.zero - (a.at - w.zero))).toBeLessThan(1e-6);
+    expect(Math.abs(b.offsetMs - a.offsetMs)).toBeLessThan(1e-6);
+    expect(b.rate).toBe(a.rate);
+    const late = b.until - c.zero - (a.until - w.zero);
+    expect(late).toBeGreaterThan(-(SPEAKER.minLeadMs + 60 + 25 + 1e-6));
+    expect(late).toBeLessThanOrEqual(25 + 1e-6);
+  });
 }
 
 const count = (o: Outcome, sound: string) => o.events.filter(e => e.kind === 'sound' && e.sound === sound).length;
@@ -341,6 +386,47 @@ describe('createTake vs the web player (T6-1, B21)', () => {
     expect(c.events).toEqual([]);
     expectSameScore(w, c);
     expect(c.finished!.stats.extra).toBe(1);
+  });
+});
+
+describe('backing audio (the web\'s options.backing)', () => {
+  // the web's backing is an AudioBuffer, the core's a local file: a take carries both, each engine reads its own
+  const song = (syncOffsetMs: number) => ({ backing: { uri: 'file:///songs/x.m4a', syncOffsetMs, buffer: {} } });
+
+  it('the whole song once, from its sync offset', async () => {
+    const { w, c } = await expectParity(rock(2), { toBar: 2, repeats: 1, ...song(120) });
+    expect(w.backing).toHaveLength(1);
+    expect(c.backing[0].offsetMs).toBe(120);
+  });
+
+  it('a section looped at 75 %: each repeat restarts the section in the file, at rate = speed', async () => {
+    const { w } = await expectParity(rock(4), { fromBar: 2, toBar: 3, repeats: 3, speed: 0.75, ...song(250) });
+    expect(w.backing.map(b => b.offsetMs)).toEqual([2650, 2650, 2650]); // bar 2 at 100 BPM = 2.4 s, + 250 ms
+    expect(w.backing.every(b => b.rate === 0.75)).toBe(true);
+  });
+
+  it('a negative offset: the file starts after beat 0 of each repeat', async () => {
+    const { w } = await expectParity(rock(), { repeats: 2, ...song(-300) });
+    expect(w.backing.map(b => Math.round((b.at - w.zero) * 1e6) / 1e6)).toEqual([300, 2700]);
+  });
+
+  it('a demo plays it too; stopping a take stops it', async () => {
+    await expectParity(rock(), { demo: true, repeats: 2, ...song(0) });
+    const { c } = await expectParity(rock(), { repeats: 4, ...song(0) }, { stopAtMs: 3000 });
+    expect(c.backing).toHaveLength(2); // repeats 3 and 4 were never started
+  });
+
+  it('with live tips, layered lanes and latency, it scores the same', async () => {
+    const tips: TakeSettings = { ...SETTINGS, liveTips: 'screen', chattiness: 'talkative', latencyMs: 20 };
+    await expectParity(rock(2), { toBar: 2, repeats: 4, activeLanes: ['snare', 'kick'], ...song(40) }, { strokes: sloppy(13, 25) }, tips);
+  });
+
+  it('wait mode has no backing (as the web)', async () => {
+    const strokes: Script['strokes'] = notes => notes.map((n, i) => ({ ms: i * 400, pad: DRUM_PAD[n.drum][0], velocity: 80 }));
+    const { w, c } = await both(rock(), { wait: true, repeats: 1, ...song(0) }, { strokes });
+    expect(w.backing).toEqual([]);
+    expect(c.backing).toEqual([]);
+    expect(c.finished!.stats).toEqual(w.finished!.stats);
   });
 });
 
