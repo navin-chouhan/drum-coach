@@ -24,7 +24,8 @@ const web = join(out, '.web');
 const W = 1194, H = 834;
 
 // [name, url, steps before the shot]: { click: testID } | { text: visible text to click } | { fill: [testID, text] } |
-// { wait: ms }. testIDs are data-testid on the web.
+// { wait: ms } | { waitFor: testID, ms? } (until it shows) | { through: testID } (click it while it shows: slides).
+// testIDs are data-testid on the web.
 const FIRST_WELCOME = [{ click: 'firstrun-goal-rock' }, { text: '25 (recommended)' }, { text: 'New to drums' }];
 const INTRO = [{ click: 'lesson-main-move' }, { wait: 600 }];
 const NEXT = { click: 'lesson-intro-next' };
@@ -74,7 +75,7 @@ const SHOTS = [
   ['technique', '/technique?h=sore'],
   ['technique-kick', '/technique?h=sore', [{ click: 'technique-demo-kick' }, { wait: 600 }]],
   ['flow', '/flow?h=sore', [{ wait: 800 }]],
-  ['placement', '/lesson/placement?h=sore'],
+  ['placement', '/lesson/placement?h=sore', [{ waitFor: 'placement-rung' }]],
   // The lesson steps (G3): ear quiz, transcription (checked once), a look step, the intro slides, the celebration
   ['lesson-quiz', '/lesson/ear-steady?h=sore'],
   ['lesson-quiz-said', '/lesson/ear-steady?h=sore', [{ click: 'lesson-quiz-answer-0' }, { wait: 200 }]],
@@ -85,8 +86,26 @@ const SHOTS = [
   ['lesson-intro-3', '/lesson/money-8ths?h=sore', [...INTRO, NEXT, NEXT]],
   ['lesson-intro-4', '/lesson/money-8ths?h=sore', [...INTRO, NEXT, NEXT, NEXT, { wait: 600 }]],
   ['lesson-celebration', '/dev/parts?part=celebration&h=sore'],
+  ['lesson-complete', '/dev/parts?part=lesson-complete&h=sore'],
   ['practice-details', '/dev/parts?part=details&h=sore', [{ wait: 800 }]],
+  // W2: real takes on the silent web engine (src/platform/audio.web.ts; no hits, so each ends on its results)
+  ...W2_SHOTS(),
 ];
+
+/** W2's states: Play, through the intro slides, and the take runs to its results (in real time: up to 60 s). */
+function W2_SHOTS() {
+  const take = [{ click: 'lesson-main-move' }, { through: 'lesson-intro-next' }, { waitFor: 'lesson-take-card', ms: 60_000 }];
+  return [
+    ['lesson-results', '/lesson/money-8ths?h=sore', take],
+    ['lesson-results-more', '/lesson/money-8ths?h=sore', [...take, { click: 'lesson-more-button' }, { waitFor: 'lesson-more' }]],
+    ['lesson-results-coach', '/lesson/money-8ths?h=sore', [...take, { click: 'lesson-ask-coach' }, { waitFor: 'coach-inspector' }]],
+    ['lesson-more', '/lesson/money-8ths?h=sore', [{ click: 'lesson-more-button' }, { waitFor: 'lesson-more' }]],
+    ['practice-your-take', '/practice?h=sore', [{ click: 'practice-play' }, { click: 'practice-main' }, { through: 'lesson-intro-next' }, { waitFor: 'practice-your-take', ms: 60_000 }]],
+    ['practice-details-take', '/practice?h=sore', [{ click: 'practice-play' }, { click: 'practice-main' }, { through: 'lesson-intro-next' },
+      { waitFor: 'practice-details-open', ms: 60_000 }, { click: 'practice-details-open' }, { waitFor: 'practice-details' }]],
+    ['journey-more', '/?h=sore', [{ click: 'journey-more-open' }, { waitFor: 'journey-more' }]],
+  ];
+}
 
 const args = process.argv.slice(2);
 const only = args.filter(a => !a.startsWith('--'));
@@ -128,28 +147,58 @@ try {
     await page.goto(base + url, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1200);
     for (const st of steps) {
+      const at = id => page.locator(`[data-testid="${id}"]`).first();
       try {
-        if (st.click) await page.locator(`[data-testid="${st.click}"]`).first().click({ timeout: 4000 });
+        if (st.click) await at(st.click).click({ timeout: 4000 });
         else if (st.text) await page.getByText(st.text, { exact: true }).first().click({ timeout: 4000 });
-        else if (st.fill) await page.locator(`[data-testid="${st.fill[0]}"]`).first().fill(st.fill[1], { timeout: 4000 });
+        else if (st.fill) await at(st.fill[0]).fill(st.fill[1], { timeout: 4000 });
         else if (st.wait) await page.waitForTimeout(st.wait);
+        else if (st.waitFor) await at(st.waitFor).waitFor({ state: 'visible', timeout: st.ms ?? 10_000 });
+        else if (st.through) for (let k = 0; k < 10 && await at(st.through).isVisible(); k++) { await at(st.through).click(); await page.waitForTimeout(400); }
         await page.waitForTimeout(150);
       } catch (e) { errors.push(`step ${JSON.stringify(st)}: ${String(e.message ?? e).split('\n')[0]}`); }
     }
+    await page.waitForTimeout(400);
     await page.screenshot({ path: join(out, `${name}.png`) });
-    // What spills: the page scrolls, or a visible element ends outside the frame, or text is cut by its box.
+    // What spills: a visible element ends outside the frame. Content a scroll view holds, or notation drawn in the sheet's
+    // SVG past its paper, is `clipped` (meant to be cut). Content a smaller box (a card) cuts off is `cut`: usually a bug.
     const o = await page.evaluate(([w, h]) => {
       const de = document.documentElement;
-      const spill = [];
+      const spill = [], cut = [];
+      let clipped = 0, truncated = 0;
+      const line = (el, r) => {
+        const id = el.getAttribute('data-testid'), text = (el.textContent ?? '').trim().slice(0, 50);
+        return id || (el.children.length === 0 && text) ? `${id ?? 'text'} "${text}" ends at ${Math.round(r.right)}×${Math.round(r.bottom)}` : '';
+      };
+      // How the element is cut: by a scroll view or inside the sheet's SVG ('clipped', meant), by a smaller box that
+      // hides overflow ('cut', usually a bug), or not at all ('').
+      const how = (el, r) => {
+        let res = '';
+        for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+          const cs = getComputedStyle(a), ov = cs.overflowY + cs.overflowX;
+          if (!/(auto|scroll|hidden)/.test(ov)) continue;
+          const br = a.getBoundingClientRect(), scrolls = /(auto|scroll)/.test(ov);
+          // a screen-sized box that hides overflow is the screen's own frame: past it is a spill (a scroll view isn't)
+          if (!scrolls && br.width * br.height >= 0.9 * w * h) continue;
+          if (r.bottom <= br.bottom + 1 && r.right <= br.right + 1) continue;
+          if (scrolls || el.closest('svg')) return 'clipped';
+          if (cs.textOverflow === 'ellipsis' || getComputedStyle(a).webkitLineClamp !== 'none') return 'trunc';
+          res ||= 'cut';
+        }
+        return res;
+      };
       for (const el of document.querySelectorAll('body *')) {
         const r = el.getBoundingClientRect();
         if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden') continue;
-        if (r.bottom > h + 1 || r.right > w + 1) {
-          const id = el.getAttribute('data-testid'), text = (el.textContent ?? '').trim().slice(0, 50);
-          if (id || (el.children.length === 0 && text)) spill.push(`${id ?? 'text'} "${text}" ends at ${Math.round(r.right)}×${Math.round(r.bottom)}`);
-        }
+        const l = line(el, r);
+        if (!l && !el.closest('svg')) continue;
+        const c = how(el, r);
+        if (c === 'clipped') clipped++;
+        else if (c === 'trunc') truncated++;
+        else if (c === 'cut') { if (l) cut.push(l); }
+        else if (l && (r.bottom > h + 1 || r.right > w + 1)) spill.push(l);
       }
-      return { scrollW: de.scrollWidth, scrollH: de.scrollHeight, spill: spill.slice(0, 12) };
+      return { scrollW: de.scrollWidth, scrollH: de.scrollHeight, clipped, truncated, spills: spill.length, spill: spill.slice(0, 12), cuts: cut.length, cut: cut.slice(0, 8) };
     }, [W, H]);
     report.push({ name, url, ...o, errors: errors.slice(0, 3) });
     await page.close();
@@ -160,18 +209,20 @@ try {
 }
 writeFileSync(join(out, 'report.json'), JSON.stringify(report, null, 2));
 for (const r of report) {
-  console.log(`${r.name}: ${r.spill.length ? `${r.spill.length} spill` : 'fits'}${r.errors.length ? `, errors: ${r.errors.join(' | ')}` : ''}`);
+  console.log(`${r.name}: ${r.spills ? `${r.spills} spill` : 'fits'}${r.cuts ? `, ${r.cuts} cut by their card` : ''}${r.errors.length ? `, errors: ${r.errors.join(' | ')}` : ''}`);
   for (const s of r.spill) console.log(`  ${s}`);
+  for (const s of r.cut) console.log(`  cut: ${s}`);
 }
 console.log(`PNGs in ${out}`);
 
-// --check: fail on new overflows against the committed baseline (a shot that spills more than it did, a new spilled
-// element, a page that scrolls further, or a shot that couldn't run its steps). --update-baseline writes it.
+// --check: fail on new overflows against the committed baseline (a new spilled element, a new element a card cuts off,
+// a page that scrolls further, or a shot that couldn't run its steps). `clipped` (scroll views, the sheet's SVG) and
+// `truncated` (text ending in …) are counted in report.json, not checked. --update-baseline writes it.
 // A dev tool, not CI: the numbers come from Chromium, not the iPad.
 const key = s => s.replace(/ ends at \d+×\d+$/, '');
 if (args.includes('--update-baseline')) {
   const prev = JSON.parse(readOrNull(baselinePath, 'utf8') ?? '{}');
-  for (const r of report) prev[r.name] = { scrollW: r.scrollW, scrollH: r.scrollH, spill: r.spill.map(key), errors: r.errors.length };
+  for (const r of report) prev[r.name] = { scrollW: r.scrollW, scrollH: r.scrollH, spill: r.spill.map(key), cut: r.cut.map(key), errors: r.errors.length };
   writeFileSync(baselinePath, `${JSON.stringify(prev, null, 2)}\n`);
   console.log(`baseline written: ${baselinePath}`);
 } else if (args.includes('--check')) {
@@ -179,9 +230,11 @@ if (args.includes('--update-baseline')) {
   const worse = [];
   for (const r of report) {
     const b = baseline[r.name];
-    if (!b) { if (r.spill.length || r.errors.length) worse.push(`${r.name}: not in the baseline and spills ${r.spill.length} / errors ${r.errors.length}`); continue; }
+    if (!b) { if (r.spill.length || r.cut.length || r.errors.length) worse.push(`${r.name}: not in the baseline and spills ${r.spill.length} / cuts ${r.cut.length} / errors ${r.errors.length}`); continue; }
     const fresh = r.spill.map(key).filter(s => !b.spill.includes(s));
     if (fresh.length) worse.push(`${r.name}: new spill: ${fresh.join('; ')}`);
+    const cutNow = r.cut.map(key).filter(s => !(b.cut ?? []).includes(s));
+    if (cutNow.length) worse.push(`${r.name}: newly cut by its card: ${cutNow.join('; ')}`);
     if (r.scrollW > Math.max(W, b.scrollW) || r.scrollH > Math.max(H, b.scrollH)) worse.push(`${r.name}: page ${r.scrollW}×${r.scrollH} (baseline ${b.scrollW}×${b.scrollH})`);
     if (r.errors.length > b.errors) worse.push(`${r.name}: ${r.errors.length} errors (baseline ${b.errors}): ${r.errors.join(' | ')}`);
   }

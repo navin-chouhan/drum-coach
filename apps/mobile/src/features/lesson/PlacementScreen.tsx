@@ -20,6 +20,7 @@ import { judgePlacement, ladderOf, placeAt, placementStep, rungLine } from './pl
 import { todayKey } from './progress';
 import { idleChart, runChart } from './runChart';
 import { createSettingsStore } from './settings';
+import { sheetScaleFor } from './sheetFit';
 import { createTakePort } from './takePort';
 import { useKitConnected } from './useLesson';
 
@@ -45,6 +46,7 @@ export function PlacementScreen() {
   const [result, setResult] = useState<string>();
   const [last, setLast] = useState<string>();
   const [notice, setNotice] = useState('');
+  const [paperH, setPaperH] = useState(0); // the sheet's zoom fits its paper (sheetFit.ts), as in the lesson player
   const item = ladder[i], lesson = item && byId(item.lessonId);
   const rung = lesson && placementStep(lesson);
 
@@ -113,10 +115,10 @@ export function PlacementScreen() {
         </> : item && lesson && rung ? <>
           <Body size={18} testID="placement-rung">{rungLine(i, ladder.length, lesson)}</Body>
           {last ? <Body size={15} color={color.muted}>{`✓ ${last}`}</Body> : null}
-          <View style={styles.sheet}>
+          <View style={styles.sheet} onLayout={e => setPaperH(Math.round(e.nativeEvent.layout.height))}>
             {live && s.options
-              ? <NotationView chart={live} bpm={live.bpm * s.options.speed} zero={s.zero} now={clock.now} latencyMs={app.latencyMs} results={take.results} hints leftHanded={!!app.leftHanded} testID="placement-sheet" />
-              : idle ? <NotationView chart={idle.chart} bpm={bpm} zero={idle.zero} now={clock.now} latencyMs={0} hints leftHanded={!!app.leftHanded} testID="placement-sheet" /> : null}
+              ? <NotationView chart={live} bpm={live.bpm * s.options.speed} zero={s.zero} now={clock.now} latencyMs={app.latencyMs} results={take.results} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" />
+              : idle ? <NotationView chart={idle.chart} bpm={bpm} zero={idle.zero} now={clock.now} latencyMs={0} hints leftHanded={!!app.leftHanded} scale={sheetScaleFor(paperH)} testID="placement-sheet" /> : null}
           </View>
           {!kit ? <TouchPads emitPad={(pad, vel, time) => bus.emitPad(pad, vel, time)} playNow={audio.available ? (snd, g) => audio.playNow(snd, g) : undefined}
             now={clock.now} activeDrums={activeDrums} results={take.results} style={styles.pads} testID="placement-touch-pads" /> : null}

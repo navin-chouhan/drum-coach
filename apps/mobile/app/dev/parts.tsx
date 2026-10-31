@@ -1,6 +1,6 @@
 // Layout harness parts (scripts/screenshots.mjs, web): states a URL can't reach, drawn with the real components on
-// fake data. /dev/parts?part=celebration (the lesson's celebration, a rank up) or ?part=details (Practice's Details and
-// history on a fake take). On the iPad it's a dev screen like the others.
+// fake data. /dev/parts?part=celebration (the lesson's celebration, a rank up), ?part=lesson-complete (the plain one, a
+// star left to earn) or ?part=details (Practice's Details and history on a fake take). On the iPad it's a dev screen like the others.
 import { MILESTONES, LESSON_BY_ID } from '@drum-coach/core/content/curriculum';
 import type { Finished } from '@drum-coach/core/play/take';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -20,18 +20,21 @@ export default function HarnessParts() {
   return (
     <Screen withSidebar={false} testID="screen-dev-parts">
       <Stack.Screen options={{ headerShown: false }} />
-      {part === 'celebration' ? (
-        <CelebrationModal onNext={noop} onAgain={noop} onClose={noop} c={{
+      {part === 'celebration' || part === 'lesson-complete' ? (
+        <CelebrationModal onNext={noop} onAgain={noop} onClose={noop} c={part === 'celebration' ? {
           title: 'RANK UP!', lessonTitle: 'The money beat', stars: 2, rankUp: true, milestone: MILESTONES[2], next: MILESTONES[3],
           done: 4, total: 4, nextLabel: "Next in today's session →", canGoForMore: true,
+        } : {
+          title: 'LESSON COMPLETE!', lessonTitle: 'The money beat', stars: 2, rankUp: false, milestone: MILESTONES[2], next: MILESTONES[3],
+          done: 1, total: 2, nextLabel: 'Back to Journey', canGoForMore: true,
         }} />
       ) : part === 'details' ? (
-        take ? <ScrollView contentContainerStyle={styles.details}>
+        take ? <ScrollView style={styles.fill} contentContainerStyle={styles.details}>
           <ResultsDetails f={take} onAgain={noop} onBack={noop} extras={{ chartId: 'lesson/money-8ths/2' }} testID="practice-details" />
         </ScrollView> : null
-      ) : <Body>Parts: ?part=celebration or ?part=details</Body>}
+      ) : <Body>Parts: ?part=celebration, ?part=lesson-complete or ?part=details</Body>}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({ details: { padding: 24, gap: 16 } });
+const styles = StyleSheet.create({ fill: { flex: 1 }, details: { padding: 24, gap: 16 } });
