@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { beatsPerBar, type Chart, type ChartDrum } from '../engine/chart';
-import { gridScore } from '../engine/transcribe';
-import { ROWS } from '../youtube/GridEditor';
+import { GRID_ROW_NAME as NAME, GRID_ROWS as ROWS, gridScore, gridStepsOf as stepsOf, TRANSCRIBE_PASS as PASS } from '../engine/transcribe';
 import { DRUM_BY_ID } from '../ui/drums';
-
-const NAME: Partial<Record<ChartDrum, string>> = { hihat: 'Hi-hat', hhOpen: 'HH open', hhPedal: 'HH foot', ride: 'Ride', crash: 'Crash', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor', snare: 'Snare', kick: 'Kick' };
-const PASS = 80;
-const stepsOf = (c: Chart) => [2, 4, 3].find(k => c.notes.every(n => Math.abs(n.t * k - Math.round(n.t * k)) < 1e-6)) ?? 4;
 
 /**
  * Transcription (N7): hear a groove, write it on the grid (drums the chart uses × its steps), check it against the

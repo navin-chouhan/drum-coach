@@ -3,13 +3,13 @@ import type { DrumId } from '../engine/kit';
 import { CoachFeedback } from '../coach/CoachFeedback';
 import { coachTake } from '../coach/session';
 import { summarizeRun } from '../coach/summary';
-import { heatSlotName, latencySuspect } from '../engine/scoring';
+import { heatBad, latencyLine, timingText } from '../engine/results';
+import { heatSlotName } from '../engine/scoring';
 import { DRUM_BY_ID } from '../ui/drums';
 import { HIGHWAY_LANES } from './Highway';
 import type { Finished } from './player';
 
 const laneOf = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
-const timingText = (ms: number) => (Math.abs(ms) < 5 ? 'Right on the grid' : ms < 0 ? `Rushing by ${Math.round(-ms)} ms` : `Dragging by ${Math.round(ms)} ms`);
 
 const saved = new WeakMap<Finished, Promise<void>>();
 const [saveOk, saveFail] = [() => {}, () => console.warn('Run not saved: is the server running?')];
@@ -36,9 +36,8 @@ export function saveRun(f: Finished, extra?: Record<string, unknown>): Promise<v
 
 /** Every stroke off by the same amount: point at the latency test before the student blames their hands. */
 export function LatencyHint({ f }: { f: Finished }) {
-  const ms = f.options.wait ? null : latencySuspect(f.results);
-  return ms === null ? null : <p className="warn">Almost every stroke landed about {Math.abs(ms)} ms {ms > 0 ? 'late' : 'early'}.
-    If it felt on time to you, it's probably the setup, not your hands: run the latency test under ⚙ Setup → Your kit.</p>;
+  const line = latencyLine(f);
+  return line === undefined ? null : <p className="warn">{line}</p>;
 }
 
 export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => void; onBack: () => void }) {
@@ -98,8 +97,7 @@ export function Results({ f, onAgain, onBack }: { f: Finished; onAgain: () => vo
             <h3>Where in the bar</h3>
             <div className="heat" style={{ gridTemplateColumns: `repeat(${s.heat.length}, 1fr)` }}>
               {s.heat.map((c, i) => {
-                const miss = c.total ? c.miss / c.total : 0, err = Math.min(1, c.meanAbsOffset / 60);
-                const bad = Math.min(1, miss * 1.6 + err * 0.8);
+                const bad = heatBad(c);
                 return (
                   <div key={i} className="cell" title={c.total ? `${c.total} notes · ${c.miss} missed · avg ±${c.meanAbsOffset} ms` : 'no notes'}
                     style={{ background: c.total ? `hsl(${140 - 140 * bad} 60% ${30 + 10 * (1 - bad)}%)` : 'var(--panel2)' }}>

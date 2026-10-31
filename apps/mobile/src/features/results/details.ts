@@ -1,27 +1,18 @@
 // A finished take's details (the web's Results, src/play/Results.tsx): the head line, accuracy, timing, dynamics,
 // per drum, where in the bar (the timing heat map) and the tips during the take. Pure: the screen
-// (ResultsDetails.tsx) lays it out with the UI kit. The wording and the numbers are the web's.
-// Copied from src/: the drum names (src/ui/drums.ts DRUMS) and the heat colour formula (Results.tsx), for a later
-// move to core.
+// (ResultsDetails.tsx) lays it out with the UI kit. The wording and the numbers are the web's: the drum names, the
+// timing words, the latency line and the heat formula are core's, shared with the web.
+import { DRUM_NAME } from '@drum-coach/core/content/drums';
 import type { DrumId } from '@drum-coach/core/engine/kit';
-import { heatSlotName, latencySuspect } from '@drum-coach/core/engine/scoring';
+import { heatBad, latencyLine, timingText } from '@drum-coach/core/engine/results';
+import { heatSlotName } from '@drum-coach/core/engine/scoring';
 import type { Finished } from '@drum-coach/core/play/take';
+
+export { DRUM_NAME, latencyLine, timingText };
 
 export type DetailsTake = Pick<Finished, 'chart' | 'options' | 'stats' | 'run' | 'results' | 'cues'>;
 
-/** The web's drum names (src/ui/drums.ts). */
-export const DRUM_NAME: Record<DrumId, string> = {
-  kick: 'Kick', crash: 'Crash', ride: 'Ride', hihat: 'Hi-hat', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor tom', snare: 'Snare',
-};
-
 export const laneOf = (d: string) => (d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d) as DrumId;
-export const timingText = (ms: number) => (Math.abs(ms) < 5 ? 'Right on the grid' : ms < 0 ? `Rushing by ${Math.round(-ms)} ms` : `Dragging by ${Math.round(ms)} ms`);
-
-/** Every stroke off by the same amount: point at the latency test before the student blames their hands. */
-export function latencyLine(f: Pick<DetailsTake, 'options' | 'results'>): string | undefined {
-  const ms = f.options.wait ? null : latencySuspect(f.results);
-  return ms === null ? undefined : `Almost every stroke landed about ${Math.abs(ms)} ms ${ms > 0 ? 'late' : 'early'}. If it felt on time to you, it's probably the setup, not your hands: run the latency test under ⚙ Setup → Your kit.`;
-}
 
 export type DrumRow = { drum: string; lane: DrumId; name: string; accuracy: number };
 export type HeatView = { label: string; total: number; bad: number; color: string; detail: string };
@@ -39,8 +30,7 @@ export type DetailsView = {
 /** A heat cell's colour (the web's: green = solid, red = missed or off-time; empty cells use `empty`). */
 export function heatColor(c: { total: number; miss: number; meanAbsOffset: number }, empty: string): { bad: number; color: string } {
   if (!c.total) return { bad: 0, color: empty };
-  const miss = c.miss / c.total, err = Math.min(1, c.meanAbsOffset / 60);
-  const bad = Math.min(1, miss * 1.6 + err * 0.8);
+  const bad = heatBad(c);
   return { bad, color: `hsl(${Math.round(140 - 140 * bad)}, 60%, ${Math.round(30 + 10 * (1 - bad))}%)` };
 }
 

@@ -3,13 +3,12 @@
 // from the song audio, the dashed squares on the web, need tab capture: off on the iPad, B13.)
 import type { ChartDrum, ChartNote } from '@drum-coach/core/engine/chart';
 import { beatAt, type BeatGrid } from '@drum-coach/core/engine/tempo';
+import { GRID_ROWS as ROWS, GRID_ROW_NAME as NAMES } from '@drum-coach/core/engine/transcribe';
 import { memo, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { MAX_FONT_SCALE, color, drumColor } from '../../ui';
 import type { YtController } from '../../youtube';
 
-export const ROWS: ChartDrum[] = ['crash', 'ride', 'hihat', 'hhOpen', 'hhPedal', 'tom1', 'tom2', 'floor', 'snare', 'kick'];
-const NAMES: Record<ChartDrum, string> = { crash: 'Crash', ride: 'Ride', hihat: 'Hi-hat', hhOpen: 'HH open', hhPedal: 'HH foot', tom1: 'Tom 1', tom2: 'Tom 2', floor: 'Floor', snare: 'Snare', kick: 'Kick' };
 const colorOf = (d: ChartDrum) => drumColor[d === 'hhOpen' || d === 'hhPedal' ? 'hihat' : d];
 const LABEL = 70, ROW_H = 30;
 
