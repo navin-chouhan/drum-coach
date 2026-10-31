@@ -2,7 +2,8 @@
 // fake data for the state in the URL (src/dev/harness/seeds.ts). Metro picks this file for `--platform web` only.
 import type { RunRow } from '@drum-coach/core/engine/progress';
 import { createDataStore, type AppStorage } from '../data/store';
-import type { AiLesson, AiLessonsRepo, PlansRepo } from '../data/records';
+import type { AiLesson, AiLessonsRepo, PlansRepo, SettingsRepo } from '../data/records';
+import type { SongsRepo } from '../data/songs';
 import type { RunsRepo } from '../data/runs';
 import { harnessState, seedFor } from '../dev/harness/seeds';
 import { KV_KEYS } from '../data/kv';
@@ -29,7 +30,11 @@ export function getStorage(): AppStorage {
     replace: (l, ids) => { ai = [...ai.filter(x => x.id !== l.id && !ids.includes(x.id)), l]; },
   };
   const plans: PlansRepo = { latest: async () => (seed.plan ? { id: 1, plan: seed.plan, checks: {} } as never : null), add: () => 1, setChecks: () => true };
-  instance = { ...base, runs: runsRepo, aiLessons, plans };
+  // Progress's show-off set and the teacher page read these (read-only here)
+  const songs = { list: () => seed.songs ?? [], get: (id: string) => seed.songs?.find(x => x.id === id) ?? null } as unknown as SongsRepo;
+  const rows: Record<string, unknown> = { ...seed.rows };
+  const settings: SettingsRepo = { get: k => rows[k], put: (k, v) => { rows[k] = v; }, all: () => ({ ...rows }) };
+  instance = { ...base, runs: runsRepo, aiLessons, plans, songs, settings };
   return instance;
 }
 
