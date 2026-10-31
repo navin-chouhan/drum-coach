@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { RunRow } from '@drum-coach/core/engine/progress';
-import { getHomeServer } from '../../platform/api';
+import { getCoach } from '../coach/coach';
 import { getStorage } from '../../platform/storage';
 import { Body, Button, Card, CardTitle, Notice, Strong, color, stroke, tabular } from '../../ui';
 import { practiceEngine } from '../practice/engine';
@@ -24,7 +24,7 @@ export function MonthReportView({ runs }: { runs: RunRow[] }) {
     setBusy(true); setErr('');
     const storage = getStorage();
     void askMonthReport({
-      call: (method, path, body, opts) => getHomeServer().call(method, path, body, opts),
+      call: (method, path, body, opts) => getCoach().server.call(method, path, body, opts), // with the API-key fallback
       context: async () => (await storage.coachContext('month')).context,
       keep: v => storage.settings?.put(MONTH_REPORT_KEY, v),
     }, again).then(r => { if (r.ok) setReport(r.report); else setErr(r.message); }).finally(() => setBusy(false));

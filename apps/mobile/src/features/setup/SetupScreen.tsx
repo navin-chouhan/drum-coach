@@ -23,7 +23,7 @@ import { VelocityPanel } from '../pads/VelocityPanel';
 import { conflictText, noteMapSummary } from '../pads/kitStore';
 import { levelsShort, setupChecks } from './checklist';
 import {
-  API_KEY_FOOT, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
+  API_KEY_FOOT, COACH_MODEL_KEY, DEFAULT_FALLBACK_MODEL, SERVER_FOOT, SERVER_PLACEHOLDER, apiKeyValue, cleanCoachModel, hasApiKey, removeApiKey, saveApiKey, saveServer, testConnection, tokenMask, type TestResult,
 } from './coachServer';
 import { KEYS_LINE, KIT_FOOT, inputChoices, kitStatus, lastHitView } from './kit';
 import { CoachVoicePanel } from './CoachVoicePanel';
@@ -235,6 +235,27 @@ function ApiKeyPanel({ onDone }: { onDone: () => void }) {
         <Button tone="blue" label="Save in the Keychain" onPress={() => void saveApiKey(keychain, key).then(r => (r.ok ? onDone() : setError(r.error)), () => setError('The Keychain refused it.'))} testID="apikey-save" />
         {set ? <Button tone="red" label="Remove" onPress={() => void removeApiKey(keychain).then(onDone, onDone)} testID="apikey-remove" /> : null}
       </View>
+      <ModelField />
+    </View>
+  );
+}
+
+/** The fallback's model (CLAUDE.md: CLAUDE_MODEL, default claude-sonnet-5-5). Saved as typed; empty goes back to the default. */
+function ModelField() {
+  const [model, setModel] = useState(() => kv().get(COACH_MODEL_KEY) ?? '');
+  const [error, setError] = useState('');
+  const save = () => {
+    const m = cleanCoachModel(model);
+    if (m === null) { setError('A model id is letters, digits, dots and dashes, e.g. claude-sonnet-5-5'); return; }
+    setError('');
+    if (m) kv().set(COACH_MODEL_KEY, m); else kv().remove(COACH_MODEL_KEY);
+  };
+  return (
+    <View style={styles.row}>
+      <Text style={styles.lbl}>Model</Text>
+      <TextInput testID="apikey-model" style={[styles.field, styles.mono]} value={model} onChangeText={setModel} onEndEditing={save} placeholder={DEFAULT_FALLBACK_MODEL}
+        autoCapitalize="none" autoCorrect={false} spellCheck={false} accessibilityLabel="Model for the API-key fallback" />
+      {error ? <Body size={14} color={color.bad} weight="700">{error}</Body> : null}
     </View>
   );
 }

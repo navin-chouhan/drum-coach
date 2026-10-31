@@ -94,7 +94,7 @@ describe('coach server and API key', () => {
     expect(validateApiKey('abc')).toMatchObject({ ok: false });
     expect(await saveApiKey(secrets, ' sk-ant-api03-abcdefghijklmnop ')).toEqual({ ok: true });
     expect(await hasApiKey(secrets)).toBe(true);
-    expect(apiKeyValue(true)).toBe('Set · used later');
+    expect(apiKeyValue(true)).toBe('Set · used when the server is away');
   });
 });
 

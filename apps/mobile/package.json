@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "doctor": "npx --yes expo-doctor@1.21.5",
-    "check:versions": "node ../../scripts/check-expo-versions.mjs ."
+    "check:versions": "node ../../scripts/check-expo-versions.mjs .",
+    "gen:prompts": "node scripts/gen-coach-prompts.mjs"
   },
   "dependencies": {
     "@drum-coach/core": "file:../../packages/core",

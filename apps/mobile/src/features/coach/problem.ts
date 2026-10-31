@@ -38,9 +38,9 @@ export async function readFallbackKey(read?: FallbackKeyRead): Promise<boolean> 
   try { return !!(await read?.()); } catch { return false; }
 }
 
-/** The API-key fallback (D2) isn't built: the line says why there's no fallback either way. */
+/** The API-key fallback (D2): with a key it was tried, and only an offline failure gets here (no internet either). */
 const fallbackLine = (hasKey: boolean) => (hasKey
-  ? "The API-key fallback isn't built yet, so there's no fallback."
+  ? 'The API-key fallback couldn’t reach Anthropic either. Is the iPad online?'
   : "No API key is set, so there's no fallback.");
 
 export function coachProblem(f: ApiFailure, o: { url?: string; hasFallbackKey?: boolean } = {}): CoachProblem {
