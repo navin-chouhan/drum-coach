@@ -23,7 +23,7 @@ import { createContextFor } from './context';
 import { createSpeakOnce } from './feedback';
 import { createCoachSession } from './session';
 import { createTipsCache } from './tips';
-import { hush, sayNext, sayNow } from './voice';
+import { applyVoiceFirst, hush, setVoicePlaying, speakMoment } from './voice';
 import { createAnthropicClient } from './direct/anthropic';
 import { createDirectCoach } from './direct/direct';
 import { withDirectFallback } from './direct/fallback';
@@ -43,11 +43,13 @@ let playing = false;
 export function setCoachPlaying(on: boolean, what?: { exercise?: string; bpm?: number; lesson?: string }) {
   playing = on;
   nowPlaying = on ? what : undefined;
+  setVoicePlaying(on); // only the short live tips are said during a take
   if (on) hush();
 }
 let nowPlaying: { exercise?: string; bpm?: number; lesson?: string } | undefined;
 
 function build() {
+  applyVoiceFirst(); // D10: spoken live tips by default, once per install
   const storage = getStorage();
   const kv = storage.kv;
   // D2: the home server first; with a key in the Keychain, the iPad asks the Anthropic API when the server is away.
@@ -68,14 +70,14 @@ function build() {
   const asks = createCoachAsks({ server, context: contextFor, hasFallbackKey });
   const session = createCoachSession({
     server, context: () => contextFor('session'), settings, hasFallbackKey, isPlaying: () => playing, playing: () => nowPlaying,
-    sayNext: text => { if (voiceOn()) sayNext(text); },
+    sayNext: text => speakMoment({ kind: 'reply', text }), // gated by the voice setting and the take
     saveChart: chart => charts.save(chart), exists,
     nav: { openLesson: id => router.push(lessonHref(id) as never), openDrill: t => router.push(drillRoute(t) as never) },
   });
   const tips = createTipsCache({ kv, asks, settings });
   const weekPlan = createWeekPlan({ plans: storage.plans, asks });
   void weekPlan.refresh();
-  const speakOnce = createSpeakOnce(text => { if (!playing) sayNow(text); }, voiceOn);
+  const speakOnce = createSpeakOnce(text => speakMoment({ kind: 'reply', text }), voiceOn);
   /**
    * Asks the coach to write the next lesson for this stage (optionally about a failed take): the web's
    * requestCoachLesson. Once per key; saved with the server's `replaces`; `onSaved` reloads whoever lists lessons.

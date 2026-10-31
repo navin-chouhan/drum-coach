@@ -17,7 +17,7 @@ export { gestureLabel, gestureSpoken, gesturesFor, type Gesture } from './gestur
 export { ringAngles, ratio, trailGeometry, type TrailGeometry } from './layout';
 export { kitDot, statusRows, type KitDot, type StatusRow, type StatusInput, type Dot } from './status';
 export { readSettings, writeSettings, subscribeSettings, settingsVersion, SETTINGS_KEY } from './appSettings';
-export { createKitMoveRouter, type KitMoveHandlers, type KitMoveRouter } from './kitMoves';
+export { createKitMoveRouter, kickAgain, type KitMove, type KitMoveHandlers, type KitMoveRouter } from './kitMoves';
 export { KIT_SOUNDS_LABEL, useKitSounds } from './useKitSounds';
 export { getAppHitBus, startAppKeyboard, useAppKey, useAppSettings, useKitDot, useKitMoves, useSidebarPref, useStatusRows, kitName } from './hooks';
 export { NAV, parseSidebarPref, sectionOf, sidebarModeFor, toggledPref, type NavKey, type SidebarMode, type SidebarPref } from './nav';
