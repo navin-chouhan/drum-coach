@@ -10,12 +10,15 @@ import {
   color, gesturesFor, ratio, readSettings, tabular, type, useKitMoves, writeSettings,
 } from '../../ui';
 import { getStorage } from '../../platform/storage';
-import { getCoach, useCoachEntry } from '../coach/coach';
+import { isoWeek } from '@drum-coach/core/engine/progress';
+import { getCoach, useCoachEntry, useWeekPlan } from '../coach/coach';
+import { sayNow } from '../coach/voice';
+import type { LessonMode } from '../lesson/route';
 import { lessonHref } from '../lesson/route';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
 import { useJourney } from './useJourney';
-import type { JourneyView } from './model';
+import { badgeNames, type JourneyView } from './model';
 
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
@@ -24,8 +27,38 @@ export function JourneyScreen() {
   // playing; a server that can't be reached is skipped silently here (the asks entry keeps the error, as the web).
   useEffect(() => { if (v.coachAsk) getCoach().requestLesson(v.coachAsk, undefined, reload); }, [v.coachAsk, reload]);
   const writing = useCoachEntry(v.coachKey)?.status === 'thinking';
+  // The coach's week plan (the web's refreshWeekPlan + ensureWeekPlan): read it, ask for this week's once when you've
+  // played, the coach is on and the first run is done; offline is skipped silently. A new plan re-plans the view.
+  useEffect(() => { void getCoach().weekPlan.refresh(); }, []);
+  useEffect(() => { if (v.weekPlanDue) getCoach().weekPlan.ensure().catch(() => {}); }, [v.weekPlanDue]);
+  const plan = useWeekPlan();
+  useEffect(() => { if (plan) reload(); }, [plan, reload]);
+  // The ear tip shows for a minute, once a week.
+  useEffect(() => {
+    if (!v.hearingTipDue) return;
+    const t = setTimeout(() => writeSettings(getStorage().kv, { hearingTipWeek: isoWeek(new Date()) }), 60_000);
+    return () => clearTimeout(t);
+  }, [v.hearingTipDue]);
+  // The Monday recap: kept for this visit, given once a week, spoken if the voice is on.
+  const [recap, setRecap] = useState<string>();
+  if (!recap && v.recap) setRecap(v.recap);
+  useEffect(() => {
+    const kv = getStorage().kv, wk = isoWeek(new Date());
+    if (!recap || readSettings(kv).lastRecapWeek === wk) return;
+    writeSettings(kv, { lastRecapWeek: wk });
+    if (readSettings(kv).voice) sayNow(recap);
+  }, [recap]);
+  // A badge earned since last time is announced once on Journey, then kept in settings.
+  const [badges, setBadges] = useState<string[]>([]);
+  if (v.newBadges.length && v.newBadges.join() !== badges.join()) setBadges(v.newBadges);
+  useEffect(() => {
+    const kv = getStorage().kv, kept = readSettings(kv).badges ?? [], add = badges.filter(id => !kept.includes(id));
+    if (add.length) writeSettings(kv, { badges: [...kept, ...add] });
+  }, [badges]);
+  // One notice at a time next to the coach's line (the web's notice strip; the recap goes first).
+  const notice = recap ?? (badges.length ? `🏅 New badge: ${badgeNames(badges)}!` : v.healthLine);
 
-  const open = (lessonId: string, item = -1, mode: 'play' | 'hear' | 'jam' = 'play') => {
+  const open = (lessonId: string, item = -1, mode: LessonMode = 'play') => {
     if (item >= 0 && mode === 'play' && v.session.date !== readSessionDate()) writeSettings(getStorage().kv, startSessionPatch(v.session));
     router.push(lessonHref(lessonId, item, mode) as never);
   };
@@ -38,7 +71,7 @@ export function JourneyScreen() {
     <Screen testID="screen-journey">
       <TitleBar
         title="Journey"
-        coach={v.healthLine ? `${v.coachLine} ${v.healthLine}` : v.coachLine}
+        coach={recap ?? (notice ? `${v.coachLine} ${notice}` : v.coachLine)} /* the recap is three sentences: it takes the line */
         right={v.setupDue
           ? <Button size="small" emoji="🛠" label="Check my kit" testID="journey-check-kit" onPress={() => router.navigate('/setup' as never)} />
           : <Button size="small" emoji="🗺️" label="Skill map" testID="journey-skill-map" onPress={() => router.navigate('/progress?view=skills' as never)} />}
@@ -51,7 +84,9 @@ export function JourneyScreen() {
             <BigMove testID="journey-start" tone="go" emoji={v.main.emoji} label={v.main.label} gestures={gesturesFor('yes')} onPress={start} style={styles.moveMain} />
           ) : null}
           <BigMove testID="journey-something-else" emoji="↻" label="Something else" gestures={gesturesFor('next')} onPress={other} disabled={!other} style={styles.move} />
-          <BigMove testID="journey-hear" emoji="👂" label="Hear it" gestures={gesturesFor('listen')} onPress={hear} disabled={!hear} style={styles.move} />
+          {v.arcade /* after today's set, as the web: the 2-minute challenge joins the moves */
+            ? <BigMove testID="journey-arcade" emoji="⏱" label="2-minute challenge" note={v.arcade.sub} onPress={() => open(v.arcade!.lessonId, -1, 'arcade')} style={styles.move} />
+            : <BigMove testID="journey-hear" emoji="👂" label="Hear it" gestures={gesturesFor('listen')} onPress={hear} disabled={!hear} style={styles.move} />}
           <BigMove testID="journey-jam" emoji="🎸" label="Just jam" note="no score, with the band" disabled={!v.jamLessonId}
             onPress={v.jamLessonId ? () => open(v.jamLessonId!, -1, 'jam') : undefined} style={styles.move} />
         </View>
