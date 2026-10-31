@@ -14,7 +14,7 @@ import type { RunsRepo } from '../../data/runs';
 import { getStorage } from '../../platform/storage';
 import {
   BigMove, Body, Button, Card, CardTitle, CoachLine, Display, Label, MAX_FONT_SCALE, Pill, Screen, Toggle,
-  color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppSettings, useKitMoves, writeSettings,
+  color, getAppHitBus, gesturesFor, hardShadow, shadow, slopFor, stroke, tabular, useAppKey, useAppSettings, useKitMoves, writeSettings,
   Dots, Notice, Stepper,
 } from '../../ui';
 import { useStoredData } from '../progress/useStoredData';
@@ -155,6 +155,7 @@ export function PlayScreen() {
     faster: () => { const a = playGesture('faster', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
     slower: () => { const a = playGesture('slower', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
   }, { playing });
+  useAppKey('escape', stop); // a hardware keyboard's Esc stops (the web App's Escape)
   const flip = (id: Parameters<typeof flipChip>[0]) => {
     const p = flipChip(id, o, settings);
     if (p.options) set(p.options);
