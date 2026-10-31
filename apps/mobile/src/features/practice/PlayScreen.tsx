@@ -23,6 +23,7 @@ import { getCoach, replyFor, setCoachPlaying, thinkingAbout, useCoachSession, ty
 import { SheetPager } from '../lesson/parts';
 import { replayResults, runChart, takenChart } from '../lesson/runChart';
 import { useSheetPages } from '../lesson/sheetPages';
+import { ResultsDetails } from '../results/ResultsDetails';
 import { backingFor, prepareBacking } from '../songs/backing';
 import { useKitConnected } from '../lesson/useLesson';
 import { kindIcon, startOf, type PracticeChart } from './catalog';
@@ -72,6 +73,9 @@ export function PlayScreen() {
   const coach = useCoachSession(), session = getCoach().session;
   const [opened] = useState(Date.now);
   const scored = f && !f.options.demo ? f : undefined;
+  // "Details" (the web's "details and history" → Results): the last take in full, until a new take starts or Back.
+  const [details, setDetails] = useState(false);
+  const showDetails = details && !playing && scored ? scored : undefined;
   const reply = replyFor(coach, scored, opened);
   const act = session.screenAction(reply?.action, '⏭ Next one');
   const coachMove = act && session.canRunAction(act) ? act : undefined;
@@ -113,6 +117,7 @@ export function PlayScreen() {
     const speed = speedFor(bpm, c.bpm);
     if (c.id !== o.chartId || speed !== o.speed) set({ chartId: c.id, speed });
     setNotice('');
+    setDetails(false);
     const run = (backing?: TakeBacking) => {
       if (!practiceEngine.start({ chart: c, options: { ...o, chartId: c.id, speed }, section: sec, hints, band: settings.band !== false, backing, ...extra })) setNotice(practiceEngine.notReady);
     };
@@ -151,7 +156,7 @@ export function PlayScreen() {
   const playAt = (bpm: number) => go(bpm);
   const stop = () => { setWarm(undefined); practiceEngine.stop(); };
   useKitMoves({
-    yes: main, listen, next, stop,
+    yes: showDetails ? () => go() : main, listen, next, stop,
     faster: () => { const a = playGesture('faster', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
     slower: () => { const a = playGesture('slower', m.bpm); if (a?.kind === 'playAt') playAt(a.bpm); },
   }, { playing });
@@ -200,6 +205,11 @@ export function PlayScreen() {
         <Button label="Hints" emoji="💡" size="small" tone={hints ? 'pop' : 'white'} onPress={() => flip('hints')} accessibilityLabel={`Hints ${hints ? 'on' : 'off'}`} testID="practice-hints" />
       </View>
 
+      {showDetails ? (
+        <ScrollView style={styles.detailsScroll} contentContainerStyle={styles.detailsIn}>
+          <ResultsDetails f={showDetails} onAgain={() => go()} onBack={() => setDetails(false)} extras={{ chartId: chart.id }} testID="practice-details" />
+        </ScrollView>
+      ) : <>
       {playing ? (
         <View style={styles.playingRow}>
           <CoachLine size={20} style={styles.grow} testID="practice-live-tip">{cue ?? (eng.demo ? 'Listen: this is how it goes.' : `${chart.title} at ${m.bpm}.`)}</CoachLine>
@@ -209,6 +219,7 @@ export function PlayScreen() {
       <View style={styles.coachRow}>
         <CoachLine size={20} style={styles.grow} testID="practice-coach-line">{m.line}</CoachLine>
         {thinking ? <View testID="practice-coach-thinking"><Pill tone="pop">Coach is listening back…</Pill></View> : null}
+        {scored && !showDetails ? <Button label="Details" emoji="📊" size="small" onPress={() => setDetails(true)} accessibilityLabel="Details of your last take" testID="practice-details-open" /> : null}
       </View>
       <View style={styles.moves}>
         <BigMove tone="go" label={m.main.label.replace(/^\S+ /, '')} emoji={m.main.label.split(' ')[0]} gestures={gesturesFor('yes')} onPress={main} testID="practice-main" style={styles.moveGo} />
@@ -296,6 +307,7 @@ export function PlayScreen() {
           </Card>
         </ScrollView>
       </View>
+      </>}
     </Screen>
   );
 }
@@ -354,4 +366,6 @@ const styles = StyleSheet.create({
   chipLabel: { fontSize: 13.5, fontWeight: '800', color: color.ink },
   chipNote: { fontSize: 11.5, fontWeight: '600', color: color.muted },
   metro: { marginTop: 6 },
+  detailsScroll: { flex: 1, marginTop: 14 },
+  detailsIn: { paddingBottom: 24 },
 });
