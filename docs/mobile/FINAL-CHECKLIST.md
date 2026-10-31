@@ -146,6 +146,7 @@ tom 1 × 2 = faster (warm-up), ride × 2 = next, crash × 4 = stop.
 - [ ] **Look step** (Stage 3 "The flam", step 1): the animated How it moves, one move (Done = hi-hat pedal × 3).
       **Listen step** (Stage 2 "Listen: the money beat"): **▶ Find it on YouTube** opens the search, "✓ I listened: next step".
 - [ ] ⋯ More → **🤸 How it moves** opens the full-size demo for this lesson; Esc or ✕ closes it.
+- [ ] **The animation draws (owner saw it blank, fixed by R2):** in all 4 places the arm or foot moves within a second: the look step, the intro's 4th slide, ⋯ → How it moves, and 🥢 Stick technique (try The grip and Kick). If a red "How it moves couldn't draw: …" line shows instead, paste it back.
 - [ ] Hardware keyboard: H hints, B band, Esc stops a take / closes More, the coach panel and the celebration;
       Enter on the celebration is its main button.
 
