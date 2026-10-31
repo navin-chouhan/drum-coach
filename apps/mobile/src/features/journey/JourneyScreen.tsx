@@ -8,7 +8,7 @@ import { router, useFocusEffect, useIsFocused } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  BigMove, Body, Button, Card, Display, Label, MAX_FONT_SCALE, Panel, RoundButton, Screen, Stars, Tick, TitleBar,
+  BigMove, Body, Button, Card, Display, Label, MAX_FONT_SCALE, MoreButton, Panel, Screen, Stars, Tick, TitleBar,
   color, gesturesFor, readSettings, tabular, useKitMoves, writeSettings,
 } from '../../ui';
 import { getStorage } from '../../platform/storage';
@@ -21,8 +21,8 @@ import { playFlourish } from '../../play/flourish';
 import { audio } from '../../platform/audio';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
-import { MoreSheet } from './MoreSheet';
-import { afterSetMove, dotLabel, stageLine, type MoreEntry } from './more';
+import { JourneyMoreSheet } from './MoreSheet';
+import { afterSetMove, dotLabel, MORE_ROUTES, stageLine, type MoreEntry } from './more';
 import { journeyMoments, momentKey } from './moments';
 import { LinkText } from './Tiles';
 import { useJourney } from './useJourney';
@@ -111,7 +111,7 @@ export function JourneyScreen() {
         <Button size="small" label="All good" testID="journey-notice-all-good" onPress={() => set({ soreAskedWeek: isoWeek(new Date()) })} />
         <Button size="small" label="A bit sore" testID="journey-notice-sore" onPress={() => set(sorePatch(v.today, isoWeek(new Date())))} />
       </> : null}
-      <RoundButton glyph="⋯" size="medium" label="More: Just jam, Flow, Find my level, Stick technique, your coach, Skill map" testID="journey-more-open" onPress={() => setMore(true)} />
+      <MoreButton label="More: Just jam, Flow, Find my level, Stick technique, your coach, Skill map" testID="journey-more-open" onPress={() => setMore(true)} />
     </View>
   );
 
@@ -167,7 +167,7 @@ export function JourneyScreen() {
       <SetStrip v={v} onOpen={(id, item) => open(id, item)} />
       {v.trail ? <StageStrip v={v} onOpen={id => open(id)} /> : null}
 
-      <MoreSheet v={v} visible={more} onClose={() => setMore(false)} onRun={run}
+      <JourneyMoreSheet v={v} visible={more} onClose={() => setMore(false)} onRun={run}
         coach={{ thinking: coachEntry?.status === 'thinking' || habitEntry?.status === 'thinking', error: coachEntry?.status === 'error' ? coachEntry.error : undefined }} />
     </Screen>
   );
@@ -252,7 +252,7 @@ function StageStrip({ v, onOpen }: { v: JourneyView; onOpen: (lessonId: string) 
         <Label>{t.title}</Label>
         <Body size={15} weight="700" numberOfLines={1} style={styles.flexShrink}>{stageLine(v)}</Body>
         <View style={styles.flex} />
-        <Button size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} testID="journey-full-path" onPress={() => router.navigate('/progress?view=path' as never)} />
+        <Button size="small" label="Full path" trailing={<Text style={styles.chev}>›</Text>} testID="journey-full-path" onPress={() => router.navigate(MORE_ROUTES.path as never)} />
       </View>
       <View style={styles.dots}>
         {t.stops.map(s => (

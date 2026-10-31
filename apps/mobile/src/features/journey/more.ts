@@ -12,7 +12,7 @@ export type MoreEntry = { key: string; emoji: string; title: string; sub?: strin
 export type MoreSection = { key: string; title: string; entries: MoreEntry[] };
 
 /** The routes the sheet opens (the shell owns them; one place to change when it moves them). */
-export const MORE_ROUTES = { placement: '/lesson/placement', technique: '/technique', skills: '/progress?view=skills', path: '/progress?view=path', songs: '/songs', setup: '/setup' } as const;
+export const MORE_ROUTES = { placement: '/lesson/placement', technique: '/technique', skills: '/you?view=skills', path: '/you?view=path', songs: '/songs', setup: '/setup' } as const;
 
 /**
  * The ⋯ sheet's sections: "More ways to play" (Just jam, Flow, the after-set moves, the stage song, a new song,

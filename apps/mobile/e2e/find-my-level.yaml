@@ -11,7 +11,12 @@ tags:
     id: journey-more-open
 - extendedWaitUntil:
     visible:
+      id: journey-more
+    timeout: 10000
+- scrollUntilVisible: # the sheet scrolls: Find my level is under "Where you are"
+    element:
       id: journey-find-level
+    direction: DOWN
     timeout: 10000
 - tapOn:
     id: journey-find-level
