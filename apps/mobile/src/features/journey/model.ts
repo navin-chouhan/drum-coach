@@ -5,7 +5,7 @@
 import { MILESTONES } from '@drum-coach/core/content/curriculum';
 import { greeting } from '@drum-coach/core/engine/greeting';
 import { dayAdvice, soreActive } from '@drum-coach/core/engine/health';
-import { dayKey, isProven, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
+import { addDays, dayKey, isProven, toolOf, type Lesson, type Step, type Tool } from '@drum-coach/core/engine/lesson';
 import { buildSession, checkpointsOf, currentMilestone, rankState, studentRead, visibleLessons, type SessionRole } from '@drum-coach/core/engine/planner';
 import { BADGES, barsReady, dashboard, earnedBadges, isoWeek, weekRecap, type RunRow } from '@drum-coach/core/engine/progress';
 import { skillMap } from '@drum-coach/core/engine/skills';
@@ -80,6 +80,10 @@ export type JourneyView = {
   coachKey: string;
   /** Ask the coach for a lesson now (once a day per stage: the key); null when not. */
   coachAsk: string | null;
+  /** The setup nudge (pads and latency not checked, "Not now" not pressed): the web's notice with two buttons. */
+  setupNudge: boolean;
+  /** The weekly wrists check-in ("All good" / "A bit sore"), after three days of playing. */
+  askSore: boolean;
   /** Make sure there's a plan for this week (the web's ensureWeekPlan: played, coach on, onboarded). */
   weekPlanDue: boolean;
   /** The ear tip is showing this week: the screen marks it seen after a minute (the web's hearingTipWeek). */
@@ -92,6 +96,10 @@ export type JourneyView = {
   arcade: { lessonId: string; title: string; sub: string } | null;
 };
 
+export const SETUP_NUDGE = 'Two minutes to check your pads and latency makes every timing score fair.';
+export const SORE_ASK = 'Quick check: anything sore after drumming (wrists, forearms, back)?';
+/** "A bit sore": lighter days for three days (the web's addDays(today, 3)). */
+export const sorePatch = (today: string, wk: string): Partial<Settings> => ({ soreAskedWeek: wk, soreUntil: addDays(today, 3) });
 export const HEARING_TIP = 'Protect your ears: keep the headphones at a level you could talk over, and stop if your ears ring.';
 export const badgeNames = (ids: string[]) => ids.map(id => BADGES.find(b => b.id === id)?.name ?? id).join(', ');
 
@@ -275,6 +283,8 @@ export function buildJourney({ settings: s, lessons, runs, now, swap = 0, focusI
       stops: trailStops(trail, hero, builtinSong, s, isCheckpoint),
     } : null,
     coachKey, coachAsk,
+    setupNudge: !s.setupDone && !s.setupNudged,
+    askSore: played && daysPlayed >= 3 && s.soreAskedWeek !== wk && !sore,
     weekPlanDue: played && s.liveCoach && s.profile.onboarded,
     hearingTipDue: played && s.hearingTipWeek !== wk,
     recap, newBadges,

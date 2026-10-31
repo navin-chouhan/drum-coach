@@ -4,7 +4,7 @@ import { isoWeek, type RunRow } from '@drum-coach/core/engine/progress';
 import { DEFAULTS, type Settings } from '@drum-coach/core/input/settings';
 import { currentMilestone } from '@drum-coach/core/engine/planner';
 import { describe, expect, it } from 'vitest';
-import { badgeNames, buildJourney, currentSession, HEARING_TIP } from './model';
+import { badgeNames, buildJourney, currentSession, HEARING_TIP, sorePatch } from './model';
 import { countWords, groovePreview, slotsPerBeat } from './preview';
 
 const NOW = new Date(2026, 9, 30, 19, 42); // Fri 30 Oct, evening
@@ -226,5 +226,21 @@ describe('the rest of the web TodayView: week plan, ear tip, recap, badges, 2-mi
       const best = { ...doneSet, arcade: { [v.arcade!.lessonId]: 6 } };
       expect(buildJourney({ settings: best, lessons: CURRICULUM, runs, now: NOW }).arcade?.sub).toMatch(/beat 8 clean bars$/);
     }
+  });
+});
+
+describe('the notice strip (web TodayView: setup nudge, wrists check-in)', () => {
+  const { settings, runs } = threeWeeksIn();
+  it('nudges a kit check until it is done or "Not now"', () => {
+    expect(buildJourney({ settings: fresh(), lessons: CURRICULUM, runs: [], now: NOW }).setupNudge).toBe(true);
+    expect(buildJourney({ settings: { ...fresh(), setupNudged: true }, lessons: CURRICULUM, runs: [], now: NOW }).setupNudge).toBe(false);
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).setupNudge).toBe(false);
+  });
+  it('asks about sore wrists once a week after three days of playing, not while easy days run', () => {
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs, now: NOW }).askSore).toBe(true);
+    expect(buildJourney({ settings: { ...settings, soreAskedWeek: isoWeek(NOW) }, lessons: CURRICULUM, runs, now: NOW }).askSore).toBe(false);
+    expect(buildJourney({ settings: { ...settings, ...sorePatch('2026-10-30', 'x') }, lessons: CURRICULUM, runs, now: NOW }).askSore).toBe(false);
+    expect(buildJourney({ settings, lessons: CURRICULUM, runs: runs.slice(-2), now: NOW }).askSore).toBe(false);
+    expect(sorePatch('2026-10-30', '2026-W44')).toEqual({ soreAskedWeek: '2026-W44', soreUntil: '2026-11-02' });
   });
 });

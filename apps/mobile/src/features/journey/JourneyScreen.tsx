@@ -18,7 +18,7 @@ import { lessonHref } from '../lesson/route';
 import { GroovePreview } from './GroovePreview';
 import { startSessionPatch } from './source';
 import { useJourney } from './useJourney';
-import { badgeNames, type JourneyView } from './model';
+import { SETUP_NUDGE, SORE_ASK, badgeNames, sorePatch, type JourneyView } from './model';
 
 export function JourneyScreen() {
   const [swap, setSwap] = useState(0);
@@ -55,8 +55,23 @@ export function JourneyScreen() {
     const kv = getStorage().kv, kept = readSettings(kv).badges ?? [], add = badges.filter(id => !kept.includes(id));
     if (add.length) writeSettings(kv, { badges: [...kept, ...add] });
   }, [badges]);
-  // One notice at a time next to the coach's line (the web's notice strip; the recap goes first).
-  const notice = recap ?? (badges.length ? `🏅 New badge: ${badgeNames(badges)}!` : v.healthLine);
+  // D9: one notice at a time (the web's slim strip; the weekly recap first, then the setup nudge, the wrists check-in,
+  // the health line). Here it takes the coach's line in the title bar, its buttons in the bar's right slot.
+  const kind = recap ? 'recap' : v.setupNudge ? 'setup' : v.askSore ? 'sore' : undefined;
+  const extra = badges.length ? `🏅 New badge: ${badgeNames(badges)}!` : v.healthLine;
+  const coachText = kind === 'recap' ? recap : kind === 'setup' ? `🛠 ${SETUP_NUDGE}` : kind === 'sore' ? `🩹 ${SORE_ASK}` : extra ? `${v.coachLine} ${extra}` : v.coachLine;
+  const set = (patch: Parameters<typeof writeSettings>[1]) => writeSettings(getStorage().kv, patch);
+  const titleRight = kind === 'setup' ? <View style={styles.noticeBtns}>
+      <Button size="small" tone="pop" label="Check my kit ▶" testID="journey-notice-setup" onPress={() => { set({ setupNudged: true }); router.navigate('/setup' as never); }} />
+      <Button size="small" label="Not now" testID="journey-notice-not-now" onPress={() => set({ setupNudged: true })} />
+    </View>
+    : kind === 'sore' ? <View style={styles.noticeBtns}>
+      <Button size="small" label="All good" testID="journey-notice-all-good" onPress={() => set({ soreAskedWeek: isoWeek(new Date()) })} />
+      <Button size="small" label="A bit sore" testID="journey-notice-sore" onPress={() => set(sorePatch(v.today, isoWeek(new Date())))} />
+    </View>
+    : v.setupDue
+      ? <Button size="small" emoji="🛠" label="Check my kit" testID="journey-check-kit" onPress={() => router.navigate('/setup' as never)} />
+      : <Button size="small" emoji="🗺️" label="Skill map" testID="journey-skill-map" onPress={() => router.navigate('/progress?view=skills' as never)} />;
 
   const open = (lessonId: string, item = -1, mode: LessonMode = 'play') => {
     if (item >= 0 && mode === 'play' && v.session.date !== readSessionDate()) writeSettings(getStorage().kv, startSessionPatch(v.session));
@@ -71,10 +86,8 @@ export function JourneyScreen() {
     <Screen testID="screen-journey">
       <TitleBar
         title="Journey"
-        coach={recap ?? (notice ? `${v.coachLine} ${notice}` : v.coachLine)} /* the recap is three sentences: it takes the line */
-        right={v.setupDue
-          ? <Button size="small" emoji="🛠" label="Check my kit" testID="journey-check-kit" onPress={() => router.navigate('/setup' as never)} />
-          : <Button size="small" emoji="🗺️" label="Skill map" testID="journey-skill-map" onPress={() => router.navigate('/progress?view=skills' as never)} />}
+        coach={coachText}
+        right={titleRight}
       />
 
       <Card elevation={6} style={styles.next} testID="journey-next">
@@ -214,6 +227,7 @@ function StageSong({ v, onHear, onPlay }: { v: JourneyView; onHear: (id: string)
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  noticeBtns: { flexDirection: 'row', gap: 8 },
   flexShrink: { flexShrink: 1, minWidth: 0 },
   b: { fontWeight: '800' },
   next: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 16, gap: 14 },
