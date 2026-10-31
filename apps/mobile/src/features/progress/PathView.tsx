@@ -55,7 +55,7 @@ function PathActions() {
     <View style={styles.actions}>
       <Button size="small" tone="plain" label={REBUILD_LABEL} onPress={rebuild} testID="path-rebuild" />
       <Button size="small" tone="plain" label={FIND_LEVEL_LABEL} onPress={() => router.push('/lesson/placement' as never)} testID="path-find-level" />
-      <Button size="small" tone="plain" label={goalsLabel(s.profile)} onPress={() => router.push('/setup?tool=coach' as never)} testID="path-goals" />
+      <Button size="small" tone="plain" label={goalsLabel(s.profile)} onPress={() => router.push('/setup?tool=connection' as never)} testID="path-goals" />
       <Button size="small" tone="red" label={RESET_LABEL} onPress={reset} testID="path-reset" />
     </View>
   );
