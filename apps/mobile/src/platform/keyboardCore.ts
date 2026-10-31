@@ -40,6 +40,7 @@ export type NamedKey = 'escape' | 'enter' | 'left' | 'right' | 'up' | 'down';
 export const COMMAND_CHARS = [
   'b', 'c', 'd', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'u', 'v', 'y',
   '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+  '\\', // the sidebar's « / » (D10)
 ] as const;
 export type CommandChar = (typeof COMMAND_CHARS)[number];
 

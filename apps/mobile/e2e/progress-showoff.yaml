@@ -8,7 +8,7 @@ tags:
 ---
 - runFlow: subflows/open-app.yaml
 - tapOn:
-    id: nav-progress
+    id: nav-you # D10: Progress is You
 - extendedWaitUntil:
     visible:
       id: screen-progress

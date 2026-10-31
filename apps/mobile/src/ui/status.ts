@@ -31,3 +31,15 @@ export function statusRows(s: StatusInput): StatusRow[] {
     { key: 'coach', name: 'Coach', value: coach.value, dot: coach.dot, accessibilityLabel: `Coach: ${coach.spoken}` },
   ];
 }
+
+/**
+ * The one kit dot at the bottom of the sidebar (D10: it replaces the three pills; latency and the coach show up where
+ * they need something). Green: a kit is connected. Orange: no kit plugged in. Grey: touch pads only (no MIDI module).
+ */
+export type KitDot = { dot: Dot; name: string; value: string; accessibilityLabel: string };
+
+export function kitDot(s: Pick<StatusInput, 'midi' | 'kit'>): KitDot {
+  if (s.kit) return { dot: 'on', name: s.kit, value: 'ready', accessibilityLabel: `Kit: ${s.kit} connected. Opens Setup.` };
+  if (s.midi) return { dot: 'warn', name: 'Kit', value: 'not plugged in', accessibilityLabel: 'Kit: not plugged in. Opens Setup.' };
+  return { dot: 'off', name: 'Kit', value: 'touch pads', accessibilityLabel: 'Kit: touch pads. Opens Setup.' };
+}
