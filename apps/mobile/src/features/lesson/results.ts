@@ -5,7 +5,8 @@
 import type { Chart } from '@drum-coach/core/engine/chart';
 import { inFreeBar } from '@drum-coach/core/engine/jam';
 import { MIN_BPM, starsFor } from '@drum-coach/core/engine/lesson';
-import { latencySuspect, WINDOWS } from '@drum-coach/core/engine/scoring';
+import { LATENCY_PATH_IPAD, latencyLine } from '@drum-coach/core/engine/results';
+import { WINDOWS } from '@drum-coach/core/engine/scoring';
 import { lastRound, type NoteMark } from '@drum-coach/core/engine/takeMarks';
 import { fillFromTake } from '@drum-coach/core/engine/transcribe';
 import type { ChartNote } from '@drum-coach/core/engine/chart';
@@ -55,11 +56,8 @@ export function takeCard(setup: LessonSetup, frame: Frame, chart: Chart, p: Less
   };
 }
 
-/** Every stroke off by the same amount: point at the latency test before the student blames their hands. */
-export function latencyHint(f: Finished): string | undefined {
-  const ms = f.options.wait ? null : latencySuspect(f.results);
-  return ms === null ? undefined : `Almost every stroke landed about ${Math.abs(ms)} ms ${ms > 0 ? 'late' : 'early'}. If it felt on time to you, it's probably the setup, not your hands: run the latency test under ⚙ Setup → Your kit.`;
-}
+/** Every stroke off by the same amount: point at the latency test (core's words, the iPad's path; QA4 m4). */
+export const latencyHint = (f: Finished): string | undefined => latencyLine(f, LATENCY_PATH_IPAD);
 
 export type TakeMarks = { marks: Map<number, NoteMark>; extras: number[]; offsets: number[]; missed: number; mark: (i: number) => NoteMark | undefined };
 /** How each note of the take's last round went, on the sheet (only when the take played the chart on screen). */

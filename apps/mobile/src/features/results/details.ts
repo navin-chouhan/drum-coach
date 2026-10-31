@@ -4,11 +4,14 @@
 // timing words, the latency line and the heat formula are core's, shared with the web.
 import { DRUM_NAME } from '@drum-coach/core/content/drums';
 import type { DrumId } from '@drum-coach/core/engine/kit';
-import { heatBad, latencyLine, timingText } from '@drum-coach/core/engine/results';
+import { heatBad, LATENCY_PATH_IPAD, latencyLine as coreLatencyLine, timingText } from '@drum-coach/core/engine/results';
 import { heatSlotName } from '@drum-coach/core/engine/scoring';
 import type { Finished } from '@drum-coach/core/play/take';
 
-export { DRUM_NAME, latencyLine, timingText };
+export { DRUM_NAME, timingText };
+
+/** The web's latency hint, with the iPad's path to the test (Setup → Latency → Measure; QA4 m4). */
+export const latencyLine = (f: Parameters<typeof coreLatencyLine>[0]) => coreLatencyLine(f, LATENCY_PATH_IPAD);
 
 export type DetailsTake = Pick<Finished, 'chart' | 'options' | 'stats' | 'run' | 'results' | 'cues'>;
 
