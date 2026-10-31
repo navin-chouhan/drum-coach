@@ -80,4 +80,35 @@ describe('song take (the song is the clock)', () => {
     expect(finished).toBe(false);
     expect(r.polls.size).toBe(0);
   });
+
+  it('an interruption (D6) keeps ≥ 2 whole bars, flagged; fewer are dropped', async () => {
+    const r = rig();
+    const long = { ...song, notes: Array.from({ length: 12 }, (_, i) => ({ t: 4 + i, drum: i % 2 ? 'snare' as const : 'kick' as const })) }; // bars 2–4
+    const { chart, opts } = songTakeOptions({ s: long, g, yt: r.yt, range: { from: 2, to: 4 }, rate: 1 });
+    const take = createSongTake(r.deps, chart, opts);
+    let done: SongTakeResult | null = null;
+    take.onFinish(f => { done = f; });
+    await take.start(); // bar 2 beat 0 at 2000 ms, 2 s a bar
+    r.hit('kick', 2000); r.hit('snare', 2500);
+    r.advance(2000 + 4500);
+    take.interrupt();
+    expect(take.running).toBe(false);
+    const d = done! as SongTakeResult;
+    expect(d.interrupted).toBe(true);
+    expect(d.run.beats).toBe(8);
+    const run = songRun(d, song.title, song.id);
+    expect(run.summary.interrupted).toBe(true);
+    expect(RunInputSchema.safeParse(run).success).toBe(true);
+    expect(songRun({ ...d, interrupted: undefined }, song.title, song.id).summary).not.toHaveProperty('interrupted');
+
+    const r2 = rig();
+    const t2 = createSongTake(r2.deps, chart, opts);
+    let kept = false;
+    t2.onFinish(() => { kept = true; });
+    await t2.start();
+    r2.advance(2000 + 1500);
+    t2.interrupt(r2.deps.clock.now());
+    expect(kept).toBe(false);
+    expect(t2.running).toBe(false);
+  });
 });

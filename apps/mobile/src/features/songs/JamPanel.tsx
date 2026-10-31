@@ -11,6 +11,8 @@ import { Choice, Small, Warn } from './bits';
 import { askFeedback, coachEntry, onCoachEntries, type Feedback } from './coachAsk';
 import { JAM_HELP, JAM_STEPS, jamBand, jamLive, jamOffset, jamResultTiles, jamRun, jamStartAt, jamSummary, scoreJamTake, timing } from './modes';
 import type { ModeProps } from './modeProps';
+import { jamKeepsInterrupted } from './interrupt';
+import { useInterruptions } from './useInterruptions';
 
 const BAND = { none: color.ink, good: color.good, ok: color.ok, bad: color.bad } as const;
 
@@ -40,14 +42,17 @@ export function JamPanel({ song, videoId, yt, rate, bus, latencyMs, now }: ModeP
     if (from !== null) yt.seek(from);
     yt.play(); setRunning(true);
   }
-  function stop() {
+  /** `interrupted` (D6): a call or the app leaving the foreground; kept, flagged, only after ≥ 2 whole bars. */
+  function stop(interrupted = false) {
     yt.pause(); setRunning(false);
-    const stats = scoreJamTake(hits.current, grid, steps, rate);
+    const playedMs = now() - started.current.ms;
+    const stats = interrupted && !jamKeepsInterrupted(song, grid, rate, playedMs) ? null : scoreJamTake(hits.current, grid, steps, rate);
     if (!stats) { setResult(null); return; }
-    const durationS = Math.round((now() - started.current.ms) / 1000);
+    const durationS = Math.round(playedMs / 1000);
     setResult({ stats, at: started.current.at });
-    void getStorage().runs.add(jamRun(song, grid, rate, stats, started.current.at, durationS)).catch(() => {});
+    void getStorage().runs.add(jamRun(song, grid, rate, stats, started.current.at, durationS, interrupted)).catch(() => {});
   }
+  useInterruptions(running, () => stop(true));
   useEffect(() => () => yt.pause(), [yt]);
   useKitMoves({ yes: () => (running ? undefined : start()), stop: () => (running ? stop() : undefined) }, { playing: running });
 
@@ -58,7 +63,7 @@ export function JamPanel({ song, videoId, yt, rate, bus, latencyMs, now }: ModeP
       <Small style={styles.gap}>{JAM_HELP}</Small>
       <View style={styles.gap}><Choice label="Compare with" value={steps} options={JAM_STEPS} onChange={setSteps} disabled={running} testID="song-jam-steps" /></View>
       <BigMove testID="song-jam-go" tone="go" emoji={running ? '■' : '▶'} label={running ? 'Stop & score' : 'Start jamming'}
-        gestures={gesturesFor(running ? 'stop' : 'yes')} onPress={running ? stop : start} style={styles.go} />
+        gestures={gesturesFor(running ? 'stop' : 'yes')} onPress={running ? () => stop() : start} style={styles.go} />
       {running ? (
         <View style={styles.gap} accessibilityLiveRegion="polite">
           <Display size={44} color={BAND[jamBand(last)]} style={tabular}>{jamLive(last)}</Display>

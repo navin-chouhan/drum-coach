@@ -19,6 +19,8 @@ export type SongTake = {
   start(): Promise<void>;
   /** Stops early: the take is dropped (the web's Stop). */
   stop(): void;
+  /** A call, Siri or the app leaving the foreground (D6): kept, flagged, if ≥ 2 whole bars were played; else dropped. */
+  interrupt(at?: number): void;
   position(now: number): number;
   /** The highway's clock: run ms (position × beatMs); the highway's zero is 0. */
   runMs(now: number): number;
@@ -82,6 +84,7 @@ export function createSongTake(deps: SongTakeDeps, chart: Chart, opts: TakeOptio
       return started;
     },
     stop() { take.stop('user'); },
+    interrupt(at) { take.stop('interrupted', at); },
     onFinish(fn) { finishers.add(fn); return () => { finishers.delete(fn); }; },
   };
 }
@@ -96,6 +99,7 @@ export function songRun(r: SongTakeResult, title: string, songId: string): RunIn
       mode: 'play', song: title, notes: s.total, perfect: s.perfect, good: s.good, miss: s.miss, extra: s.extra,
       meanOffsetMs: s.meanOffset, spreadMs: s.spread, perDrum: s.perDrum, velocity: s.velocity, streak: s.streak,
       section: { fromBar: o.fromBar, toBar: o.toBar },
+      ...(r.interrupted && { interrupted: true }), // D6: kept, not for the ladder or stars
     },
     take: {
       beatMs, beats: r.run.beats, beatsPerBar: r.run.beatsPerBar, timeSignature: r.chart.timeSignature,

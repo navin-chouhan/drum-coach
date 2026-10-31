@@ -20,6 +20,7 @@ import {
 import type { ModeProps } from './modeProps';
 import { SheetPart } from './SheetPart';
 import { TAB_CAPTURE } from './songsModel';
+import { useInterruptions } from './useInterruptions';
 import { songsWrite } from './useSongs';
 
 export function LearnPanel({ song, videoId, yt, rate, bus, latencyMs, sound }: ModeProps) {
@@ -78,6 +79,8 @@ export function LearnPanel({ song, videoId, yt, rate, bus, latencyMs, sound }: M
   }, [looping, yt, grid, fromBeat, toBeat, bpb, steps, sound]);
 
   useKitMoves({ yes: () => setLooping(l => !l), stop: () => setLooping(false) }, { playing: looping });
+  // a call or the app leaving the foreground stops the loop; the unfinished pass is dropped (nothing is saved per pass)
+  useInterruptions(looping, () => setLooping(false));
 
   function save() {
     const r = songsWrite(s => s.songs.patch(song.id, { notes: replaceRange(song.notes, draft, fromBeat, toBeat) }));
