@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState, type Ref } from 'react';
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from 'expo/dom';
 import { nextOffset } from '../../play/clockSync';
+import { deadline } from '../../play/domCalls';
 import { LOAD_ERROR, measureOffset, ytPlayerVars, type YtCommand, type YtEvent } from '../ytController';
 
 export type YouTubeHandle = DOMImperativeFactory & {
@@ -85,7 +86,7 @@ export default function YouTubeDom(props: YouTubeDomProps) {
     let live = true, timer: ReturnType<typeof setTimeout> | undefined;
     const sync = async () => {
       try {
-        const m = await measureOffset(clockNow, () => performance.now());
+        const m = await measureOffset(deadline(clockNow, 1500), () => performance.now()); // a dropped answer: next sync
         if (live) offset.current = nextOffset(offset.current, m);
       } catch { /* the bridge isn't up yet: try again */ }
       if (live) timer = setTimeout(() => void sync(), RESYNC_MS);

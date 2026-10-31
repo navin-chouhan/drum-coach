@@ -25,6 +25,12 @@ export type YouTubeViewProps = {
   testID?: string;
 };
 
+// One object: the DOM wrapper re-sends its props when they change identity.
+const YT_DOM_PROPS = {
+  style: { flex: 1 }, scrollEnabled: false, bounces: false, overScrollMode: 'never',
+  allowsInlineMediaPlayback: true, mediaPlaybackRequiresUserAction: false, allowsFullscreenVideo: true,
+} as const;
+
 export function YouTubeView({ videoId, now, onPlayer, style, testID }: YouTubeViewProps) {
   const [kind] = useState(() => choosePlayer({ nativeAvailable: DrumYouTube.available, dev: __DEV__, devNative: readDevNative(getStorage().kv) }));
   const handle = useRef<YouTubeHandle>(null);
@@ -47,22 +53,15 @@ export function YouTubeView({ videoId, now, onPlayer, style, testID }: YouTubeVi
   const onEvent = useCallback(async (e: YtEvent) => { yt.handle(e); }, [yt]);
   const onNative = useCallback((e: { nativeEvent: unknown }) => { const ev = DrumYouTube.toYtEvent(e.nativeEvent, LOAD_ERROR); if (ev) yt.handle(ev); }, [yt]);
   const Native = DrumYouTube.NativePlayer;
+  // The same element across the screen's re-renders (Expo's DOM wrapper re-sends its props on each of its renders).
+  const domPlayer = useMemo(() => <YouTubeDom ref={handle} videoId={first} clockNow={clockNow} onEvent={onEvent} dom={YT_DOM_PROPS} />, [first, clockNow, onEvent]);
 
   return (
     <View style={[{ backgroundColor: '#000', overflow: 'hidden' }, style]} testID={testID} accessibilityLabel="YouTube video player">
       {kind === 'native' && Native ? (
         <Native ref={native} videoId={first} onPlayerEvent={onNative} style={{ flex: 1 }} testID={testID ? `${testID}-native` : undefined} />
       ) : (
-        <YouTubeDom
-          ref={handle}
-          videoId={first}
-          clockNow={clockNow}
-          onEvent={onEvent}
-          dom={{
-            style: { flex: 1 }, scrollEnabled: false, bounces: false, overScrollMode: 'never',
-            allowsInlineMediaPlayback: true, mediaPlaybackRequiresUserAction: false, allowsFullscreenVideo: true,
-          }}
-        />
+        domPlayer
       )}
     </View>
   );

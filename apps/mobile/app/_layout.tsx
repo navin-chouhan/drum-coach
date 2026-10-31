@@ -1,12 +1,20 @@
 import { Stack, ThemeProvider, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState } from 'react-native';
+import { AppState, LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { keepAwake, keepAwakeWhileForeground } from '../src/platform/keepAwake';
 import { refocusKeyboard } from '../src/platform/keyboard';
 import { colors, navigationTheme } from '../src/theme';
 import { startAppKeyboard, useKitSounds } from '../src/ui';
+
+// Expo's DOM bridge answers a DOM component (and sends it its props) by injecting JavaScript into its WebView, and
+// drops the promise. When the view isn't registered at that moment (just mounting under the new architecture, where
+// Expo's "wait until the view registers" retry doesn't run, or being replaced) that promise rejects with this message
+// and LogBox shows it red in a dev build. The message is lost, nothing else: the DOM pages re-ask what matters
+// (src/play/domCalls.ts: deadlines and retries) and Expo re-sends the props on the page's DOM_READY. Release builds
+// show nothing. Any other error still shows.
+LogBox.ignoreLogs([/Unable to find the 'DomWebView' view with tag/]);
 
 export default function RootLayout() {
   // The screen stays on while Drum Coach is in the foreground (hands are on sticks, not on the iPad).
