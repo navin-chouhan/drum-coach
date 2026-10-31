@@ -7,7 +7,7 @@ import { createKv, KV_KEYS, type Kv } from './kv';
 import { createAiLessonsRepo, createPlansRepo, createSettingsRepo, type AiLessonsRepo, type PlansRepo, type SettingsRepo } from './records';
 import { createRunsRepo, type RunsRepo } from './runs';
 import { migrate } from './schema';
-import { createChartsRepo, createSongsRepo, type ChartsRepo, type SongsRepo } from './songs';
+import { createChartsRepo, createSongsRepo, migrateCoachCharts, type ChartsRepo, type SongsRepo } from './songs';
 import type { SqlDb } from './sql';
 
 export type AppStorage = Storage & {
@@ -51,6 +51,9 @@ export function createDataStore(open: () => SqlDb, log: (m: string) => void = m 
   const aiLessons = db ? createAiLessonsRepo(db) : null;
   const songs = db ? createSongsRepo(db) : null;
   const charts = db ? createChartsRepo(db) : null;
+  if (charts) {
+    try { migrateCoachCharts(kv, charts); } catch (e) { log(`storage: coach charts not moved yet (${e instanceof Error ? e.message : String(e)})`); }
+  }
 
   const parse = (text: string | null) => { try { return text == null ? undefined : JSON.parse(text) as unknown; } catch { return undefined; } };
   async function contextSource(): Promise<ContextSource> {

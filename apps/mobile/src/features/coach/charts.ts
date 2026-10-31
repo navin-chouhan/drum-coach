@@ -1,16 +1,18 @@
-// The exercises the coach wrote (a drill's or a suggestion's new chart), saved on the iPad. The web keeps them on its
-// server (POST /api/charts with source 'ai', src/content/charts.ts saveChart); the iPad keeps them in its key-value
-// store, newest first, so "Play this drill" can open them by id and the coach context can list them as the catalog
-// (`charts`, at most 200, as server/coachContext.ts accepts).
+// The exercises the coach wrote (a drill's or a suggestion's new chart), saved on the iPad as the web saves them: in
+// the `charts` table with source 'ai' (the web's POST /api/charts, src/content/charts.ts saveChart; QA m8), next to
+// imported songs, so one lookup (features/songs findStoredChart) finds both and the coach context reads them from
+// storage (data/store.ts contextSource). The old key-value list moves into the table once (data/songs.ts
+// migrateCoachCharts). This is a thin wrapper over the table for the coach and Practice.
 import { ChartSchema, type Chart } from '@drum-coach/core/engine/chart';
 import { LESSON_BY_ID } from '@drum-coach/core/content/curriculum';
 import { LIBRARY } from '@drum-coach/core/content/library';
-import type { KeyValueStore } from '@drum-coach/core/platform';
+import { KV_KEYS } from '../../data/kv';
+import type { ChartsRepo, StoredChart } from '../../data/songs';
 
-export const COACH_CHARTS_KEY = 'drumcoach.coachCharts';
-export const MAX_COACH_CHARTS = 200;
+/** The legacy key-value list (moved into the table on start). */
+export const COACH_CHARTS_KEY = KV_KEYS.coachCharts;
 
-export type CoachChart = Chart & { id: string; source: 'ai'; savedAt: string };
+export type CoachChart = StoredChart & { source: 'ai' };
 
 /** The server's id rule (server/index.ts POST /api/charts): a slug of the title and 5 random characters. */
 export function chartIdFor(title: string, random: () => number = Math.random): string {
@@ -18,32 +20,39 @@ export function chartIdFor(title: string, random: () => number = Math.random): s
   return `${slug}-${random().toString(36).slice(2, 7).padEnd(5, '0')}`;
 }
 
-const same = (a: Chart, b: Chart) => JSON.stringify({ ...a, id: undefined }) === JSON.stringify({ ...b, id: undefined });
+/** Objects with their keys sorted (at every depth), so key order never makes two equal charts differ. */
+const sorted = (v: unknown): unknown => Array.isArray(v) ? v.map(sorted)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, sorted((v as Record<string, unknown>)[k])])) : v;
 
-export function createCoachCharts(kv: KeyValueStore, o: { random?: () => number; now?: () => Date } = {}) {
-  const read = (): CoachChart[] => {
-    try {
-      const v: unknown = JSON.parse(kv.get(COACH_CHARTS_KEY) ?? '[]');
-      if (!Array.isArray(v)) return [];
-      return v.flatMap(x => {
-        const p = ChartSchema.safeParse(x);
-        const id = (x as { id?: unknown })?.id, savedAt = (x as { savedAt?: unknown })?.savedAt;
-        return p.success && typeof id === 'string' ? [{ ...p.data, id, source: 'ai' as const, savedAt: typeof savedAt === 'string' ? savedAt : '' }] : [];
-      });
-    } catch { return []; }
-  };
+/** A chart's content without its id or where it's stored, so the same exercise compares equal. */
+const contentKey = (c: unknown) => {
+  const p = ChartSchema.safeParse(c);
+  return p.success ? JSON.stringify(sorted({ ...p.data, id: undefined, kind: p.data.kind ?? 'exercise' })) : null;
+};
+
+const isAi = (c: StoredChart): c is CoachChart => c.source === 'ai';
+
+/**
+ * The coach's exercises in `storage.charts`. When the database didn't open (`charts` null) they're kept in memory for
+ * this session, as the key-value store then is.
+ */
+export function createCoachCharts(storage: { charts: Pick<ChartsRepo, 'list' | 'get' | 'save'> | null }, o: { random?: () => number } = {}) {
+  const memory: CoachChart[] = [];
+  const all = (): StoredChart[] => storage.charts?.list() ?? memory;
+  const list = (): CoachChart[] => all().filter(isAi).reverse();
   return {
-    /** Newest first. */
-    list: read,
-    byId: (id: string) => read().find(c => c.id === id),
-    /** Saves a chart the coach wrote; the same chart again keeps its id (and moves to the front). */
+    /** The coach's exercises, newest first. */
+    list,
+    /** Any saved chart (the coach's or an import), as the web's chartExists looks at every stored chart. */
+    byId: (id: string): StoredChart | undefined => (storage.charts ? storage.charts.get(id) : memory.find(c => c.id === id)) ?? undefined,
+    /** Saves a chart the coach wrote; the same exercise again keeps the one already saved. */
     save(chart: Chart): CoachChart {
-      const all = read();
-      const old = all.find(c => same(c, chart));
-      const kind = chart.kind ?? 'exercise';
-      const saved: CoachChart = old ?? { ...chart, kind, id: chartIdFor(chart.title, o.random), source: 'ai', savedAt: (o.now?.() ?? new Date()).toISOString() };
-      const next = [saved, ...all.filter(c => c.id !== saved.id)].slice(0, MAX_COACH_CHARTS);
-      kv.set(COACH_CHARTS_KEY, JSON.stringify(next));
+      const key = contentKey(chart);
+      const old = key ? list().find(c => contentKey(c) === key) : undefined;
+      if (old) return old;
+      if (storage.charts) return storage.charts.save(chart, 'ai') as CoachChart;
+      const saved: CoachChart = { ...chart, kind: chart.kind ?? 'exercise', id: chartIdFor(chart.title, o.random), source: 'ai', hasAudio: false, syncOffsetMs: 0 };
+      memory.push(saved);
       return saved;
     },
   };

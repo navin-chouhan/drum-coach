@@ -13,6 +13,8 @@ export const KV_KEYS = {
   playOptions: 'drumcoach.playOptions',
   /** The home server's base URL (src/platform/api.ts). Its token lives only in expo-secure-store. */
   homeServerUrl: 'drumcoach.homeServer.url',
+  /** Legacy: the coach's exercises before they moved into the `charts` table (QA m8; migrateCoachCharts, songs.ts). */
+  coachCharts: 'drumcoach.coachCharts',
 } as const;
 
 type Log = (message: string) => void;

@@ -6,6 +6,11 @@ import type { PlanRecord } from '../../data/records';
 import { createCoachAsks } from './asks';
 import { chartIdFor, COACH_CHARTS_KEY, createCoachCharts, targetExists } from './charts';
 import { createContextFor } from './context';
+import { createKv } from '../../data/kv';
+import { openTestDb } from '../../data/nodeSqlite.testutil';
+import { migrate } from '../../data/schema';
+import { createChartsRepo, migrateCoachCharts, sqliteTime } from '../../data/songs';
+import { createDataStore } from '../../data/store';
 import { askFeedback, createSpeakOnce, feedbackKey, feedbackView, spokenLine } from './feedback';
 import { coachProblem, hostOf } from './problem';
 import { summarizeTake } from './summary';
@@ -97,30 +102,64 @@ describe('feedback after a take', () => {
   });
 });
 
-describe("the coach's saved exercises", () => {
+describe("the coach's saved exercises (the charts table, source 'ai': QA m8)", () => {
   const chart: Chart = { title: 'Kick with the hat!', bpm: 65, timeSignature: [4, 4], bars: 1, notes: [{ t: 0, drum: 'kick' }] };
-  it('saved once per chart (the server\'s id rule), newest first, found as a drill target', () => {
-    const kv = memoryKv();
-    const c = createCoachCharts(kv, { random: () => 0.123456, now: () => new Date('2026-10-30T19:00:00Z') });
+  const table = () => { const db = openTestDb(); migrate(db); return createChartsRepo(db, () => 0.123456); };
+  it("saved once per chart (the server's id rule), newest first, found as a drill target", () => {
+    const charts = table();
+    const c = createCoachCharts({ charts });
     const a = c.save(chart);
     expect(a.id).toBe(chartIdFor('Kick with the hat!', () => 0.123456));
     expect(a.id).toMatch(/^kick-with-the-hat-[a-z0-9]{5}$/);
-    expect(c.save({ ...chart }).id).toBe(a.id);
+    expect(a).toMatchObject({ source: 'ai', kind: 'exercise', hasAudio: false });
+    expect(charts.get(a.id)?.source).toBe('ai');
+    expect(c.save({ ...chart, kind: 'exercise' }).id).toBe(a.id);
+    const imported = charts.save({ ...chart, title: 'A song' }, 'import');
     c.save({ ...chart, title: 'Other' });
     expect(c.list().map(x => x.title)).toEqual(['Other', 'Kick with the hat!']);
     expect(targetExists(a.id, { coachCharts: c })).toBe(true);
+    expect(targetExists(imported.id, { coachCharts: c })).toBe(true);
     expect(targetExists('rock-basic')).toBe(false);
     expect(targetExists('lesson/nope')).toBe(false);
     expect(targetExists('lesson/x', { aiLessonIds: new Set(['x']) })).toBe(true);
-    kv.set(COACH_CHARTS_KEY, '{broken');
-    expect(c.list()).toEqual([]);
   });
-  it('go into the context as catalog entries', async () => {
-    const kv = memoryKv();
-    const c = createCoachCharts(kv);
+  it('kept in memory for the session when the database is missing', () => {
+    let r = 0.1;
+    const c = createCoachCharts({ charts: null }, { random: () => (r += 0.1) });
+    const a = c.save(chart);
+    expect(c.save(chart).id).toBe(a.id);
+    expect(c.byId(a.id)?.title).toBe('Kick with the hat!');
+    expect(c.list()).toHaveLength(1);
+  });
+  it('go into the context from storage (contextSource reads the table)', async () => {
+    const db = openTestDb();
+    const s = createDataStore(() => db);
+    const c = createCoachCharts(s);
     c.save(chart);
-    const ctx = await createContextFor({ contextSource: async () => ({ runs: [] }) }, c)('feedback');
-    expect(ctx.charts).toEqual([{ id: c.list()[0].id, title: 'Kick with the hat!', kind: 'exercise', bpm: 65, timeSignature: [4, 4] }]);
+    const ctx = await createContextFor(s)('feedback');
+    expect(ctx.charts).toEqual([{ id: c.list()[0].id, title: 'Kick with the hat!', kind: 'exercise', bpm: 65, timeSignature: [4, 4], bars: 1, notes: [{ t: 0, drum: 'kick' }] }]);
+  });
+  it('the old key-value list moves into the table once, keeping ids and order', () => {
+    const db = openTestDb();
+    migrate(db);
+    const kv = createKv(db, () => {});
+    kv.set(COACH_CHARTS_KEY, JSON.stringify([
+      { ...chart, title: 'Newer', id: 'newer-bbbbb', source: 'ai', savedAt: '2026-10-30T19:00:00.000Z' },
+      { ...chart, id: 'older-aaaaa', source: 'ai', savedAt: '2026-10-29T08:00:00.000Z' },
+      { title: 'broken', id: 'broken-ccccc' },
+    ]));
+    const s = createDataStore(() => db);
+    expect(s.kv.get(COACH_CHARTS_KEY)).toBeNull();
+    const c = createCoachCharts(s);
+    expect(c.list().map(x => x.id)).toEqual(['newer-bbbbb', 'older-aaaaa']);
+    expect(c.byId('older-aaaaa')).toMatchObject({ title: 'Kick with the hat!', source: 'ai', kind: 'exercise' });
+    expect(c.byId('older-aaaaa')).not.toHaveProperty('savedAt');
+    expect(migrateCoachCharts(s.kv, s.charts!)).toBe(0); // nothing left to move
+    kv.set(COACH_CHARTS_KEY, '{broken');
+    expect(migrateCoachCharts(s.kv, s.charts!)).toBe(0);
+    expect(s.kv.get(COACH_CHARTS_KEY)).toBeNull();
+    expect(sqliteTime('2026-10-29T08:00:00.000Z')).toBe('2026-10-29 08:00:00');
+    expect(sqliteTime('nope')).toBeNull();
   });
 });
 
