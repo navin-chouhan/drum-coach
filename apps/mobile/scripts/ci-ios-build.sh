@@ -151,6 +151,35 @@ xcresult_race_only() {
   echo "::warning::$(basename "$log"): every test passed; xcodebuild then crashed writing the result bundle (Xcode's diagnostics race), counted as a pass"
 }
 
+# One scheme's test run: $3 is a log/result suffix for the retry. Passes on success, or on Xcode's result-bundle
+# crash after every test passed (xcresult_race_only).
+scheme_test() {
+  local scheme=$1 udid=$2 sfx=$3 log="$LOG_DIR/xcodebuild-$1$3.log"
+  echo "== xcodebuild test: $scheme${sfx:+ (retry)}"
+  run_logged "$log" "xcodebuild test ($scheme$sfx)" \
+    xcodebuild \
+    -workspace "$WORKSPACE" \
+    -scheme "$scheme" \
+    -configuration Debug \
+    -destination "platform=iOS Simulator,id=$udid" \
+    -derivedDataPath "${RUNNER_TEMP:-$APP_DIR/ios/build}/DerivedData" \
+    -resultBundlePath "$LOG_DIR/$scheme$sfx.xcresult" \
+    COMPILER_INDEX_STORE_ENABLE=NO \
+    CODE_SIGNING_ALLOWED=NO \
+    test </dev/null || xcresult_race_only "$log"
+}
+
+# The simulator's test runner hung or timed out (runs 59 and 60: "The test runner hung before establishing
+# connection" / "timed out while preparing to run tests"), and no test case failed. Only then is one retry allowed;
+# a failed test, a build error or any other error is never retried.
+runner_hang_only() {
+  local log=$1
+  grep -Eq 'encountered an error \(The test runner (hung|timed out)' "$log" || return 1
+  if grep -Eq "Test Case .* failed|error: |\*\* (BUILD FAILED|TEST EXECUTE FAILED)" "$log"; then return 1; fi
+  if grep -Eq 'with [1-9][0-9]* failures?' "$log"; then return 1; fi
+  return 0
+}
+
 pod_tests() {
   # The podspecs' test_specs are only installed with `use_expo_modules!(includeTests: true)` (see the header of
   # modules/drum-midi/ios/Tests/BatchPolicyTests.swift). ios/ is generated and never committed, so patch it here.
@@ -199,18 +228,14 @@ pod_tests() {
 
   local scheme failed=0 failed_schemes=""
   while IFS= read -r scheme; do
-    echo "== xcodebuild test: $scheme"
-    run_logged "$LOG_DIR/xcodebuild-$scheme.log" "xcodebuild test ($scheme)" \
-      xcodebuild \
-      -workspace "$WORKSPACE" \
-      -scheme "$scheme" \
-      -configuration Debug \
-      -destination "platform=iOS Simulator,id=$udid" \
-      -derivedDataPath "${RUNNER_TEMP:-$APP_DIR/ios/build}/DerivedData" \
-      -resultBundlePath "$LOG_DIR/$scheme.xcresult" \
-      COMPILER_INDEX_STORE_ENABLE=NO \
-      CODE_SIGNING_ALLOWED=NO \
-      test </dev/null || xcresult_race_only "$LOG_DIR/xcodebuild-$scheme.log" || { failed=$((failed + 1)); failed_schemes="$failed_schemes $scheme"; }
+    if ! scheme_test "$scheme" "$udid" ""; then
+      if runner_hang_only "$LOG_DIR/xcodebuild-$scheme.log"; then
+        echo "::warning::$scheme: the simulator's test runner hung or timed out (no test failed); trying once more"
+        scheme_test "$scheme" "$udid" "-retry" || { failed=$((failed + 1)); failed_schemes="$failed_schemes $scheme"; }
+      else
+        failed=$((failed + 1)); failed_schemes="$failed_schemes $scheme"
+      fi
+    fi
   done <<< "$schemes"
   # Repeat what failed at the very end: the API that serves job logs only keeps the last 5000 lines.
   echo "== pod tests: $(wc -l <<< "$schemes" | tr -d ' ') scheme(s), $failed failed${failed_schemes:+:$failed_schemes}"
