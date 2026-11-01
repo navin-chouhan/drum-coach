@@ -83,7 +83,8 @@ export function LessonScreen({ ctl, take }: { ctl: LessonController; take: CoreT
   const countIn = v.playing ? countInAt(pos, bpb) : undefined;
   const tip = v.playing ? liveTip(s, now) : '';
   const f = v.results ? v.take : undefined;
-  const takeChart = v.playing ? runChart(s) : undefined;
+  // one chart per take (the screen re-renders every 100 ms while playing: a new object each time restarted the sheet)
+  const takeChart = useMemo(() => (v.playing ? runChart(s) : undefined), [v.playing, s.run]); // eslint-disable-line react-hooks/exhaustive-deps -- the run is the chart
   const idle = useMemo(() => ({ chart: idleChart(v.chart), zero: clock.now() + 1e9 }), [v.chart]); // eslint-disable-line react-hooks/exhaustive-deps -- one standing sheet per chart (its zero must not move)
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- a finished take is never changed (core play/take.ts); the compiler only sees it passed to shareTake below
   const done = useMemo(() => (f ? { chart: takenChart(f), results: replayResults(f) } : undefined), [f]);

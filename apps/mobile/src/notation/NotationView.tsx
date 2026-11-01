@@ -6,13 +6,13 @@
 // the bridge: the chart, tempo and beat-0 time as props (once per take), the Clock on request (a few round trips every
 // 2 s, to map the WebView's own performance.now() onto the Clock), and each result as it's judged. The cursor moves on
 // the WebView's requestAnimationFrame: no message per frame.
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ChartLike } from '../play/chartLike';
 import type { PlayResult, Subscribe } from '../play/events';
 import { IPAD_THEME, type PlayTheme } from '../play/theme';
 import SheetDom, { type SheetHandle } from './dom/SheetDom';
-import { createResultLog, sheetColors, type ResultBatch, type SheetChart } from './sheetModel';
+import { createResultLog, sameSheetChart, sheetColors, type ResultBatch, type SheetChart } from './sheetModel';
 import { useLatest } from '../ui/useLatest';
 
 export type NotationViewProps = {
@@ -51,18 +51,28 @@ const DOM_PROPS = { style: { flex: 1 }, scrollEnabled: false, bounces: false, ov
 
 type PushTarget = { push?: (batch: ResultBatch) => void };
 
+function toSheetChart(chart: ChartLike): SheetChart {
+  return { notes: [...chart.notes], timeSignature: [chart.timeSignature[0], chart.timeSignature[1]], bars: chart.bars, ...(chart.title !== undefined && { title: chart.title }) };
+}
+
 export function NotationView(props: NotationViewProps) {
   const { chart, bpm, zero, now, latencyMs, results, theme = IPAD_THEME, hints = true, leftHanded = false } = props;
-  const sheetChart = useMemo<SheetChart>(
-    () => ({ notes: [...chart.notes], timeSignature: [chart.timeSignature[0], chart.timeSignature[1]], bars: chart.bars, ...(chart.title !== undefined && { title: chart.title }) }),
-    [chart],
-  );
+  // The sheet's chart, kept while it draws the same thing (sameSheetChart: a caller's new wrapper object around the
+  // same notes, as the lesson player makes every 100 ms during a take, must not restart the sheet).
+  // Derived state, updated during render only when the sheet really changes (React's "adjust state on prop change").
+  const [shown, setShown] = useState(() => ({ from: chart, sheet: toSheetChart(chart) }));
+  let current = shown;
+  if (!sameSheetChart(shown.from, chart)) {
+    current = { from: chart, sheet: toSheetChart(chart) };
+    setShown(current);
+  }
+  const sheetChart = current.sheet;
   const colors = useMemo(() => sheetColors(theme), [theme]);
   const handle = useRef<SheetHandle>(null);
 
   // The take's results, kept for a WebView that loads (or reloads) mid-take.
   const log = useMemo(() => createResultLog(), []);
-  useEffect(() => log.reset(zero), [log, zero, chart]);
+  useEffect(() => log.reset(zero), [log, zero, sheetChart]);
   useEffect(() => {
     if (!results) return;
     return results(r => {
