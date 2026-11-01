@@ -4,6 +4,7 @@ import { IPAD_THEME, WEB_THEME } from '../play/theme';
 import { resultColor } from '../ui/tokens';
 import type { PlayResult } from '../play/events';
 import { markShowcase, moneyBeat } from './dev/fixtures';
+import { sameSheetChart } from './sheetModel';
 import {
   barAt, countText, createResultLog, cursorAt, emptyMarks, hintBarMin, measureClockOffset, mergeBatch, pageBars, pageCount, pageOf,
   positionFromPerf, sheetColors, sheetGeometry, totalBarsOf, worstKind, type MeasureBox, type SheetChart,
@@ -160,5 +161,21 @@ describe('the Clock inside the WebView', () => {
     // beat 0 at Clock 60000; perf 9000 + offset 50000 = Clock 59000 → one beat (1000 ms at 60 BPM) before beat 0.
     expect(positionFromPerf(9000, 50000, 60000, 1000)).toBe(-1);
     expect(positionFromPerf(9000, 50000, 60000, 1000, 500)).toBe(-0.5);
+  });
+});
+
+describe('the same sheet across re-renders (the lesson re-renders every 100 ms during a take)', () => {
+  const notes = [{ t: 0, drum: 'kick' }, { t: 1, drum: 'snare' }];
+  const run = { notes, timeSignature: [4, 4] as const, bars: 1, title: 'Money beat' };
+  it('a new wrapper around the same run notes is the same sheet', () => {
+    expect(sameSheetChart(run, { ...run })).toBe(true);
+    expect(sameSheetChart(run, { ...run, timeSignature: [4, 4] })).toBe(true);
+  });
+  it('a new take (new notes), another meter, bar count or title is a new sheet', () => {
+    expect(sameSheetChart(run, { ...run, notes: [...notes] })).toBe(false);
+    expect(sameSheetChart(run, { ...run, timeSignature: [6, 8] })).toBe(false);
+    expect(sameSheetChart(run, { ...run, bars: 2 })).toBe(false);
+    expect(sameSheetChart(run, { ...run, title: 'Other' })).toBe(false);
+    expect(sameSheetChart(undefined, run)).toBe(false);
   });
 });

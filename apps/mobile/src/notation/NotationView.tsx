@@ -12,7 +12,7 @@ import type { ChartLike } from '../play/chartLike';
 import type { PlayResult, Subscribe } from '../play/events';
 import { IPAD_THEME, type PlayTheme } from '../play/theme';
 import SheetDom, { type SheetHandle } from './dom/SheetDom';
-import { createResultLog, sheetColors, type ResultBatch, type SheetChart } from './sheetModel';
+import { createResultLog, sameSheetChart, sheetColors, type ResultBatch, type SheetChart } from './sheetModel';
 import { useLatest } from '../ui/useLatest';
 
 export type NotationViewProps = {
@@ -53,16 +53,19 @@ type PushTarget = { push?: (batch: ResultBatch) => void };
 
 export function NotationView(props: NotationViewProps) {
   const { chart, bpm, zero, now, latencyMs, results, theme = IPAD_THEME, hints = true, leftHanded = false } = props;
-  const sheetChart = useMemo<SheetChart>(
-    () => ({ notes: [...chart.notes], timeSignature: [chart.timeSignature[0], chart.timeSignature[1]], bars: chart.bars, ...(chart.title !== undefined && { title: chart.title }) }),
-    [chart],
-  );
+  // The sheet's chart, kept while it draws the same thing (sameSheetChart: a caller's new wrapper object around the
+  // same notes, as the lesson player makes every 100 ms during a take, must not restart the sheet).
+  const shownChart = useRef<{ from: ChartLike; sheet: SheetChart }>(undefined);
+  if (!shownChart.current || !sameSheetChart(shownChart.current.from, chart)) {
+    shownChart.current = { from: chart, sheet: { notes: [...chart.notes], timeSignature: [chart.timeSignature[0], chart.timeSignature[1]], bars: chart.bars, ...(chart.title !== undefined && { title: chart.title }) } };
+  }
+  const sheetChart = shownChart.current.sheet;
   const colors = useMemo(() => sheetColors(theme), [theme]);
   const handle = useRef<SheetHandle>(null);
 
   // The take's results, kept for a WebView that loads (or reloads) mid-take.
   const log = useMemo(() => createResultLog(), []);
-  useEffect(() => log.reset(zero), [log, zero, chart]);
+  useEffect(() => log.reset(zero), [log, zero, sheetChart]);
   useEffect(() => {
     if (!results) return;
     return results(r => {

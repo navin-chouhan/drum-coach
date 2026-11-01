@@ -274,3 +274,13 @@ cd apps/mobile && npx expo run:ios --device --configuration Release
 - Section 9: both tables and the same-lesson numbers.
 - Section 10: Release results, T6-11, error 153 yes/no.
 - Anything that surprised you, and any **(M…)** or **(QA2 …)** step that failed, with the build's commit.
+
+## Dev notes (known, harmless)
+- **Metro log: one `Unable to find the 'DomWebView' view with tag N` per sheet or demo that appears (Debug).** Expo 58
+  sends a DOM component's props into its WebView from a `useEffect` on mount (`expo/src/dom/webview-wrapper.tsx:112`),
+  before the new architecture has mounted the native view; that one send fails. It's redundant: the page gets its first
+  props when it loads and Expo sends them again when the page says it's ready. Nothing is lost; Release shows nothing.
+  (Owner's call: no patched Expo copy.) Anything else after the mount, e.g. the sheet not following a take, is a real bug.
+- **`Sending onAnimatedValueUpdate with no listeners registered`**: react-native-screens' native-stack transition
+  progress (`Animated.event(…, { useNativeDriver: true })`, `react-native-screens/src/components/Screen.tsx:259-273`);
+  not our code, harmless.

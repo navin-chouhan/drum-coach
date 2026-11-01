@@ -17,6 +17,17 @@ import type { PlayTheme, ResultKind } from '../play/theme';
 /** The chart as it crosses the bridge (JSON): the core's notes, unchanged and in the order results index them. */
 export type SheetChart = { notes: ChartNote[]; timeSignature: [number, number]; bars: number; title?: string };
 
+/**
+ * Whether two charts draw the same sheet. Screens often build the chart object anew on every render (the lesson
+ * player re-renders every 100 ms during a take: `runChart(state)` around the same run notes), so identity says
+ * nothing: compare the notes array (the run's own) and the shape instead. A changed chart re-engraves the page and
+ * restarts the cursor, and resets the take's colours, so a false "changed" every 100 ms kept the sheet from following.
+ */
+export function sameSheetChart(a: { notes: readonly unknown[]; timeSignature: readonly [number, number]; bars: number; title?: string } | undefined,
+  b: { notes: readonly unknown[]; timeSignature: readonly [number, number]; bars: number; title?: string }): boolean {
+  return !!a && a.notes === b.notes && a.bars === b.bars && a.title === b.title && a.timeSignature[0] === b.timeSignature[0] && a.timeSignature[1] === b.timeSignature[1];
+}
+
 export const beatsPerBarOf = (ts: readonly [number, number]): number => (ts[0] * 4) / ts[1];
 
 /** Bars to draw: the chart's bars, or more when a note lies past them (a hand-made chart). */
