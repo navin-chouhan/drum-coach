@@ -71,7 +71,8 @@ export function NoteHighway(props: NoteHighwayProps) {
   }, [zero, beatMs, zeroSv, beatMsSv]);
   const pos = useDerivedValue(() => positionAt(clock.value, zeroSv.value, beatMsSv.value));
   const nowAt = layout?.nowAt ?? 0, px = layout?.pxPerBeat ?? 1, sign = layout?.sign ?? 1;
-  const scroll = useDerivedValue(() => scrollFor(pos.value, nowAt, px, sign), [nowAt, px, sign]);
+  // no deps array: Reanimated tracks the worklet's closure itself on native (a deps array is web-only and warns)
+  const scroll = useDerivedValue(() => scrollFor(pos.value, nowAt, px, sign));
 
   // Pages: React hears about it only when the visible range changes.
   const past = layout?.pastBeats ?? 4, future = layout?.futureBeats ?? 8;
@@ -83,7 +84,6 @@ export function NoteHighway(props: NoteHighwayProps) {
       if (prev && cur[0] === prev[0] && cur[1] === prev[1]) return;
       scheduleOnRN(setRangeIfNew, cur[0], cur[1]);
     },
-    [past, future, span],
   );
   // The pages in view, built when the visible range (or what they're drawn from) changes.
   const pages = useMemo(() => {
